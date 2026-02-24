@@ -51,28 +51,28 @@ import Base from '../layouts/Base.astro';
         <table cellpadding="6" cellspacing="0" width="100%" style="font-size: 9pt; margin-bottom: 15px;">
           <tr>
             <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
-              <b style="color: #60a5fa;">Editorial (E)</b><br>
+              <b style="color: #60a5fa;">Editorial</b><br>
               <span style="color: #828282;">What the content <b style="color: #c9c9c9;">says</b>. Analyzes text, arguments, framing, and sourcing.</span>
             </td>
             <td width="5px"></td>
             <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
-              <b style="color: #22d3ee;">Structural (S)</b><br>
+              <b style="color: #22d3ee;">Structural</b><br>
               <span style="color: #828282;">What the site <b style="color: #c9c9c9;">does</b>. Examines privacy, accessibility, tracking, access models.</span>
             </td>
           </tr>
         </table>
 
         <p style="color: #828282; font-size: 8pt; margin-bottom: 15px;">
-          Channels are weighted by content type (e.g., editorial: E=0.6, S=0.4).
-          Combined: <span class="score-font">(w_E &times; E) + (w_S &times; S)</span>.
+          Channels are weighted by content type (e.g., Editorial=0.6, Structural=0.4).
+          Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.
         </p>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">ND vs 0.0</p>
+        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
 
         <table cellpadding="6" cellspacing="0" width="100%" style="font-size: 9pt; margin-bottom: 15px;">
           <tr>
             <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
-              <b style="color: #828282;">ND (No Data)</b><br>
+              <b style="color: #828282;">No Data</b><br>
               <span style="color: #828282;">No relevant content for this UDHR article. The topic is simply absent.</span>
             </td>
             <td width="5px"></td>
@@ -106,16 +106,16 @@ import Base from '../layouts/Base.astro';
 
         <table cellpadding="3" cellspacing="0" style="font-size: 9pt; margin-bottom: 15px;">
           <tr>
-            <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">H</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">High — direct, explicit content with strong sourcing</td>
+            <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">High</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Direct, explicit content with strong sourcing</td>
           </tr>
           <tr>
-            <td><span class="badge" style="background: rgba(234,179,8,0.2); color: #eab308;">M</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Medium — clear signal but may be secondary</td>
+            <td><span class="badge" style="background: rgba(234,179,8,0.2); color: #eab308;">Medium</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Clear signal but may be secondary</td>
           </tr>
           <tr>
-            <td><span class="badge" style="background: rgba(107,114,128,0.2); color: #6b7280;">L</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Low — tangential, indirect, or weakly sourced</td>
+            <td><span class="badge" style="background: rgba(107,114,128,0.2); color: #6b7280;">Low</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Tangential, indirect, or weakly sourced</td>
           </tr>
         </table>
 
@@ -123,20 +123,20 @@ import Base from '../layouts/Base.astro';
 
         <table cellpadding="3" cellspacing="0" style="font-size: 9pt; margin-bottom: 15px;">
           <tr>
-            <td><span class="badge" style="background: rgba(129,140,248,0.2); color: #818cf8;">A</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Advocacy — explicitly argues for or against a right</td>
+            <td><span class="badge" style="background: rgba(129,140,248,0.2); color: #818cf8;">Advocacy</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Explicitly argues for or against a right</td>
           </tr>
           <tr>
-            <td><span class="badge" style="background: rgba(34,211,238,0.2); color: #22d3ee;">P</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Practice — site infrastructure reflects a rights stance</td>
+            <td><span class="badge" style="background: rgba(34,211,238,0.2); color: #22d3ee;">Practice</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Site infrastructure reflects a rights stance</td>
           </tr>
           <tr>
-            <td><span class="badge" style="background: rgba(167,139,250,0.2); color: #a78bfa;">F</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Framing — presents issues in a rights-aligned or rights-opposed frame</td>
+            <td><span class="badge" style="background: rgba(167,139,250,0.2); color: #a78bfa;">Framing</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Presents issues in a rights-aligned or rights-opposed frame</td>
           </tr>
           <tr>
-            <td><span class="badge" style="background: rgba(251,146,60,0.2); color: #fb923c;">C</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Content — factual content relevant to human rights topics</td>
+            <td><span class="badge" style="background: rgba(251,146,60,0.2); color: #fb923c;">Coverage</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Factual content relevant to human rights topics</td>
           </tr>
         </table>
 
@@ -159,7 +159,7 @@ import Base from '../layouts/Base.astro';
           {[
             { v: 'v1', desc: 'External-source methodology, domain-level evaluation' },
             { v: 'v2', desc: 'On-domain-only, ND vs 0.0 distinction, evidence strength' },
-            { v: 'v3', desc: 'URL-level HRCB with E/S channels, content types, rubrics' },
+            { v: 'v3', desc: 'URL-level HRCB with Editorial/Structural channels, content types, rubrics' },
             { v: 'v3.3', desc: 'Consolidation + roadmap' },
             { v: 'v3.4', desc: 'Current — Batch protocol, adversarial robustness, JSON output' },
           ].map(({ v, desc }) => (

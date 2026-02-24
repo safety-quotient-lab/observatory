@@ -11,3 +11,6 @@ database_id = "d49c47bc-8107-4481-8aa1-6a9cf0b534c8"
 # Deploy cron separately: wrangler deploy functions/cron.ts --name hn-hrcb-cron
 # Secrets (set via `wrangler secret put`):
 # ANTHROPIC_API_KEY
+
+[vars]
+DAILY_EVAL_BUDGET = "50"

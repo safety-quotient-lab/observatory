@@ -1,6 +1,6 @@
 /**
  * Shared HRCB evaluation logic.
- * Used by both the API trigger endpoint and (conceptually) the cron worker.
+ * Used by both the API trigger endpoint and the cron worker.
  */
 
 const ALL_SECTIONS = [
@@ -159,7 +159,7 @@ interface EvalScore {
   note: string;
 }
 
-interface EvalResult {
+export interface EvalResult {
   schema_version: string;
   evaluation: {
     url: string;
@@ -197,6 +197,12 @@ interface EvalResult {
   adversarial_gap: unknown;
 }
 
+export interface EvalCallResult {
+  result: EvalResult;
+  model: string;
+  promptHash: string;
+}
+
 async function hashPrompt(system: string, user: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(system + '\n---\n' + user);
@@ -224,17 +230,25 @@ export async function fetchUrlContent(url: string): Promise<string> {
   }
 }
 
-export async function callClaude(apiKey: string, url: string, pageContent: string): Promise<{
-  result: EvalResult;
-  model: string;
-  systemPrompt: string;
-  userPrompt: string;
-  promptHash: string;
-}> {
+/**
+ * Call Claude for evaluation.
+ * Supports both URL-fetched content and self-post text (Ask HN, Show HN).
+ */
+export async function callClaude(
+  apiKey: string,
+  url: string,
+  pageContent: string,
+  isSelfPost = false
+): Promise<EvalCallResult> {
   const today = new Date().toISOString().slice(0, 10);
+
+  const contentLabel = isSelfPost
+    ? 'Here is the self-post text from Hacker News:'
+    : 'Here is the page content (truncated):';
+
   const userPrompt = `Evaluate this URL: ${url}
 
-Here is the page content (truncated):
+${contentLabel}
 
 ${pageContent}
 
@@ -252,7 +266,13 @@ Output ONLY the JSON evaluation object, no other text.`;
     body: JSON.stringify({
       model: EVAL_MODEL,
       max_tokens: 8192,
-      system: METHODOLOGY_SYSTEM_PROMPT,
+      system: [
+        {
+          type: 'text',
+          text: METHODOLOGY_SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages: [{ role: 'user', content: userPrompt }],
     }),
   });
@@ -279,18 +299,20 @@ Output ONLY the JSON evaluation object, no other text.`;
   return {
     result: JSON.parse(jsonText) as EvalResult,
     model: EVAL_MODEL,
-    systemPrompt: METHODOLOGY_SYSTEM_PROMPT,
-    userPrompt,
     promptHash,
   };
 }
 
+/**
+ * Write evaluation result to D1.
+ * No longer stores system/user prompts — they're reconstructible and waste storage.
+ */
 export async function writeEvalResult(
   db: D1Database,
   hnId: number,
-  evalCall: { result: EvalResult; model: string; systemPrompt: string; userPrompt: string; promptHash: string }
+  evalCall: EvalCallResult
 ): Promise<void> {
-  const { result, model, systemPrompt, userPrompt, promptHash } = evalCall;
+  const { result, model, promptHash } = evalCall;
   const agg = result.aggregates;
 
   await db
@@ -304,8 +326,6 @@ export async function writeEvalResult(
         hcb_json = ?,
         eval_model = ?,
         eval_prompt_hash = ?,
-        eval_system_prompt = ?,
-        eval_user_prompt = ?,
         eval_status = 'done',
         eval_error = NULL,
         evaluated_at = datetime('now')
@@ -320,8 +340,6 @@ export async function writeEvalResult(
       JSON.stringify(result),
       model,
       promptHash,
-      systemPrompt,
-      userPrompt,
       hnId
     )
     .run();

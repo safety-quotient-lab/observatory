@@ -2,10 +2,10 @@
 import { scoreToColor, formatScore, classificationColor, classificationTextColor } from '../lib/colors';
 import HeatMap from './HeatMap.astro';
 import type { Score } from '../lib/types';
-import type { Story } from '../lib/db';
+import type { Story, StoryWithMiniScores } from '../lib/db';
 
 interface Props {
-  story: Story;
+  story: Story | StoryWithMiniScores;
   scores?: Score[];
   rank?: number;
 }
@@ -14,6 +14,8 @@ const { story, scores, rank } = Astro.props;
 
 const hasEval = story.eval_status === 'done' && story.hcb_weighted_mean !== null;
 const meanColor = hasEval ? scoreToColor(story.hcb_weighted_mean) : '#555';
+// Classification can be a full paragraph — truncate to just the label for tooltips
+const classLabel = story.hcb_classification?.split(' — ')[0] || story.hcb_classification;
 
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
@@ -36,7 +38,7 @@ function timeAgo(unixTime: number): string {
   </td>
   <td valign="top" style="padding-right: 5px; width: 44px; text-align: center;">
     {hasEval ? (
-      <a href={`/item/${story.hn_id}`} title={`HRCB: ${formatScore(story.hcb_weighted_mean)} — ${story.hcb_classification}`}>
+      <a href={`/item/${story.hn_id}`} title={`HRCB: ${formatScore(story.hcb_weighted_mean)} — ${classLabel}`}>
         <span
           class="score-font"
           style={`color: ${meanColor}; font-size: 9pt; font-weight: bold;`}

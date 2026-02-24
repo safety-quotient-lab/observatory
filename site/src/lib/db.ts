@@ -9,6 +9,8 @@ export interface Story {
   hn_comments: number | null;
   hn_by: string | null;
   hn_time: number;
+  hn_type: string;
+  hn_text: string | null;
   content_type: string;
   hcb_weighted_mean: number | null;
   hcb_classification: string | null;
@@ -71,46 +73,75 @@ function scoreRowToScore(row: ScoreRow): Score {
 
 export type SortOption = 'time' | 'score_desc' | 'score_asc' | 'hn_points';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
+export type TypeOption = 'all' | 'ask' | 'show' | 'best';
 
-export async function getTopStories(db: D1Database, limit = 30): Promise<Story[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT * FROM stories ORDER BY hn_time DESC LIMIT ?`
-    )
-    .bind(limit)
-    .all<Story>();
-  return results;
+// --- Feed page: single JOIN query replaces N+1 ---
+
+interface FeedScoreRow {
+  hn_id: number;
+  section: string;
+  sort_order: number;
+  final: number | null;
 }
 
-export async function getFilteredStories(
+export interface StoryWithMiniScores extends Story {
+  miniScores: Score[];
+}
+
+export async function getFilteredStoriesWithScores(
   db: D1Database,
   sort: SortOption = 'time',
   filter: FilterOption = 'all',
-  limit = 500
-): Promise<Story[]> {
-  let where = '1=1';
+  type: TypeOption = 'all',
+  limit = 30,
+  offset = 0
+): Promise<StoryWithMiniScores[]> {
+  const conditions: string[] = ['1=1'];
   switch (filter) {
-    case 'evaluated': where = "eval_status = 'done'"; break;
-    case 'positive': where = "eval_status = 'done' AND hcb_weighted_mean > 0.05"; break;
-    case 'negative': where = "eval_status = 'done' AND hcb_weighted_mean < -0.05"; break;
-    case 'neutral': where = "eval_status = 'done' AND hcb_weighted_mean BETWEEN -0.05 AND 0.05"; break;
-    case 'pending': where = "eval_status IN ('pending', 'evaluating')"; break;
-    case 'failed': where = "eval_status IN ('failed', 'skipped')"; break;
+    case 'evaluated': conditions.push("s.eval_status = 'done'"); break;
+    case 'positive': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean > 0.05"); break;
+    case 'negative': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean < -0.05"); break;
+    case 'neutral': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05"); break;
+    case 'pending': conditions.push("s.eval_status IN ('pending', 'evaluating')"); break;
+    case 'failed': conditions.push("s.eval_status IN ('failed', 'skipped')"); break;
   }
 
-  let orderBy = 'hn_time DESC';
+  switch (type) {
+    case 'ask': conditions.push("s.hn_type = 'ask'"); break;
+    case 'show': conditions.push("s.hn_type = 'show'"); break;
+  }
+
+  const where = conditions.join(' AND ');
+
+  let orderBy = 's.hn_time DESC';
   switch (sort) {
-    case 'score_desc': orderBy = 'hcb_weighted_mean DESC NULLS LAST'; break;
-    case 'score_asc': orderBy = 'hcb_weighted_mean ASC NULLS LAST'; break;
-    case 'hn_points': orderBy = 'hn_score DESC NULLS LAST'; break;
+    case 'score_desc': orderBy = 's.hcb_weighted_mean DESC NULLS LAST'; break;
+    case 'score_asc': orderBy = 's.hcb_weighted_mean ASC NULLS LAST'; break;
+    case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
   }
 
-  const { results } = await db
-    .prepare(`SELECT * FROM stories WHERE ${where} ORDER BY ${orderBy} LIMIT ?`)
-    .bind(limit)
-    .all<Story>();
-  return results;
+  // Single query: stories only (excludes hcb_json and hn_text blobs).
+  // Heatmaps are only shown on detail pages, not in the feed — no need to fetch scores here.
+  const { results: storyRows } = await db
+    .prepare(
+      `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
+              hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
+              hcb_signal_sections, hcb_nd_count, eval_model, eval_prompt_hash,
+              eval_status, eval_error, evaluated_at, created_at
+       FROM stories s WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
+    )
+    .bind(limit, offset)
+    .all<Omit<Story, 'hcb_json' | 'hn_text'>>();
+
+  return storyRows.map(story => ({
+    ...story,
+    hn_text: null,
+    hcb_json: null,
+    miniScores: [],
+  }));
 }
+
+// --- Detail page ---
 
 export async function getStory(db: D1Database, hnId: number): Promise<StoryWithScores | null> {
   const story = await db
@@ -139,10 +170,11 @@ export async function getStoryScores(db: D1Database, hnId: number): Promise<Scor
   return results.map(scoreRowToScore);
 }
 
+// --- Article ranking ---
+
 export async function getArticleRanking(
   db: D1Database,
-  articleNum: number,
-  limit = 50
+  articleNum: number
 ): Promise<ArticleRankingRow[]> {
   const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
   const { results } = await db
@@ -154,13 +186,14 @@ export async function getArticleRanking(
        FROM scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
        WHERE sc.section = ? AND sc.final IS NOT NULL
-       ORDER BY sc.final DESC
-       LIMIT ?`
+       ORDER BY sc.final DESC`
     )
-    .bind(section, limit)
+    .bind(section)
     .all<ArticleRankingRow>();
   return results;
 }
+
+// --- Cron helpers ---
 
 export async function getPendingStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
@@ -171,6 +204,8 @@ export async function getPendingStories(db: D1Database, limit = 5): Promise<Stor
     .all<Story>();
   return results;
 }
+
+// --- Stats ---
 
 export async function getEvaluatedCount(db: D1Database): Promise<number> {
   const row = await db
@@ -325,16 +360,14 @@ export async function getDomainStats(db: D1Database, limit = 10): Promise<Domain
   return results;
 }
 
-export async function getQueueStories(db: D1Database, limit = 30): Promise<Story[]> {
+export async function getQueueStories(db: D1Database): Promise<Story[]> {
   const { results } = await db
     .prepare(
       `SELECT * FROM stories WHERE eval_status IN ('pending', 'evaluating')
        ORDER BY
          CASE eval_status WHEN 'evaluating' THEN 0 WHEN 'pending' THEN 1 END,
-         hn_time DESC
-       LIMIT ?`
+         hn_time DESC`
     )
-    .bind(limit)
     .all<Story>();
   return results;
 }
@@ -354,6 +387,13 @@ export async function getModelStats(db: D1Database): Promise<ModelStat[]> {
     )
     .all<ModelStat>();
   return results;
+}
+
+export async function getTodayEvalCount(db: D1Database): Promise<number> {
+  const row = await db
+    .prepare(`SELECT COUNT(*) as cnt FROM stories WHERE eval_status = 'done' AND evaluated_at >= date('now')`)
+    .first<{ cnt: number }>();
+  return row?.cnt ?? 0;
 }
 
 export async function getFailedStories(db: D1Database, limit = 10): Promise<Story[]> {

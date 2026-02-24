@@ -12,6 +12,9 @@ const { score, index } = Astro.props;
 const isND = score.final === null;
 const color = scoreToColor(score.final);
 const title = ARTICLE_TITLES[score.section] || score.section;
+
+const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low'};
+const DIRECTION_LABELS: Record<string, string> = {A: 'Advocacy', F: 'Framing', P: 'Practice', C: 'Coverage'};
 ---
 
 <details class="group border-b border-surface-3/50">
@@ -37,19 +40,17 @@ const title = ARTICLE_TITLES[score.section] || score.section;
       {score.evidence && (
         <span
           class="badge text-[10px]"
-          title={({H: 'High evidence', M: 'Medium evidence', L: 'Low evidence'} as Record<string, string>)[score.evidence] || score.evidence}
-          style={`background: ${evidenceColor(score.evidence)}20; color: ${evidenceColor(score.evidence)}; cursor: help;`}
+          style={`background: ${evidenceColor(score.evidence)}20; color: ${evidenceColor(score.evidence)};`}
         >
-          {score.evidence}
+          {EVIDENCE_LABELS[score.evidence] || score.evidence}
         </span>
       )}
       {score.directionality.map((d) => (
         <span
           class="badge text-[10px]"
-          title={({A: 'Advocacy', F: 'Framing', P: 'Practice', C: 'Coverage'} as Record<string, string>)[d] || d}
-          style={`background: ${directionalityColor(d)}20; color: ${directionalityColor(d)}; cursor: help;`}
+          style={`background: ${directionalityColor(d)}20; color: ${directionalityColor(d)};`}
         >
-          {d}
+          {DIRECTION_LABELS[d] || d}
         </span>
       ))}
     </div>
@@ -82,7 +83,7 @@ const title = ARTICLE_TITLES[score.section] || score.section;
           </div>
         </div>
         <div class="bg-surface-2 rounded px-3 py-2">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Context Mod.</div>
+          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Context Modifier</div>
           <div class="score-font text-sm" style={`color: ${scoreToColor(score.context_modifier)}`}>
             {formatScore(score.context_modifier)}
           </div>

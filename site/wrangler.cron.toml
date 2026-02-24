@@ -1,0 +1,17 @@
+name = "hn-hrcb-cron"
+main = "functions/cron.ts"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "udhr-hrcb"
+database_id = "d49c47bc-8107-4481-8aa1-6a9cf0b534c8"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+DAILY_EVAL_BUDGET = "50"
+
+# Secrets (set via `wrangler secret put --name hn-hrcb-cron`):
+# ANTHROPIC_API_KEY

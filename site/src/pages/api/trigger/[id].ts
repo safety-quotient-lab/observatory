@@ -15,9 +15,9 @@ export const POST: APIRoute = async ({ params, locals }) => {
   }
 
   const story = await db
-    .prepare(`SELECT hn_id, url, title, eval_status FROM stories WHERE hn_id = ?`)
+    .prepare(`SELECT hn_id, url, title, hn_text, eval_status FROM stories WHERE hn_id = ?`)
     .bind(hnId)
-    .first<{ hn_id: number; url: string | null; title: string; eval_status: string }>();
+    .first<{ hn_id: number; url: string | null; title: string; hn_text: string | null; eval_status: string }>();
 
   if (!story) {
     return new Response(JSON.stringify({ error: 'Story not found' }), { status: 404 });
@@ -33,7 +33,8 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
   // Stream progress via SSE
   const encoder = new TextEncoder();
-  const url = story.url || `https://news.ycombinator.com/item?id=${hnId}`;
+  const isSelfPost = !story.url && !!story.hn_text;
+  const evalUrl = story.url || `https://news.ycombinator.com/item?id=${hnId}`;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -47,48 +48,55 @@ export const POST: APIRoute = async ({ params, locals }) => {
         .bind(hnId)
         .run();
 
-      send('status', { step: 'fetching', message: `Fetching ${url}...` });
-
       try {
-        // Skip binary content
-        if (url.includes('.pdf') || url.includes('.zip') || url.includes('.tar')) {
-          await db
-            .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = 'Binary/unsupported content type' WHERE hn_id = ?`)
-            .bind(hnId)
-            .run();
-          send('error', { error: 'Unsupported content type' });
-          controller.close();
-          return;
-        }
-
-        // Fetch page content
         let pageContent: string;
-        try {
-          pageContent = await fetchUrlContent(url);
-        } catch (err) {
-          await db
-            .prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ?`)
-            .bind(`Fetch failed: ${err}`.slice(0, 500), hnId)
-            .run();
-          send('error', { error: `Failed to fetch URL: ${err}` });
-          controller.close();
-          return;
-        }
 
-        if (pageContent.length < 100) {
-          await db
-            .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = 'Page content too short' WHERE hn_id = ?`)
-            .bind(hnId)
-            .run();
-          send('error', { error: 'Page content too short' });
-          controller.close();
-          return;
-        }
+        if (isSelfPost) {
+          // Self-post: use hn_text directly, no fetch needed
+          pageContent = `${story.title}\n\n${story.hn_text}`;
+          send('status', { step: 'evaluating', message: `Self-post — using HN text (${pageContent.length.toLocaleString()} chars)...` });
+        } else {
+          send('status', { step: 'fetching', message: `Fetching ${evalUrl}...` });
 
-        send('status', { step: 'evaluating', message: `Calling Claude (${pageContent.length.toLocaleString()} chars)...` });
+          // Skip binary content
+          if (evalUrl.includes('.pdf') || evalUrl.includes('.zip') || evalUrl.includes('.tar')) {
+            await db
+              .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = 'Binary/unsupported content type' WHERE hn_id = ?`)
+              .bind(hnId)
+              .run();
+            send('error', { error: 'Unsupported content type' });
+            controller.close();
+            return;
+          }
+
+          // Fetch page content
+          try {
+            pageContent = await fetchUrlContent(evalUrl);
+          } catch (err) {
+            await db
+              .prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ?`)
+              .bind(`Fetch failed: ${err}`.slice(0, 500), hnId)
+              .run();
+            send('error', { error: `Failed to fetch URL: ${err}` });
+            controller.close();
+            return;
+          }
+
+          if (pageContent.length < 100) {
+            await db
+              .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = 'Page content too short' WHERE hn_id = ?`)
+              .bind(hnId)
+              .run();
+            send('error', { error: 'Page content too short' });
+            controller.close();
+            return;
+          }
+
+          send('status', { step: 'evaluating', message: `Calling Claude (${pageContent.length.toLocaleString()} chars)...` });
+        }
 
         // Call Claude for evaluation
-        const evalCall = await callClaude(apiKey, url, pageContent);
+        const evalCall = await callClaude(apiKey, evalUrl, pageContent, isSelfPost);
 
         send('status', { step: 'writing', message: 'Writing results...' });
 

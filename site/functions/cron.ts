@@ -1,14 +1,22 @@
 /**
- * Cron Worker: Fetches HN top stories, evaluates pending ones via Claude Haiku,
- * and writes results to D1.
+ * Cron Worker v2: Smart diff-based HN fetching + HRCB evaluation.
  *
- * Triggered by Cloudflare cron every 10 minutes.
- * Can also be invoked manually via: wrangler dev --test-scheduled
+ * Changes from v1:
+ * - Fetches topstories + askstories + showstories (3 list calls)
+ * - Diffs against DB — only fetches details for genuinely new items
+ * - Tags stories with hn_type (story/ask/show) from API source
+ * - Stores hn_text for self-posts, evaluates them directly
+ * - Refreshes hn_score/hn_comments via /updates endpoint
+ * - Uses prompt caching (system prompt as cached block)
+ * - Daily budget cap on evaluations
+ *
+ * Net: ~5 HTTP calls/cycle instead of ~200. Self-posts no longer skipped.
  */
 
 interface Env {
   DB: D1Database;
   ANTHROPIC_API_KEY: string;
+  DAILY_EVAL_BUDGET?: string;
 }
 
 interface HNItem {
@@ -16,6 +24,7 @@ interface HNItem {
   type: string;
   title?: string;
   url?: string;
+  text?: string;
   score?: number;
   descendants?: number;
   by?: string;
@@ -76,6 +85,8 @@ const ALL_SECTIONS = [
   'Preamble',
   ...Array.from({ length: 30 }, (_, i) => `Article ${i + 1}`),
 ];
+
+const EVAL_MODEL = 'claude-haiku-4-5-20251001';
 
 const METHODOLOGY_SYSTEM_PROMPT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Your task is to assess the content of any URL provided by the user against the Universal Declaration of Human Rights (UDHR), following the methodology below exactly. As a Fair Witness, you report only what you directly observe — no inference beyond the evidence, no assumptions, no editorializing.
 
@@ -214,6 +225,8 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
   "adversarial_gap": { "per_article": [], "mean_ag": null, "ag_coverage": 0, "ag_classification": null }
 }`;
 
+// --- Helpers ---
+
 function extractDomain(url: string): string | null {
   try {
     return new URL(url).hostname;
@@ -222,16 +235,10 @@ function extractDomain(url: string): string | null {
   }
 }
 
-async function fetchHNTopStories(): Promise<number[]> {
-  const res = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
-  if (!res.ok) throw new Error(`HN API error: ${res.status}`);
-  return (await res.json()) as number[];
-}
-
-async function fetchHNItem(id: number): Promise<HNItem | null> {
-  const res = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
-  if (!res.ok) return null;
-  return (await res.json()) as HNItem;
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
+  return (await res.json()) as T;
 }
 
 async function fetchUrlContent(url: string): Promise<string> {
@@ -247,20 +254,28 @@ async function fetchUrlContent(url: string): Promise<string> {
     });
     if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
     const text = await res.text();
-    // Truncate to ~30k chars to stay within token limits
     return text.slice(0, 30000);
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function evaluateUrl(apiKey: string, url: string, pageContent: string): Promise<EvalResult> {
+async function evaluateContent(
+  apiKey: string,
+  url: string,
+  content: string,
+  isSelfPost: boolean
+): Promise<EvalResult> {
   const today = new Date().toISOString().slice(0, 10);
+  const contentLabel = isSelfPost
+    ? 'Here is the self-post text from Hacker News:'
+    : 'Here is the page content (truncated):';
+
   const userMessage = `Evaluate this URL: ${url}
 
-Here is the page content (truncated):
+${contentLabel}
 
-${pageContent}
+${content}
 
 Today's date: ${today}
 
@@ -274,9 +289,15 @@ Output ONLY the JSON evaluation object, no other text.`;
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: EVAL_MODEL,
       max_tokens: 8192,
-      system: METHODOLOGY_SYSTEM_PROMPT,
+      system: [
+        {
+          type: 'text',
+          text: METHODOLOGY_SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
       messages: [{ role: 'user', content: userMessage }],
     }),
   });
@@ -293,7 +314,6 @@ Output ONLY the JSON evaluation object, no other text.`;
   const textBlock = data.content.find((b) => b.type === 'text');
   if (!textBlock?.text) throw new Error('No text in API response');
 
-  // Try to parse the JSON response (may have markdown fences)
   let jsonText = textBlock.text.trim();
   if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
@@ -302,30 +322,9 @@ Output ONLY the JSON evaluation object, no other text.`;
   return JSON.parse(jsonText) as EvalResult;
 }
 
-async function insertStory(db: D1Database, item: HNItem): Promise<void> {
-  const domain = item.url ? extractDomain(item.url) : null;
-  await db
-    .prepare(
-      `INSERT OR IGNORE INTO stories (hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, eval_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
-    )
-    .bind(
-      item.id,
-      item.url || null,
-      item.title || 'Untitled',
-      domain,
-      item.score || null,
-      item.descendants || null,
-      item.by || null,
-      item.time || Math.floor(Date.now() / 1000)
-    )
-    .run();
-}
-
 async function writeEvalResult(db: D1Database, hnId: number, result: EvalResult): Promise<void> {
   const agg = result.aggregates;
 
-  // Update story with evaluation results
   await db
     .prepare(
       `UPDATE stories SET
@@ -335,7 +334,9 @@ async function writeEvalResult(db: D1Database, hnId: number, result: EvalResult)
         hcb_signal_sections = ?,
         hcb_nd_count = ?,
         hcb_json = ?,
+        eval_model = ?,
         eval_status = 'done',
+        eval_error = NULL,
         evaluated_at = datetime('now')
        WHERE hn_id = ?`
     )
@@ -346,12 +347,12 @@ async function writeEvalResult(db: D1Database, hnId: number, result: EvalResult)
       agg.signal_sections,
       agg.nd_count,
       JSON.stringify(result),
+      EVAL_MODEL,
       hnId
     )
     .run();
 
-  // Insert score rows
-  const stmts = result.scores.map((score, _i) => {
+  const stmts = result.scores.map((score) => {
     const sortOrder = ALL_SECTIONS.indexOf(score.section);
     return db
       .prepare(
@@ -371,7 +372,6 @@ async function writeEvalResult(db: D1Database, hnId: number, result: EvalResult)
       );
   });
 
-  // Batch execute score inserts
   if (stmts.length > 0) {
     await db.batch(stmts);
   }
@@ -379,21 +379,19 @@ async function writeEvalResult(db: D1Database, hnId: number, result: EvalResult)
 
 async function markFailed(db: D1Database, hnId: number, error: string): Promise<void> {
   await db
-    .prepare(
-      `UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ?`
-    )
+    .prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ?`)
     .bind(error.slice(0, 500), hnId)
     .run();
 }
 
 async function markSkipped(db: D1Database, hnId: number, reason: string): Promise<void> {
   await db
-    .prepare(
-      `UPDATE stories SET eval_status = 'skipped', eval_error = ? WHERE hn_id = ?`
-    )
+    .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = ? WHERE hn_id = ?`)
     .bind(reason, hnId)
     .run();
 }
+
+// --- Main cron handler ---
 
 export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
@@ -405,98 +403,226 @@ export default {
       return;
     }
 
-    // Step 1: Fetch top stories from HN
-    console.log('Fetching HN top stories...');
-    let topIds: number[];
-    try {
-      topIds = await fetchHNTopStories();
-    } catch (err) {
-      console.error('Failed to fetch HN top stories:', err);
+    // Budget check
+    const dailyBudget = parseInt(env.DAILY_EVAL_BUDGET || '50', 10);
+    const todayCount = await db
+      .prepare(`SELECT COUNT(*) as cnt FROM stories WHERE eval_status = 'done' AND evaluated_at >= date('now')`)
+      .first<{ cnt: number }>();
+    const evalsToday = todayCount?.cnt ?? 0;
+
+    if (evalsToday >= dailyBudget) {
+      console.log(`Daily budget reached: ${evalsToday}/${dailyBudget}. Skipping.`);
       return;
     }
 
-    // Step 2: Insert new stories
-    const top200 = topIds.slice(0, 200);
-    let insertedCount = 0;
+    const remainingBudget = dailyBudget - evalsToday;
+    console.log(`Budget: ${evalsToday}/${dailyBudget}, ${remainingBudget} remaining`);
 
-    for (const id of top200) {
-      try {
-        const item = await fetchHNItem(id);
-        if (item && item.type === 'story' && item.title) {
-          await insertStory(db, item);
-          insertedCount++;
-        }
-      } catch (err) {
-        console.error(`Failed to fetch HN item ${id}:`, err);
+    // ─── STEP 1: Fetch story ID lists from HN API (3 calls) ───
+
+    let topIds: number[] = [];
+    let askIds: number[] = [];
+    let showIds: number[] = [];
+
+    try {
+      [topIds, askIds, showIds] = await Promise.all([
+        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/topstories.json'),
+        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/askstories.json'),
+        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/showstories.json'),
+      ]);
+    } catch (err) {
+      console.error('Failed to fetch HN story lists:', err);
+      return;
+    }
+
+    // Build type map: which list(s) each ID appeared in
+    const typeMap = new Map<number, string>();
+    for (const id of topIds) typeMap.set(id, 'story');
+    for (const id of showIds) typeMap.set(id, 'show'); // override if in both
+    for (const id of askIds) typeMap.set(id, 'ask');    // ask takes priority
+
+    const allIds = [...new Set([...topIds.slice(0, 200), ...askIds, ...showIds])];
+    console.log(`HN lists: ${topIds.length} top, ${askIds.length} ask, ${showIds.length} show → ${allIds.length} unique`);
+
+    // ─── STEP 2: Diff against DB — find genuinely new IDs ───
+
+    const { results: existingRows } = await db
+      .prepare(
+        `SELECT hn_id FROM stories WHERE hn_id IN (${allIds.map(() => '?').join(',')})`,
+      )
+      .bind(...allIds)
+      .all<{ hn_id: number }>();
+
+    const existingIds = new Set(existingRows.map((r) => r.hn_id));
+    const newIds = allIds.filter((id) => !existingIds.has(id));
+    console.log(`${newIds.length} new stories to fetch (${existingIds.size} already in DB)`);
+
+    // ─── STEP 3: Fetch details only for new IDs ───
+
+    let insertedCount = 0;
+    // Fetch in parallel batches of 20
+    for (let i = 0; i < newIds.length; i += 20) {
+      const batch = newIds.slice(i, i + 20);
+      const items = await Promise.all(
+        batch.map(async (id): Promise<HNItem | null> => {
+          try {
+            return await fetchJson<HNItem>(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      const stmts = items
+        .filter((item): item is HNItem => item !== null && item.type === 'story' && !!item.title)
+        .map((item) => {
+          const domain = item.url ? extractDomain(item.url) : null;
+          const hnType = typeMap.get(item.id) || 'story';
+          return db
+            .prepare(
+              `INSERT OR IGNORE INTO stories (hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, hn_type, hn_text, eval_status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+            )
+            .bind(
+              item.id,
+              item.url || null,
+              item.title || 'Untitled',
+              domain,
+              item.score || null,
+              item.descendants || null,
+              item.by || null,
+              item.time || Math.floor(Date.now() / 1000),
+              hnType,
+              item.text || null
+            );
+        });
+
+      if (stmts.length > 0) {
+        await db.batch(stmts);
+        insertedCount += stmts.length;
       }
     }
-    console.log(`Inserted/checked ${insertedCount} stories`);
+    console.log(`Inserted ${insertedCount} new stories`);
 
-    // Step 3: Pick pending stories to evaluate
+    // ─── STEP 4: Refresh scores/comments via /updates ───
+
+    try {
+      const updates = await fetchJson<{ items: number[]; profiles: string[] }>(
+        'https://hacker-news.firebaseio.com/v0/updates.json'
+      );
+
+      // Only refresh items we have in our DB
+      const updateIds = updates.items.filter((id) => existingIds.has(id));
+      if (updateIds.length > 0) {
+        // Fetch updated items in parallel (max 20)
+        const toRefresh = updateIds.slice(0, 20);
+        const refreshed = await Promise.all(
+          toRefresh.map(async (id): Promise<HNItem | null> => {
+            try {
+              return await fetchJson<HNItem>(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
+            } catch {
+              return null;
+            }
+          })
+        );
+
+        const refreshStmts = refreshed
+          .filter((item): item is HNItem => item !== null)
+          .map((item) =>
+            db
+              .prepare(`UPDATE stories SET hn_score = ?, hn_comments = ? WHERE hn_id = ?`)
+              .bind(item.score || null, item.descendants || null, item.id)
+          );
+
+        if (refreshStmts.length > 0) {
+          await db.batch(refreshStmts);
+          console.log(`Refreshed scores for ${refreshStmts.length} stories`);
+        }
+      }
+    } catch (err) {
+      console.error('Score refresh failed (non-fatal):', err);
+    }
+
+    // ─── STEP 5: Evaluate pending stories ───
+
+    const batchSize = Math.min(5, remainingBudget);
+    // Fetch pending stories — now includes self-posts (url IS NULL but hn_text IS NOT NULL)
     const { results: pending } = await db
       .prepare(
-        `SELECT * FROM stories WHERE eval_status = 'pending' AND url IS NOT NULL ORDER BY hn_time DESC LIMIT 5`
+        `SELECT * FROM stories
+         WHERE eval_status = 'pending'
+           AND (url IS NOT NULL OR hn_text IS NOT NULL)
+         ORDER BY hn_time DESC LIMIT ?`
       )
-      .all<{ hn_id: number; url: string; title: string }>();
+      .bind(batchSize)
+      .all<{
+        hn_id: number;
+        url: string | null;
+        title: string;
+        hn_text: string | null;
+      }>();
 
     console.log(`${pending.length} pending stories to evaluate`);
 
-    // Step 4: Evaluate each
     for (const story of pending) {
-      console.log(`Evaluating: ${story.title} (${story.url})`);
+      console.log(`Evaluating: ${story.title}`);
 
-      // Mark as evaluating
       await db
         .prepare(`UPDATE stories SET eval_status = 'evaluating' WHERE hn_id = ?`)
         .bind(story.hn_id)
         .run();
 
       try {
-        // Skip certain URLs that won't work well
-        const url = story.url;
-        if (!url || url.includes('.pdf') || url.includes('.zip') || url.includes('.tar')) {
+        const isSelfPost = !story.url && !!story.hn_text;
+        const evalUrl = story.url || `https://news.ycombinator.com/item?id=${story.hn_id}`;
+
+        // Skip binary content
+        if (story.url && (story.url.includes('.pdf') || story.url.includes('.zip') || story.url.includes('.tar'))) {
           await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
           continue;
         }
 
-        // Fetch page content
-        let pageContent: string;
-        try {
-          pageContent = await fetchUrlContent(url);
-        } catch (err) {
-          await markFailed(db, story.hn_id, `Fetch failed: ${err}`);
+        let content: string;
+
+        if (isSelfPost) {
+          // Use HN text directly — no HTTP fetch needed
+          content = story.hn_text!;
+        } else {
+          // Fetch page content
+          try {
+            content = await fetchUrlContent(story.url!);
+          } catch (err) {
+            await markFailed(db, story.hn_id, `Fetch failed: ${err}`);
+            continue;
+          }
+        }
+
+        if (content.length < 50) {
+          await markSkipped(db, story.hn_id, 'Content too short');
           continue;
         }
 
-        if (pageContent.length < 100) {
-          await markSkipped(db, story.hn_id, 'Page content too short');
-          continue;
-        }
-
-        // Call Claude Haiku for evaluation
-        const result = await evaluateUrl(apiKey, url, pageContent);
-
-        // Write results to D1
+        const result = await evaluateContent(apiKey, evalUrl, content, isSelfPost);
         await writeEvalResult(db, story.hn_id, result);
+
         console.log(`Done: ${story.title} → ${result.aggregates.classification} (${result.aggregates.weighted_mean})`);
       } catch (err) {
-        console.error(`Failed to evaluate ${story.title}:`, err);
+        console.error(`Failed: ${story.title}:`, err);
         await markFailed(db, story.hn_id, `${err}`);
       }
     }
 
-    // Also skip stories without URLs (Ask HN, Show HN without links)
+    // Skip self-posts with no text AND no URL (truly empty)
     await db
       .prepare(
-        `UPDATE stories SET eval_status = 'skipped', eval_error = 'No URL (self-post)'
-         WHERE eval_status = 'pending' AND url IS NULL`
+        `UPDATE stories SET eval_status = 'skipped', eval_error = 'No URL and no text'
+         WHERE eval_status = 'pending' AND url IS NULL AND (hn_text IS NULL OR LENGTH(hn_text) < 50)`
       )
       .run();
 
     console.log('Cron cycle complete');
   },
 
-  // Also handle HTTP requests (for manual testing)
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     if (new URL(request.url).pathname === '/trigger') {
       ctx.waitUntil(
@@ -504,6 +630,6 @@ export default {
       );
       return new Response('Cron triggered', { status: 200 });
     }
-    return new Response('HN HRCB Cron Worker', { status: 200 });
+    return new Response('HN HRCB Cron Worker v2', { status: 200 });
   },
 };

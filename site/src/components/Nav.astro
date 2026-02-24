@@ -1,5 +1,6 @@
 ---
 const currentPath = Astro.url.pathname;
+const currentType = Astro.url.searchParams.get('type') || '';
 ---
 
 <table style="background-color: #ff6600; padding: 2px;" width="100%" cellpadding="0" cellspacing="0">
@@ -17,15 +18,15 @@ const currentPath = Astro.url.pathname;
           <a href="/" style="color: black; text-decoration: none;">HN HRCB</a>
         </b>
         <span style="margin-left: 10px; font-size: 10pt;">
-          <a href="/new" style="color: black;">new</a> |
+          <a href="/" style={`color: black;${currentPath === '/' && !currentType ? ' font-weight: bold;' : ''}`}>new</a> |
           <a href="https://news.ycombinator.com/past" style="color: black;">past</a> |
           <a href="https://news.ycombinator.com/newcomments" style="color: black;">comments</a> |
-          <a href="/ask" style="color: black;">ask</a> |
-          <a href="/show" style="color: black;">show</a> |
+          <a href="/?type=ask" style={`color: black;${currentType === 'ask' ? ' font-weight: bold;' : ''}`}>ask</a> |
+          <a href="/?type=show" style={`color: black;${currentType === 'show' ? ' font-weight: bold;' : ''}`}>show</a> |
           <a href="https://news.ycombinator.com/jobs" style="color: black;">jobs</a> |
-          <a href="/article/19" style="color: black;">by article</a> |
-          <a href="/dashboard" style="color: black;">dashboard</a> |
-          <a href="/about" style="color: black;">about hrcb</a>
+          <a href="/article/19" style={`color: black;${currentPath.startsWith('/article') ? ' font-weight: bold;' : ''}`}>by article</a> |
+          <a href="/dashboard" style={`color: black;${currentPath === '/dashboard' ? ' font-weight: bold;' : ''}`}>dashboard</a> |
+          <a href="/about" style={`color: black;${currentPath === '/about' ? ' font-weight: bold;' : ''}`}>about hrcb</a>
         </span>
       </span>
     </td>

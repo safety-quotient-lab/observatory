@@ -1,50 +1,33 @@
-export const ARTICLE_TITLES: Record<string, string> = {
-  'Preamble': 'Preamble',
-  'Article 1': 'Freedom, Equality, Brotherhood',
-  'Article 2': 'Non-Discrimination',
-  'Article 3': 'Life, Liberty, Security',
-  'Article 4': 'No Slavery',
-  'Article 5': 'No Torture',
-  'Article 6': 'Legal Personhood',
-  'Article 7': 'Equality Before Law',
-  'Article 8': 'Right to Remedy',
-  'Article 9': 'No Arbitrary Detention',
-  'Article 10': 'Fair Hearing',
-  'Article 11': 'Presumption of Innocence',
-  'Article 12': 'Privacy',
-  'Article 13': 'Freedom of Movement',
-  'Article 14': 'Asylum',
-  'Article 15': 'Nationality',
-  'Article 16': 'Marriage & Family',
-  'Article 17': 'Property',
-  'Article 18': 'Freedom of Thought',
-  'Article 19': 'Freedom of Expression',
-  'Article 20': 'Assembly & Association',
-  'Article 21': 'Political Participation',
-  'Article 22': 'Social Security',
-  'Article 23': 'Work & Equal Pay',
-  'Article 24': 'Rest & Leisure',
-  'Article 25': 'Standard of Living',
-  'Article 26': 'Education',
-  'Article 27': 'Cultural Participation',
-  'Article 28': 'Social & International Order',
-  'Article 29': 'Duties to Community',
-  'Article 30': 'No Destruction of Rights',
-};
+import udhrData from './udhr.json';
 
-export const ARTICLE_GROUPS: Record<string, string[]> = {
-  'Foundation': ['Preamble', 'Article 1', 'Article 2'],
-  'Security': ['Article 3', 'Article 4', 'Article 5'],
-  'Legal': ['Article 6', 'Article 7', 'Article 8', 'Article 9', 'Article 10', 'Article 11'],
-  'Privacy & Movement': ['Article 12', 'Article 13', 'Article 14', 'Article 15'],
-  'Personal': ['Article 16', 'Article 17', 'Article 18'],
-  'Expression': ['Article 19', 'Article 20', 'Article 21'],
-  'Economic & Social': ['Article 22', 'Article 23', 'Article 24', 'Article 25'],
-  'Cultural': ['Article 26', 'Article 27'],
-  'Order & Duties': ['Article 28', 'Article 29', 'Article 30'],
-};
+export interface UdhrSection {
+  id: string;
+  number: number;
+  title: string;
+  shortTitle: string;
+  group: string;
+  text: string;
+}
 
-export const ALL_SECTIONS = [
-  'Preamble',
-  ...Array.from({ length: 30 }, (_, i) => `Article ${i + 1}`),
-];
+export const UDHR = udhrData;
+export const SECTIONS: UdhrSection[] = udhrData.sections;
+
+export const ARTICLE_TITLES: Record<string, string> = Object.fromEntries(
+  SECTIONS.map((s) => [s.id, s.title])
+);
+
+export const ARTICLE_TEXT: Record<string, string> = Object.fromEntries(
+  SECTIONS.map((s) => [s.id, s.text])
+);
+
+export const ARTICLE_GROUPS: Record<string, string[]> = {};
+for (const s of SECTIONS) {
+  if (!ARTICLE_GROUPS[s.group]) ARTICLE_GROUPS[s.group] = [];
+  ARTICLE_GROUPS[s.group].push(s.id);
+}
+
+export const ALL_SECTIONS = SECTIONS.map((s) => s.id);
+
+export function getSection(num: number): UdhrSection | undefined {
+  return SECTIONS.find((s) => s.number === num);
+}

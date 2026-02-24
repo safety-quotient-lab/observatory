@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { scoreToColor, formatScore } from '../../lib/colors';
-import { ARTICLE_TITLES, ALL_SECTIONS } from '../../lib/udhr';
+import { ARTICLE_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
 import { getArticleRanking } from '../../lib/db';
 
 const { n } = Astro.params;
@@ -13,15 +13,36 @@ if (isNaN(articleNum) || articleNum < 0 || articleNum > 30) {
 
 const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
 const articleTitle = ARTICLE_TITLES[section] || section;
+const udhrSection = getSection(articleNum);
 
 const db = Astro.locals.runtime.env.DB;
-const rankings = await getArticleRanking(db, articleNum, 100);
+const rankings = await getArticleRanking(db, articleNum);
 
 const prevNum = articleNum > 0 ? articleNum - 1 : null;
 const nextNum = articleNum < 30 ? articleNum + 1 : null;
+
+const jsonLd = udhrSection ? {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  name: `${section}: ${articleTitle}`,
+  headline: `UDHR ${section} — ${articleTitle}`,
+  description: udhrSection.text.slice(0, 200) + (udhrSection.text.length > 200 ? '...' : ''),
+  url: `${Astro.url.origin}/article/${articleNum}`,
+  isPartOf: {
+    '@type': 'Legislation',
+    name: 'Universal Declaration of Human Rights',
+    legislationIdentifier: 'A/RES/217(III)',
+    datePublished: '1948-12-10',
+    legislationPassedBy: {
+      '@type': 'Organization',
+      name: 'United Nations General Assembly',
+    },
+  },
+} : null;
 ---
 
 <Base title={`${section}: ${articleTitle} — Rankings`}>
+  {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
   {/* Header */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
@@ -49,15 +70,32 @@ const nextNum = articleNum < 30 ? articleNum + 1 : null;
     </tr>
   </table>
 
+  {/* UDHR Article Text */}
+  {udhrSection && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+            UDHR Text
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              {udhrSection.group}
+            </span>
+          </div>
+          <div style="color: #aaa; font-size: 9pt; line-height: 1.6; white-space: pre-line;">{udhrSection.text}</div>
+        </td>
+      </tr>
+    </table>
+  )}
+
   {rankings.length > 0 ? (
     <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 9pt;">
       <tr style="color: #828282; font-size: 8pt;">
         <td width="30">#</td>
         <td width="60" align="center">Score</td>
         <td>Story</td>
-        <td width="50" align="center" title="Editorial — what the content says" style="cursor: help;">E</td>
-        <td width="50" align="center" title="Structural — what the site does" style="cursor: help;">S</td>
-        <td width="40" align="center" title="Evidence strength (High, Medium, Low)" style="cursor: help;">Ev.</td>
+        <td width="60" align="center" title="Editorial — what the content says" style="cursor: help;">Editorial</td>
+        <td width="60" align="center" title="Structural — what the site does" style="cursor: help;">Structural</td>
+        <td width="60" align="center" title="Evidence strength (High, Medium, Low)" style="cursor: help;">Evidence</td>
         <td width="60" align="center">Overall</td>
       </tr>
       {rankings.map((row, i) => (
@@ -80,9 +118,9 @@ const nextNum = articleNum < 30 ? articleNum + 1 : null;
           <td align="center" class="score-font" style={`color: ${scoreToColor(row.structural)}; font-size: 8pt;`}>
             {formatScore(row.structural)}
           </td>
-          <td align="center" style="color: #828282; font-size: 8pt; cursor: help;"
-              title={row.evidence ? ({H: 'High evidence', M: 'Medium evidence', L: 'Low evidence'} as Record<string, string>)[row.evidence] || row.evidence : ''}
-          >{row.evidence || ''}</td>
+          <td align="center" style="color: #828282; font-size: 8pt;">
+            {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
+          </td>
           <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_weighted_mean)}; font-size: 8pt;`}>
             {formatScore(row.hcb_weighted_mean)}
           </td>

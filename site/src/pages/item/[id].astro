@@ -34,6 +34,50 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
   AD: 'Advertising', AC: 'Academic', MX: 'Mixed',
 };
 
+const siteUrl = Astro.url.origin;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Review',
+  name: `HRCB Evaluation: ${storyData.title}`,
+  description: `Human Rights Compatibility Bias evaluation of "${storyData.title}" against the UN Universal Declaration of Human Rights. Classification: ${aggregates.classification}. Score: ${formatScore(aggregates.weighted_mean)}.`,
+  url: `${siteUrl}/item/${storyData.hn_id}`,
+  datePublished: storyData.evaluated_at || undefined,
+  author: {
+    '@type': 'Organization',
+    name: 'HN HRCB',
+    url: siteUrl,
+  },
+  itemReviewed: {
+    '@type': 'CreativeWork',
+    name: storyData.title,
+    url: storyData.url || `https://news.ycombinator.com/item?id=${storyData.hn_id}`,
+    ...(storyData.domain && { publisher: { '@type': 'Organization', name: storyData.domain } }),
+    ...(storyData.hn_by && { author: { '@type': 'Person', name: storyData.hn_by } }),
+    datePublished: new Date(storyData.hn_time * 1000).toISOString(),
+  },
+  reviewRating: {
+    '@type': 'Rating',
+    ratingValue: aggregates.weighted_mean,
+    bestRating: 1.0,
+    worstRating: -1.0,
+    ratingExplanation: `HRCB ${aggregates.classification} — evaluated against ${aggregates.signal_sections} of 31 UDHR provisions using methodology v${evaluation.methodology}`,
+  },
+  reviewBody: `Content type: ${CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}. ${aggregates.signal_sections} sections scored, ${aggregates.nd_count} with no data. Volatility: ${aggregates.volatility.label} (${aggregates.volatility.value.toFixed(2)}).`,
+  about: {
+    '@type': 'Legislation',
+    name: 'Universal Declaration of Human Rights',
+    legislationIdentifier: 'A/RES/217(III)',
+    datePublished: '1948-12-10',
+    legislationPassedBy: {
+      '@type': 'Organization',
+      name: 'United Nations General Assembly',
+    },
+  },
+};
+
+const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low', ND: 'No Data'};
+
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
   if (seconds < 60) return `${seconds} seconds ago`;
@@ -46,7 +90,13 @@ function timeAgo(unixTime: number): string {
 }
 ---
 
-<Base title={`${storyData.title} — HRCB`}>
+<Base
+  title={`${storyData.title} — HRCB`}
+  ogTitle={`${formatScore(aggregates.weighted_mean)} ${storyData.title}`}
+  ogDescription={`HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}`}
+  ogUrl={`${siteUrl}/item/${storyData.hn_id}`}
+>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   {/* Story header - HN style */}
   <table cellpadding="0" cellspacing="0" width="100%">
     <tr class="athing">
@@ -112,7 +162,7 @@ function timeAgo(unixTime: number): string {
           <span><span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 2px;"></span> Negative</span>
           <span><span style="display: inline-block; width: 8px; height: 8px; background: #555; border-radius: 2px;"></span> Neutral</span>
           <span><span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 2px;"></span> Positive</span>
-          <span title="No Data — insufficient evidence to score" style="cursor: help;"><span style="display: inline-block; width: 8px; height: 8px; background: #2a2a35; border-radius: 2px;"></span> ND</span>
+          <span title="Insufficient evidence to score"><span style="display: inline-block; width: 8px; height: 8px; background: #2a2a35; border-radius: 2px;"></span> No Data</span>
         </div>
       </td>
     </tr>
@@ -140,7 +190,7 @@ function timeAgo(unixTime: number): string {
             <tr>
               <td style="color: #666;">Signal</td>
               <td class="score-font" style="color: #ccc;">{aggregates.signal_sections}</td>
-              <td style="color: #666; cursor: help;" title="No Data — articles with insufficient evidence to score">ND</td>
+              <td style="color: #666;" title="Articles with insufficient evidence to score">No Data</td>
               <td class="score-font" style="color: #666;">{aggregates.nd_count}</td>
             </tr>
             <tr>
@@ -152,22 +202,24 @@ function timeAgo(unixTime: number): string {
             <tr>
               <td style="color: #666;">Channels</td>
               <td colspan="3" class="score-font">
-                <span style="color: #60a5fa; cursor: help;" title="Editorial — what the content says">E:{evaluation.channel_weights.editorial}</span>
-                <span style="color: #22d3ee; margin-left: 6px; cursor: help;" title="Structural — what the site does">S:{evaluation.channel_weights.structural}</span>
+                <span style="color: #60a5fa;" title="What the content says">Editorial: {evaluation.channel_weights.editorial}</span>
+                <span style="color: #22d3ee; margin-left: 6px;" title="What the site does">Structural: {evaluation.channel_weights.structural}</span>
               </td>
             </tr>
           </table>
           <div style="margin-top: 6px;">
             <span style="color: #666; font-size: 7pt;">Evidence: </span>
-            {Object.entries(aggregates.evidence_profile).map(([key, count]) => (
-              <span
-                class="badge"
-                title={({H: 'High evidence', M: 'Medium evidence', L: 'Low evidence', ND: 'No data'} as Record<string, string>)[key] || key}
-                style={`background: ${evidenceColor(key === 'ND' ? null : key)}30; color: ${evidenceColor(key === 'ND' ? null : key)}; font-size: 7pt; margin-right: 3px; cursor: help;`}
-              >
-                {key}:{count}
-              </span>
-            ))}
+            {Object.entries(aggregates.evidence_profile).map(([key, count]) => {
+              const label = EVIDENCE_LABELS[key] || key;
+              return (
+                <span
+                  class="badge"
+                  style={`background: ${evidenceColor(key === 'ND' ? null : key)}30; color: ${evidenceColor(key === 'ND' ? null : key)}; font-size: 7pt; margin-right: 3px;`}
+                >
+                  {label}: {count}
+                </span>
+              );
+            })}
           </div>
         </div>
       </td>

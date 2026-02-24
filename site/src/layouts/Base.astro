@@ -6,9 +6,18 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogUrl?: string;
 }
 
-const { title, description = 'HN HRCB — Hacker News stories scored against the UN Universal Declaration of Human Rights' } = Astro.props;
+const {
+  title,
+  description = 'HN HRCB — Hacker News stories scored against the UN Universal Declaration of Human Rights',
+  ogTitle,
+  ogDescription,
+  ogUrl,
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -19,6 +28,14 @@ const { title, description = 'HN HRCB — Hacker News stories scored against the
     <meta name="description" content={description} />
     <title>{title} | HN HRCB</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="HN HRCB" />
+    <meta property="og:title" content={ogTitle || title} />
+    <meta property="og:description" content={ogDescription || description} />
+    {ogUrl && <meta property="og:url" content={ogUrl} />}
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={ogTitle || title} />
+    <meta name="twitter:description" content={ogDescription || description} />
   </head>
   <body>
     <center>

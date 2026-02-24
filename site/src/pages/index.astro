@@ -1,42 +1,49 @@
 ---
 import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
-import { getFilteredStories, getStoryScores, getEvaluatedCount } from '../lib/db';
-import type { SortOption, FilterOption } from '../lib/db';
-import type { Score } from '../lib/types';
+import { getFilteredStoriesWithScores, getEvaluatedCount } from '../lib/db';
+import type { SortOption, FilterOption, TypeOption } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
 const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'time') as SortOption;
 const filter = (url.searchParams.get('filter') || 'all') as FilterOption;
+const type = (url.searchParams.get('type') || 'all') as TypeOption;
+const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
 const validSorts: SortOption[] = ['time', 'score_desc', 'score_asc', 'hn_points'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
+const validTypes: TypeOption[] = ['all', 'ask', 'show'];
 const safeSort = validSorts.includes(sort) ? sort : 'time';
 const safeFilter = validFilters.includes(filter) ? filter : 'all';
+const safeType = validTypes.includes(type) ? type : 'all';
 
-const stories = await getFilteredStories(db, safeSort, safeFilter, 500);
+const PER_PAGE = 30;
+const offset = (page - 1) * PER_PAGE;
+
+// Single JOIN query: stories + scores in one round-trip
+const stories = await getFilteredStoriesWithScores(db, safeSort, safeFilter, safeType, PER_PAGE + 1, offset);
+const hasMore = stories.length > PER_PAGE;
+const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
+
 const evaluatedCount = await getEvaluatedCount(db);
-
-// Fetch scores for evaluated stories (for mini heatmaps)
-const storyScoresMap = new Map<number, Score[]>();
-for (const story of stories) {
-  if (story.eval_status === 'done') {
-    const scores = await getStoryScores(db, story.hn_id);
-    storyScoresMap.set(story.hn_id, scores);
-  }
-}
 
 function buildUrl(params: Record<string, string>): string {
   const p = new URLSearchParams();
   const s = params.sort ?? safeSort;
   const f = params.filter ?? safeFilter;
+  const t = params.type ?? safeType;
+  const pg = params.p ?? '1';
   if (s !== 'time') p.set('sort', s);
   if (f !== 'all') p.set('filter', f);
+  if (t !== 'all') p.set('type', t);
+  if (pg !== '1') p.set('p', pg);
   const qs = p.toString();
   return qs ? `/?${qs}` : '/';
 }
+
+const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN' : 'HN HRCB';
 
 const SORT_OPTIONS = [
   { value: 'time', label: 'new' },
@@ -56,7 +63,7 @@ const FILTER_OPTIONS = [
 ] as const;
 ---
 
-<Base title="HN HRCB">
+<Base title={pageTitle}>
   {/* Filter/sort bar */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
@@ -68,7 +75,7 @@ const FILTER_OPTIONS = [
               {i > 0 && <span style="color: #444;"> | </span>}
               {safeSort === opt.value
                 ? <span style="color: #ff6600; font-weight: bold;">{opt.label}</span>
-                : <a href={buildUrl({ sort: opt.value })}>{opt.label}</a>
+                : <a href={buildUrl({ sort: opt.value, p: '1' })}>{opt.label}</a>
               }
             </>
           ))}
@@ -79,38 +86,38 @@ const FILTER_OPTIONS = [
               {i > 0 && <span style="color: #444;"> | </span>}
               {safeFilter === opt.value
                 ? <span style="color: #ff6600; font-weight: bold;">{opt.label}</span>
-                : <a href={buildUrl({ filter: opt.value })}>{opt.label}</a>
+                : <a href={buildUrl({ filter: opt.value, p: '1' })}>{opt.label}</a>
               }
             </>
           ))}
           <span style="color: #444; margin: 0 6px;">·</span>
-          <span style="color: #555;">{stories.length} stories</span>
+          <span style="color: #555;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
           {evaluatedCount > 0 && <span style="color: #555;"> ({evaluatedCount} evaluated)</span>}
+          {page > 1 && <span style="color: #555;"> · page {page}</span>}
         </span>
       </td>
     </tr>
   </table>
 
   <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
-    {stories.map((story, i) => (
+    {displayStories.map((story, i) => (
       <EvalCard
         story={story}
-        scores={storyScoresMap.get(story.hn_id)}
-        rank={i + 1}
+        rank={offset + i + 1}
       />
     ))}
   </table>
 
-  {stories.length === 0 && (
+  {displayStories.length === 0 && (
     <table width="100%">
       <tr>
         <td style="padding: 40px 20px; text-align: center;">
           <div style="color: #828282; margin-bottom: 12px;">
-            {safeFilter !== 'all'
-              ? `No stories match the "${safeFilter}" filter.`
+            {safeFilter !== 'all' || safeType !== 'all'
+              ? `No stories match the current filters.`
               : 'No stories yet.'}
           </div>
-          {safeFilter !== 'all' ? (
+          {safeFilter !== 'all' || safeType !== 'all' ? (
             <a href="/" style="color: #ff6600;">clear filters</a>
           ) : (
             <>
@@ -151,6 +158,19 @@ const FILTER_OPTIONS = [
               </script>
             </>
           )}
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Pagination */}
+  {hasMore && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
+      <tr>
+        <td style="padding-left: 40px;">
+          <a href={buildUrl({ p: String(page + 1) })} class="morelink" style="color: #828282; font-size: 10pt;">
+            More
+          </a>
         </td>
       </tr>
     </table>
