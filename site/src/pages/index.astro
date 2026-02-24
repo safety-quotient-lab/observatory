@@ -92,7 +92,7 @@ const FILTER_OPTIONS = [
               }
             </>
           ))}
-          <span style="color: #444; margin: 0 6px;">·</span>
+          <br />
           <span style="color: #666;">show:</span>
           {FILTER_OPTIONS.map((opt, i) => (
             <>
@@ -103,7 +103,7 @@ const FILTER_OPTIONS = [
               }
             </>
           ))}
-          <span style="color: #444; margin: 0 6px;">·</span>
+          <br />
           <span style="color: #555;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
           {evaluatedCount > 0 && <span style="color: #555;"> ({evaluatedCount} evaluated)</span>}
           {page > 1 && <span style="color: #555;"> · page {page}</span>}
