@@ -1,10 +1,18 @@
 import type { APIRoute } from 'astro';
 import { fetchUrlContent, callClaude, writeEvalResult } from '../../../lib/evaluate';
 
-export const POST: APIRoute = async ({ params, locals }) => {
+export const POST: APIRoute = async ({ params, locals, request }) => {
   const hnId = parseInt(params.id!, 10);
   if (isNaN(hnId)) {
     return new Response(JSON.stringify({ error: 'Invalid ID' }), { status: 400 });
+  }
+
+  const triggerSecret = locals.runtime.env.TRIGGER_SECRET;
+  if (triggerSecret) {
+    const auth = request.headers.get('Authorization');
+    if (auth !== `Bearer ${triggerSecret}`) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    }
   }
 
   const db = locals.runtime.env.DB;
@@ -82,7 +90,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
             return;
           }
 
-          if (pageContent.length < 100) {
+          if (pageContent.length < 50) {
             await db
               .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = 'Page content too short' WHERE hn_id = ?`)
               .bind(hnId)
@@ -113,7 +121,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
           .prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ?`)
           .bind(`${err}`.slice(0, 500), hnId)
           .run();
-        send('error', { error: `${err}` });
+        send('error', { error: 'Evaluation failed' });
       }
 
       controller.close();

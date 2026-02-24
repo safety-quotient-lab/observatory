@@ -209,7 +209,8 @@ export async function getStoryScores(db: D1Database, hnId: number): Promise<Scor
 
 export async function getArticleRanking(
   db: D1Database,
-  articleNum: number
+  articleNum: number,
+  limit = 200
 ): Promise<ArticleRankingRow[]> {
   const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
   const { results } = await db
@@ -221,9 +222,10 @@ export async function getArticleRanking(
        FROM scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
        WHERE sc.section = ? AND sc.final IS NOT NULL
-       ORDER BY sc.final DESC`
+       ORDER BY sc.final DESC
+       LIMIT ?`
     )
-    .bind(section)
+    .bind(section, limit)
     .all<ArticleRankingRow>();
   return results;
 }
@@ -395,14 +397,16 @@ export async function getDomainStats(db: D1Database, limit = 10): Promise<Domain
   return results;
 }
 
-export async function getQueueStories(db: D1Database): Promise<Story[]> {
+export async function getQueueStories(db: D1Database, limit = 100): Promise<Story[]> {
   const { results } = await db
     .prepare(
       `SELECT * FROM stories WHERE eval_status IN ('pending', 'evaluating')
        ORDER BY
          CASE eval_status WHEN 'evaluating' THEN 0 WHEN 'pending' THEN 1 END,
-         hn_time DESC`
+         hn_time DESC
+       LIMIT ?`
     )
+    .bind(limit)
     .all<Story>();
   return results;
 }

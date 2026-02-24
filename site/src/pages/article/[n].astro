@@ -42,7 +42,7 @@ const jsonLd = udhrSection ? {
 ---
 
 <Base title={`${section}: ${articleTitle} — Rankings`}>
-  {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+  {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
   {/* Header */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>

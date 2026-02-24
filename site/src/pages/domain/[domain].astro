@@ -7,7 +7,7 @@ import { scoreToColor, formatScore } from '../../lib/colors';
 const { domain } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
 
-if (!domain) {
+if (!domain || !/^[a-zA-Z0-9]([a-zA-Z0-9-]*\.)+[a-zA-Z]{2,}$/.test(domain)) {
   return Astro.redirect('/domains');
 }
 
@@ -23,7 +23,7 @@ const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 const evaluatedCount = stories.filter(s => s.eval_status === 'done').length;
 ---
 
-<Base title={`${domain} — HN HRCB`}>
+<Base title={`${domain} — HN HRCB`} canonicalUrl={`${url.origin}/domain/${domain}`}>
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
     <tr>
       <td>

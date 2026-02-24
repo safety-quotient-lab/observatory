@@ -45,6 +45,14 @@ function buildUrl(params: Record<string, string>): string {
 
 const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN' : 'HN HRCB';
 
+// Canonical URL: include sort/filter/type but exclude pagination
+const canonicalParams = new URLSearchParams();
+if (safeSort !== 'time') canonicalParams.set('sort', safeSort);
+if (safeFilter !== 'all') canonicalParams.set('filter', safeFilter);
+if (safeType !== 'all') canonicalParams.set('type', safeType);
+const canonicalQs = canonicalParams.toString();
+const canonicalUrl = `${url.origin}${canonicalQs ? `/?${canonicalQs}` : '/'}`;
+
 const SORT_OPTIONS = [
   { value: 'time', label: 'new' },
   { value: 'score_desc', label: 'top hrcb' },
@@ -63,7 +71,7 @@ const FILTER_OPTIONS = [
 ] as const;
 ---
 
-<Base title={pageTitle}>
+<Base title={pageTitle} canonicalUrl={canonicalUrl}>
   {/* Filter/sort bar */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
@@ -120,43 +128,7 @@ const FILTER_OPTIONS = [
           {safeFilter !== 'all' || safeType !== 'all' ? (
             <a href="/" style="color: #ff6600;">clear filters</a>
           ) : (
-            <>
-              <button
-                id="init-btn"
-                style="background: #ff6600; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 10pt; font-family: inherit;"
-              >
-                Fetch HN Top Stories
-              </button>
-              <div id="init-status" style="color: #828282; font-size: 8pt; margin-top: 8px;"></div>
-              <script>
-                document.getElementById('init-btn')!.addEventListener('click', async (e) => {
-                  const btn = e.target as HTMLButtonElement;
-                  const status = document.getElementById('init-status')!;
-                  btn.disabled = true;
-                  btn.style.opacity = '0.5';
-                  btn.textContent = 'Fetching...';
-                  status.textContent = 'Loading stories from Hacker News API...';
-                  try {
-                    const res = await fetch('/api/init', { method: 'POST' });
-                    const data = await res.json();
-                    if (res.ok) {
-                      status.innerHTML = `<span style="color: #16a34a;">Loaded ${data.inserted} stories. Refreshing...</span>`;
-                      setTimeout(() => window.location.reload(), 1000);
-                    } else {
-                      status.innerHTML = `<span style="color: #dc2626;">${data.error}</span>`;
-                      btn.disabled = false;
-                      btn.style.opacity = '1';
-                      btn.textContent = 'Fetch HN Top Stories';
-                    }
-                  } catch (err) {
-                    status.innerHTML = `<span style="color: #dc2626;">Network error: ${err}</span>`;
-                    btn.disabled = false;
-                    btn.style.opacity = '1';
-                    btn.textContent = 'Fetch HN Top Stories';
-                  }
-                });
-              </script>
-            </>
+            <span style="color: #828282; font-size: 8pt;">No stories yet. The cron worker will populate them shortly.</span>
           )}
         </td>
       </tr>

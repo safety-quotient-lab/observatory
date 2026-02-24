@@ -305,8 +305,15 @@ Output ONLY the JSON evaluation object, no other text.`;
 
   const promptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT, userPrompt);
 
+  let parsed: EvalResult;
+  try {
+    parsed = JSON.parse(jsonText) as EvalResult;
+  } catch (err) {
+    throw new Error(`Failed to parse evaluation JSON: ${err}. Response starts with: ${jsonText.slice(0, 200)}`);
+  }
+
   return {
-    result: JSON.parse(jsonText) as EvalResult,
+    result: parsed,
     model: EVAL_MODEL,
     promptHash,
   };

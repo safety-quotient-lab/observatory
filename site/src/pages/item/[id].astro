@@ -22,7 +22,12 @@ if (!storyData || storyData.eval_status !== 'done' || !storyData.hcb_json) {
   return Astro.redirect('/');
 }
 
-const evalData = JSON.parse(storyData.hcb_json) as Evaluation;
+let evalData: Evaluation;
+try {
+  evalData = JSON.parse(storyData.hcb_json) as Evaluation;
+} catch {
+  return Astro.redirect('/');
+}
 const { evaluation, domain_context_profile, aggregates } = evalData;
 const scores = storyData.scores.length > 0 ? storyData.scores : evalData.scores;
 
@@ -90,8 +95,9 @@ function timeAgo(unixTime: number): string {
   ogTitle={`${formatScore(aggregates.weighted_mean)} ${storyData.title}`}
   ogDescription={`HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}`}
   ogUrl={`${siteUrl}/item/${storyData.hn_id}`}
+  canonicalUrl={`${siteUrl}/item/${storyData.hn_id}`}
 >
-  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
   {/* Story header - HN style */}
   <table cellpadding="0" cellspacing="0" width="100%">
     <tr class="athing">

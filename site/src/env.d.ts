@@ -5,6 +5,7 @@ type D1Database = import('@cloudflare/workers-types').D1Database;
 interface Env {
   DB: D1Database;
   ANTHROPIC_API_KEY: string;
+  TRIGGER_SECRET?: string;
 }
 
 type Runtime = import('@astrojs/cloudflare').Runtime<Env>;

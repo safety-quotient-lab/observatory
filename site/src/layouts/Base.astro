@@ -9,6 +9,7 @@ interface Props {
   ogTitle?: string;
   ogDescription?: string;
   ogUrl?: string;
+  canonicalUrl?: string;
 }
 
 const {
@@ -17,7 +18,10 @@ const {
   ogTitle,
   ogDescription,
   ogUrl,
+  canonicalUrl,
 } = Astro.props;
+
+const triggerSecret = Astro.locals.runtime?.env?.TRIGGER_SECRET || '';
 ---
 
 <!doctype html>
@@ -28,6 +32,7 @@ const {
     <meta name="description" content={description} />
     <title>{title} | HN HRCB</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="HN HRCB" />
     <meta property="og:title" content={ogTitle || title} />
@@ -37,7 +42,7 @@ const {
     <meta name="twitter:title" content={ogTitle || title} />
     <meta name="twitter:description" content={ogDescription || description} />
   </head>
-  <body>
+  <body data-ts={triggerSecret}>
     <center>
       <table id="hnmain" width="85%" cellpadding="0" cellspacing="0" style="background-color: #0d0d14; max-width: 1280px;">
         <tr>
@@ -110,14 +115,24 @@ const {
           subtextTd.appendChild(statusEl);
         }
 
-        function setStatus(html: string) {
-          if (statusEl) statusEl.innerHTML = ` | ${html}`;
+        function setStatus(text: string, color: string = '#60a5fa') {
+          if (!statusEl) return;
+          statusEl.textContent = '';
+          const sep = document.createTextNode(' | ');
+          const span = document.createElement('span');
+          span.style.cssText = `color: ${color}; font-size: 8pt;`;
+          span.textContent = text;
+          statusEl.appendChild(sep);
+          statusEl.appendChild(span);
         }
 
-        setStatus('<span style="color: #60a5fa; font-size: 8pt;">connecting...</span>');
+        setStatus('connecting...', '#60a5fa');
 
         try {
-          const res = await fetch(`/api/trigger/${hnId}`, { method: 'POST' });
+          const ts = document.body.dataset.ts;
+          const headers: Record<string, string> = {};
+          if (ts) headers['Authorization'] = `Bearer ${ts}`;
+          const res = await fetch(`/api/trigger/${hnId}`, { method: 'POST', headers });
 
           // Check if we got an SSE stream or a plain JSON error
           const contentType = res.headers.get('content-type') || '';
@@ -153,11 +168,11 @@ const {
                 if (event === 'status') {
                   spinner.title = parsed.message;
                   if (parsed.step === 'fetching') {
-                    setStatus('<span style="color: #60a5fa; font-size: 8pt;">fetching page...</span>');
+                    setStatus('fetching page...', '#60a5fa');
                   } else if (parsed.step === 'evaluating') {
-                    setStatus('<span style="color: #60a5fa; font-size: 8pt;">calling Claude...</span>');
+                    setStatus('calling Claude...', '#60a5fa');
                   } else if (parsed.step === 'writing') {
-                    setStatus('<span style="color: #60a5fa; font-size: 8pt;">saving results...</span>');
+                    setStatus('saving results...', '#60a5fa');
                   }
                 } else if (event === 'done') {
                   const score = parsed.score as number;
@@ -176,10 +191,19 @@ const {
                   link.appendChild(scoreEl);
                   spinner.replaceWith(link);
 
-                  setStatus(`<a href="/item/${hnId}" style="color: #ff6600;">hrcb</a>`);
+                  if (statusEl) {
+                    statusEl.textContent = '';
+                    const sep = document.createTextNode(' | ');
+                    const link = document.createElement('a');
+                    link.href = `/item/${hnId}`;
+                    link.style.color = '#ff6600';
+                    link.textContent = 'hrcb';
+                    statusEl.appendChild(sep);
+                    statusEl.appendChild(link);
+                  }
                 } else if (event === 'error') {
                   spinner.replaceWith(makeRetryBtn(hnId, parsed.error || 'Failed — click to retry'));
-                  setStatus('<span style="color: #dc2626; font-size: 8pt;">failed</span>');
+                  setStatus('failed', '#dc2626');
                 }
               }
             }
@@ -187,11 +211,11 @@ const {
             // Plain JSON error response (409, 404, etc.)
             const data = await res.json();
             spinner.replaceWith(makeRetryBtn(hnId, data.error || 'Failed — click to retry'));
-            setStatus(`<span style="color: #dc2626; font-size: 8pt;">${data.error || 'error'}</span>`);
+            setStatus(data.error || 'error', '#dc2626');
           }
         } catch (err) {
           spinner.replaceWith(makeRetryBtn(hnId, 'Network error — click to retry'));
-          setStatus('<span style="color: #dc2626; font-size: 8pt;">network error</span>');
+          setStatus('network error', '#dc2626');
         }
       });
     </script>

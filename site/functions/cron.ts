@@ -21,6 +21,7 @@ interface Env {
   ANTHROPIC_API_KEY: string;
   DAILY_EVAL_BUDGET?: string;
   BATCH_MODE?: string;
+  CRON_SECRET?: string;
 }
 
 interface HNItem {
@@ -363,7 +364,11 @@ function parseEvalResponse(data: { content: Array<{ type: string; text?: string 
     jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
   }
 
-  return JSON.parse(jsonText) as EvalResult;
+  try {
+    return JSON.parse(jsonText) as EvalResult;
+  } catch (err) {
+    throw new Error(`Failed to parse evaluation JSON: ${err}. Response starts with: ${jsonText.slice(0, 200)}`);
+  }
 }
 
 async function writeEvalResult(db: D1Database, hnId: number, result: EvalResult): Promise<void> {
@@ -743,6 +748,12 @@ export default {
 
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     if (new URL(request.url).pathname === '/trigger') {
+      if (env.CRON_SECRET) {
+        const auth = request.headers.get('Authorization');
+        if (auth !== `Bearer ${env.CRON_SECRET}`) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+        }
+      }
       ctx.waitUntil(
         this.scheduled({ scheduledTime: Date.now(), cron: '*/10 * * * *' } as ScheduledEvent, env, ctx)
       );
@@ -818,6 +829,41 @@ async function evaluateDirectly(db: D1Database, apiKey: string, remainingBudget:
 // --- Batch API evaluation ---
 
 async function evaluateWithBatchAPI(db: D1Database, apiKey: string, remainingBudget: number): Promise<void> {
+  // Phase 0: Detect and cancel stuck batches (>24h old)
+  const { results: stuckBatches } = await db
+    .prepare(
+      `SELECT batch_id FROM batches
+       WHERE status = 'in_progress'
+         AND created_at < datetime('now', '-24 hours')`
+    )
+    .all<{ batch_id: string }>();
+
+  for (const { batch_id } of stuckBatches) {
+    console.log(`[batch] Canceling stuck batch ${batch_id} (>24h old)`);
+    try {
+      await fetch(`https://api.anthropic.com/v1/messages/batches/${batch_id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+      });
+    } catch (err) {
+      console.error(`[batch] Cancel API call failed for ${batch_id}:`, err);
+    }
+    await db
+      .prepare(`UPDATE batches SET status = 'canceled' WHERE batch_id = ?`)
+      .bind(batch_id)
+      .run();
+    await db
+      .prepare(
+        `UPDATE stories SET eval_status = 'failed', eval_error = 'Batch stuck >24h, canceled'
+         WHERE eval_batch_id = ? AND eval_status = 'evaluating'`
+      )
+      .bind(batch_id)
+      .run();
+  }
+
   // Phase 1: Check for in-progress batches and collect results
   const { results: activeBatches } = await db
     .prepare(`SELECT batch_id FROM batches WHERE status = 'in_progress'`)
