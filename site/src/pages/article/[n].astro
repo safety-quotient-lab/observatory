@@ -87,6 +87,34 @@ const jsonLd = udhrSection ? {
     </table>
   )}
 
+  {/* Article navigation */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 10px 0;">
+    <tr>
+      <td>
+        <div style="color: #828282; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">All Articles</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 3px;">
+          {ALL_SECTIONS.map((sec, i) => {
+            const num = sec === 'Preamble' ? 0 : i;
+            const isActive = num === articleNum;
+            return (
+              <a
+                href={`/article/${num}`}
+                style={`display: inline-block; padding: 2px 6px; font-size: 8pt; border-radius: 3px; ${
+                  isActive
+                    ? 'background: rgba(255,102,0,0.2); color: #ff6600; border: 1px solid rgba(255,102,0,0.4);'
+                    : 'background: #1a1a25; color: #828282; border: 1px solid #222230;'
+                }`}
+                class="score-font"
+              >
+                {sec === 'Preamble' ? 'P' : i}
+              </a>
+            );
+          })}
+        </div>
+      </td>
+    </tr>
+  </table>
+
   {rankings.length > 0 ? (
     <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 9pt;">
       <tr style="color: #828282; font-size: 8pt;">
@@ -137,31 +165,4 @@ const jsonLd = udhrSection ? {
     </table>
   )}
 
-  {/* Article navigation */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 15px 0;">
-    <tr>
-      <td>
-        <div style="color: #828282; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">All Articles</div>
-        <div style="display: flex; flex-wrap: wrap; gap: 3px;">
-          {ALL_SECTIONS.map((sec, i) => {
-            const num = sec === 'Preamble' ? 0 : i;
-            const isActive = num === articleNum;
-            return (
-              <a
-                href={`/article/${num}`}
-                style={`display: inline-block; padding: 2px 6px; font-size: 8pt; border-radius: 3px; ${
-                  isActive
-                    ? 'background: rgba(255,102,0,0.2); color: #ff6600; border: 1px solid rgba(255,102,0,0.4);'
-                    : 'background: #1a1a25; color: #828282; border: 1px solid #222230;'
-                }`}
-                class="score-font"
-              >
-                {sec === 'Preamble' ? 'P' : i}
-              </a>
-            );
-          })}
-        </div>
-      </td>
-    </tr>
-  </table>
 </Base>
