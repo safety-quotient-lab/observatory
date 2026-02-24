@@ -149,6 +149,20 @@ export default {
 
         if (!res.ok) {
           const body = await res.text();
+          if (res.status === 429) {
+            // Rate limited — retry with delay instead of burning retries
+            const retryAfter = res.headers.get('retry-after');
+            const delaySec = retryAfter ? parseInt(retryAfter, 10) : 60;
+            console.warn(`[consumer] Rate limited (429) for hn_id=${story.hn_id}. retry-after=${retryAfter ?? 'none'}, delaying ${delaySec}s`);
+            msg.retry({ delaySeconds: Math.min(Math.max(delaySec, 30), 300) });
+            continue;
+          }
+          if (res.status === 529) {
+            // API overloaded — retry with longer delay
+            console.warn(`[consumer] API overloaded (529) for hn_id=${story.hn_id}, delaying 120s`);
+            msg.retry({ delaySeconds: 120 });
+            continue;
+          }
           throw new Error(`Anthropic API error ${res.status}: ${body}`);
         }
 

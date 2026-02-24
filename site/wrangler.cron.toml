@@ -11,6 +11,9 @@ database_id = "d49c47bc-8107-4481-8aa1-6a9cf0b534c8"
 binding = "CONTENT_CACHE"
 id = "ffe31e8bd21f43169e81f6d6137772bf"
 
+[vars]
+DAILY_EVAL_BUDGET = "50"
+
 [triggers]
 crons = ["*/5 * * * *"]
 
