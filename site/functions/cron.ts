@@ -247,23 +247,25 @@ async function enqueueForEvaluation(
   kv: KVNamespace,
 ): Promise<void> {
   const limit = 25; // Queue.sendBatch limit
-  // Priority: composite of hn_score (popularity) and HOTL extremity (contention).
-  // SETL requires evaluation results so can't be used pre-eval.
-  // HOTL = (comments - score) / (comments + score); extreme = high |HOTL|.
-  // Composite: 0.7 * normalized_score + 0.3 * |HOTL|
+  // Priority: HN top stories rank first (lower rank = higher priority),
+  // then composite of hn_score + HOTL extremity for unranked stories.
   const { results: pending } = await db
     .prepare(
       `SELECT hn_id, url, title, domain, hn_text FROM stories
        WHERE eval_status = 'pending'
          AND (url IS NOT NULL OR hn_text IS NOT NULL)
-       ORDER BY (
-         COALESCE(hn_score, 0) / 500.0
-         + 0.3 * CASE
-            WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
-            THEN ABS(CAST(hn_comments - hn_score AS REAL) / (hn_comments + hn_score))
-            ELSE 0
-          END
-       ) DESC LIMIT ?`
+       ORDER BY
+         CASE WHEN hn_rank IS NOT NULL THEN 0 ELSE 1 END,
+         hn_rank ASC,
+         (
+           COALESCE(hn_score, 0) / 500.0
+           + 0.3 * CASE
+              WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
+              THEN ABS(CAST(hn_comments - hn_score AS REAL) / (hn_comments + hn_score))
+              ELSE 0
+            END
+         ) DESC
+       LIMIT ?`
     )
     .bind(limit)
     .all<{
