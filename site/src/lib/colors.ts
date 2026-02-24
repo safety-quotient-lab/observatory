@@ -1,22 +1,23 @@
-/** Map a score [-1, +1] to a hex color on a diverging red-gray-green scale */
+/** Map a score [-1, +1] to a hex color on a diverging red-yellow-green scale */
 export function scoreToColor(score: number | null): string {
   if (score === null) return '#2a2a35'; // ND gray
 
   const clamped = Math.max(-1, Math.min(1, score));
 
+  // Midpoint: yellow (#eab308)
   if (clamped < 0) {
-    // Red channel: interpolate from gray (#555) to red (#dc2626)
+    // Red (#dc2626) ← yellow (#eab308): interpolate from yellow to red
     const t = Math.abs(clamped);
-    const r = Math.round(0x55 + (0xdc - 0x55) * t);
-    const g = Math.round(0x55 + (0x26 - 0x55) * t);
-    const b = Math.round(0x55 + (0x26 - 0x55) * t);
+    const r = Math.round(0xea + (0xdc - 0xea) * t);
+    const g = Math.round(0xb3 + (0x26 - 0xb3) * t);
+    const b = Math.round(0x08 + (0x26 - 0x08) * t);
     return `rgb(${r}, ${g}, ${b})`;
   } else {
-    // Green channel: interpolate from gray (#555) to green (#16a34a)
+    // Yellow (#eab308) → green (#16a34a): interpolate from yellow to green
     const t = clamped;
-    const r = Math.round(0x55 + (0x16 - 0x55) * t);
-    const g = Math.round(0x55 + (0xa3 - 0x55) * t);
-    const b = Math.round(0x55 + (0x4a - 0x55) * t);
+    const r = Math.round(0xea + (0x16 - 0xea) * t);
+    const g = Math.round(0xb3 + (0xa3 - 0xb3) * t);
+    const b = Math.round(0x08 + (0x4a - 0x08) * t);
     return `rgb(${r}, ${g}, ${b})`;
   }
 }
@@ -32,7 +33,7 @@ export function classificationColor(classification: string): string {
   if (lower.includes('strong positive')) return '#16a34a';
   if (lower.includes('moderate positive')) return '#22c55e';
   if (lower.includes('mild positive')) return '#86efac';
-  if (lower.includes('neutral')) return '#6b7280';
+  if (lower.includes('neutral')) return '#eab308';
   if (lower.includes('mild negative')) return '#fca5a5';
   if (lower.includes('moderate negative')) return '#ef4444';
   if (lower.includes('strong negative')) return '#dc2626';
@@ -42,7 +43,7 @@ export function classificationColor(classification: string): string {
 /** Get classification badge text color */
 export function classificationTextColor(classification: string): string {
   const lower = classification.toLowerCase();
-  if (lower.includes('mild positive') || lower.includes('mild negative')) return '#1a1a25';
+  if (lower.includes('mild positive') || lower.includes('mild negative') || lower.includes('neutral')) return '#1a1a25';
   return '#ffffff';
 }
 
@@ -122,7 +123,7 @@ export function modifierColor(mod: number | null): string {
   if (mod === null) return '#3a3a45';
   if (mod > 0.05) return '#22c55e';
   if (mod > 0) return '#86efac';
-  if (mod === 0) return '#6b7280';
+  if (mod === 0) return '#eab308';
   if (mod > -0.05) return '#fca5a5';
   return '#ef4444';
 }

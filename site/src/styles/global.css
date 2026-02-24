@@ -5,10 +5,29 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Golden ratio type scale (φ = 1.618, base = 10pt) */
+    --phi: 1.618;
+    --font-xs: 6.18pt;    /* base / φ / φ — micro labels, timestamps */
+    --font-sm: 7.64pt;    /* base / φ^(3/4) — subtext, secondary scores (SETL/HOTL) */
+    --font-base: 10pt;    /* φ^0 — body text */
+    --font-md: 12.36pt;   /* base × φ^(1/2) — primary scores (HRCB in feed) */
+    --font-lg: 16.18pt;   /* base × φ — section headers, big scores */
+    --font-xl: 26.18pt;   /* base × φ² — hero numbers */
+
+    /* Golden ratio spacing scale (base = 4px) */
+    --space-xs: 2.47px;   /* 4 / φ */
+    --space-sm: 4px;       /* base */
+    --space-md: 6.47px;   /* 4 × φ */
+    --space-lg: 10.47px;  /* 4 × φ² */
+    --space-xl: 16.94px;  /* 4 × φ³ */
+    --space-2xl: 27.42px; /* 4 × φ⁴ */
+  }
+
   html {
     @apply bg-surface-0 text-gray-300 antialiased;
     font-family: Verdana, Geneva, sans-serif;
-    font-size: 10pt;
+    font-size: var(--font-base);
   }
 
   body {
@@ -51,7 +70,7 @@
 
   /* HN subtext style */
   .subtext {
-    font-size: 7pt;
+    font-size: var(--font-xs);
     color: #828282;
   }
 

@@ -18,12 +18,12 @@ const domains = await getAllDomainStats(db, safeSort, 100);
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: 12pt; color: #c9c9c9; font-weight: bold;">Domains</span>
-        <span style="color: #828282; margin-left: 8px; font-size: 9pt;">
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Domains</span>
+        <span style="color: #828282; margin-left: 8px; font-size: var(--font-base);">
           {domains.length} domains
         </span>
         <span style="color: #444; margin: 0 6px;">·</span>
-        <span class="subtext" style="font-size: 8pt;">
+        <span class="subtext" style="font-size: var(--font-sm);">
           <span style="color: #666;">sort:</span>
           {(['count', 'score', 'setl', 'hotl'] as const).map((opt, i) => {
             const labels = { count: 'stories', score: 'hrcb', setl: 'setl', hotl: 'hotl' };
@@ -46,8 +46,8 @@ const domains = await getAllDomainStats(db, safeSort, 100);
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
         {domains.length > 0 ? (
-          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 9pt;">
-            <tr style="color: #555; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.05em;">
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
+            <tr style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td width="24">#</td>
               <td>Domain</td>
               <td width="70" align="center">Stories</td>
@@ -75,7 +75,7 @@ const domains = await getAllDomainStats(db, safeSort, 100);
             ))}
           </table>
         ) : (
-          <div style="color: #555; font-size: 8pt; padding: 10px;">No domain data yet.</div>
+          <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No domain data yet.</div>
         )}
       </td>
     </tr>

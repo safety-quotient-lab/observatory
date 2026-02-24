@@ -33,10 +33,10 @@ const evaluatedCount = stories.filter(s => s.eval_status === 'done').length;
       <td>
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <span style="font-size: 12pt; color: #c9c9c9; font-weight: bold;">{domain}</span>
-            <a href={`https://${domain}`} target="_blank" rel="noopener" style="color: #ff6600; font-size: 8pt;">visit &rarr;</a>
+            <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">{domain}</span>
+            <a href={`https://${domain}`} target="_blank" rel="noopener" style="color: #ff6600; font-size: var(--font-sm);">visit &rarr;</a>
           </div>
-          <div style="margin-top: 6px; font-size: 8pt; color: #888; display: flex; gap: 16px;">
+          <div style="margin-top: 6px; font-size: var(--font-sm); color: #888; display: flex; gap: 16px;">
             <span>{total} stories</span>
             {avgScore !== null && (
               <span>
@@ -83,7 +83,7 @@ const evaluatedCount = stories.filter(s => s.eval_status === 'done').length;
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={`/domain/${domain}?p=${page + 1}`} class="morelink" style="color: #828282; font-size: 10pt;">
+          <a href={`/domain/${domain}?p=${page + 1}`} class="morelink" style="color: #828282; font-size: var(--font-base);">
             More
           </a>
         </td>

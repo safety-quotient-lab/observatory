@@ -81,7 +81,7 @@ const FILTER_OPTIONS = [
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td style="padding: 4px 0;">
-        <span class="subtext" style="font-size: 8pt;">
+        <span class="subtext" style="font-size: var(--font-sm);">
           <span style="color: #666;">sort:</span>
           {SORT_OPTIONS.map((opt, i) => (
             <>
@@ -133,7 +133,7 @@ const FILTER_OPTIONS = [
           {safeFilter !== 'all' || safeType !== 'all' ? (
             <a href="/" style="color: #ff6600;">clear filters</a>
           ) : (
-            <span style="color: #828282; font-size: 8pt;">No stories yet. The cron worker will populate them shortly.</span>
+            <span style="color: #828282; font-size: var(--font-sm);">No stories yet. The cron worker will populate them shortly.</span>
           )}
         </td>
       </tr>
@@ -145,7 +145,7 @@ const FILTER_OPTIONS = [
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={buildUrl({ p: String(page + 1) })} class="morelink" style="color: #828282; font-size: 10pt;">
+          <a href={buildUrl({ p: String(page + 1) })} class="morelink" style="color: #828282; font-size: var(--font-base);">
             More
           </a>
         </td>

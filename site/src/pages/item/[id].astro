@@ -118,16 +118,16 @@ function timeAgo(unixTime: number): string {
   {/* Story header - HN style */}
   <table cellpadding="0" cellspacing="0" width="100%">
     <tr class="athing">
-      <td valign="top" style="padding: 5px 10px 0 0; text-align: center; width: 44px;">
+      <td valign="top" style="padding: 5px var(--space-lg) 0 0; text-align: center; width: 44px;">
         <span
           class="score-font"
-          style={`color: ${scoreToColor(aggregates.weighted_mean)}; font-size: 14pt; font-weight: bold;`}
+          style={`color: ${scoreToColor(aggregates.weighted_mean)}; font-size: var(--font-lg); font-weight: bold;`}
         >
           {formatScore(aggregates.weighted_mean)}
         </span>
       </td>
       <td>
-        <span class="titleline" style="font-size: 12pt;">
+        <span class="titleline" style="font-size: var(--font-md);">
           <a href={storyData.url || `https://news.ycombinator.com/item?id=${storyData.hn_id}`}
              target="_blank" rel="noopener"
           >
@@ -135,7 +135,7 @@ function timeAgo(unixTime: number): string {
           </a>
         </span>
         {storyData.domain && (
-          <span class="sitebit" style="font-size: 8pt; margin-left: 5px;">
+          <span class="sitebit" style="font-size: var(--font-sm); margin-left: 5px;">
             (<a href={`https://${storyData.domain}`} target="_blank" rel="noopener">{storyData.domain}</a>)
           </span>
         )}
@@ -154,7 +154,7 @@ function timeAgo(unixTime: number): string {
         <span> | </span>
         <span
           class="badge"
-          style={`background: ${classColor}; color: ${classText}; font-size: 7pt;`}
+          style={`background: ${classColor}; color: ${classText}; font-size: var(--font-xs);`}
         >
           {aggregates.classification}
         </span>
@@ -174,11 +174,11 @@ function timeAgo(unixTime: number): string {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Article Heatmap</div>
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Article Heatmap</div>
         <HeatMap scores={scores} compact={false} showLabels={true} />
-        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 7pt; color: #666;">
+        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: var(--font-xs); color: #666;">
           <span><span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 2px;"></span> Negative</span>
-          <span><span style="display: inline-block; width: 8px; height: 8px; background: #555; border-radius: 2px;"></span> Neutral</span>
+          <span><span style="display: inline-block; width: 8px; height: 8px; background: #eab308; border-radius: 2px;"></span> Neutral</span>
           <span><span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 2px;"></span> Positive</span>
           <span title="Insufficient evidence to score"><span style="display: inline-block; width: 8px; height: 8px; background: #2a2a35; border-radius: 2px;"></span> No Data</span>
         </div>
@@ -191,8 +191,8 @@ function timeAgo(unixTime: number): string {
     <tr>
       <td width="50%" valign="top" style="padding-right: 5px;">
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
-          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr>
               <td style="color: #666;">Weighted Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(aggregates.weighted_mean)}`}>{formatScore(aggregates.weighted_mean)}</td>
@@ -227,22 +227,22 @@ function timeAgo(unixTime: number): string {
             <tr>
               <td style="color: #666;" title="Structural-Editorial Tension Level: normalized difference between S and E channels">SETL</td>
               <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
-              <td style="color: #555; font-size: 7pt;" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
+              <td style="color: #555; font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
             </tr>
             <tr>
               <td style="color: #666;" title="Higher Order Tension Level: (comments - points) / (comments + points)">HOTL</td>
               <td class="score-font" style={`color: ${hotlToColor(hotl)};`}>{formatHotl(hotl)}</td>
-              <td style="color: #555; font-size: 7pt;" colspan="2">{hotl !== null ? (hotl > 0 ? 'Contentious' : hotl < 0 ? 'Consensus' : 'Balanced') : ''}</td>
+              <td style="color: #555; font-size: var(--font-xs);" colspan="2">{hotl !== null ? (hotl > 0 ? 'Contentious' : hotl < 0 ? 'Consensus' : 'Balanced') : ''}</td>
             </tr>
           </table>
           <div style="margin-top: 6px;">
-            <span style="color: #666; font-size: 7pt;">Evidence: </span>
+            <span style="color: #666; font-size: var(--font-xs);">Evidence: </span>
             {Object.entries(aggregates.evidence_profile).map(([key, count]) => {
               const label = EVIDENCE_LABELS[key] || key;
               return (
                 <span
                   class="badge"
-                  style={`background: ${evidenceColor(key === 'ND' ? null : key)}30; color: ${evidenceColor(key === 'ND' ? null : key)}; font-size: 7pt; margin-right: 3px;`}
+                  style={`background: ${evidenceColor(key === 'ND' ? null : key)}30; color: ${evidenceColor(key === 'ND' ? null : key)}; font-size: var(--font-xs); margin-right: 3px;`}
                 >
                   {label}: {count}
                 </span>
@@ -253,7 +253,7 @@ function timeAgo(unixTime: number): string {
       </td>
       <td width="50%" valign="top" style="padding-left: 5px;">
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
           <RadarChart scores={scores} size={300} />
         </div>
       </td>
@@ -264,7 +264,7 @@ function timeAgo(unixTime: number): string {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Domain Context Profile</div>
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Domain Context Profile</div>
         <DcpTable elements={domain_context_profile.elements} />
       </td>
     </tr>
@@ -275,7 +275,7 @@ function timeAgo(unixTime: number): string {
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
       <tr>
         <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             HN Discussion
             <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
               {comments.length} top-level comments
@@ -283,7 +283,7 @@ function timeAgo(unixTime: number): string {
           </div>
           {comments.map((c) => (
             <div style="border-top: 1px solid #1a1a25; padding: 8px 0;">
-              <div style="font-size: 7pt; color: #555; margin-bottom: 4px;">
+              <div style="font-size: var(--font-xs); color: #555; margin-bottom: 4px;">
                 <a href={`https://news.ycombinator.com/user?id=${c.author}`}
                    target="_blank" rel="noopener"
                    style="color: #888;">{c.author}</a>
@@ -296,7 +296,7 @@ function timeAgo(unixTime: number): string {
                    target="_blank" rel="noopener"
                    style="color: #555; margin-left: 6px;">link</a>
               </div>
-              <div style="color: #aaa; font-size: 8pt; line-height: 1.5;" set:html={c.text} />
+              <div style="color: #aaa; font-size: var(--font-sm); line-height: 1.5;" set:html={c.text} />
             </div>
           ))}
         </td>
@@ -308,7 +308,7 @@ function timeAgo(unixTime: number): string {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Score Breakdown</div>
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Score Breakdown</div>
         {scores.map((score, i) => (
           <ArticleDetail score={score} index={i} />
         ))}

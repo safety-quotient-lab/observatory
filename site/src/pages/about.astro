@@ -6,7 +6,7 @@ import Base from '../layouts/Base.astro';
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
       <td>
-        <p style="font-size: 12pt; color: #c9c9c9; font-weight: bold; margin-bottom: 10px;">About HN HRCB</p>
+        <p style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold; margin-bottom: 10px;">About HN HRCB</p>
 
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 15px;">
           HN HRCB is a mirror of <a href="https://news.ycombinator.com" style="color: #ff6600;">Hacker News</a> that
@@ -24,7 +24,7 @@ import Base from '../layouts/Base.astro';
           directly observable, with no inference beyond the evidence.
         </p>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Core Construct: HRCB</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Core Construct: HRCB</p>
 
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
           <b>Human Rights Compatibility Bias (HRCB)</b> measures the directional lean
@@ -33,7 +33,7 @@ import Base from '../layouts/Base.astro';
           content that conflicts with them.
         </p>
 
-        <table cellpadding="4" cellspacing="0" style="font-size: 9pt; margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
+        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
           <tr style="color: #828282;">
             <td class="score-font" style="color: #dc2626;">-1.0</td>
             <td>&larr;</td>
@@ -47,9 +47,9 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Signal Channels</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Signal Channels</p>
 
-        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: 9pt; margin-bottom: 15px;">
+        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
           <tr>
             <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
               <b style="color: #60a5fa;">Editorial</b><br>
@@ -63,19 +63,19 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="color: #828282; font-size: 8pt; margin-bottom: 15px;">
+        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
           Channels are weighted by content type (e.g., Editorial=0.6, Structural=0.4).
           Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.
         </p>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</p>
 
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
           SETL measures the divergence between editorial and structural signals for each article.
           It captures whether a site's words and infrastructure tell different stories.
         </p>
 
-        <table cellpadding="4" cellspacing="0" style="font-size: 9pt; margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
+        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
           <tr style="color: #828282;">
             <td class="score-font" style="color: #dc2626;">-1.0</td>
             <td>&larr;</td>
@@ -89,19 +89,19 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="color: #828282; font-size: 8pt; margin-bottom: 15px;">
+        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
           Formula: <span class="score-font">(E - S) / max(|S|, |E|, |E - S|)</span>.
           A high absolute SETL means the site's content and infrastructure are misaligned on human rights.
         </p>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">HOTL — Higher Order Tension Level</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">HOTL — Higher Order Tension Level</p>
 
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
           HOTL measures audience contention from HN metadata — the ratio of discussion (comments)
           to approval (points). Negative values indicate consensus; positive values indicate controversy.
         </p>
 
-        <table cellpadding="4" cellspacing="0" style="font-size: 9pt; margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
+        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
           <tr style="color: #828282;">
             <td class="score-font" style="color: #16a34a;">-1.0</td>
             <td>&larr;</td>
@@ -115,14 +115,14 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="color: #828282; font-size: 8pt; margin-bottom: 15px;">
+        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
           Formula: <span class="score-font">(comments - points) / (comments + points)</span>.
           HOTL is independent of the evaluation model — it's derived purely from HN engagement data.
         </p>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
 
-        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: 9pt; margin-bottom: 15px;">
+        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
           <tr>
             <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
               <b style="color: #828282;">No Data</b><br>
@@ -136,13 +136,13 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Domain Context Profile (DCP)</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Domain Context Profile (DCP)</p>
 
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
           Eight domain-level elements provide context modifiers:
         </p>
 
-        <table cellpadding="3" cellspacing="2" style="font-size: 8pt; margin-bottom: 15px;">
+        <table cellpadding="3" cellspacing="2" style="font-size: var(--font-sm); margin-bottom: 15px;">
           <tr>
             {['Privacy', 'ToS', 'Accessibility', 'Mission'].map((el) => (
               <td style="background: #12121a; border: 1px solid #222230; border-radius: 3px; padding: 4px 8px; color: #c9c9c9; text-align: center;">{el}</td>
@@ -155,9 +155,9 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Evidence Strength</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Evidence Strength</p>
 
-        <table cellpadding="3" cellspacing="0" style="font-size: 9pt; margin-bottom: 15px;">
+        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
           <tr>
             <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">High</span></td>
             <td style="color: #c9c9c9; padding-left: 6px;">Direct, explicit content with strong sourcing</td>
@@ -172,9 +172,9 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Directionality Markers</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Directionality Markers</p>
 
-        <table cellpadding="3" cellspacing="0" style="font-size: 9pt; margin-bottom: 15px;">
+        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
           <tr>
             <td><span class="badge" style="background: rgba(129,140,248,0.2); color: #818cf8;">Advocacy</span></td>
             <td style="color: #c9c9c9; padding-left: 6px;">Explicitly argues for or against a right</td>
@@ -193,9 +193,9 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">How Evaluations Work</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">How Evaluations Work</p>
 
-        <ol style="color: #828282; line-height: 1.8; padding-left: 20px; font-size: 9pt; margin-bottom: 15px;">
+        <ol style="color: #828282; line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
           <li>A URL from HN's top stories is fetched as the unit of analysis</li>
           <li>The page's content type is classified (Editorial, Community, HR, etc.)</li>
           <li>Channel weights are assigned based on content type</li>
@@ -206,9 +206,9 @@ import Base from '../layouts/Base.astro';
           <li>A final classification is assigned (Strong positive to Strong negative)</li>
         </ol>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Version History</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Version History</p>
 
-        <table cellpadding="3" cellspacing="0" style="font-size: 9pt; margin-bottom: 15px;">
+        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
           {[
             { v: 'v1', desc: 'External-source methodology, domain-level evaluation' },
             { v: 'v2', desc: 'On-domain-only, ND vs 0.0 distinction, evidence strength' },
@@ -227,9 +227,9 @@ import Base from '../layouts/Base.astro';
           ))}
         </table>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Technical Details</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Technical Details</p>
 
-        <table cellpadding="4" cellspacing="0" style="font-size: 8pt; background: #12121a; border: 1px solid #222230; border-radius: 4px; margin-bottom: 15px;" width="100%">
+        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); background: #12121a; border: 1px solid #222230; border-radius: 4px; margin-bottom: 15px;" width="100%">
           <tr>
             <td style="color: #828282;" class="score-font">Schema</td><td style="color: #c9c9c9;" class="score-font">3.4</td>
             <td style="color: #828282;" class="score-font">Framework</td><td style="color: #c9c9c9;" class="score-font">Astro + CF Pages</td>
@@ -248,7 +248,7 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">The Universal Declaration of Human Rights</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">The Universal Declaration of Human Rights</p>
 
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 15px;">
           Adopted by the United Nations General Assembly on 10 December 1948 (Resolution 217 A),

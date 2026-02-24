@@ -17,7 +17,7 @@ const currentType = Astro.url.searchParams.get('type') || '';
         <b class="hnname">
           <a href="/" style="color: black; text-decoration: none;">HN HRCB</a>
         </b>
-        <span style="margin-left: 10px; font-size: 10pt;">
+        <span style="margin-left: 10px; font-size: var(--font-base);">
           <a href="/" style={`color: black;${currentPath === '/' && !currentType ? ' font-weight: bold;' : ''}`}>new</a> |
           <a href="https://news.ycombinator.com/past" style="color: black;">past</a> |
           <a href="https://news.ycombinator.com/newcomments" style="color: black;">comments</a> |

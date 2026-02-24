@@ -47,7 +47,7 @@ const jsonLd = udhrSection ? {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
-        <span style="font-size: 12pt; color: #c9c9c9; font-weight: bold;">{section}</span>
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">{section}</span>
         <span style="color: #828282; margin-left: 8px;">{articleTitle}</span>
       </td>
     </tr>
@@ -75,13 +75,13 @@ const jsonLd = udhrSection ? {
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
         <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
             UDHR Text
             <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
               {udhrSection.group}
             </span>
           </div>
-          <div style="color: #aaa; font-size: 9pt; line-height: 1.6; white-space: pre-line;">{udhrSection.text}</div>
+          <div style="color: #aaa; font-size: var(--font-base); line-height: 1.6; white-space: pre-line;">{udhrSection.text}</div>
         </td>
       </tr>
     </table>
@@ -91,7 +91,7 @@ const jsonLd = udhrSection ? {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 10px 0;">
     <tr>
       <td>
-        <div style="color: #828282; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">All Articles</div>
+        <div style="color: #828282; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">All Articles</div>
         <div style="display: flex; flex-wrap: wrap; gap: 3px;">
           {ALL_SECTIONS.map((sec, i) => {
             const num = sec === 'Preamble' ? 0 : i;
@@ -99,7 +99,7 @@ const jsonLd = udhrSection ? {
             return (
               <a
                 href={`/article/${num}`}
-                style={`display: inline-block; padding: 2px 6px; font-size: 8pt; border-radius: 3px; ${
+                style={`display: inline-block; padding: 2px 6px; font-size: var(--font-sm); border-radius: 3px; ${
                   isActive
                     ? 'background: rgba(255,102,0,0.2); color: #ff6600; border: 1px solid rgba(255,102,0,0.4);'
                     : 'background: #1a1a25; color: #828282; border: 1px solid #222230;'
@@ -116,8 +116,8 @@ const jsonLd = udhrSection ? {
   </table>
 
   {rankings.length > 0 ? (
-    <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 9pt;">
-      <tr style="color: #828282; font-size: 8pt;">
+    <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
+      <tr style="color: #828282; font-size: var(--font-sm);">
         <td width="30">#</td>
         <td width="60" align="center">HRCB</td>
         <td>Story</td>
@@ -142,25 +142,25 @@ const jsonLd = udhrSection ? {
           <td>
             <a href={`/item/${row.hn_id}`}>{row.title}</a>
             {row.domain && (
-              <span style="color: #828282; font-size: 8pt; margin-left: 4px;">({row.domain})</span>
+              <span style="color: #828282; font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
             )}
           </td>
-          <td align="center" class="score-font" style={`color: ${scoreToColor(row.editorial)}; font-size: 8pt;`}>
+          <td align="center" class="score-font" style={`color: ${scoreToColor(row.editorial)}; font-size: var(--font-sm);`}>
             {formatScore(row.editorial)}
           </td>
-          <td align="center" class="score-font" style={`color: ${scoreToColor(row.structural)}; font-size: 8pt;`}>
+          <td align="center" class="score-font" style={`color: ${scoreToColor(row.structural)}; font-size: var(--font-sm);`}>
             {formatScore(row.structural)}
           </td>
-          <td align="center" class="score-font" style={`color: ${setlToColor(rowSetl)}; font-size: 8pt;`}>
+          <td align="center" class="score-font" style={`color: ${setlToColor(rowSetl)}; font-size: var(--font-sm);`}>
             {formatSetl(rowSetl)}
           </td>
-          <td align="center" class="score-font" style={`color: ${hotlToColor(rowHotl)}; font-size: 8pt;`}>
+          <td align="center" class="score-font" style={`color: ${hotlToColor(rowHotl)}; font-size: var(--font-sm);`}>
             {formatHotl(rowHotl)}
           </td>
-          <td align="center" style="color: #828282; font-size: 8pt;">
+          <td align="center" style="color: #828282; font-size: var(--font-sm);">
             {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
           </td>
-          <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_weighted_mean)}; font-size: 8pt;`}>
+          <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_weighted_mean)}; font-size: var(--font-sm);`}>
             {formatScore(row.hcb_weighted_mean)}
           </td>
         </tr>
