@@ -4,8 +4,8 @@ import HeatMap from '../../components/HeatMap.astro';
 import RadarChart from '../../components/RadarChart.astro';
 import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
-import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor } from '../../lib/colors';
-import { getStory } from '../../lib/db';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor } from '../../lib/colors';
+import { getStory, getStoryComments } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
 
@@ -41,6 +41,15 @@ const setlValues = scores
 const aggSetl = setlValues.length > 0
   ? setlValues.reduce((a, b) => a + b, 0) / setlValues.length
   : null;
+
+const hotl = computeHotl(storyData.hn_score, storyData.hn_comments);
+
+let comments: Awaited<ReturnType<typeof getStoryComments>> = [];
+try {
+  comments = await getStoryComments(db, hnId);
+} catch {
+  // story_comments table may not exist yet — graceful fallback
+}
 
 const siteUrl = Astro.url.origin;
 
@@ -220,6 +229,11 @@ function timeAgo(unixTime: number): string {
               <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
               <td style="color: #555; font-size: 7pt;" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
             </tr>
+            <tr>
+              <td style="color: #666;" title="Higher Order Tension Level: (comments - points) / (comments + points)">HOTL</td>
+              <td class="score-font" style={`color: ${hotlToColor(hotl)};`}>{formatHotl(hotl)}</td>
+              <td style="color: #555; font-size: 7pt;" colspan="2">{hotl !== null ? (hotl > 0 ? 'Contentious' : hotl < 0 ? 'Consensus' : 'Balanced') : ''}</td>
+            </tr>
           </table>
           <div style="margin-top: 6px;">
             <span style="color: #666; font-size: 7pt;">Evidence: </span>
@@ -255,6 +269,40 @@ function timeAgo(unixTime: number): string {
       </td>
     </tr>
   </table>
+
+  {/* HN Comments */}
+  {comments.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            HN Discussion
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              {comments.length} top-level comments
+            </span>
+          </div>
+          {comments.map((c) => (
+            <div style="border-top: 1px solid #1a1a25; padding: 8px 0;">
+              <div style="font-size: 7pt; color: #555; margin-bottom: 4px;">
+                <a href={`https://news.ycombinator.com/user?id=${c.author}`}
+                   target="_blank" rel="noopener"
+                   style="color: #888;">{c.author}</a>
+                {c.time && (
+                  <span style="margin-left: 6px;">
+                    {new Date(c.time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC
+                  </span>
+                )}
+                <a href={`https://news.ycombinator.com/item?id=${c.comment_id}`}
+                   target="_blank" rel="noopener"
+                   style="color: #555; margin-left: 6px;">link</a>
+              </div>
+              <div style="color: #aaa; font-size: 8pt; line-height: 1.5;" set:html={c.text} />
+            </div>
+          ))}
+        </td>
+      </tr>
+    </table>
+  )}
 
   {/* Score breakdown */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">

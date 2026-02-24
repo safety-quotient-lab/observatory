@@ -7,12 +7,17 @@ binding = "DB"
 database_name = "udhr-hrcb"
 database_id = "d49c47bc-8107-4481-8aa1-6a9cf0b534c8"
 
-[triggers]
-crons = ["*/10 * * * *"]
+[[kv_namespaces]]
+binding = "CONTENT_CACHE"
+id = "ffe31e8bd21f43169e81f6d6137772bf"
 
-[vars]
-DAILY_EVAL_BUDGET = "200"
-BATCH_MODE = "true"
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[queues.producers]]
+queue = "hrcb-eval-queue"
+binding = "EVAL_QUEUE"
 
 # Secrets (set via `wrangler secret put --name hn-hrcb-cron`):
 # ANTHROPIC_API_KEY
+# CRON_SECRET

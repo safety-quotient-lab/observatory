@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor } from '../lib/colors';
+import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor } from '../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS } from '../lib/udhr';
 import { CONTENT_TYPE_LABELS } from '../lib/types';
 import {
@@ -15,14 +15,15 @@ import {
   getFailedStories,
   getQueueStories,
   getModelStats,
-  getTodayEvalCount,
   getMeanSetl,
-  getStorySetl,
+  getMeanHotl,
+  getModelComparisonStats,
+  getCostStats,
 } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recent, domains, failed, queue, models, todayEvals, meanSetl] = await Promise.all([
+const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recent, domains, failed, queue, models, meanSetl, meanHotl, modelComparison, costStats] = await Promise.all([
   getStatusCounts(db),
   getScoreStats(db),
   getContentTypeStats(db),
@@ -34,9 +35,23 @@ const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recen
   getFailedStories(db, 5),
   getQueueStories(db),
   getModelStats(db),
-  getTodayEvalCount(db),
   getMeanSetl(db),
+  getMeanHotl(db),
+  getModelComparisonStats(db),
+  getCostStats(db),
 ]);
+
+// Format token counts for display
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
+  return String(n);
+}
+
+// Helper to compute HOTL from a Story
+function storyHotl(s: { hn_score: number | null; hn_comments: number | null }): number | null {
+  return computeHotl(s.hn_score, s.hn_comments);
+}
 
 // Helper to compute aggregate SETL from a Story's hcb_json
 function storySetl(s: { hcb_json: string | null }): number | null {
@@ -69,6 +84,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
       <td>
         <span style="font-size: 12pt; color: #c9c9c9; font-weight: bold;">Dashboard</span>
         <span style="color: #828282; margin-left: 8px;">Evaluation pipeline status &amp; analytics</span>
+        <span id="live-indicator" style="margin-left: 8px; font-size: 7pt; color: #555;">connecting...</span>
       </td>
     </tr>
   </table>
@@ -120,7 +136,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
     <tr>
       <td width="50%" valign="top" style="padding-right: 5px;">
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
-          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Score Overview</div>
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">HRCB Overview</div>
           <table cellpadding="6" cellspacing="0" width="100%" style="font-size: 9pt;">
             <tr>
               <td style="color: #666;">Mean HRCB</td>
@@ -133,6 +149,13 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
               <td class="score-font" style={`color: ${setlToColor(meanSetl)}; font-size: 11pt;`}>
                 {formatSetl(meanSetl)}
                 <span style="color: #555; font-size: 7pt; margin-left: 4px;">{meanSetl !== null ? (meanSetl > 0 ? 'E-dominant' : meanSetl < 0 ? 'S-dominant' : 'Balanced') : ''}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="color: #666;" title="Higher Order Tension Level — comments vs points">Mean HOTL</td>
+              <td class="score-font" style={`color: ${hotlToColor(meanHotl)}; font-size: 11pt;`}>
+                {formatHotl(meanHotl)}
+                <span style="color: #555; font-size: 7pt; margin-left: 4px;">{meanHotl !== null ? (meanHotl > 0 ? 'Contentious' : meanHotl < 0 ? 'Consensus' : 'Balanced') : ''}</span>
               </td>
             </tr>
             <tr>
@@ -271,6 +294,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: 8pt;">
               {topPositive.map((s, i) => {
                 const setl = storySetl(s);
+                const hotl = storyHotl(s);
                 return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
@@ -279,6 +303,9 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
                   </td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
+                  </td>
+                  <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
+                    {formatHotl(hotl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
@@ -300,6 +327,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: 8pt;">
               {topNegative.map((s, i) => {
                 const setl = storySetl(s);
+                const hotl = storyHotl(s);
                 return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
@@ -308,6 +336,9 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
                   </td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
+                  </td>
+                  <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
+                    {formatHotl(hotl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
@@ -337,6 +368,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
               <td width="60" align="center">Stories</td>
               <td width="60" align="center">Avg HRCB</td>
               <td width="50" align="center" title="Structural-Editorial Tension Level">SETL</td>
+              <td width="50" align="center" title="Higher Order Tension Level">HOTL</td>
             </tr>
             {domains.map((d) => (
               <tr style="border-top: 1px solid #1a1a25;">
@@ -349,6 +381,9 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
                 </td>
                 <td align="center" class="score-font" style={`color: ${setlToColor(d.avg_setl)};`}>
                   {formatSetl(d.avg_setl)}
+                </td>
+                <td align="center" class="score-font" style={`color: ${hotlToColor(d.avg_hotl)};`}>
+                  {formatHotl(d.avg_hotl)}
                 </td>
               </tr>
             ))}
@@ -368,14 +403,16 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
         {recent.length > 0 ? (
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
             <tr style="color: #555; font-size: 7pt;">
-              <td width="50">Score</td>
+              <td width="50">HRCB</td>
               <td width="40">SETL</td>
+              <td width="40">HOTL</td>
               <td>Story</td>
               <td width="60">Type</td>
               <td width="120">Evaluated</td>
             </tr>
             {recent.map((s) => {
               const setl = storySetl(s);
+              const hotl = storyHotl(s);
               return (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; font-weight: bold;`}>
@@ -383,6 +420,9 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
                 </td>
                 <td class="score-font" style={`color: ${setlToColor(setl)}; font-size: 8pt;`}>
                   {formatSetl(setl)}
+                </td>
+                <td class="score-font" style={`color: ${hotlToColor(hotl)}; font-size: 8pt;`}>
+                  {formatHotl(hotl)}
                 </td>
                 <td>
                   <a href={`/item/${s.hn_id}`}>{s.title}</a>
@@ -436,22 +476,62 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
         <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Evaluation Model</div>
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Evaluation Models
+            {modelComparison.length > 1 && (
+              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                {modelComparison.length} models in history
+              </span>
+            )}
+          </div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
             <tr style="color: #555; font-size: 7pt;">
               <td>Model</td>
-              <td width="80" align="center">Evaluations</td>
-              <td width="80" align="center">Avg Score</td>
+              <td width="80" align="center">Active Evals</td>
+              <td width="80" align="center">Avg HRCB</td>
+              <td width="80" align="center">History</td>
+              <td width="60" align="center">Min</td>
+              <td width="60" align="center">Max</td>
             </tr>
-            {models.map((m) => (
+            {models.map((m) => {
+              const hist = modelComparison.find(mc => mc.eval_model === m.eval_model);
+              return (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td style="color: #c9c9c9;" class="score-font">{m.eval_model}</td>
                 <td align="center" class="score-font" style="color: #888;">{m.count}</td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(m.avg_score)};`}>
                   {formatScore(m.avg_score)}
                 </td>
+                <td align="center" class="score-font" style="color: #555;">
+                  {hist ? hist.count : '—'}
+                </td>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(hist?.min_score ?? null)};`}>
+                  {hist ? formatScore(hist.min_score) : '—'}
+                </td>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(hist?.max_score ?? null)};`}>
+                  {hist ? formatScore(hist.max_score) : '—'}
+                </td>
               </tr>
-            ))}
+              );
+            })}
+            {/* Show models only in history but not active */}
+            {modelComparison
+              .filter(mc => !models.find(m => m.eval_model === mc.eval_model))
+              .map(mc => (
+                <tr style="border-top: 1px solid #1a1a25;">
+                  <td style="color: #666;" class="score-font">{mc.eval_model}</td>
+                  <td align="center" class="score-font" style="color: #555;">—</td>
+                  <td align="center" class="score-font" style="color: #555;">—</td>
+                  <td align="center" class="score-font" style="color: #888;">{mc.count}</td>
+                  <td align="center" class="score-font" style={`color: ${scoreToColor(mc.min_score)};`}>
+                    {formatScore(mc.min_score)}
+                  </td>
+                  <td align="center" class="score-font" style={`color: ${scoreToColor(mc.max_score)};`}>
+                    {formatScore(mc.max_score)}
+                  </td>
+                </tr>
+              ))
+            }
           </table>
         </td>
       </tr>
@@ -501,11 +581,112 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
     </table>
   )}
 
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 15px 0;">
+  {/* Operations */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="color: #555; font-size: 7pt;">
-        Cron runs every 10 minutes &middot; up to 20 evaluations per batch cycle &middot; {todayEvals} evals today &middot; budget: 50/day (~$0.13/day with Batch API)
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Operations</div>
+        <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
+          <tr>
+            <td style="color: #666; width: 140px;">Cron interval</td>
+            <td style="color: #c9c9c9;">Every 5 minutes</td>
+          </tr>
+          <tr>
+            <td style="color: #666;">Score refresh</td>
+            <td style="color: #c9c9c9;">Every 5 min (updates) · 48h sweep every 10 min</td>
+          </tr>
+          <tr>
+            <td style="color: #666;">Eval today</td>
+            <td>
+              <span class="score-font" style="color: #eab308;">{costStats.today_evals}</span>
+              <span style="color: #555;"> evals · </span>
+              <span class="score-font" style="color: #888;">{formatTokens(costStats.today_input_tokens)}</span>
+              <span style="color: #555;"> in · </span>
+              <span class="score-font" style="color: #888;">{formatTokens(costStats.today_output_tokens)}</span>
+              <span style="color: #555;"> out</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="color: #666;">Total usage</td>
+            <td>
+              <span class="score-font" style="color: #16a34a;">{costStats.total_evals}</span>
+              <span style="color: #555;"> evals · </span>
+              <span class="score-font" style="color: #888;">{formatTokens(costStats.total_input_tokens)}</span>
+              <span style="color: #555;"> in · </span>
+              <span class="score-font" style="color: #888;">{formatTokens(costStats.total_output_tokens)}</span>
+              <span style="color: #555;"> out</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="color: #666;">Queue</td>
+            <td>
+              <span class="score-font" style="color: #60a5fa;">{status.evaluating}</span>
+              <span style="color: #555;"> evaluating · </span>
+              <span class="score-font" style="color: #eab308;">{queue.length}</span>
+              <span style="color: #555;"> queued/pending</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="color: #666;">Crawl surface</td>
+            <td style="color: #c9c9c9;">top · new · best · ask · show (5 lists)</td>
+          </tr>
+          <tr>
+            <td style="color: #666;">Architecture</td>
+            <td style="color: #555; font-size: 7pt;">Cron v5 → Queue → Consumer (fan-out) · KV content cache · KV DCP cache</td>
+          </tr>
+        </table>
       </td>
     </tr>
   </table>
+
+  {/* Live feed toast area */}
+  <div id="live-feed" style="position: fixed; bottom: 10px; right: 10px; z-index: 100; display: flex; flex-direction: column; gap: 4px; max-width: 320px;"></div>
+
+  <script is:inline>
+  (function() {
+    const indicator = document.getElementById('live-indicator');
+    const feed = document.getElementById('live-feed');
+    let es;
+
+    function connect() {
+      es = new EventSource('/api/events');
+
+      es.addEventListener('connected', function() {
+        if (indicator) {
+          indicator.style.color = '#16a34a';
+          indicator.textContent = 'live';
+        }
+      });
+
+      es.addEventListener('evaluation', function(e) {
+        const d = JSON.parse(e.data);
+        const score = d.hcb_weighted_mean !== null ? d.hcb_weighted_mean.toFixed(2) : '?';
+        const toast = document.createElement('div');
+        toast.style.cssText = 'background:#12121a;border:1px solid #222230;border-radius:4px;padding:6px 10px;font-size:8pt;color:#aaa;animation:fadeIn 0.3s;';
+        toast.innerHTML = '<a href="/item/' + d.hn_id + '" style="color:#c9c9c9;">' + d.title.slice(0, 40) + '</a>' +
+          ' <span style="color:' + (d.hcb_weighted_mean > 0.05 ? '#16a34a' : d.hcb_weighted_mean < -0.05 ? '#dc2626' : '#888') + ';font-family:monospace;">' + score + '</span>';
+        if (feed) {
+          feed.appendChild(toast);
+          setTimeout(function() { toast.remove(); }, 15000);
+          // Keep max 3 toasts
+          while (feed.children.length > 3) feed.removeChild(feed.firstChild);
+        }
+      });
+
+      es.addEventListener('timeout', function() {
+        es.close();
+        if (indicator) { indicator.style.color = '#555'; indicator.textContent = 'reconnecting...'; }
+        setTimeout(connect, 2000);
+      });
+
+      es.onerror = function() {
+        es.close();
+        if (indicator) { indicator.style.color = '#555'; indicator.textContent = 'offline'; }
+        setTimeout(connect, 30000);
+      };
+    }
+
+    connect();
+  })();
+  </script>
 </Base>

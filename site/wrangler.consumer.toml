@@ -1,0 +1,25 @@
+name = "hn-hrcb-consumer"
+main = "functions/consumer.ts"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "udhr-hrcb"
+database_id = "d49c47bc-8107-4481-8aa1-6a9cf0b534c8"
+
+[[kv_namespaces]]
+binding = "CONTENT_CACHE"
+id = "ffe31e8bd21f43169e81f6d6137772bf"
+
+[[r2_buckets]]
+binding = "CONTENT_SNAPSHOTS"
+bucket_name = "hrcb-content-snapshots"
+
+[[queues.consumers]]
+queue = "hrcb-eval-queue"
+max_batch_size = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+# Secrets (set via `wrangler secret put --name hn-hrcb-consumer`):
+# ANTHROPIC_API_KEY

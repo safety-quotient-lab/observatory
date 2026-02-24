@@ -23,6 +23,7 @@ export interface Story {
   eval_error: string | null;
   evaluated_at: string | null;
   created_at: string;
+  hn_rank: number | null;
 }
 
 export interface ScoreRow {
@@ -47,6 +48,7 @@ export interface ArticleRankingRow {
   domain: string | null;
   url: string | null;
   hn_score: number | null;
+  hn_comments: number | null;
   hcb_weighted_mean: number | null;
   hcb_classification: string | null;
   section: string;
@@ -71,7 +73,7 @@ function scoreRowToScore(row: ScoreRow): Score {
   };
 }
 
-export type SortOption = 'time' | 'score_desc' | 'score_asc' | 'hn_points';
+export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'setl_desc' | 'setl_asc' | 'hotl_desc' | 'hotl_asc';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show';
 
@@ -122,20 +124,42 @@ export async function getFilteredStoriesWithScores(
   const where = conditions.join(' AND ');
 
   let orderBy = 's.hn_time DESC';
+  let joinSetl = false;
+  let joinHotl = false;
   switch (sort) {
+    case 'top': orderBy = 's.hn_rank ASC NULLS LAST, s.hn_time DESC'; break;
     case 'score_desc': orderBy = 's.hcb_weighted_mean DESC NULLS LAST'; break;
     case 'score_asc': orderBy = 's.hcb_weighted_mean ASC NULLS LAST'; break;
     case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
+    case 'setl_desc': joinSetl = true; orderBy = 'story_setl DESC NULLS LAST'; break;
+    case 'setl_asc': joinSetl = true; orderBy = 'story_setl ASC NULLS LAST'; break;
+    case 'hotl_desc': joinHotl = true; orderBy = 'hotl DESC NULLS LAST'; break;
+    case 'hotl_asc': joinHotl = true; orderBy = 'hotl ASC NULLS LAST'; break;
   }
 
   // Stories query — excludes hcb_json blob but includes truncated hn_text preview
+  const setlSelect = joinSetl ? `,
+              (SELECT AVG(
+                CAST((sc2.editorial - sc2.structural) AS REAL) /
+                MAX(ABS(sc2.structural), ABS(sc2.editorial), ABS(sc2.editorial - sc2.structural))
+               )
+               FROM scores sc2
+               WHERE sc2.hn_id = s.hn_id
+                 AND sc2.editorial IS NOT NULL AND sc2.structural IS NOT NULL
+                 AND (ABS(sc2.editorial) > 0 OR ABS(sc2.structural) > 0)
+              ) as story_setl` : '';
+  const hotlSelect = joinHotl ? `,
+              CASE WHEN s.hn_score IS NOT NULL AND s.hn_comments IS NOT NULL AND (s.hn_score + s.hn_comments) > 0
+                   THEN CAST((s.hn_comments - s.hn_score) AS REAL) / (s.hn_comments + s.hn_score)
+                   ELSE NULL END as hotl` : '';
+
   const { results: storyRows } = await db
     .prepare(
       `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
               hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
               hcb_signal_sections, hcb_nd_count, eval_model, eval_prompt_hash,
               eval_status, eval_error, evaluated_at, created_at,
-              SUBSTR(hn_text, 1, 100) as hn_text_preview
+              SUBSTR(hn_text, 1, 100) as hn_text_preview${setlSelect}${hotlSelect}
        FROM stories s WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
     .bind(limit, offset)
@@ -217,7 +241,7 @@ export async function getArticleRanking(
   const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
   const { results } = await db
     .prepare(
-      `SELECT s.hn_id, s.title, s.domain, s.url, s.hn_score,
+      `SELECT s.hn_id, s.title, s.domain, s.url, s.hn_score, s.hn_comments,
               s.hcb_weighted_mean, s.hcb_classification,
               sc.section, sc.final, sc.editorial, sc.structural,
               sc.evidence, sc.note
@@ -386,6 +410,7 @@ export interface DomainStat {
   count: number;
   avg_score: number;
   avg_setl: number | null;
+  avg_hotl: number | null;
 }
 
 export async function getDomainStats(db: D1Database, limit = 10): Promise<DomainStat[]> {
@@ -394,14 +419,17 @@ export async function getDomainStats(db: D1Database, limit = 10): Promise<Domain
       `SELECT s.domain, COUNT(*) as count, AVG(s.hcb_weighted_mean) as avg_score,
               (SELECT AVG(
                 CAST((sc.editorial - sc.structural) AS REAL) /
-                MAX(ABS(sc.structural), ABS(sc.editorial))
+                MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
                )
                FROM scores sc
                JOIN stories s2 ON s2.hn_id = sc.hn_id
                WHERE s2.domain = s.domain
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
                  AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-              ) as avg_setl
+              ) as avg_setl,
+              AVG(CASE WHEN s.hn_score IS NOT NULL AND s.hn_comments IS NOT NULL AND (s.hn_score + s.hn_comments) > 0
+                       THEN CAST((s.hn_comments - s.hn_score) AS REAL) / (s.hn_comments + s.hn_score)
+                       ELSE NULL END) as avg_hotl
        FROM stories s WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
        GROUP BY s.domain ORDER BY count DESC LIMIT ?`
     )
@@ -575,26 +603,67 @@ export async function getDomainSetl(db: D1Database, domain: string): Promise<num
   return row?.setl ?? null;
 }
 
+export type DomainSortOption = 'count' | 'score' | 'setl' | 'hotl';
+
+export async function getMeanHotl(db: D1Database): Promise<number | null> {
+  const row = await db
+    .prepare(
+      `SELECT AVG(
+        CASE WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
+             THEN CAST((hn_comments - hn_score) AS REAL) / (hn_comments + hn_score)
+             ELSE NULL END
+       ) as mean_hotl
+       FROM stories
+       WHERE eval_status = 'done'`
+    )
+    .first<{ mean_hotl: number | null }>();
+  return row?.mean_hotl ?? null;
+}
+
+export async function getDomainHotl(db: D1Database, domain: string): Promise<number | null> {
+  const row = await db
+    .prepare(
+      `SELECT AVG(
+        CASE WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
+             THEN CAST((hn_comments - hn_score) AS REAL) / (hn_comments + hn_score)
+             ELSE NULL END
+       ) as hotl
+       FROM stories
+       WHERE domain = ?`
+    )
+    .bind(domain)
+    .first<{ hotl: number | null }>();
+  return row?.hotl ?? null;
+}
+
 export async function getAllDomainStats(
   db: D1Database,
-  sort: 'count' | 'score' = 'count',
+  sort: DomainSortOption = 'count',
   limit = 50
 ): Promise<DomainStat[]> {
-  const orderBy = sort === 'score' ? 'avg_score DESC NULLS LAST' : 'count DESC';
+  let orderBy = 'count DESC';
+  switch (sort) {
+    case 'score': orderBy = 'avg_score DESC NULLS LAST'; break;
+    case 'setl': orderBy = 'avg_setl DESC NULLS LAST'; break;
+    case 'hotl': orderBy = 'avg_hotl DESC NULLS LAST'; break;
+  }
   const { results } = await db
     .prepare(
       `SELECT s.domain, COUNT(*) as count,
               AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
               (SELECT AVG(
                 CAST((sc.editorial - sc.structural) AS REAL) /
-                MAX(ABS(sc.structural), ABS(sc.editorial))
+                MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
                )
                FROM scores sc
                JOIN stories s2 ON s2.hn_id = sc.hn_id
                WHERE s2.domain = s.domain
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
                  AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-              ) as avg_setl
+              ) as avg_setl,
+              AVG(CASE WHEN s.hn_score IS NOT NULL AND s.hn_comments IS NOT NULL AND (s.hn_score + s.hn_comments) > 0
+                       THEN CAST((s.hn_comments - s.hn_score) AS REAL) / (s.hn_comments + s.hn_score)
+                       ELSE NULL END) as avg_hotl
        FROM stories s
        WHERE s.domain IS NOT NULL
        GROUP BY s.domain
@@ -603,5 +672,98 @@ export async function getAllDomainStats(
     )
     .bind(limit)
     .all<DomainStat>();
+  return results;
+}
+
+// --- Model comparison ---
+
+export interface ModelComparisonStat {
+  eval_model: string;
+  count: number;
+  avg_score: number | null;
+  min_score: number | null;
+  max_score: number | null;
+}
+
+export async function getModelComparisonStats(db: D1Database): Promise<ModelComparisonStat[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT eval_model,
+              COUNT(*) as count,
+              AVG(hcb_weighted_mean) as avg_score,
+              MIN(hcb_weighted_mean) as min_score,
+              MAX(hcb_weighted_mean) as max_score
+       FROM eval_history
+       GROUP BY eval_model
+       ORDER BY count DESC`
+    )
+    .all<ModelComparisonStat>();
+  return results;
+}
+
+// --- Cost tracking ---
+
+export interface CostStats {
+  total_evals: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  today_evals: number;
+  today_input_tokens: number;
+  today_output_tokens: number;
+}
+
+export async function getCostStats(db: D1Database): Promise<CostStats> {
+  const row = await db
+    .prepare(
+      `SELECT
+        COUNT(*) as total_evals,
+        COALESCE(SUM(input_tokens), 0) as total_input_tokens,
+        COALESCE(SUM(output_tokens), 0) as total_output_tokens,
+        SUM(CASE WHEN evaluated_at >= date('now') THEN 1 ELSE 0 END) as today_evals,
+        COALESCE(SUM(CASE WHEN evaluated_at >= date('now') THEN input_tokens ELSE 0 END), 0) as today_input_tokens,
+        COALESCE(SUM(CASE WHEN evaluated_at >= date('now') THEN output_tokens ELSE 0 END), 0) as today_output_tokens
+       FROM eval_history`
+    )
+    .first<{
+      total_evals: number;
+      total_input_tokens: number;
+      total_output_tokens: number;
+      today_evals: number;
+      today_input_tokens: number;
+      today_output_tokens: number;
+    }>();
+  return {
+    total_evals: row?.total_evals ?? 0,
+    total_input_tokens: row?.total_input_tokens ?? 0,
+    total_output_tokens: row?.total_output_tokens ?? 0,
+    today_evals: row?.today_evals ?? 0,
+    today_input_tokens: row?.today_input_tokens ?? 0,
+    today_output_tokens: row?.today_output_tokens ?? 0,
+  };
+}
+
+// --- Comments ---
+
+export interface StoryComment {
+  comment_id: number;
+  author: string | null;
+  text: string | null;
+  time: number | null;
+}
+
+export async function getStoryComments(
+  db: D1Database,
+  hnId: number,
+  limit = 20
+): Promise<StoryComment[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT comment_id, author, text, time FROM story_comments
+       WHERE hn_id = ?
+       ORDER BY time ASC
+       LIMIT ?`
+    )
+    .bind(hnId, limit)
+    .all<StoryComment>();
   return results;
 }

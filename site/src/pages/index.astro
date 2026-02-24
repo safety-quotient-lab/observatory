@@ -7,15 +7,15 @@ import type { SortOption, FilterOption, TypeOption } from '../lib/db';
 const db = Astro.locals.runtime.env.DB;
 
 const url = new URL(Astro.request.url);
-const sort = (url.searchParams.get('sort') || 'time') as SortOption;
+const sort = (url.searchParams.get('sort') || 'top') as SortOption;
 const filter = (url.searchParams.get('filter') || 'all') as FilterOption;
 const type = (url.searchParams.get('type') || 'all') as TypeOption;
 const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
-const validSorts: SortOption[] = ['time', 'score_desc', 'score_asc', 'hn_points'];
+const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'setl_desc', 'setl_asc', 'hotl_desc', 'hotl_asc'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show'];
-const safeSort = validSorts.includes(sort) ? sort : 'time';
+const safeSort = validSorts.includes(sort) ? sort : 'top';
 const safeFilter = validFilters.includes(filter) ? filter : 'all';
 const safeType = validTypes.includes(type) ? type : 'all';
 
@@ -35,7 +35,7 @@ function buildUrl(params: Record<string, string>): string {
   const f = params.filter ?? safeFilter;
   const t = params.type ?? safeType;
   const pg = params.p ?? '1';
-  if (s !== 'time') p.set('sort', s);
+  if (s !== 'top') p.set('sort', s);
   if (f !== 'all') p.set('filter', f);
   if (t !== 'all') p.set('type', t);
   if (pg !== '1') p.set('p', pg);
@@ -47,17 +47,22 @@ const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN
 
 // Canonical URL: include sort/filter/type but exclude pagination
 const canonicalParams = new URLSearchParams();
-if (safeSort !== 'time') canonicalParams.set('sort', safeSort);
+if (safeSort !== 'top') canonicalParams.set('sort', safeSort);
 if (safeFilter !== 'all') canonicalParams.set('filter', safeFilter);
 if (safeType !== 'all') canonicalParams.set('type', safeType);
 const canonicalQs = canonicalParams.toString();
 const canonicalUrl = `${url.origin}${canonicalQs ? `/?${canonicalQs}` : '/'}`;
 
 const SORT_OPTIONS = [
+  { value: 'top', label: 'top' },
   { value: 'time', label: 'new' },
   { value: 'score_desc', label: 'top hrcb' },
   { value: 'score_asc', label: 'bottom hrcb' },
   { value: 'hn_points', label: 'points' },
+  { value: 'setl_desc', label: 'top setl' },
+  { value: 'setl_asc', label: 'bottom setl' },
+  { value: 'hotl_desc', label: 'top hotl' },
+  { value: 'hotl_asc', label: 'bottom hotl' },
 ] as const;
 
 const FILTER_OPTIONS = [

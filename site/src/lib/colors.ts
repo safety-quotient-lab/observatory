@@ -31,9 +31,9 @@ export function classificationColor(classification: string): string {
   const lower = classification.toLowerCase();
   if (lower.includes('strong positive')) return '#16a34a';
   if (lower.includes('moderate positive')) return '#22c55e';
-  if (lower.includes('weak positive')) return '#86efac';
+  if (lower.includes('mild positive')) return '#86efac';
   if (lower.includes('neutral')) return '#6b7280';
-  if (lower.includes('weak negative')) return '#fca5a5';
+  if (lower.includes('mild negative')) return '#fca5a5';
   if (lower.includes('moderate negative')) return '#ef4444';
   if (lower.includes('strong negative')) return '#dc2626';
   return '#6b7280';
@@ -42,7 +42,7 @@ export function classificationColor(classification: string): string {
 /** Get classification badge text color */
 export function classificationTextColor(classification: string): string {
   const lower = classification.toLowerCase();
-  if (lower.includes('weak positive') || lower.includes('weak negative')) return '#1a1a25';
+  if (lower.includes('mild positive') || lower.includes('mild negative')) return '#1a1a25';
   return '#ffffff';
 }
 
@@ -90,25 +90,31 @@ export function formatSetl(setl: number | null): string {
   return `${sign}${setl.toFixed(2)}`;
 }
 
-/** Map SETL [-1, +1] to a color: orange for editorial-dominant (positive), blue for structural-dominant (negative) */
+/** Map SETL [-1, +1] to a color: green for positive, red for negative */
 export function setlToColor(setl: number | null): string {
   if (setl === null) return '#2a2a35';
-  const clamped = Math.max(-1, Math.min(1, setl));
-  if (clamped < 0) {
-    // Blue: interpolate gray (#555) → blue (#60a5fa) for structural-dominant (negative)
-    const t = Math.abs(clamped);
-    const r = Math.round(0x55 + (0x60 - 0x55) * t);
-    const g = Math.round(0x55 + (0xa5 - 0x55) * t);
-    const b = Math.round(0x55 + (0xfa - 0x55) * t);
-    return `rgb(${r}, ${g}, ${b})`;
-  } else {
-    // Orange: interpolate gray (#555) → orange (#fb923c) for editorial-dominant (positive)
-    const t = clamped;
-    const r = Math.round(0x55 + (0xfb - 0x55) * t);
-    const g = Math.round(0x55 + (0x92 - 0x55) * t);
-    const b = Math.round(0x55 + (0x3c - 0x55) * t);
-    return `rgb(${r}, ${g}, ${b})`;
-  }
+  return scoreToColor(setl);
+}
+
+/** Compute HOTL (Higher Order Tension Level) from HN points and comments */
+export function computeHotl(points: number | null, comments: number | null): number | null {
+  if (points === null || comments === null) return null;
+  const denom = points + comments;
+  if (denom === 0) return null;
+  return (comments - points) / denom;
+}
+
+/** Format HOTL value for display */
+export function formatHotl(hotl: number | null): string {
+  if (hotl === null) return 'ND';
+  const sign = hotl > 0 ? '+' : '';
+  return `${sign}${hotl.toFixed(2)}`;
+}
+
+/** Map HOTL [-1, +1] to a color: green for negative (low tension = consensus), red for positive (high tension = contentious) */
+export function hotlToColor(hotl: number | null): string {
+  if (hotl === null) return '#2a2a35';
+  return scoreToColor(-hotl);
 }
 
 /** DCP modifier color */

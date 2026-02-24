@@ -16,11 +16,12 @@ import Base from '../layouts/Base.astro';
         </p>
 
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 15px;">
-          A cron worker fetches top HN stories every 10 minutes, retrieves each linked URL's content,
-          and uses Claude to evaluate it against the UDHR methodology (v3.4). Results are stored
-          and displayed alongside the standard HN story metadata. The evaluator operates as a
-          <b style="color: #ff6600;">Fair Witness</b> — reporting only what is directly observable, with no
-          inference beyond the evidence.
+          A cron worker crawls HN stories every 5 minutes across 5 lists (top, new, best, ask, show),
+          cleans HTML content, and dispatches evaluations via a Cloudflare Queue. A separate consumer worker
+          evaluates each URL against the UDHR methodology (v3.4) using Claude, with DCP caching per domain
+          and content snapshots stored in R2. Results are displayed alongside standard HN metadata.
+          The evaluator operates as a <b style="color: #ff6600;">Fair Witness</b> — reporting only what is
+          directly observable, with no inference beyond the evidence.
         </p>
 
         <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Core Construct: HRCB</p>
@@ -65,6 +66,58 @@ import Base from '../layouts/Base.astro';
         <p style="color: #828282; font-size: 8pt; margin-bottom: 15px;">
           Channels are weighted by content type (e.g., Editorial=0.6, Structural=0.4).
           Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.
+        </p>
+
+        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</p>
+
+        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+          SETL measures the divergence between editorial and structural signals for each article.
+          It captures whether a site's words and infrastructure tell different stories.
+        </p>
+
+        <table cellpadding="4" cellspacing="0" style="font-size: 9pt; margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
+          <tr style="color: #828282;">
+            <td class="score-font" style="color: #dc2626;">-1.0</td>
+            <td>&larr;</td>
+            <td>S-dominant (structural exceeds editorial)</td>
+            <td>|</td>
+            <td>Balanced</td>
+            <td>|</td>
+            <td>E-dominant (editorial exceeds structural)</td>
+            <td>&rarr;</td>
+            <td class="score-font" style="color: #16a34a;">+1.0</td>
+          </tr>
+        </table>
+
+        <p style="color: #828282; font-size: 8pt; margin-bottom: 15px;">
+          Formula: <span class="score-font">(E - S) / max(|S|, |E|, |E - S|)</span>.
+          A high absolute SETL means the site's content and infrastructure are misaligned on human rights.
+        </p>
+
+        <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">HOTL — Higher Order Tension Level</p>
+
+        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+          HOTL measures audience contention from HN metadata — the ratio of discussion (comments)
+          to approval (points). Negative values indicate consensus; positive values indicate controversy.
+        </p>
+
+        <table cellpadding="4" cellspacing="0" style="font-size: 9pt; margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
+          <tr style="color: #828282;">
+            <td class="score-font" style="color: #16a34a;">-1.0</td>
+            <td>&larr;</td>
+            <td>Consensus (points &gt;&gt; comments)</td>
+            <td>|</td>
+            <td>Balanced</td>
+            <td>|</td>
+            <td>Contentious (comments &gt;&gt; points)</td>
+            <td>&rarr;</td>
+            <td class="score-font" style="color: #dc2626;">+1.0</td>
+          </tr>
+        </table>
+
+        <p style="color: #828282; font-size: 8pt; margin-bottom: 15px;">
+          Formula: <span class="score-font">(comments - points) / (comments + points)</span>.
+          HOTL is independent of the evaluation model — it's derived purely from HN engagement data.
         </p>
 
         <p style="font-size: 11pt; color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
@@ -184,6 +237,14 @@ import Base from '../layouts/Base.astro';
           <tr>
             <td style="color: #828282;" class="score-font">Evaluator</td><td style="color: #c9c9c9;" class="score-font">Claude Haiku 4.5</td>
             <td style="color: #828282;" class="score-font">Database</td><td style="color: #c9c9c9;" class="score-font">Cloudflare D1</td>
+          </tr>
+          <tr>
+            <td style="color: #828282;" class="score-font">Cron</td><td style="color: #c9c9c9;" class="score-font">Every 5 min (5 HN lists)</td>
+            <td style="color: #828282;" class="score-font">Cache</td><td style="color: #c9c9c9;" class="score-font">KV (content + DCP)</td>
+          </tr>
+          <tr>
+            <td style="color: #828282;" class="score-font">Queue</td><td style="color: #c9c9c9;" class="score-font">CF Queues (fan-out)</td>
+            <td style="color: #828282;" class="score-font">Storage</td><td style="color: #c9c9c9;" class="score-font">R2 (content snapshots)</td>
           </tr>
         </table>
 
