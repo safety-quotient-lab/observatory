@@ -75,7 +75,7 @@ function scoreRowToScore(row: ScoreRow): Score {
   };
 }
 
-export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'setl_desc' | 'setl_asc' | 'hotl_desc' | 'hotl_asc';
+export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'setl_desc' | 'setl_asc' | 'hotl_desc' | 'hotl_asc' | 'salient' | 'outliers';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show';
 
@@ -137,6 +137,10 @@ export async function getFilteredStoriesWithScores(
     case 'setl_asc': joinSetl = true; orderBy = 'story_setl ASC NULLS LAST'; break;
     case 'hotl_desc': joinHotl = true; orderBy = 'hotl DESC NULLS LAST'; break;
     case 'hotl_asc': joinHotl = true; orderBy = 'hotl ASC NULLS LAST'; break;
+    // salient: high positive SETL + low (negative) HOTL → score = SETL - HOTL
+    case 'salient': joinSetl = true; joinHotl = true; orderBy = '(story_setl - hotl) DESC NULLS LAST'; break;
+    // outliers: extreme SETL (either direction) + high positive HOTL → score = ABS(SETL) + HOTL
+    case 'outliers': joinSetl = true; joinHotl = true; orderBy = '(ABS(story_setl) + hotl) DESC NULLS LAST'; break;
   }
 
   // Stories query — excludes hcb_json blob but includes truncated hn_text preview
