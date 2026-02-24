@@ -87,6 +87,8 @@ interface FeedScoreRow {
 export interface MiniScore {
   section: string;
   final: number | null;
+  editorial: number | null;
+  structural: number | null;
 }
 
 export interface StoryWithMiniScores extends Story {
@@ -149,13 +151,13 @@ export async function getFilteredStoriesWithScores(
   if (evaluatedIds.length > 0) {
     const { results: scoreRows } = await db
       .prepare(
-        `SELECT hn_id, section, sort_order, final
+        `SELECT hn_id, section, sort_order, final, editorial, structural
          FROM scores
          WHERE hn_id IN (${evaluatedIds.map(() => '?').join(',')})
          ORDER BY sort_order`
       )
       .bind(...evaluatedIds)
-      .all<{ hn_id: number; section: string; sort_order: number; final: number | null }>();
+      .all<{ hn_id: number; section: string; sort_order: number; final: number | null; editorial: number | null; structural: number | null }>();
 
     for (const row of scoreRows) {
       let arr = scoresByHnId.get(row.hn_id);
@@ -163,7 +165,7 @@ export async function getFilteredStoriesWithScores(
         arr = [];
         scoresByHnId.set(row.hn_id, arr);
       }
-      arr.push({ section: row.section, final: row.final });
+      arr.push({ section: row.section, final: row.final, editorial: row.editorial, structural: row.structural });
     }
   }
 
@@ -383,14 +385,25 @@ export interface DomainStat {
   domain: string;
   count: number;
   avg_score: number;
+  avg_setl: number | null;
 }
 
 export async function getDomainStats(db: D1Database, limit = 10): Promise<DomainStat[]> {
   const { results } = await db
     .prepare(
-      `SELECT domain, COUNT(*) as count, AVG(hcb_weighted_mean) as avg_score
-       FROM stories WHERE eval_status = 'done' AND domain IS NOT NULL
-       GROUP BY domain ORDER BY count DESC LIMIT ?`
+      `SELECT s.domain, COUNT(*) as count, AVG(s.hcb_weighted_mean) as avg_score,
+              (SELECT AVG(
+                CAST((sc.structural - sc.editorial) AS REAL) /
+                MAX(ABS(sc.structural), ABS(sc.editorial))
+               )
+               FROM scores sc
+               JOIN stories s2 ON s2.hn_id = sc.hn_id
+               WHERE s2.domain = s.domain
+                 AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+                 AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
+              ) as avg_setl
+       FROM stories s WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
+       GROUP BY s.domain ORDER BY count DESC LIMIT ?`
     )
     .bind(limit)
     .all<DomainStat>();
@@ -481,13 +494,13 @@ export async function getStoriesByDomain(
   if (evaluatedIds.length > 0) {
     const { results: scoreRows } = await db
       .prepare(
-        `SELECT hn_id, section, sort_order, final
+        `SELECT hn_id, section, sort_order, final, editorial, structural
          FROM scores
          WHERE hn_id IN (${evaluatedIds.map(() => '?').join(',')})
          ORDER BY sort_order`
       )
       .bind(...evaluatedIds)
-      .all<{ hn_id: number; section: string; sort_order: number; final: number | null }>();
+      .all<{ hn_id: number; section: string; sort_order: number; final: number | null; editorial: number | null; structural: number | null }>();
 
     for (const row of scoreRows) {
       let arr = scoresByHnId.get(row.hn_id);
@@ -495,7 +508,7 @@ export async function getStoriesByDomain(
         arr = [];
         scoresByHnId.set(row.hn_id, arr);
       }
-      arr.push({ section: row.section, final: row.final });
+      arr.push({ section: row.section, final: row.final, editorial: row.editorial, structural: row.structural });
     }
   }
 
@@ -512,6 +525,56 @@ export async function getStoriesByDomain(
   };
 }
 
+export async function getMeanSetl(db: D1Database): Promise<number | null> {
+  const row = await db
+    .prepare(
+      `SELECT AVG(
+        CAST((sc.structural - sc.editorial) AS REAL) /
+        MAX(ABS(sc.structural), ABS(sc.editorial))
+       ) as mean_setl
+       FROM scores sc
+       WHERE sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+         AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)`
+    )
+    .first<{ mean_setl: number | null }>();
+  return row?.mean_setl ?? null;
+}
+
+export async function getStorySetl(db: D1Database, hnId: number): Promise<number | null> {
+  const row = await db
+    .prepare(
+      `SELECT AVG(
+        CAST((sc.structural - sc.editorial) AS REAL) /
+        MAX(ABS(sc.structural), ABS(sc.editorial))
+       ) as setl
+       FROM scores sc
+       WHERE sc.hn_id = ?
+         AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+         AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)`
+    )
+    .bind(hnId)
+    .first<{ setl: number | null }>();
+  return row?.setl ?? null;
+}
+
+export async function getDomainSetl(db: D1Database, domain: string): Promise<number | null> {
+  const row = await db
+    .prepare(
+      `SELECT AVG(
+        CAST((sc.structural - sc.editorial) AS REAL) /
+        MAX(ABS(sc.structural), ABS(sc.editorial))
+       ) as setl
+       FROM scores sc
+       JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE s.domain = ?
+         AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+         AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)`
+    )
+    .bind(domain)
+    .first<{ setl: number | null }>();
+  return row?.setl ?? null;
+}
+
 export async function getAllDomainStats(
   db: D1Database,
   sort: 'count' | 'score' = 'count',
@@ -520,11 +583,21 @@ export async function getAllDomainStats(
   const orderBy = sort === 'score' ? 'avg_score DESC NULLS LAST' : 'count DESC';
   const { results } = await db
     .prepare(
-      `SELECT domain, COUNT(*) as count,
-              AVG(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END) as avg_score
-       FROM stories
-       WHERE domain IS NOT NULL
-       GROUP BY domain
+      `SELECT s.domain, COUNT(*) as count,
+              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
+              (SELECT AVG(
+                CAST((sc.structural - sc.editorial) AS REAL) /
+                MAX(ABS(sc.structural), ABS(sc.editorial))
+               )
+               FROM scores sc
+               JOIN stories s2 ON s2.hn_id = sc.hn_id
+               WHERE s2.domain = s.domain
+                 AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+                 AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
+              ) as avg_setl
+       FROM stories s
+       WHERE s.domain IS NOT NULL
+       GROUP BY s.domain
        ORDER BY ${orderBy}
        LIMIT ?`
     )

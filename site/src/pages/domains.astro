@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getAllDomainStats } from '../lib/db';
-import { scoreToColor, formatScore } from '../lib/colors';
+import { scoreToColor, formatScore, formatSetl, setlToColor } from '../lib/colors';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -47,6 +47,7 @@ const domains = await getAllDomainStats(db, safeSort, 100);
               <td>Domain</td>
               <td width="70" align="center">Stories</td>
               <td width="80" align="center">Avg HRCB</td>
+              <td width="70" align="center" title="Structural-Editorial Tension Level">Avg SETL</td>
             </tr>
             {domains.map((d, i) => (
               <tr style="border-top: 1px solid #1a1a25;">
@@ -57,6 +58,9 @@ const domains = await getAllDomainStats(db, safeSort, 100);
                 <td align="center" class="score-font" style="color: #888;">{d.count}</td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
                   {d.avg_score !== null ? formatScore(d.avg_score) : <span style="color: #555;">—</span>}
+                </td>
+                <td align="center" class="score-font" style={`color: ${setlToColor(d.avg_setl)};`}>
+                  {d.avg_setl !== null ? formatSetl(d.avg_setl) : <span style="color: #555;">—</span>}
                 </td>
               </tr>
             ))}

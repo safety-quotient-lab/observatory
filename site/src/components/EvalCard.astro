@@ -1,5 +1,5 @@
 ---
-import { scoreToColor, formatScore, classificationColor, classificationTextColor } from '../lib/colors';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, setlToColor } from '../lib/colors';
 import MiniBar from './MiniBar.astro';
 import type { Story, StoryWithMiniScores } from '../lib/db';
 
@@ -16,6 +16,14 @@ const classLabel = story.hcb_classification?.split(' — ')[0] || story.hcb_clas
 
 const miniScores = 'miniScores' in story ? story.miniScores : [];
 const hnTextPreview = 'hn_text_preview' in story ? (story as StoryWithMiniScores).hn_text_preview : null;
+
+// Compute aggregate SETL from miniScores
+const setlValues = miniScores
+  .map(s => computeSetl(s.structural, s.editorial))
+  .filter((v): v is number => v !== null);
+const aggSetl = setlValues.length > 0
+  ? setlValues.reduce((a, b) => a + b, 0) / setlValues.length
+  : null;
 
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
@@ -38,13 +46,21 @@ function timeAgo(unixTime: number): string {
   </td>
   <td valign="top" style="padding-right: 5px; width: 44px; text-align: center;">
     {hasEval ? (
-      <a href={`/item/${story.hn_id}`} title={`HRCB: ${formatScore(story.hcb_weighted_mean)} — ${classLabel}`}>
+      <a href={`/item/${story.hn_id}`} title={`HRCB: ${formatScore(story.hcb_weighted_mean)} — ${classLabel} | SETL: ${formatSetl(aggSetl)}`}>
         <span
           class="score-font"
           style={`color: ${meanColor}; font-size: 9pt; font-weight: bold;`}
         >
           {formatScore(story.hcb_weighted_mean)}
         </span>
+        {aggSetl !== null && (
+          <span
+            class="score-font"
+            style={`color: ${setlToColor(aggSetl)}; font-size: 7pt; display: block; margin-top: 1px;`}
+          >
+            {formatSetl(aggSetl)}
+          </span>
+        )}
       </a>
     ) : story.eval_status === 'evaluating' ? (
       <span class="eval-spinner" style="color: #60a5fa; font-size: 8pt; display: inline-block;" title="Evaluating...">&#9881;</span>

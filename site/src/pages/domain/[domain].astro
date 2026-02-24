@@ -1,8 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
-import { getStoriesByDomain } from '../../lib/db';
-import { scoreToColor, formatScore } from '../../lib/colors';
+import { getStoriesByDomain, getDomainSetl } from '../../lib/db';
+import { scoreToColor, formatScore, formatSetl, setlToColor } from '../../lib/colors';
 
 const { domain } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
@@ -16,7 +16,10 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
-const { stories, total, avgScore } = await getStoriesByDomain(db, domain, PER_PAGE + 1, offset);
+const [{ stories, total, avgScore }, domainSetl] = await Promise.all([
+  getStoriesByDomain(db, domain, PER_PAGE + 1, offset),
+  getDomainSetl(db, domain),
+]);
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
@@ -37,6 +40,11 @@ const evaluatedCount = stories.filter(s => s.eval_status === 'done').length;
             {avgScore !== null && (
               <span>
                 avg HRCB: <span class="score-font" style={`color: ${scoreToColor(avgScore)}; font-weight: bold;`}>{formatScore(avgScore)}</span>
+              </span>
+            )}
+            {domainSetl !== null && (
+              <span>
+                avg SETL: <span class="score-font" style={`color: ${setlToColor(domainSetl)}; font-weight: bold;`}>{formatSetl(domainSetl)}</span>
               </span>
             )}
             {page > 1 && <span>page {page}</span>}

@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { scoreToColor, formatScore } from '../lib/colors';
+import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor } from '../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS } from '../lib/udhr';
 import { CONTENT_TYPE_LABELS } from '../lib/types';
 import {
@@ -16,11 +16,13 @@ import {
   getQueueStories,
   getModelStats,
   getTodayEvalCount,
+  getMeanSetl,
+  getStorySetl,
 } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recent, domains, failed, queue, models, todayEvals] = await Promise.all([
+const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recent, domains, failed, queue, models, todayEvals, meanSetl] = await Promise.all([
   getStatusCounts(db),
   getScoreStats(db),
   getContentTypeStats(db),
@@ -33,7 +35,23 @@ const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recen
   getQueueStories(db),
   getModelStats(db),
   getTodayEvalCount(db),
+  getMeanSetl(db),
 ]);
+
+// Helper to compute aggregate SETL from a Story's hcb_json
+function storySetl(s: { hcb_json: string | null }): number | null {
+  if (!s.hcb_json) return null;
+  try {
+    const data = JSON.parse(s.hcb_json);
+    const scores = data.scores as Array<{ editorial: number | null; structural: number | null }>;
+    if (!scores) return null;
+    const vals = scores
+      .map((sc: { editorial: number | null; structural: number | null }) => computeSetl(sc.structural, sc.editorial))
+      .filter((v: number | null): v is number => v !== null);
+    if (vals.length === 0) return null;
+    return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
+  } catch { return null; }
+}
 
 const pctDone = status.total > 0 ? Math.round((status.done / status.total) * 100) : 0;
 const pctPending = status.total > 0 ? Math.round((status.pending / status.total) * 100) : 0;
@@ -108,6 +126,13 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
               <td style="color: #666;">Mean HRCB</td>
               <td class="score-font" style={`color: ${scoreToColor(stats.avgScore)}; font-size: 14pt; font-weight: bold;`}>
                 {formatScore(stats.avgScore)}
+              </td>
+            </tr>
+            <tr>
+              <td style="color: #666;" title="Structural-Editorial Tension Level">Mean SETL</td>
+              <td class="score-font" style={`color: ${setlToColor(meanSetl)}; font-size: 11pt;`}>
+                {formatSetl(meanSetl)}
+                <span style="color: #555; font-size: 7pt; margin-left: 4px;">{meanSetl !== null ? (meanSetl > 0 ? 'S-dominant' : meanSetl < 0 ? 'E-dominant' : 'Balanced') : ''}</span>
               </td>
             </tr>
             <tr>
@@ -244,18 +269,24 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Most Positive</div>
           {topPositive.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: 8pt;">
-              {topPositive.map((s, i) => (
+              {topPositive.map((s, i) => {
+                const setl = storySetl(s);
+                return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px; font-weight: bold;`}>
                     {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
+                    {formatSetl(setl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
                     {s.domain && <span style="color: #555; font-size: 7pt; margin-left: 3px;">({s.domain})</span>}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </table>
           ) : (
             <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
@@ -267,18 +298,24 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Most Negative</div>
           {topNegative.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: 8pt;">
-              {topNegative.map((s, i) => (
+              {topNegative.map((s, i) => {
+                const setl = storySetl(s);
+                return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px; font-weight: bold;`}>
                     {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
+                    {formatSetl(setl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
                     {s.domain && <span style="color: #555; font-size: 7pt; margin-left: 3px;">({s.domain})</span>}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </table>
           ) : (
             <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
@@ -299,6 +336,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
               <td>Domain</td>
               <td width="60" align="center">Stories</td>
               <td width="60" align="center">Avg HRCB</td>
+              <td width="50" align="center" title="Structural-Editorial Tension Level">SETL</td>
             </tr>
             {domains.map((d) => (
               <tr style="border-top: 1px solid #1a1a25;">
@@ -308,6 +346,9 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
                 <td align="center" class="score-font" style="color: #888;">{d.count}</td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
                   {formatScore(d.avg_score)}
+                </td>
+                <td align="center" class="score-font" style={`color: ${setlToColor(d.avg_setl)};`}>
+                  {formatSetl(d.avg_setl)}
                 </td>
               </tr>
             ))}
@@ -328,14 +369,20 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
             <tr style="color: #555; font-size: 7pt;">
               <td width="50">Score</td>
+              <td width="40">SETL</td>
               <td>Story</td>
               <td width="60">Type</td>
               <td width="120">Evaluated</td>
             </tr>
-            {recent.map((s) => (
+            {recent.map((s) => {
+              const setl = storySetl(s);
+              return (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; font-weight: bold;`}>
                   {formatScore(s.hcb_weighted_mean)}
+                </td>
+                <td class="score-font" style={`color: ${setlToColor(setl)}; font-size: 8pt;`}>
+                  {formatSetl(setl)}
                 </td>
                 <td>
                   <a href={`/item/${s.hn_id}`}>{s.title}</a>
@@ -349,7 +396,8 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
                 </td>
                 <td style="color: #555; font-size: 7pt;">{s.evaluated_at || ''}</td>
               </tr>
-            ))}
+              );
+            })}
           </table>
         ) : (
           <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>

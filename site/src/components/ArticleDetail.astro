@@ -1,5 +1,5 @@
 ---
-import { scoreToColor, formatScore, evidenceColor, directionalityColor } from '../lib/colors';
+import { scoreToColor, formatScore, evidenceColor, directionalityColor, computeSetl, formatSetl, setlToColor } from '../lib/colors';
 import { ARTICLE_TITLES } from '../lib/udhr';
 import type { Score } from '../lib/types';
 
@@ -15,6 +15,7 @@ const title = ARTICLE_TITLES[score.section] || score.section;
 
 const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low'};
 const DIRECTION_LABELS: Record<string, string> = {A: 'Advocacy', F: 'Framing', P: 'Practice', C: 'Coverage'};
+const articleSetl = computeSetl(score.structural, score.editorial);
 ---
 
 <details class="group border-b border-surface-3/50">
@@ -63,7 +64,7 @@ const DIRECTION_LABELS: Record<string, string> = {A: 'Advocacy', F: 'Framing', P
 
   <div class="px-4 pb-4 pt-1 ml-[52px]">
     {!isND ? (
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
         <div class="bg-surface-2 rounded px-3 py-2">
           <div class="text-[10px] text-gray-500 uppercase tracking-wider">Editorial</div>
           <div class="score-font text-sm" style={`color: ${scoreToColor(score.editorial)}`}>
@@ -74,6 +75,12 @@ const DIRECTION_LABELS: Record<string, string> = {A: 'Advocacy', F: 'Framing', P
           <div class="text-[10px] text-gray-500 uppercase tracking-wider">Structural</div>
           <div class="score-font text-sm" style={`color: ${scoreToColor(score.structural)}`}>
             {formatScore(score.structural)}
+          </div>
+        </div>
+        <div class="bg-surface-2 rounded px-3 py-2" title="Structural-Editorial Tension Level">
+          <div class="text-[10px] text-gray-500 uppercase tracking-wider">SETL</div>
+          <div class="score-font text-sm" style={`color: ${setlToColor(articleSetl)}`}>
+            {formatSetl(articleSetl)}
           </div>
         </div>
         <div class="bg-surface-2 rounded px-3 py-2">

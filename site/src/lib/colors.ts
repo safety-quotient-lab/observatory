@@ -74,6 +74,42 @@ export function directionalityColor(d: string): string {
   }
 }
 
+/** Compute SETL (Structural-Editorial Tension Level) from S and E channel scores */
+export function computeSetl(structural: number | null, editorial: number | null): number | null {
+  if (structural === null || editorial === null) return null;
+  const denom = Math.max(Math.abs(structural), Math.abs(editorial));
+  if (denom === 0) return null;
+  return (structural - editorial) / denom;
+}
+
+/** Format SETL value for display */
+export function formatSetl(setl: number | null): string {
+  if (setl === null) return 'ND';
+  const sign = setl > 0 ? '+' : '';
+  return `${sign}${setl.toFixed(2)}`;
+}
+
+/** Map SETL [-1, +1] to a color: blue for structural-dominant, orange for editorial-dominant */
+export function setlToColor(setl: number | null): string {
+  if (setl === null) return '#2a2a35';
+  const clamped = Math.max(-1, Math.min(1, setl));
+  if (clamped < 0) {
+    // Orange: interpolate gray (#555) → orange (#fb923c)
+    const t = Math.abs(clamped);
+    const r = Math.round(0x55 + (0xfb - 0x55) * t);
+    const g = Math.round(0x55 + (0x92 - 0x55) * t);
+    const b = Math.round(0x55 + (0x3c - 0x55) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  } else {
+    // Blue: interpolate gray (#555) → blue (#60a5fa)
+    const t = clamped;
+    const r = Math.round(0x55 + (0x60 - 0x55) * t);
+    const g = Math.round(0x55 + (0xa5 - 0x55) * t);
+    const b = Math.round(0x55 + (0xfa - 0x55) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+}
+
 /** DCP modifier color */
 export function modifierColor(mod: number | null): string {
   if (mod === null) return '#3a3a45';

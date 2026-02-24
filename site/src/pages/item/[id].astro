@@ -4,7 +4,7 @@ import HeatMap from '../../components/HeatMap.astro';
 import RadarChart from '../../components/RadarChart.astro';
 import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
-import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor } from '../../lib/colors';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor } from '../../lib/colors';
 import { getStory } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
@@ -33,6 +33,14 @@ const scores = storyData.scores.length > 0 ? storyData.scores : evalData.scores;
 
 const classColor = classificationColor(aggregates.classification);
 const classText = classificationTextColor(aggregates.classification);
+
+// Compute aggregate SETL from scores
+const setlValues = scores
+  .map(s => computeSetl(s.structural, s.editorial))
+  .filter((v): v is number => v !== null);
+const aggSetl = setlValues.length > 0
+  ? setlValues.reduce((a, b) => a + b, 0) / setlValues.length
+  : null;
 
 const siteUrl = Astro.url.origin;
 
@@ -206,6 +214,11 @@ function timeAgo(unixTime: number): string {
                 <span style="color: #60a5fa;" title="What the content says">Editorial: {evaluation.channel_weights.editorial}</span>
                 <span style="color: #22d3ee; margin-left: 6px;" title="What the site does">Structural: {evaluation.channel_weights.structural}</span>
               </td>
+            </tr>
+            <tr>
+              <td style="color: #666;" title="Structural-Editorial Tension Level: normalized difference between S and E channels">SETL</td>
+              <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
+              <td style="color: #555; font-size: 7pt;" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Structural-dominant' : aggSetl < 0 ? 'Editorial-dominant' : 'Balanced') : ''}</td>
             </tr>
           </table>
           <div style="margin-top: 6px;">
