@@ -530,7 +530,7 @@ export async function getMeanSetl(db: D1Database): Promise<number | null> {
     .prepare(
       `SELECT AVG(
         CAST((sc.editorial - sc.structural) AS REAL) /
-        MAX(ABS(sc.structural), ABS(sc.editorial))
+        MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
        ) as mean_setl
        FROM scores sc
        WHERE sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
@@ -545,7 +545,7 @@ export async function getStorySetl(db: D1Database, hnId: number): Promise<number
     .prepare(
       `SELECT AVG(
         CAST((sc.editorial - sc.structural) AS REAL) /
-        MAX(ABS(sc.structural), ABS(sc.editorial))
+        MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
        ) as setl
        FROM scores sc
        WHERE sc.hn_id = ?
@@ -562,7 +562,7 @@ export async function getDomainSetl(db: D1Database, domain: string): Promise<num
     .prepare(
       `SELECT AVG(
         CAST((sc.editorial - sc.structural) AS REAL) /
-        MAX(ABS(sc.structural), ABS(sc.editorial))
+        MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
        ) as setl
        FROM scores sc
        JOIN stories s ON s.hn_id = sc.hn_id

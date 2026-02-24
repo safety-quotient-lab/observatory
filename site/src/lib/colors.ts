@@ -77,9 +77,10 @@ export function directionalityColor(d: string): string {
 /** Compute SETL (Structural-Editorial Tension Level) from S and E channel scores */
 export function computeSetl(structural: number | null, editorial: number | null): number | null {
   if (structural === null || editorial === null) return null;
-  const denom = Math.max(Math.abs(structural), Math.abs(editorial));
+  const diff = editorial - structural;
+  const denom = Math.max(Math.abs(structural), Math.abs(editorial), Math.abs(diff));
   if (denom === 0) return null;
-  return (editorial - structural) / denom;
+  return diff / denom;
 }
 
 /** Format SETL value for display */
