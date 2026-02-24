@@ -423,7 +423,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             Queue
             <span style="color: #555; text-transform: none; letter-spacing: 0; margin-left: 6px;">
-              {queue.length} stories waiting &middot; ~3 per cycle &middot; est. {Math.ceil(queue.length / 3) * 10} min to clear
+              {queue.length} stories waiting &middot; ~20 per batch &middot; est. {Math.ceil(queue.length / 20) * 10} min to clear
             </span>
           </div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
@@ -461,7 +461,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 15px 0;">
     <tr>
       <td style="color: #555; font-size: 7pt;">
-        Cron runs every 10 minutes &middot; up to 5 evaluations per cycle &middot; {todayEvals} evals today &middot; budget: 50/day (~$0.25/day)
+        Cron runs every 10 minutes &middot; up to 20 evaluations per batch cycle &middot; {todayEvals} evals today &middot; budget: 50/day (~$0.13/day with Batch API)
       </td>
     </tr>
   </table>

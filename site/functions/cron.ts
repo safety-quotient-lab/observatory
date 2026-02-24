@@ -256,9 +256,15 @@ async function fetchUrlContent(url: string): Promise<string> {
         'Accept': 'text/html,application/xhtml+xml,text/plain',
       },
     });
-    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
     const text = await res.text();
+    if (!res.ok) {
+      // Use the error page body as content — it still has evaluable signals
+      return `[HTTP ${res.status} error page for ${url}]\n\n${text}`.slice(0, 30000);
+    }
     return text.slice(0, 30000);
+  } catch (err) {
+    // Network error / timeout — return descriptive content instead of throwing
+    return `[Fetch error for ${url}]: ${err}. The page could not be reached. This may indicate access restrictions, geo-blocking, or the site being unavailable.`;
   } finally {
     clearTimeout(timeout);
   }
@@ -458,11 +464,7 @@ async function prepareStoryForBatch(
   if (isSelfPost) {
     content = story.hn_text!;
   } else {
-    try {
-      content = await fetchUrlContent(story.url!);
-    } catch {
-      return null; // Will be marked failed separately
-    }
+    content = await fetchUrlContent(story.url!);
   }
 
   if (content.length < 50) {
@@ -768,12 +770,7 @@ async function evaluateDirectly(db: D1Database, apiKey: string, remainingBudget:
       if (isSelfPost) {
         content = story.hn_text!;
       } else {
-        try {
-          content = await fetchUrlContent(story.url!);
-        } catch (err) {
-          await markFailed(db, story.hn_id, `Fetch failed: ${err}`);
-          continue;
-        }
+        content = await fetchUrlContent(story.url!);
       }
 
       if (content.length < 50) {
@@ -910,13 +907,7 @@ async function evaluateWithBatchAPI(db: D1Database, apiKey: string, remainingBud
       batchRequests.push(prepared.request);
       batchHnIds.push(prepared.hnId);
     } else {
-      // Content fetch failed or too short
-      const isSelfPost = !story.url && !!story.hn_text;
-      if (!isSelfPost && story.url) {
-        await markFailed(db, story.hn_id, 'Content fetch failed during batch prep');
-      } else {
-        await markSkipped(db, story.hn_id, 'Content too short');
-      }
+      await markSkipped(db, story.hn_id, 'Content too short');
     }
   }
 

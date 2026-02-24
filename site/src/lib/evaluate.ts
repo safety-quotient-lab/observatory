@@ -222,9 +222,13 @@ export async function fetchUrlContent(url: string): Promise<string> {
         'Accept': 'text/html,application/xhtml+xml,text/plain',
       },
     });
-    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
     const text = await res.text();
+    if (!res.ok) {
+      return `[HTTP ${res.status} error page for ${url}]\n\n${text}`.slice(0, 30000);
+    }
     return text.slice(0, 30000);
+  } catch (err) {
+    return `[Fetch error for ${url}]: ${err}. The page could not be reached. This may indicate access restrictions, geo-blocking, or the site being unavailable.`;
   } finally {
     clearTimeout(timeout);
   }
