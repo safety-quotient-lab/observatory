@@ -1,21 +1,21 @@
 ---
 import { scoreToColor, formatScore, classificationColor, classificationTextColor } from '../lib/colors';
-import HeatMap from './HeatMap.astro';
-import type { Score } from '../lib/types';
+import MiniBar from './MiniBar.astro';
 import type { Story, StoryWithMiniScores } from '../lib/db';
 
 interface Props {
   story: Story | StoryWithMiniScores;
-  scores?: Score[];
   rank?: number;
 }
 
-const { story, scores, rank } = Astro.props;
+const { story, rank } = Astro.props;
 
 const hasEval = story.eval_status === 'done' && story.hcb_weighted_mean !== null;
 const meanColor = hasEval ? scoreToColor(story.hcb_weighted_mean) : '#555';
-// Classification can be a full paragraph — truncate to just the label for tooltips
 const classLabel = story.hcb_classification?.split(' — ')[0] || story.hcb_classification;
+
+const miniScores = 'miniScores' in story ? story.miniScores : [];
+const hnTextPreview = 'hn_text_preview' in story ? (story as StoryWithMiniScores).hn_text_preview : null;
 
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
@@ -74,11 +74,22 @@ function timeAgo(unixTime: number): string {
     </span>
     {story.domain && (
       <span class="sitebit" style="font-size: 8pt; margin-left: 5px;">
-        (<a href={`https://${story.domain}`} target="_blank" rel="noopener">{story.domain}</a>)
+        (<a href={`/domain/${story.domain}`}>{story.domain}</a>)
       </span>
     )}
   </td>
 </tr>
+{/* Self-post text preview for Ask HN */}
+{!story.url && hnTextPreview && (
+  <tr>
+    <td colspan="2"></td>
+    <td style="padding: 2px 0 0 0;">
+      <span style="color: #828282; font-size: 8pt; font-style: italic;">
+        {hnTextPreview.length >= 100 ? hnTextPreview + '...' : hnTextPreview}
+      </span>
+    </td>
+  </tr>
+)}
 {/* Subtext row */}
 <tr>
   <td colspan="2"></td>
@@ -109,12 +120,12 @@ function timeAgo(unixTime: number): string {
   </td>
 </tr>
 {/* Mini heatmap row for evaluated stories */}
-{hasEval && scores && scores.length > 0 && (
+{hasEval && miniScores.length > 0 && (
   <tr>
     <td colspan="2"></td>
     <td style="padding: 2px 0 4px 0;">
-      <a href={`/item/${story.hn_id}`}>
-        <HeatMap scores={scores} compact={true} showLabels={false} />
+      <a href={`/item/${story.hn_id}`} style="text-decoration: none;">
+        <MiniBar scores={miniScores} />
       </a>
     </td>
   </tr>

@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Universal Declaration of Human Rights",
+  "adopted": "1948-12-10",
+  "source": "https://www.un.org/en/about-us/universal-declaration-of-human-rights",
+  "sections": [
+    {
+      "id": "Preamble",
+      "number": 0,
+      "title": "Preamble",
+      "shortTitle": "Preamble",
+      "group": "Foundation",
+      "text": "Whereas recognition of the inherent dignity and of the equal and inalienable rights of all members of the human family is the foundation of freedom, justice and peace in the world,\n\nWhereas disregard and contempt for human rights have resulted in barbarous acts which have outraged the conscience of mankind, and the advent of a world in which human beings shall enjoy freedom of speech and belief and freedom from fear and want has been proclaimed as the highest aspiration of the common people,\n\nWhereas it is essential, if man is not to be compelled to have recourse, as a last resort, to rebellion against tyranny and oppression, that human rights should be protected by the rule of law,\n\nWhereas it is essential to promote the development of friendly relations between nations,\n\nWhereas the peoples of the United Nations have in the Charter reaffirmed their faith in fundamental human rights, in the dignity and worth of the human person and in the equal rights of men and women and have determined to promote social progress and better standards of life in larger freedom,\n\nWhereas Member States have pledged themselves to achieve, in co-operation with the United Nations, the promotion of universal respect for and observance of human rights and fundamental freedoms,\n\nWhereas a common understanding of these rights and freedoms is of the greatest importance for the full realization of this pledge,\n\nNow, therefore,\n\nThe General Assembly,\n\nProclaims this Universal Declaration of Human Rights as a common standard of achievement for all peoples and all nations, to the end that every individual and every organ of society, keeping this Declaration constantly in mind, shall strive by teaching and education to promote respect for these rights and freedoms and by progressive measures, national and international, to secure their universal and effective recognition and observance, both among the peoples of Member States themselves and among the peoples of territories under their jurisdiction."
+    },
+    {
+      "id": "Article 1",
+      "number": 1,
+      "title": "Freedom, Equality, Brotherhood",
+      "shortTitle": "Freedom & Equality",
+      "group": "Foundation",
+      "text": "All human beings are born free and equal in dignity and rights. They are endowed with reason and conscience and should act towards one another in a spirit of brotherhood."
+    },
+    {
+      "id": "Article 2",
+      "number": 2,
+      "title": "Non-Discrimination",
+      "shortTitle": "Non-Discrimination",
+      "group": "Foundation",
+      "text": "Everyone is entitled to all the rights and freedoms set forth in this Declaration, without distinction of any kind, such as race, colour, sex, language, religion, political or other opinion, national or social origin, property, birth or other status. Furthermore, no distinction shall be made on the basis of the political, jurisdictional or international status of the country or territory to which a person belongs, whether it be independent, trust, non-self-governing or under any other limitation of sovereignty."
+    },
+    {
+      "id": "Article 3",
+      "number": 3,
+      "title": "Life, Liberty, Security",
+      "shortTitle": "Life & Liberty",
+      "group": "Security",
+      "text": "Everyone has the right to life, liberty and security of person."
+    },
+    {
+      "id": "Article 4",
+      "number": 4,
+      "title": "No Slavery",
+      "shortTitle": "No Slavery",
+      "group": "Security",
+      "text": "No one shall be held in slavery or servitude; slavery and the slave trade shall be prohibited in all their forms."
+    },
+    {
+      "id": "Article 5",
+      "number": 5,
+      "title": "No Torture",
+      "shortTitle": "No Torture",
+      "group": "Security",
+      "text": "No one shall be subjected to torture or to cruel, inhuman or degrading treatment or punishment."
+    },
+    {
+      "id": "Article 6",
+      "number": 6,
+      "title": "Legal Personhood",
+      "shortTitle": "Legal Personhood",
+      "group": "Legal",
+      "text": "Everyone has the right to recognition everywhere as a person before the law."
+    },
+    {
+      "id": "Article 7",
+      "number": 7,
+      "title": "Equality Before Law",
+      "shortTitle": "Equal Protection",
+      "group": "Legal",
+      "text": "All are equal before the law and are entitled without any discrimination to equal protection of the law. All are entitled to equal protection against any discrimination in violation of this Declaration and against any incitement to such discrimination."
+    },
+    {
+      "id": "Article 8",
+      "number": 8,
+      "title": "Right to Remedy",
+      "shortTitle": "Right to Remedy",
+      "group": "Legal",
+      "text": "Everyone has the right to an effective remedy by the competent national tribunals for acts violating the fundamental rights granted him by the constitution or by law."
+    },
+    {
+      "id": "Article 9",
+      "number": 9,
+      "title": "No Arbitrary Detention",
+      "shortTitle": "No Arbitrary Detention",
+      "group": "Legal",
+      "text": "No one shall be subjected to arbitrary arrest, detention or exile."
+    },
+    {
+      "id": "Article 10",
+      "number": 10,
+      "title": "Fair Hearing",
+      "shortTitle": "Fair Hearing",
+      "group": "Legal",
+      "text": "Everyone is entitled in full equality to a fair and public hearing by an independent and impartial tribunal, in the determination of his rights and obligations and of any criminal charge against him."
+    },
+    {
+      "id": "Article 11",
+      "number": 11,
+      "title": "Presumption of Innocence",
+      "shortTitle": "Presumption of Innocence",
+      "group": "Legal",
+      "text": "Everyone charged with a penal offence has the right to be presumed innocent until proved guilty according to law in a public trial at which he has had all the guarantees necessary for his defence.\n\nNo one shall be held guilty of any penal offence on account of any act or omission which did not constitute a penal offence, under national or international law, at the time when it was committed. Nor shall a heavier penalty be imposed than the one that was applicable at the time the penal offence was committed."
+    },
+    {
+      "id": "Article 12",
+      "number": 12,
+      "title": "Privacy",
+      "shortTitle": "Privacy",
+      "group": "Privacy & Movement",
+      "text": "No one shall be subjected to arbitrary interference with his privacy, family, home or correspondence, nor to attacks upon his honour and reputation. Everyone has the right to the protection of the law against such interference or attacks."
+    },
+    {
+      "id": "Article 13",
+      "number": 13,
+      "title": "Freedom of Movement",
+      "shortTitle": "Freedom of Movement",
+      "group": "Privacy & Movement",
+      "text": "Everyone has the right to freedom of movement and residence within the borders of each state.\n\nEveryone has the right to leave any country, including his own, and to return to his country."
+    },
+    {
+      "id": "Article 14",
+      "number": 14,
+      "title": "Asylum",
+      "shortTitle": "Asylum",
+      "group": "Privacy & Movement",
+      "text": "Everyone has the right to seek and to enjoy in other countries asylum from persecution.\n\nThis right may not be invoked in the case of prosecutions genuinely arising from non-political crimes or from acts contrary to the purposes and principles of the United Nations."
+    },
+    {
+      "id": "Article 15",
+      "number": 15,
+      "title": "Nationality",
+      "shortTitle": "Nationality",
+      "group": "Privacy & Movement",
+      "text": "Everyone has the right to a nationality.\n\nNo one shall be arbitrarily deprived of his nationality nor denied the right to change his nationality."
+    },
+    {
+      "id": "Article 16",
+      "number": 16,
+      "title": "Marriage & Family",
+      "shortTitle": "Marriage & Family",
+      "group": "Personal",
+      "text": "Men and women of full age, without any limitation due to race, nationality or religion, have the right to marry and to found a family. They are entitled to equal rights as to marriage, during marriage and at its dissolution.\n\nMarriage shall be entered into only with the free and full consent of the intending spouses.\n\nThe family is the natural and fundamental group unit of society and is entitled to protection by society and the State."
+    },
+    {
+      "id": "Article 17",
+      "number": 17,
+      "title": "Property",
+      "shortTitle": "Property",
+      "group": "Personal",
+      "text": "Everyone has the right to own property alone as well as in association with others.\n\nNo one shall be arbitrarily deprived of his property."
+    },
+    {
+      "id": "Article 18",
+      "number": 18,
+      "title": "Freedom of Thought",
+      "shortTitle": "Freedom of Thought",
+      "group": "Personal",
+      "text": "Everyone has the right to freedom of thought, conscience and religion; this right includes freedom to change his religion or belief, and freedom, either alone or in community with others and in public or private, to manifest his religion or belief in teaching, practice, worship and observance."
+    },
+    {
+      "id": "Article 19",
+      "number": 19,
+      "title": "Freedom of Expression",
+      "shortTitle": "Free Expression",
+      "group": "Expression",
+      "text": "Everyone has the right to freedom of opinion and expression; this right includes freedom to hold opinions without interference and to seek, receive and impart information and ideas through any media and regardless of frontiers."
+    },
+    {
+      "id": "Article 20",
+      "number": 20,
+      "title": "Assembly & Association",
+      "shortTitle": "Assembly",
+      "group": "Expression",
+      "text": "Everyone has the right to freedom of peaceful assembly and association.\n\nNo one may be compelled to belong to an association."
+    },
+    {
+      "id": "Article 21",
+      "number": 21,
+      "title": "Political Participation",
+      "shortTitle": "Political Participation",
+      "group": "Expression",
+      "text": "Everyone has the right to take part in the government of his country, directly or through freely chosen representatives.\n\nEveryone has the right of equal access to public service in his country.\n\nThe will of the people shall be the basis of the authority of government; this will shall be expressed in periodic and genuine elections which shall be by universal and equal suffrage and shall be held by secret vote or by equivalent free voting procedures."
+    },
+    {
+      "id": "Article 22",
+      "number": 22,
+      "title": "Social Security",
+      "shortTitle": "Social Security",
+      "group": "Economic & Social",
+      "text": "Everyone, as a member of society, has the right to social security and is entitled to realization, through national effort and international co-operation and in accordance with the organization and resources of each State, of the economic, social and cultural rights indispensable for his dignity and the free development of his personality."
+    },
+    {
+      "id": "Article 23",
+      "number": 23,
+      "title": "Work & Equal Pay",
+      "shortTitle": "Work & Pay",
+      "group": "Economic & Social",
+      "text": "Everyone has the right to work, to free choice of employment, to just and favourable conditions of work and to protection against unemployment.\n\nEveryone, without any discrimination, has the right to equal pay for equal work.\n\nEveryone who works has the right to just and favourable remuneration ensuring for himself and his family an existence worthy of human dignity, and supplemented, if necessary, by other means of social protection.\n\nEveryone has the right to form and to join trade unions for the protection of his interests."
+    },
+    {
+      "id": "Article 24",
+      "number": 24,
+      "title": "Rest & Leisure",
+      "shortTitle": "Rest & Leisure",
+      "group": "Economic & Social",
+      "text": "Everyone has the right to rest and leisure, including reasonable limitation of working hours and periodic holidays with pay."
+    },
+    {
+      "id": "Article 25",
+      "number": 25,
+      "title": "Standard of Living",
+      "shortTitle": "Standard of Living",
+      "group": "Economic & Social",
+      "text": "Everyone has the right to a standard of living adequate for the health and well-being of himself and of his family, including food, clothing, housing and medical care and necessary social services, and the right to security in the event of unemployment, sickness, disability, widowhood, old age or other lack of livelihood in circumstances beyond his control.\n\nMotherhood and childhood are entitled to special care and assistance. All children, whether born in or out of wedlock, shall enjoy the same social protection."
+    },
+    {
+      "id": "Article 26",
+      "number": 26,
+      "title": "Education",
+      "shortTitle": "Education",
+      "group": "Cultural",
+      "text": "Everyone has the right to education. Education shall be free, at least in the elementary and fundamental stages. Elementary education shall be compulsory. Technical and professional education shall be made generally available and higher education shall be equally accessible to all on the basis of merit.\n\nEducation shall be directed to the full development of the human personality and to the strengthening of respect for human rights and fundamental freedoms. It shall promote understanding, tolerance and friendship among all nations, racial or religious groups, and shall further the activities of the United Nations for the maintenance of peace.\n\nParents have a prior right to choose the kind of education that shall be given to their children."
+    },
+    {
+      "id": "Article 27",
+      "number": 27,
+      "title": "Cultural Participation",
+      "shortTitle": "Culture & Science",
+      "group": "Cultural",
+      "text": "Everyone has the right freely to participate in the cultural life of the community, to enjoy the arts and to share in scientific advancement and its benefits.\n\nEveryone has the right to the protection of the moral and material interests resulting from any scientific, literary or artistic production of which he is the author."
+    },
+    {
+      "id": "Article 28",
+      "number": 28,
+      "title": "Social & International Order",
+      "shortTitle": "Social Order",
+      "group": "Order & Duties",
+      "text": "Everyone is entitled to a social and international order in which the rights and freedoms set forth in this Declaration can be fully realized."
+    },
+    {
+      "id": "Article 29",
+      "number": 29,
+      "title": "Duties to Community",
+      "shortTitle": "Duties",
+      "group": "Order & Duties",
+      "text": "Everyone has duties to the community in which alone the free and full development of his personality is possible.\n\nIn the exercise of his rights and freedoms, everyone shall be subject only to such limitations as are determined by law solely for the purpose of securing due recognition and respect for the rights and freedoms of others and of meeting the just requirements of morality, public order and the general welfare in a democratic society.\n\nThese rights and freedoms may in no case be exercised contrary to the purposes and principles of the United Nations."
+    },
+    {
+      "id": "Article 30",
+      "number": 30,
+      "title": "No Destruction of Rights",
+      "shortTitle": "No Destruction of Rights",
+      "group": "Order & Duties",
+      "text": "Nothing in this Declaration may be interpreted as implying for any State, group or person any right to engage in any activity or to perform any act aimed at the destruction of any of the rights and freedoms set forth herein."
+    }
+  ]
+}

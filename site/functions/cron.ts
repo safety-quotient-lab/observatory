@@ -1,7 +1,12 @@
 /**
- * Cron Worker v2: Smart diff-based HN fetching + HRCB evaluation.
+ * Cron Worker v3: Smart diff-based HN fetching + HRCB evaluation.
  *
- * Changes from v1:
+ * v3 additions:
+ * - Batch API support (50% cost savings) — toggle via BATCH_MODE env var
+ * - Two-phase batch workflow: submit → poll → collect results
+ * - Falls back to direct evaluation when BATCH_MODE is not 'true'
+ *
+ * Inherited from v2:
  * - Fetches topstories + askstories + showstories (3 list calls)
  * - Diffs against DB — only fetches details for genuinely new items
  * - Tags stories with hn_type (story/ask/show) from API source
@@ -9,14 +14,13 @@
  * - Refreshes hn_score/hn_comments via /updates endpoint
  * - Uses prompt caching (system prompt as cached block)
  * - Daily budget cap on evaluations
- *
- * Net: ~5 HTTP calls/cycle instead of ~200. Self-posts no longer skipped.
  */
 
 interface Env {
   DB: D1Database;
   ANTHROPIC_API_KEY: string;
   DAILY_EVAL_BUDGET?: string;
+  BATCH_MODE?: string;
 }
 
 interface HNItem {
@@ -260,18 +264,13 @@ async function fetchUrlContent(url: string): Promise<string> {
   }
 }
 
-async function evaluateContent(
-  apiKey: string,
-  url: string,
-  content: string,
-  isSelfPost: boolean
-): Promise<EvalResult> {
+function buildUserMessage(url: string, content: string, isSelfPost: boolean): string {
   const today = new Date().toISOString().slice(0, 10);
   const contentLabel = isSelfPost
     ? 'Here is the self-post text from Hacker News:'
     : 'Here is the page content (truncated):';
 
-  const userMessage = `Evaluate this URL: ${url}
+  return `Evaluate this URL: ${url}
 
 ${contentLabel}
 
@@ -280,6 +279,15 @@ ${content}
 Today's date: ${today}
 
 Output ONLY the JSON evaluation object, no other text.`;
+}
+
+async function evaluateContent(
+  apiKey: string,
+  url: string,
+  content: string,
+  isSelfPost: boolean
+): Promise<EvalResult> {
+  const userMessage = buildUserMessage(url, content, isSelfPost);
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -311,6 +319,10 @@ Output ONLY the JSON evaluation object, no other text.`;
     content: Array<{ type: string; text?: string }>;
   };
 
+  return parseEvalResponse(data);
+}
+
+function parseEvalResponse(data: { content: Array<{ type: string; text?: string }> }): EvalResult {
   const textBlock = data.content.find((b) => b.type === 'text');
   if (!textBlock?.text) throw new Error('No text in API response');
 
@@ -343,7 +355,7 @@ async function writeEvalResult(db: D1Database, hnId: number, result: EvalResult)
     .bind(
       result.evaluation.content_type.primary,
       agg.weighted_mean,
-      agg.classification,
+      (agg.classification || '').split(' — ')[0],
       agg.signal_sections,
       agg.nd_count,
       JSON.stringify(result),
@@ -391,12 +403,151 @@ async function markSkipped(db: D1Database, hnId: number, reason: string): Promis
     .run();
 }
 
+// --- Batch API helpers ---
+
+interface BatchRequest {
+  custom_id: string;
+  params: {
+    model: string;
+    max_tokens: number;
+    system: Array<{ type: string; text: string }>;
+    messages: Array<{ role: string; content: string }>;
+  };
+}
+
+interface BatchStatus {
+  id: string;
+  type: string;
+  processing_status: string; // in_progress, ended, expired, canceled
+  request_counts: {
+    processing: number;
+    succeeded: number;
+    errored: number;
+    canceled: number;
+    expired: number;
+  };
+  results_url: string | null;
+  created_at: string;
+  ended_at: string | null;
+}
+
+interface BatchResultLine {
+  custom_id: string;
+  result: {
+    type: string; // succeeded, errored, expired, canceled
+    message?: {
+      content: Array<{ type: string; text?: string }>;
+    };
+    error?: { type: string; message: string };
+  };
+}
+
+async function prepareStoryForBatch(
+  story: { hn_id: number; url: string | null; title: string; hn_text: string | null }
+): Promise<{ request: BatchRequest; hnId: number } | null> {
+  const isSelfPost = !story.url && !!story.hn_text;
+  const evalUrl = story.url || `https://news.ycombinator.com/item?id=${story.hn_id}`;
+
+  // Skip binary content
+  if (story.url && (story.url.includes('.pdf') || story.url.includes('.zip') || story.url.includes('.tar'))) {
+    return null; // Will be marked skipped separately
+  }
+
+  let content: string;
+
+  if (isSelfPost) {
+    content = story.hn_text!;
+  } else {
+    try {
+      content = await fetchUrlContent(story.url!);
+    } catch {
+      return null; // Will be marked failed separately
+    }
+  }
+
+  if (content.length < 50) {
+    return null; // Will be marked skipped separately
+  }
+
+  const userMessage = buildUserMessage(evalUrl, content, isSelfPost);
+
+  return {
+    hnId: story.hn_id,
+    request: {
+      custom_id: `hn-${story.hn_id}`,
+      params: {
+        model: EVAL_MODEL,
+        max_tokens: 8192,
+        system: [{ type: 'text', text: METHODOLOGY_SYSTEM_PROMPT }],
+        messages: [{ role: 'user', content: userMessage }],
+      },
+    },
+  };
+}
+
+async function submitBatch(apiKey: string, requests: BatchRequest[]): Promise<BatchStatus> {
+  const res = await fetch('https://api.anthropic.com/v1/messages/batches', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({ requests }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Batch submit failed ${res.status}: ${body}`);
+  }
+
+  return (await res.json()) as BatchStatus;
+}
+
+async function pollBatch(apiKey: string, batchId: string): Promise<BatchStatus> {
+  const res = await fetch(`https://api.anthropic.com/v1/messages/batches/${batchId}`, {
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Batch poll failed ${res.status}: ${body}`);
+  }
+
+  return (await res.json()) as BatchStatus;
+}
+
+async function fetchBatchResults(apiKey: string, resultsUrl: string): Promise<BatchResultLine[]> {
+  const res = await fetch(resultsUrl, {
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Batch results fetch failed ${res.status}: ${body}`);
+  }
+
+  const text = await res.text();
+  return text
+    .trim()
+    .split('\n')
+    .filter(line => line.length > 0)
+    .map(line => JSON.parse(line) as BatchResultLine);
+}
+
 // --- Main cron handler ---
 
 export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     const db = env.DB;
     const apiKey = env.ANTHROPIC_API_KEY;
+    const batchMode = env.BATCH_MODE === 'true';
 
     if (!apiKey) {
       console.error('ANTHROPIC_API_KEY not set');
@@ -416,7 +567,7 @@ export default {
     }
 
     const remainingBudget = dailyBudget - evalsToday;
-    console.log(`Budget: ${evalsToday}/${dailyBudget}, ${remainingBudget} remaining`);
+    console.log(`Budget: ${evalsToday}/${dailyBudget}, ${remainingBudget} remaining. Batch mode: ${batchMode}`);
 
     // ─── STEP 1: Fetch story ID lists from HN API (3 calls) ───
 
@@ -545,71 +696,10 @@ export default {
 
     // ─── STEP 5: Evaluate pending stories ───
 
-    const batchSize = Math.min(5, remainingBudget);
-    // Fetch pending stories — now includes self-posts (url IS NULL but hn_text IS NOT NULL)
-    const { results: pending } = await db
-      .prepare(
-        `SELECT * FROM stories
-         WHERE eval_status = 'pending'
-           AND (url IS NOT NULL OR hn_text IS NOT NULL)
-         ORDER BY hn_time DESC LIMIT ?`
-      )
-      .bind(batchSize)
-      .all<{
-        hn_id: number;
-        url: string | null;
-        title: string;
-        hn_text: string | null;
-      }>();
-
-    console.log(`${pending.length} pending stories to evaluate`);
-
-    for (const story of pending) {
-      console.log(`Evaluating: ${story.title}`);
-
-      await db
-        .prepare(`UPDATE stories SET eval_status = 'evaluating' WHERE hn_id = ?`)
-        .bind(story.hn_id)
-        .run();
-
-      try {
-        const isSelfPost = !story.url && !!story.hn_text;
-        const evalUrl = story.url || `https://news.ycombinator.com/item?id=${story.hn_id}`;
-
-        // Skip binary content
-        if (story.url && (story.url.includes('.pdf') || story.url.includes('.zip') || story.url.includes('.tar'))) {
-          await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
-          continue;
-        }
-
-        let content: string;
-
-        if (isSelfPost) {
-          // Use HN text directly — no HTTP fetch needed
-          content = story.hn_text!;
-        } else {
-          // Fetch page content
-          try {
-            content = await fetchUrlContent(story.url!);
-          } catch (err) {
-            await markFailed(db, story.hn_id, `Fetch failed: ${err}`);
-            continue;
-          }
-        }
-
-        if (content.length < 50) {
-          await markSkipped(db, story.hn_id, 'Content too short');
-          continue;
-        }
-
-        const result = await evaluateContent(apiKey, evalUrl, content, isSelfPost);
-        await writeEvalResult(db, story.hn_id, result);
-
-        console.log(`Done: ${story.title} → ${result.aggregates.classification} (${result.aggregates.weighted_mean})`);
-      } catch (err) {
-        console.error(`Failed: ${story.title}:`, err);
-        await markFailed(db, story.hn_id, `${err}`);
-      }
+    if (batchMode) {
+      await evaluateWithBatchAPI(db, apiKey, remainingBudget);
+    } else {
+      await evaluateDirectly(db, apiKey, remainingBudget);
     }
 
     // Skip self-posts with no text AND no URL (truly empty)
@@ -630,6 +720,241 @@ export default {
       );
       return new Response('Cron triggered', { status: 200 });
     }
-    return new Response('HN HRCB Cron Worker v2', { status: 200 });
+    return new Response('HN HRCB Cron Worker v3', { status: 200 });
   },
 };
+
+// --- Direct evaluation (original path) ---
+
+async function evaluateDirectly(db: D1Database, apiKey: string, remainingBudget: number): Promise<void> {
+  const batchSize = Math.min(5, remainingBudget);
+  const { results: pending } = await db
+    .prepare(
+      `SELECT * FROM stories
+       WHERE eval_status = 'pending'
+         AND (url IS NOT NULL OR hn_text IS NOT NULL)
+       ORDER BY hn_time DESC LIMIT ?`
+    )
+    .bind(batchSize)
+    .all<{
+      hn_id: number;
+      url: string | null;
+      title: string;
+      hn_text: string | null;
+    }>();
+
+  console.log(`[direct] ${pending.length} pending stories to evaluate`);
+
+  for (const story of pending) {
+    console.log(`Evaluating: ${story.title}`);
+
+    await db
+      .prepare(`UPDATE stories SET eval_status = 'evaluating' WHERE hn_id = ?`)
+      .bind(story.hn_id)
+      .run();
+
+    try {
+      const isSelfPost = !story.url && !!story.hn_text;
+      const evalUrl = story.url || `https://news.ycombinator.com/item?id=${story.hn_id}`;
+
+      // Skip binary content
+      if (story.url && (story.url.includes('.pdf') || story.url.includes('.zip') || story.url.includes('.tar'))) {
+        await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
+        continue;
+      }
+
+      let content: string;
+
+      if (isSelfPost) {
+        content = story.hn_text!;
+      } else {
+        try {
+          content = await fetchUrlContent(story.url!);
+        } catch (err) {
+          await markFailed(db, story.hn_id, `Fetch failed: ${err}`);
+          continue;
+        }
+      }
+
+      if (content.length < 50) {
+        await markSkipped(db, story.hn_id, 'Content too short');
+        continue;
+      }
+
+      const result = await evaluateContent(apiKey, evalUrl, content, isSelfPost);
+      await writeEvalResult(db, story.hn_id, result);
+
+      console.log(`Done: ${story.title} → ${result.aggregates.classification} (${result.aggregates.weighted_mean})`);
+    } catch (err) {
+      console.error(`Failed: ${story.title}:`, err);
+      await markFailed(db, story.hn_id, `${err}`);
+    }
+  }
+}
+
+// --- Batch API evaluation ---
+
+async function evaluateWithBatchAPI(db: D1Database, apiKey: string, remainingBudget: number): Promise<void> {
+  // Phase 1: Check for in-progress batches and collect results
+  const { results: activeBatches } = await db
+    .prepare(`SELECT batch_id FROM batches WHERE status = 'in_progress'`)
+    .all<{ batch_id: string }>();
+
+  for (const { batch_id } of activeBatches) {
+    console.log(`[batch] Polling batch ${batch_id}`);
+    try {
+      const status = await pollBatch(apiKey, batch_id);
+      console.log(`[batch] Status: ${status.processing_status}, succeeded: ${status.request_counts.succeeded}, errored: ${status.request_counts.errored}`);
+
+      if (status.processing_status === 'ended') {
+        // Collect results
+        if (status.results_url) {
+          const results = await fetchBatchResults(apiKey, status.results_url);
+          console.log(`[batch] Collecting ${results.length} results`);
+
+          for (const line of results) {
+            const hnId = parseInt(line.custom_id.replace('hn-', ''), 10);
+            if (isNaN(hnId)) continue;
+
+            if (line.result.type === 'succeeded' && line.result.message) {
+              try {
+                const evalResult = parseEvalResponse(line.result.message);
+                await writeEvalResult(db, hnId, evalResult);
+                console.log(`[batch] Written: hn_id=${hnId} → ${evalResult.aggregates.classification}`);
+              } catch (err) {
+                console.error(`[batch] Parse/write failed for hn_id=${hnId}:`, err);
+                await markFailed(db, hnId, `Batch result parse error: ${err}`);
+              }
+            } else {
+              const errMsg = line.result.error?.message || line.result.type;
+              await markFailed(db, hnId, `Batch error: ${errMsg}`);
+            }
+          }
+        }
+
+        // Update batch record
+        await db
+          .prepare(
+            `UPDATE batches SET status = 'ended', completed_at = datetime('now'),
+             succeeded = ?, failed = ? WHERE batch_id = ?`
+          )
+          .bind(
+            status.request_counts.succeeded,
+            status.request_counts.errored,
+            batch_id
+          )
+          .run();
+
+      } else if (status.processing_status === 'expired' || status.processing_status === 'canceled') {
+        // Mark batch and stories as failed
+        await db
+          .prepare(`UPDATE batches SET status = ? WHERE batch_id = ?`)
+          .bind(status.processing_status, batch_id)
+          .run();
+        await db
+          .prepare(
+            `UPDATE stories SET eval_status = 'failed', eval_error = ?
+             WHERE eval_batch_id = ? AND eval_status = 'evaluating'`
+          )
+          .bind(`Batch ${status.processing_status}`, batch_id)
+          .run();
+        console.log(`[batch] Batch ${batch_id} ${status.processing_status}`);
+      }
+      // If still in_progress, do nothing — will check again next cycle
+    } catch (err) {
+      console.error(`[batch] Poll error for ${batch_id}:`, err);
+    }
+  }
+
+  // Phase 2: Submit new batch if no active batches
+  if (activeBatches.length > 0) {
+    console.log('[batch] Active batch exists, skipping new submission');
+    return;
+  }
+
+  const batchSize = Math.min(20, remainingBudget);
+  const { results: pending } = await db
+    .prepare(
+      `SELECT hn_id, url, title, hn_text FROM stories
+       WHERE eval_status = 'pending'
+         AND (url IS NOT NULL OR hn_text IS NOT NULL)
+       ORDER BY hn_time DESC LIMIT ?`
+    )
+    .bind(batchSize)
+    .all<{
+      hn_id: number;
+      url: string | null;
+      title: string;
+      hn_text: string | null;
+    }>();
+
+  if (pending.length === 0) {
+    console.log('[batch] No pending stories');
+    return;
+  }
+
+  console.log(`[batch] Preparing ${pending.length} stories for batch`);
+
+  const batchRequests: BatchRequest[] = [];
+  const batchHnIds: number[] = [];
+
+  for (const story of pending) {
+    // Skip binary content
+    if (story.url && (story.url.includes('.pdf') || story.url.includes('.zip') || story.url.includes('.tar'))) {
+      await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
+      continue;
+    }
+
+    const prepared = await prepareStoryForBatch(story);
+    if (prepared) {
+      batchRequests.push(prepared.request);
+      batchHnIds.push(prepared.hnId);
+    } else {
+      // Content fetch failed or too short
+      const isSelfPost = !story.url && !!story.hn_text;
+      if (!isSelfPost && story.url) {
+        await markFailed(db, story.hn_id, 'Content fetch failed during batch prep');
+      } else {
+        await markSkipped(db, story.hn_id, 'Content too short');
+      }
+    }
+  }
+
+  if (batchRequests.length === 0) {
+    console.log('[batch] No valid requests after content fetch');
+    return;
+  }
+
+  try {
+    const batchStatus = await submitBatch(apiKey, batchRequests);
+    console.log(`[batch] Submitted batch ${batchStatus.id} with ${batchRequests.length} requests`);
+
+    // Record batch in DB
+    await db
+      .prepare(
+        `INSERT INTO batches (batch_id, status, request_count) VALUES (?, 'in_progress', ?)`
+      )
+      .bind(batchStatus.id, batchRequests.length)
+      .run();
+
+    // Mark stories as evaluating with batch ID
+    const updateStmts = batchHnIds.map(hnId =>
+      db
+        .prepare(`UPDATE stories SET eval_status = 'evaluating', eval_batch_id = ? WHERE hn_id = ?`)
+        .bind(batchStatus.id, hnId)
+    );
+
+    if (updateStmts.length > 0) {
+      await db.batch(updateStmts);
+    }
+  } catch (err) {
+    console.error('[batch] Submit failed:', err);
+    // Reset stories to pending so they can be picked up next cycle
+    const resetStmts = batchHnIds.map(hnId =>
+      db.prepare(`UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status = 'evaluating'`).bind(hnId)
+    );
+    if (resetStmts.length > 0) {
+      await db.batch(resetStmts);
+    }
+  }
+}

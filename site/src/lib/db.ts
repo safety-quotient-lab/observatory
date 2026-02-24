@@ -73,7 +73,7 @@ function scoreRowToScore(row: ScoreRow): Score {
 
 export type SortOption = 'time' | 'score_desc' | 'score_asc' | 'hn_points';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
-export type TypeOption = 'all' | 'ask' | 'show' | 'best';
+export type TypeOption = 'all' | 'ask' | 'show';
 
 // --- Feed page: single JOIN query replaces N+1 ---
 
@@ -84,8 +84,14 @@ interface FeedScoreRow {
   final: number | null;
 }
 
+export interface MiniScore {
+  section: string;
+  final: number | null;
+}
+
 export interface StoryWithMiniScores extends Story {
-  miniScores: Score[];
+  miniScores: MiniScore[];
+  hn_text_preview: string | null;
 }
 
 export async function getFilteredStoriesWithScores(
@@ -120,24 +126,53 @@ export async function getFilteredStoriesWithScores(
     case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
   }
 
-  // Single query: stories only (excludes hcb_json and hn_text blobs).
-  // Heatmaps are only shown on detail pages, not in the feed — no need to fetch scores here.
+  // Stories query — excludes hcb_json blob but includes truncated hn_text preview
   const { results: storyRows } = await db
     .prepare(
       `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
               hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
               hcb_signal_sections, hcb_nd_count, eval_model, eval_prompt_hash,
-              eval_status, eval_error, evaluated_at, created_at
+              eval_status, eval_error, evaluated_at, created_at,
+              SUBSTR(hn_text, 1, 100) as hn_text_preview
        FROM stories s WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
     .bind(limit, offset)
-    .all<Omit<Story, 'hcb_json' | 'hn_text'>>();
+    .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>();
+
+  // Fetch mini scores (final only) for evaluated stories
+  const evaluatedIds = storyRows
+    .filter(s => s.eval_status === 'done')
+    .map(s => s.hn_id);
+
+  const scoresByHnId = new Map<number, MiniScore[]>();
+
+  if (evaluatedIds.length > 0) {
+    const { results: scoreRows } = await db
+      .prepare(
+        `SELECT hn_id, section, sort_order, final
+         FROM scores
+         WHERE hn_id IN (${evaluatedIds.map(() => '?').join(',')})
+         ORDER BY sort_order`
+      )
+      .bind(...evaluatedIds)
+      .all<{ hn_id: number; section: string; sort_order: number; final: number | null }>();
+
+    for (const row of scoreRows) {
+      let arr = scoresByHnId.get(row.hn_id);
+      if (!arr) {
+        arr = [];
+        scoresByHnId.set(row.hn_id, arr);
+      }
+      arr.push({ section: row.section, final: row.final });
+    }
+  }
 
   return storyRows.map(story => ({
     ...story,
     hn_text: null,
     hcb_json: null,
-    miniScores: [],
+    miniScores: scoresByHnId.get(story.hn_id) || [],
+    hn_text_preview: story.hn_text_preview || null,
   }));
 }
 
@@ -404,5 +439,92 @@ export async function getFailedStories(db: D1Database, limit = 10): Promise<Stor
     )
     .bind(limit)
     .all<Story>();
+  return results;
+}
+
+// --- Domain pages ---
+
+export async function getStoriesByDomain(
+  db: D1Database,
+  domain: string,
+  limit = 50,
+  offset = 0
+): Promise<{ stories: StoryWithMiniScores[]; total: number; avgScore: number | null }> {
+  const countRow = await db
+    .prepare(`SELECT COUNT(*) as cnt, AVG(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END) as avg_score FROM stories WHERE domain = ?`)
+    .bind(domain)
+    .first<{ cnt: number; avg_score: number | null }>();
+
+  const { results: storyRows } = await db
+    .prepare(
+      `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
+              hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
+              hcb_signal_sections, hcb_nd_count, eval_model, eval_prompt_hash,
+              eval_status, eval_error, evaluated_at, created_at,
+              SUBSTR(hn_text, 1, 100) as hn_text_preview
+       FROM stories WHERE domain = ? ORDER BY hn_time DESC LIMIT ? OFFSET ?`
+    )
+    .bind(domain, limit, offset)
+    .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>();
+
+  // Fetch mini scores for evaluated stories
+  const evaluatedIds = storyRows
+    .filter(s => s.eval_status === 'done')
+    .map(s => s.hn_id);
+
+  const scoresByHnId = new Map<number, MiniScore[]>();
+
+  if (evaluatedIds.length > 0) {
+    const { results: scoreRows } = await db
+      .prepare(
+        `SELECT hn_id, section, sort_order, final
+         FROM scores
+         WHERE hn_id IN (${evaluatedIds.map(() => '?').join(',')})
+         ORDER BY sort_order`
+      )
+      .bind(...evaluatedIds)
+      .all<{ hn_id: number; section: string; sort_order: number; final: number | null }>();
+
+    for (const row of scoreRows) {
+      let arr = scoresByHnId.get(row.hn_id);
+      if (!arr) {
+        arr = [];
+        scoresByHnId.set(row.hn_id, arr);
+      }
+      arr.push({ section: row.section, final: row.final });
+    }
+  }
+
+  return {
+    stories: storyRows.map(story => ({
+      ...story,
+      hn_text: null,
+      hcb_json: null,
+      miniScores: scoresByHnId.get(story.hn_id) || [],
+      hn_text_preview: story.hn_text_preview || null,
+    })),
+    total: countRow?.cnt ?? 0,
+    avgScore: countRow?.avg_score ?? null,
+  };
+}
+
+export async function getAllDomainStats(
+  db: D1Database,
+  sort: 'count' | 'score' = 'count',
+  limit = 50
+): Promise<DomainStat[]> {
+  const orderBy = sort === 'score' ? 'avg_score DESC NULLS LAST' : 'count DESC';
+  const { results } = await db
+    .prepare(
+      `SELECT domain, COUNT(*) as count,
+              AVG(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END) as avg_score
+       FROM stories
+       WHERE domain IS NOT NULL
+       GROUP BY domain
+       ORDER BY ${orderBy}
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<DomainStat>();
   return results;
 }

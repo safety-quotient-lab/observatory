@@ -1,0 +1,79 @@
+---
+import Base from '../../layouts/Base.astro';
+import EvalCard from '../../components/EvalCard.astro';
+import { getStoriesByDomain } from '../../lib/db';
+import { scoreToColor, formatScore } from '../../lib/colors';
+
+const { domain } = Astro.params;
+const db = Astro.locals.runtime.env.DB;
+
+if (!domain) {
+  return Astro.redirect('/domains');
+}
+
+const url = new URL(Astro.request.url);
+const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
+const PER_PAGE = 30;
+const offset = (page - 1) * PER_PAGE;
+
+const { stories, total, avgScore } = await getStoriesByDomain(db, domain, PER_PAGE + 1, offset);
+const hasMore = stories.length > PER_PAGE;
+const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
+
+const evaluatedCount = stories.filter(s => s.eval_status === 'done').length;
+---
+
+<Base title={`${domain} — HN HRCB`}>
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
+    <tr>
+      <td>
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span style="font-size: 12pt; color: #c9c9c9; font-weight: bold;">{domain}</span>
+            <a href={`https://${domain}`} target="_blank" rel="noopener" style="color: #ff6600; font-size: 8pt;">visit &rarr;</a>
+          </div>
+          <div style="margin-top: 6px; font-size: 8pt; color: #888; display: flex; gap: 16px;">
+            <span>{total} stories</span>
+            {avgScore !== null && (
+              <span>
+                avg HRCB: <span class="score-font" style={`color: ${scoreToColor(avgScore)}; font-weight: bold;`}>{formatScore(avgScore)}</span>
+              </span>
+            )}
+            {page > 1 && <span>page {page}</span>}
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
+    {displayStories.map((story, i) => (
+      <EvalCard
+        story={story}
+        rank={offset + i + 1}
+      />
+    ))}
+  </table>
+
+  {displayStories.length === 0 && (
+    <table width="100%">
+      <tr>
+        <td style="padding: 40px 20px; text-align: center; color: #828282;">
+          No stories from this domain.
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {hasMore && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
+      <tr>
+        <td style="padding-left: 40px;">
+          <a href={`/domain/${domain}?p=${page + 1}`} class="morelink" style="color: #828282; font-size: 10pt;">
+            More
+          </a>
+        </td>
+      </tr>
+    </table>
+  )}
+</Base>

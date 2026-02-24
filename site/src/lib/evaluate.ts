@@ -334,7 +334,7 @@ export async function writeEvalResult(
     .bind(
       result.evaluation.content_type.primary,
       agg.weighted_mean,
-      agg.classification,
+      (agg.classification || '').split(' — ')[0],
       agg.signal_sections,
       agg.nd_count,
       JSON.stringify(result),

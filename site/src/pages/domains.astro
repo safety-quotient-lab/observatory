@@ -1,0 +1,70 @@
+---
+import Base from '../layouts/Base.astro';
+import { getAllDomainStats } from '../lib/db';
+import { scoreToColor, formatScore } from '../lib/colors';
+
+const db = Astro.locals.runtime.env.DB;
+
+const url = new URL(Astro.request.url);
+const sort = (url.searchParams.get('sort') || 'count') as 'count' | 'score';
+const safeSort = sort === 'score' ? 'score' : 'count';
+
+const domains = await getAllDomainStats(db, safeSort, 100);
+---
+
+<Base title="Domains — HN HRCB">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
+    <tr>
+      <td>
+        <span style="font-size: 12pt; color: #c9c9c9; font-weight: bold;">Domains</span>
+        <span style="color: #828282; margin-left: 8px; font-size: 9pt;">
+          {domains.length} domains
+        </span>
+        <span style="color: #444; margin: 0 6px;">·</span>
+        <span class="subtext" style="font-size: 8pt;">
+          <span style="color: #666;">sort:</span>
+          {safeSort === 'count'
+            ? <span style="color: #ff6600; font-weight: bold;">stories</span>
+            : <a href="/domains?sort=count">stories</a>
+          }
+          <span style="color: #444;"> | </span>
+          {safeSort === 'score'
+            ? <span style="color: #ff6600; font-weight: bold;">score</span>
+            : <a href="/domains?sort=score">score</a>
+          }
+        </span>
+      </td>
+    </tr>
+  </table>
+
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        {domains.length > 0 ? (
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 9pt;">
+            <tr style="color: #555; font-size: 7pt; text-transform: uppercase; letter-spacing: 0.05em;">
+              <td width="24">#</td>
+              <td>Domain</td>
+              <td width="70" align="center">Stories</td>
+              <td width="80" align="center">Avg HRCB</td>
+            </tr>
+            {domains.map((d, i) => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td style="color: #555;" class="score-font">{i + 1}</td>
+                <td>
+                  <a href={`/domain/${d.domain}`} style="color: #c9c9c9;">{d.domain}</a>
+                </td>
+                <td align="center" class="score-font" style="color: #888;">{d.count}</td>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
+                  {d.avg_score !== null ? formatScore(d.avg_score) : <span style="color: #555;">—</span>}
+                </td>
+              </tr>
+            ))}
+          </table>
+        ) : (
+          <div style="color: #555; font-size: 8pt; padding: 10px;">No domain data yet.</div>
+        )}
+      </td>
+    </tr>
+  </table>
+</Base>

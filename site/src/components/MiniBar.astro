@@ -1,0 +1,31 @@
+---
+import { scoreToColor } from '../lib/colors';
+import { ALL_SECTIONS, ARTICLE_TITLES } from '../lib/udhr';
+
+interface MiniScore {
+  section: string;
+  final: number | null;
+}
+
+interface Props {
+  scores: MiniScore[];
+}
+
+const { scores } = Astro.props;
+
+const scoreMap = new Map(scores.map((s) => [s.section, s.final]));
+---
+
+<div style="display: inline-flex; gap: 1px; vertical-align: middle;">
+  {ALL_SECTIONS.map((section) => {
+    const final = scoreMap.get(section) ?? null;
+    const color = final !== null ? scoreToColor(final) : '#1a1a25';
+    const label = section === 'Preamble' ? 'P' : section.replace('Article ', '');
+    return (
+      <span
+        style={`display: inline-block; width: 8px; height: 12px; background: ${color}; border-radius: 1px;`}
+        title={`${section}: ${final !== null ? (final > 0 ? '+' : '') + final.toFixed(2) : 'ND'}`}
+      />
+    );
+  })}
+</div>

@@ -308,7 +308,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
             {domains.map((d) => (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td style="color: #c9c9c9;">
-                  <a href={`https://${d.domain}`} target="_blank" rel="noopener" style="color: #c9c9c9;">{d.domain}</a>
+                  <a href={`/domain/${d.domain}`} style="color: #c9c9c9;">{d.domain}</a>
                 </td>
                 <td align="center" class="score-font" style="color: #888;">{d.count}</td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
