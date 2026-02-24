@@ -1,0 +1,454 @@
+{
+  "schema_version": "3.4",
+  "evaluation": {
+    "url": "https://economictimes.indiatimes.com/news/international/us/still-making-a-shopping-list-psychology-suggests-its-a-sign-of-sharper-thinking/articleshow/127796018.cms",
+    "domain": "economictimes.indiatimes.com",
+    "content_type": {
+      "primary": "ED",
+      "secondary": []
+    },
+    "channel_weights": {
+      "editorial": 0.6,
+      "structural": 0.4
+    },
+    "eval_depth": "STANDARD",
+    "date": "2026-02-23",
+    "methodology": "v3.4",
+    "off_domain": false,
+    "external_evidence": false,
+    "operator": "claude-opus-4-6"
+  },
+  "domain_context_profile": {
+    "domain": "economictimes.indiatimes.com",
+    "eval_date": "2026-02-23",
+    "elements": {
+      "privacy": {
+        "modifier": -0.10,
+        "affects": ["Art. 12", "Art. 13"],
+        "note": "Times Internet cross-domain tracking across 20+ properties. Internal data platforms: GrowthRx, CLMB Tech, TVID. Third-party ad network data sharing. Cookie-based tracking (first and third party). No granular opt-out visible."
+      },
+      "tos": {
+        "modifier": null,
+        "affects": ["Art. 8", "Art. 17", "Art. 29", "Art. 30"],
+        "note": "Not directly evaluated. No modifier applied."
+      },
+      "accessibility": {
+        "modifier": 0.00,
+        "affects": ["Art. 2", "Art. 26"],
+        "note": "Multilingual editions in 8 Indian languages (strong language accessibility). No WCAG statement or accessibility page found. No evidence of screen reader optimization. Net neutral."
+      },
+      "mission": {
+        "modifier": 0.00,
+        "affects": ["Preamble", "Art. 1", "Art. 28"],
+        "note": "Business-focused newspaper since 1961. No explicit mission/values page found. Standard commercial media operation."
+      },
+      "editorial_code": {
+        "modifier": -0.05,
+        "affects": ["Art. 11", "Art. 12", "Art. 19"],
+        "note": "No published editorial code found. MBFC rates factual reporting as Mixed with multiple failed fact checks. Rated Questionable Source with Low Credibility."
+      },
+      "ownership": {
+        "modifier": -0.05,
+        "affects": ["Art. 19"],
+        "note": "The Times Group (India's largest media conglomerate). Sahu Jain family control. Private family-controlled conglomerate with no structural editorial independence protections. Revenue through advertising."
+      },
+      "access_model": {
+        "modifier": 0.10,
+        "affects": ["Art. 13", "Art. 19", "Art. 26"],
+        "note": "No paywall. Article freely accessible without registration. Open access model."
+      },
+      "ad_tracking": {
+        "modifier": -0.15,
+        "affects": ["Art. 12"],
+        "note": "Heavy ad load. Times Internet internal ad-tech stack (GrowthRx, CLMB Tech). Third-party ad network participation. Cross-domain tracking across 20+ properties."
+      }
+    }
+  },
+  "scores": [
+    {
+      "section": "Preamble",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on dignity, equality, freedom, or justice."
+    },
+    {
+      "section": "Art. 1",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on freedom, equality, or brotherhood."
+    },
+    {
+      "section": "Art. 2",
+      "editorial": null,
+      "structural": -0.1,
+      "combined": -0.1,
+      "context_modifier": 0.00,
+      "final": -0.04,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "No accessibility statement or WCAG commitment found. Multilingual editions partially offset. Final = 0.4 * -0.1 = -0.04."
+    },
+    {
+      "section": "Art. 3",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on life, liberty, or security."
+    },
+    {
+      "section": "Art. 4",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on slavery or servitude."
+    },
+    {
+      "section": "Art. 5",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on torture or degrading treatment."
+    },
+    {
+      "section": "Art. 6",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on legal personhood."
+    },
+    {
+      "section": "Art. 7",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on equality before law."
+    },
+    {
+      "section": "Art. 8",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on right to remedy."
+    },
+    {
+      "section": "Art. 9",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on arbitrary detention."
+    },
+    {
+      "section": "Art. 10",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on fair hearing."
+    },
+    {
+      "section": "Art. 11",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on presumption of innocence."
+    },
+    {
+      "section": "Art. 12",
+      "editorial": null,
+      "structural": -0.4,
+      "combined": -0.4,
+      "context_modifier": -0.20,
+      "final": -0.36,
+      "directionality": ["P"],
+      "evidence": "M",
+      "note": "Times Internet cross-domain tracking across 20+ properties; internal data platforms (GrowthRx, CLMB Tech); third-party ad network data sharing; cookie-based tracking. Context: privacy -0.10 + ad/tracking -0.15 = -0.25, capped at -0.20. Final = (0.4 * -0.4) + (-0.20) = -0.36."
+    },
+    {
+      "section": "Art. 13",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No paywall; free access. No signal."
+    },
+    {
+      "section": "Art. 14",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on asylum."
+    },
+    {
+      "section": "Art. 15",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on nationality."
+    },
+    {
+      "section": "Art. 16",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on marriage or family."
+    },
+    {
+      "section": "Art. 17",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on property rights."
+    },
+    {
+      "section": "Art. 18",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on freedom of thought in the UDHR sense. Article discusses cognitive psychology, not freedom of thought, conscience, or religion."
+    },
+    {
+      "section": "Art. 19",
+      "editorial": 0.1,
+      "structural": -0.2,
+      "combined": -0.02,
+      "context_modifier": 0.05,
+      "final": 0.03,
+      "directionality": ["C", "P"],
+      "evidence": "L",
+      "note": "E: presents research from named researchers (Levitin, Mueller & Oppenheimer, Risko). Imprecise citations noted. S: heavy ad density creates friction. Context: ed. code -0.05 + access +0.10 = net +0.05. Final: -0.02 + 0.05 = 0.03."
+    },
+    {
+      "section": "Art. 20",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on assembly or association."
+    },
+    {
+      "section": "Art. 21",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on political participation."
+    },
+    {
+      "section": "Art. 22",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on social security or cultural rights."
+    },
+    {
+      "section": "Art. 23",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on work or equal pay."
+    },
+    {
+      "section": "Art. 24",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on rest and leisure."
+    },
+    {
+      "section": "Art. 25",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on standard of living."
+    },
+    {
+      "section": "Art. 26",
+      "editorial": 0.2,
+      "structural": null,
+      "combined": 0.2,
+      "context_modifier": null,
+      "final": 0.12,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "Presents cognitive science and psychology research to general audience. Cites studies (Mueller & Oppenheimer 2014, Neuropsychology 2023). Educational value, though lifestyle framing. Final = 0.6 * 0.2 = 0.12."
+    },
+    {
+      "section": "Art. 27",
+      "editorial": 0.1,
+      "structural": null,
+      "combined": 0.1,
+      "context_modifier": null,
+      "final": 0.06,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "Makes psychological research accessible to general public. Very weak signal — lifestyle framing. Final = 0.6 * 0.1 = 0.06."
+    },
+    {
+      "section": "Art. 28",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on social or international order."
+    },
+    {
+      "section": "Art. 29",
+      "editorial": null,
+      "structural": -0.2,
+      "combined": -0.2,
+      "context_modifier": null,
+      "final": -0.08,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "Heavy ad/tracking infrastructure across Times Internet ecosystem; cross-domain profiling without clear user benefit. Tension with duties to community and responsible data stewardship. Final = 0.4 * -0.2 = -0.08."
+    },
+    {
+      "section": "Art. 30",
+      "editorial": null,
+      "structural": -0.1,
+      "combined": -0.1,
+      "context_modifier": null,
+      "final": -0.04,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "Cross-domain data sharing and ad network participation potentially enables third-party misuse of user data. Minor, indirect. Final = 0.4 * -0.1 = -0.04."
+    }
+  ],
+  "l2_scores": [],
+  "adversarial_gap": {
+    "per_article": [],
+    "mean_ag": null,
+    "ag_coverage": 0,
+    "ag_classification": null
+  },
+  "aggregates": {
+    "weighted_mean": -0.04,
+    "unweighted_mean": -0.04,
+    "max": {
+      "value": 0.12,
+      "section": "Art. 26"
+    },
+    "min": {
+      "value": -0.36,
+      "section": "Art. 12"
+    },
+    "negative_count": 5,
+    "nd_count": 24,
+    "signal_sections": 7,
+    "evidence_profile": {
+      "H": 0,
+      "M": 1,
+      "L": 6,
+      "ND": 24
+    },
+    "channel_balance": {
+      "E_only": 2,
+      "S_only": 4,
+      "both": 1
+    },
+    "directionality_profile": {
+      "A": 0,
+      "P": 6,
+      "F": 0,
+      "C": 3
+    },
+    "volatility": {
+      "value": 0.15,
+      "label": "Medium"
+    },
+    "classification": "Neutral"
+  }
+}

@@ -1,0 +1,454 @@
+{
+  "schema_version": "3.4",
+  "evaluation": {
+    "url": "https://berthub.eu/articles/posts/you-can-no-longer-base-your-government-and-society-on-us-clouds/",
+    "domain": "berthub.eu",
+    "content_type": {
+      "primary": "ED",
+      "secondary": ["MI"]
+    },
+    "channel_weights": {
+      "editorial": 0.6,
+      "structural": 0.4
+    },
+    "eval_depth": "STANDARD",
+    "date": "2026-02-23",
+    "methodology": "v3.4",
+    "off_domain": false,
+    "external_evidence": false,
+    "operator": "claude-opus-4-6"
+  },
+  "domain_context_profile": {
+    "domain": "berthub.eu",
+    "eval_date": "2026-02-23",
+    "elements": {
+      "privacy": {
+        "modifier": 0.15,
+        "affects": ["Art. 12", "Art. 13"],
+        "note": "Privacy by design. Custom analytics (audience-minutes.js): no tracking, no cookies, no local storage, no third parties. Open-source code. Policy: data will not be sold or shared."
+      },
+      "tos": {
+        "modifier": null,
+        "affects": ["Art. 8", "Art. 17", "Art. 29", "Art. 30"],
+        "note": "Personal blog; no formal ToS. No modifier applied."
+      },
+      "accessibility": {
+        "modifier": 0.05,
+        "affects": ["Art. 2", "Art. 26"],
+        "note": "Skip-to-content and skip-to-main-menu anchor links. Semantic HTML. Clean minimal layout. No dedicated accessibility statement."
+      },
+      "mission": {
+        "modifier": 0.10,
+        "affects": ["Preamble", "Art. 1", "Art. 28"],
+        "note": "Self-described: 'entrepreneur & software developer who contributes to science and cares about Europe, innovation, climate, biology & health.' Consistent digital sovereignty and privacy rights advocacy. Ukrainian solidarity banner."
+      },
+      "editorial_code": {
+        "modifier": 0.05,
+        "affects": ["Art. 11", "Art. 12", "Art. 19"],
+        "note": "No formal editorial code (personal blog). Articles cite specific sources (AP, NBC, Le Monde, Lawfare, government documents). Author identified with email. Bilingual (EN/NL)."
+      },
+      "ownership": {
+        "modifier": 0.10,
+        "affects": ["Art. 19"],
+        "note": "Personal blog. Bert Hubert: PowerDNS founder, former Dutch government cybersecurity advisor, IETF/IEEE/RIPE/Nature contributor. No corporate ownership. Independent voice."
+      },
+      "access_model": {
+        "modifier": 0.15,
+        "affects": ["Art. 13", "Art. 19", "Art. 26"],
+        "note": "No paywall. No registration. Full open access. Bilingual (EN/NL). RSS available."
+      },
+      "ad_tracking": {
+        "modifier": 0.10,
+        "affects": ["Art. 12"],
+        "note": "Zero advertising. Zero ad networks. Zero commercial tracking. Custom open-source sampling analytics only. Author has written extensively against surveillance capitalism."
+      }
+    }
+  },
+  "scores": [
+    {
+      "section": "Preamble",
+      "editorial": 0.4,
+      "structural": 0.3,
+      "combined": 0.36,
+      "context_modifier": 0.10,
+      "final": 0.46,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Frames digital sovereignty as essential to democratic governance and rule of law. Societies must not surrender autonomy to foreign powers. Mission modifier +0.10."
+    },
+    {
+      "section": "Art. 1",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on freedom/equality/brotherhood in the individual rights sense."
+    },
+    {
+      "section": "Art. 2",
+      "editorial": null,
+      "structural": 0.2,
+      "combined": 0.2,
+      "context_modifier": 0.05,
+      "final": 0.13,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "S: skip-to-content links, semantic HTML, clean design, bilingual (EN/NL). Accessibility modifier +0.05. Final = (0.4 * 0.2) + 0.05 = 0.13."
+    },
+    {
+      "section": "Art. 3",
+      "editorial": 0.2,
+      "structural": null,
+      "combined": 0.12,
+      "context_modifier": null,
+      "final": 0.12,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "Government cloud dependency creates security vulnerability. 'If Trump sanctions a government, nothing works.' Infrastructure autonomy as security issue. Indirect."
+    },
+    {
+      "section": "Art. 4",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on slavery or servitude."
+    },
+    {
+      "section": "Art. 5",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on torture or degrading treatment."
+    },
+    {
+      "section": "Art. 6",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on legal personhood."
+    },
+    {
+      "section": "Art. 7",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on equality before law."
+    },
+    {
+      "section": "Art. 8",
+      "editorial": 0.3,
+      "structural": null,
+      "combined": 0.18,
+      "context_modifier": null,
+      "final": 0.18,
+      "directionality": ["A", "C"],
+      "evidence": "M",
+      "note": "Discusses EU-US Data Privacy Framework review mechanism ('special court') being neutered by Trump. Advocates for meaningful judicial remedy for data protection violations. Loss of remedial mechanisms framed as crisis."
+    },
+    {
+      "section": "Art. 9",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on arbitrary detention."
+    },
+    {
+      "section": "Art. 10",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on fair hearing."
+    },
+    {
+      "section": "Art. 11",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on presumption of innocence."
+    },
+    {
+      "section": "Art. 12",
+      "editorial": 0.7,
+      "structural": 0.5,
+      "combined": 0.62,
+      "context_modifier": 0.25,
+      "final": 0.87,
+      "directionality": ["A", "P"],
+      "evidence": "H",
+      "note": "Central theme. EU governments surrendering citizens' privacy via US cloud transfers. Dutch govt falsely claiming 'Google cannot see the IP address.' Legal basis collapse (DPF oversight neutered). 'US can read government/court/tax documents.' S: berthub.eu practices what it preaches — zero tracking, zero cookies, zero third parties, open-source analytics. Privacy +0.15, ad/tracking +0.10 = +0.25."
+    },
+    {
+      "section": "Art. 13",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on freedom of movement."
+    },
+    {
+      "section": "Art. 14",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on asylum."
+    },
+    {
+      "section": "Art. 15",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on nationality."
+    },
+    {
+      "section": "Art. 16",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on marriage or family."
+    },
+    {
+      "section": "Art. 17",
+      "editorial": 0.3,
+      "structural": null,
+      "combined": 0.18,
+      "context_modifier": null,
+      "final": 0.18,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Data in US clouds subject to seizure. 'Data hostage scenarios.' Citizens' data as property that should not be surrendered. Advocates for sovereign control over digital property."
+    },
+    {
+      "section": "Art. 18",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on freedom of thought/conscience/religion in the UDHR sense."
+    },
+    {
+      "section": "Art. 19",
+      "editorial": 0.5,
+      "structural": 0.4,
+      "combined": 0.46,
+      "context_modifier": 0.30,
+      "final": 0.76,
+      "directionality": ["A", "P"],
+      "evidence": "H",
+      "note": "Independent journalism/advocacy on public interest. Named sources (AP, NBC, Le Monde, Lawfare, government docs). Argues for open-source alternatives. S: fully open, no barriers, bilingual. Context: ed. code +0.05, ownership +0.10, access +0.15 = +0.30 (at cap)."
+    },
+    {
+      "section": "Art. 20",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on assembly or association."
+    },
+    {
+      "section": "Art. 21",
+      "editorial": 0.5,
+      "structural": null,
+      "combined": 0.30,
+      "context_modifier": null,
+      "final": 0.30,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Democratic governance requires digital autonomy. Governments cannot function democratically when foreign powers can cut off infrastructure. 'All European business processes subject to American government interruption.'"
+    },
+    {
+      "section": "Art. 22",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on social security or cultural rights."
+    },
+    {
+      "section": "Art. 23",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on work or equal pay."
+    },
+    {
+      "section": "Art. 24",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on rest and leisure."
+    },
+    {
+      "section": "Art. 25",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on standard of living."
+    },
+    {
+      "section": "Art. 26",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on education."
+    },
+    {
+      "section": "Art. 27",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on cultural participation or IP."
+    },
+    {
+      "section": "Art. 28",
+      "editorial": 0.6,
+      "structural": 0.3,
+      "combined": 0.48,
+      "context_modifier": 0.10,
+      "final": 0.58,
+      "directionality": ["A", "F"],
+      "evidence": "H",
+      "note": "Central thesis: argues for just international digital order. US cloud dependency is a failure of international order — one government can destabilize others. Proposes European sovereign solutions. 1930s weapons-from-Germany analogy underscores systemic risk. S: site runs on non-US infrastructure. Mission modifier +0.10."
+    },
+    {
+      "section": "Art. 29",
+      "editorial": 0.4,
+      "structural": 0.4,
+      "combined": 0.40,
+      "context_modifier": null,
+      "final": 0.40,
+      "directionality": ["A", "P"],
+      "evidence": "M",
+      "note": "Governments have obligation not to surrender citizens' data to foreign powers. Tech companies have duties regarding data stewardship. Open-source advocacy as community responsibility. S: author practices responsible data stewardship (zero tracking, open-source analytics)."
+    },
+    {
+      "section": "Art. 30",
+      "editorial": 0.4,
+      "structural": null,
+      "combined": 0.24,
+      "context_modifier": null,
+      "final": 0.24,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Frames US government actions (neutering oversight, potential sanctions) as destructive of European rights. 'King of America.' Surrendering infrastructure enables destruction of rights by foreign state."
+    }
+  ],
+  "l2_scores": [],
+  "adversarial_gap": {
+    "per_article": [],
+    "mean_ag": null,
+    "ag_coverage": 0,
+    "ag_classification": null
+  },
+  "aggregates": {
+    "weighted_mean": 0.39,
+    "unweighted_mean": 0.38,
+    "max": {
+      "value": 0.87,
+      "section": "Art. 12"
+    },
+    "min": {
+      "value": 0.12,
+      "section": "Art. 3"
+    },
+    "negative_count": 0,
+    "nd_count": 17,
+    "signal_sections": 14,
+    "evidence_profile": {
+      "H": 4,
+      "M": 7,
+      "L": 3,
+      "ND": 17
+    },
+    "channel_balance": {
+      "E_only": 7,
+      "S_only": 1,
+      "both": 6
+    },
+    "directionality_profile": {
+      "A": 13,
+      "P": 4,
+      "F": 8,
+      "C": 3
+    },
+    "volatility": {
+      "value": 0.22,
+      "label": "High"
+    },
+    "classification": "Moderate positive"
+  }
+}

@@ -1,0 +1,454 @@
+{
+  "schema_version": "3.4",
+  "evaluation": {
+    "url": "https://pen.org/press-release/chinese-government-destroying-mongolian-language/",
+    "domain": "pen.org",
+    "content_type": {
+      "primary": "HR",
+      "secondary": ["ED"]
+    },
+    "channel_weights": {
+      "editorial": 0.5,
+      "structural": 0.5
+    },
+    "eval_depth": "STANDARD",
+    "date": "2026-02-23",
+    "methodology": "v3.4",
+    "off_domain": false,
+    "external_evidence": false,
+    "operator": "claude-opus-4-6"
+  },
+  "domain_context_profile": {
+    "domain": "pen.org",
+    "eval_date": "2026-02-23",
+    "elements": {
+      "privacy": {
+        "modifier": 0.00,
+        "affects": ["Art. 12", "Art. 13"],
+        "note": "Google Analytics and New Relic monitoring present. Standard nonprofit analytics. No ad-network data sharing or cross-domain profiling. No ad-supported model."
+      },
+      "tos": {
+        "modifier": null,
+        "affects": ["Art. 8", "Art. 17", "Art. 29", "Art. 30"],
+        "note": "Not directly evaluated. No modifier applied."
+      },
+      "accessibility": {
+        "modifier": 0.00,
+        "affects": ["Art. 2", "Art. 26"],
+        "note": "No published accessibility statement found. Standard WordPress theme. Insufficient information to score positively or negatively."
+      },
+      "mission": {
+        "modifier": 0.15,
+        "affects": ["Preamble", "Art. 1", "Art. 28"],
+        "note": "501(c)(3) nonprofit founded 1922. Mission: unite writers and allies to celebrate creative expression and defend liberties. Explicit free expression and human rights mandate. PEN International member."
+      },
+      "editorial_code": {
+        "modifier": 0.10,
+        "affects": ["Art. 11", "Art. 12", "Art. 19"],
+        "note": "Original research with named methodology (20 interviews, digital research, public records). Partner attribution. Clear sourcing standards for HR organization."
+      },
+      "ownership": {
+        "modifier": 0.15,
+        "affects": ["Art. 19"],
+        "note": "Nonprofit 501(c)(3). Board of 41 independent trustees. Charity Navigator 3/4 stars (86%). Governance policies: conflict of interest, whistleblower, document retention. No asset diversion."
+      },
+      "access_model": {
+        "modifier": 0.15,
+        "affects": ["Art. 13", "Art. 19", "Art. 26"],
+        "note": "No paywall. No registration required. Reports and research published openly. Full open access."
+      },
+      "ad_tracking": {
+        "modifier": 0.05,
+        "affects": ["Art. 12"],
+        "note": "No advertising. No ad networks. Standard analytics only (Google Analytics, New Relic). Nonprofit model eliminates ad-driven data incentives."
+      }
+    }
+  },
+  "scores": [
+    {
+      "section": "Preamble",
+      "editorial": 0.7,
+      "structural": 0.3,
+      "combined": 0.50,
+      "context_modifier": 0.15,
+      "final": 0.65,
+      "directionality": ["A", "F"],
+      "evidence": "H",
+      "note": "Centers human dignity, ethnic minority rights, rule of law. Documents violations against Mongolian people. Calls for rights-based response. S: open access, nonprofit model. Mission modifier +0.15."
+    },
+    {
+      "section": "Art. 1",
+      "editorial": 0.6,
+      "structural": null,
+      "combined": 0.30,
+      "context_modifier": null,
+      "final": 0.30,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Frames Mongolians as equal rights-holders. Amplifies affected community voices (exile journalist Soyonbo Borjgin). Solidarity framing."
+    },
+    {
+      "section": "Art. 2",
+      "editorial": 0.7,
+      "structural": 0.2,
+      "combined": 0.45,
+      "context_modifier": 0.00,
+      "final": 0.45,
+      "directionality": ["A", "F"],
+      "evidence": "H",
+      "note": "Core content: documents ethnic discrimination against Mongolians by Chinese state. Systematic targeting based on ethnicity and language. Explicit advocacy against discrimination."
+    },
+    {
+      "section": "Art. 3",
+      "editorial": 0.3,
+      "structural": null,
+      "combined": 0.15,
+      "context_modifier": null,
+      "final": 0.15,
+      "directionality": ["C"],
+      "evidence": "M",
+      "note": "Documents mass detentions: 8,000-10,000 Mongolians in police custody following 2020 protests. Threats against educators and activists."
+    },
+    {
+      "section": "Art. 4",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on slavery or servitude."
+    },
+    {
+      "section": "Art. 5",
+      "editorial": 0.3,
+      "structural": null,
+      "combined": 0.15,
+      "context_modifier": null,
+      "final": 0.15,
+      "directionality": ["C", "F"],
+      "evidence": "M",
+      "note": "Documents forced re-education of Mongolian activists and educators. Forced public confessions on digital platforms. Degrading treatment."
+    },
+    {
+      "section": "Art. 6",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on legal personhood."
+    },
+    {
+      "section": "Art. 7",
+      "editorial": 0.4,
+      "structural": null,
+      "combined": 0.20,
+      "context_modifier": null,
+      "final": 0.20,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Documents unequal treatment: Mongolians targeted with language restrictions not imposed on Han Chinese. Implicit advocacy for equal protection."
+    },
+    {
+      "section": "Art. 8",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on judicial remedies. Implicitly relevant but too indirect."
+    },
+    {
+      "section": "Art. 9",
+      "editorial": 0.4,
+      "structural": null,
+      "combined": 0.20,
+      "context_modifier": null,
+      "final": 0.20,
+      "directionality": ["A", "C"],
+      "evidence": "M",
+      "note": "Documents mass arbitrary detention: 8,000-10,000 in custody for peaceful protests against education policy changes."
+    },
+    {
+      "section": "Art. 10",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on fair hearings."
+    },
+    {
+      "section": "Art. 11",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on presumption of innocence."
+    },
+    {
+      "section": "Art. 12",
+      "editorial": 0.5,
+      "structural": 0.2,
+      "combined": 0.35,
+      "context_modifier": 0.05,
+      "final": 0.40,
+      "directionality": ["A", "C"],
+      "evidence": "H",
+      "note": "Documents digital surveillance: WeChat monitoring (11/18 interviewees report restrictions), keyword censorship, transnational reach (police contact diaspora via WeChat in Japan, Australia, Canada, Europe). Advocates against privacy violations. S: pen.org uses only standard analytics, no ad networks. Ad/tracking modifier +0.05."
+    },
+    {
+      "section": "Art. 13",
+      "editorial": 0.3,
+      "structural": null,
+      "combined": 0.15,
+      "context_modifier": 0.15,
+      "final": 0.30,
+      "directionality": ["C"],
+      "evidence": "M",
+      "note": "Documents restrictions on Mongolians' communication. Reports exile journalist displacement. Diaspora subject to transnational surveillance. Access modifier +0.15."
+    },
+    {
+      "section": "Art. 14",
+      "editorial": 0.2,
+      "structural": null,
+      "combined": 0.10,
+      "context_modifier": null,
+      "final": 0.10,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "References Mongolians in exile (Soyonbo Borjgin in New York; communities in Japan, Australia, Canada, Europe). Implies asylum/refuge context. Indirect."
+    },
+    {
+      "section": "Art. 15",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on nationality rights."
+    },
+    {
+      "section": "Art. 16",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on marriage or family."
+    },
+    {
+      "section": "Art. 17",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on property rights."
+    },
+    {
+      "section": "Art. 18",
+      "editorial": 0.5,
+      "structural": null,
+      "combined": 0.25,
+      "context_modifier": null,
+      "final": 0.25,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Documents suppression of Mongolian intellectual expression as thought/conscience violation. Language erasure linked to freedom of thought. Government labels language defense 'ideological warfare.'"
+    },
+    {
+      "section": "Art. 19",
+      "editorial": 0.8,
+      "structural": 0.4,
+      "combined": 0.60,
+      "context_modifier": 0.30,
+      "final": 0.90,
+      "directionality": ["A", "C"],
+      "evidence": "H",
+      "note": "Central topic. 89% of Mongolian cultural websites censored/shut down. Bainu app (400K users) restricted. Mongolian-script messaging apps restricted. Chat forums shut down. Music removed from apps. 'One Province One Newspaper One Client' crowds out independent platforms. PEN America's core mission is free expression. Context: ed. code +0.10, ownership +0.15, access +0.15 = +0.30 (at cap). Clamped to 0.90."
+    },
+    {
+      "section": "Art. 20",
+      "editorial": 0.5,
+      "structural": null,
+      "combined": 0.25,
+      "context_modifier": null,
+      "final": 0.25,
+      "directionality": ["A", "C"],
+      "evidence": "M",
+      "note": "Documents suppression of Mongolian assembly: 300,000 students boycotted classes; mass detentions followed. Online meeting spaces shut down. Community forums closed."
+    },
+    {
+      "section": "Art. 21",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on political participation."
+    },
+    {
+      "section": "Art. 22",
+      "editorial": 0.3,
+      "structural": null,
+      "combined": 0.15,
+      "context_modifier": null,
+      "final": 0.15,
+      "directionality": ["C"],
+      "evidence": "M",
+      "note": "Documents destruction of Mongolian cultural infrastructure online. 'Northern Frontier culture' rebranding eliminates Mongolian identity from institutions."
+    },
+    {
+      "section": "Art. 23",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No direct content on work or equal pay."
+    },
+    {
+      "section": "Art. 24",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on rest and leisure."
+    },
+    {
+      "section": "Art. 25",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on standard of living."
+    },
+    {
+      "section": "Art. 26",
+      "editorial": 0.6,
+      "structural": null,
+      "combined": 0.30,
+      "context_modifier": null,
+      "final": 0.30,
+      "directionality": ["A", "C"],
+      "evidence": "H",
+      "note": "Documents destruction of Mongolian-language education: 2020 policy replaced Mongolian with Mandarin across all subjects. 300,000 students boycotted. Educators terminated. Report title 'Save Our Mother Tongue' centers education rights."
+    },
+    {
+      "section": "Art. 27",
+      "editorial": 0.7,
+      "structural": 0.2,
+      "combined": 0.45,
+      "context_modifier": null,
+      "final": 0.45,
+      "directionality": ["A", "C"],
+      "evidence": "H",
+      "note": "Directly addresses cultural participation: 89% of cultural websites shut down; Mongolian music removed from streaming; playlists rebranded with communist themes; institutions renamed to erase identity. S: pen.org makes research freely available."
+    },
+    {
+      "section": "Art. 28",
+      "editorial": 0.5,
+      "structural": 0.3,
+      "combined": 0.40,
+      "context_modifier": 0.15,
+      "final": 0.55,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Calls for international response from tech companies, governments, international institutions. Frames issue as requiring just international order. PEN International membership. S: nonprofit models international solidarity. Mission modifier +0.15."
+    },
+    {
+      "section": "Art. 29",
+      "editorial": 0.4,
+      "structural": 0.3,
+      "combined": 0.35,
+      "context_modifier": null,
+      "final": 0.35,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Frames tech companies as having duties: 'adopt cultural rights framework,' 'respect human rights responsibilities,' 'partner with independent organizations.' Invokes corporate duties to community. S: PEN operates as accountable nonprofit (Charity Navigator 86%, governance transparency)."
+    },
+    {
+      "section": "Art. 30",
+      "editorial": 0.6,
+      "structural": null,
+      "combined": 0.30,
+      "context_modifier": null,
+      "final": 0.30,
+      "directionality": ["A", "F"],
+      "evidence": "H",
+      "note": "Directly addresses state destruction of minority rights. Chinese government campaign constitutes exactly the activity Art. 30 prohibits: state action aimed at destruction of rights. PEN explicitly advocates against this."
+    }
+  ],
+  "l2_scores": [],
+  "adversarial_gap": {
+    "per_article": [],
+    "mean_ag": null,
+    "ag_coverage": 0,
+    "ag_classification": null
+  },
+  "aggregates": {
+    "weighted_mean": 0.35,
+    "unweighted_mean": 0.33,
+    "max": {
+      "value": 0.90,
+      "section": "Art. 19"
+    },
+    "min": {
+      "value": 0.10,
+      "section": "Art. 14"
+    },
+    "negative_count": 0,
+    "nd_count": 8,
+    "signal_sections": 23,
+    "evidence_profile": {
+      "H": 8,
+      "M": 13,
+      "L": 2,
+      "ND": 8
+    },
+    "channel_balance": {
+      "E_only": 15,
+      "S_only": 0,
+      "both": 8
+    },
+    "directionality_profile": {
+      "A": 18,
+      "P": 0,
+      "F": 12,
+      "C": 16
+    },
+    "volatility": {
+      "value": 0.17,
+      "label": "Medium"
+    },
+    "classification": "Moderate positive"
+  }
+}

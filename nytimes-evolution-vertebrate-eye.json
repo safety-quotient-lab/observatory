@@ -1,0 +1,454 @@
+{
+  "schema_version": "3.4",
+  "evaluation": {
+    "url": "https://www.nytimes.com/2026/02/23/science/evolution-vertebrate-eye.html",
+    "domain": "nytimes.com",
+    "content_type": {
+      "primary": "ED",
+      "secondary": ["ME"]
+    },
+    "channel_weights": {
+      "editorial": 0.6,
+      "structural": 0.4
+    },
+    "eval_depth": "STANDARD",
+    "date": "2026-02-23",
+    "methodology": "v3.4",
+    "off_domain": false,
+    "external_evidence": false,
+    "operator": "claude-opus-4-6"
+  },
+  "domain_context_profile": {
+    "domain": "nytimes.com",
+    "eval_date": "2026-02-23",
+    "elements": {
+      "privacy": {
+        "modifier": -0.10,
+        "affects": ["Art. 12", "Art. 13"],
+        "note": "Extensive data collection across 5 products; 150+ ad partners; cross-device tracking; behavioral profiling. Privacy Watchdog grade D (25/100). Some opt-out controls (CCPA/GDPR) but defaults permissive."
+      },
+      "tos": {
+        "modifier": null,
+        "affects": ["Art. 8", "Art. 17", "Art. 29", "Art. 30"],
+        "note": "Not directly evaluated (ToS page not fetched). No modifier applied."
+      },
+      "accessibility": {
+        "modifier": 0.05,
+        "affects": ["Art. 2", "Art. 26"],
+        "note": "Very few WCAG 2.1 issues per Library Accessibility Alliance (2024). Minor HTML nesting and ARIA issues. No published accessibility statement found."
+      },
+      "mission": {
+        "modifier": 0.10,
+        "affects": ["Preamble", "Art. 1", "Art. 28"],
+        "note": "Journalism of record; 'All the News That's Fit to Print'; institutional commitment to public information."
+      },
+      "editorial_code": {
+        "modifier": 0.10,
+        "affects": ["Art. 11", "Art. 12", "Art. 19"],
+        "note": "Published editorial standards; corrections policy; news/opinion separation; byline and sourcing standards."
+      },
+      "ownership": {
+        "modifier": 0.05,
+        "affects": ["Art. 19"],
+        "note": "NYSE-listed, Sulzberger family dual-class control maintains editorial independence. Not a trust or non-profit."
+      },
+      "access_model": {
+        "modifier": -0.10,
+        "affects": ["Art. 13", "Art. 19", "Art. 26"],
+        "note": "Hard paywall on most content. This URL shared via gift/unlocked link. Default model restricts access to subscribers."
+      },
+      "ad_tracking": {
+        "modifier": -0.10,
+        "affects": ["Art. 12"],
+        "note": "Heavy ad load; 150+ ad partners; first- and third-party cookies; cross-product behavioral profiling."
+      }
+    }
+  },
+  "scores": [
+    {
+      "section": "Preamble",
+      "editorial": 0.1,
+      "structural": null,
+      "combined": 0.06,
+      "context_modifier": null,
+      "final": 0.06,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "Article celebrates scientific inquiry and human understanding; tangential alignment with dignity and reason in Preamble."
+    },
+    {
+      "section": "Art. 1",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on freedom, equality, or brotherhood."
+    },
+    {
+      "section": "Art. 2",
+      "editorial": null,
+      "structural": -0.1,
+      "combined": -0.1,
+      "context_modifier": 0.05,
+      "final": -0.05,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "Minor WCAG ARIA nesting issues create barriers for screen reader users."
+    },
+    {
+      "section": "Art. 3",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on life, liberty, or security."
+    },
+    {
+      "section": "Art. 4",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on slavery or servitude."
+    },
+    {
+      "section": "Art. 5",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on torture or degrading treatment."
+    },
+    {
+      "section": "Art. 6",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on legal personhood."
+    },
+    {
+      "section": "Art. 7",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on equality before law."
+    },
+    {
+      "section": "Art. 8",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on right to remedy."
+    },
+    {
+      "section": "Art. 9",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on arbitrary detention."
+    },
+    {
+      "section": "Art. 10",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on fair hearing."
+    },
+    {
+      "section": "Art. 11",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on presumption of innocence."
+    },
+    {
+      "section": "Art. 12",
+      "editorial": null,
+      "structural": -0.4,
+      "combined": -0.4,
+      "context_modifier": -0.10,
+      "final": -0.26,
+      "directionality": ["P"],
+      "evidence": "M",
+      "note": "Extensive ad-tracking infrastructure; 150+ ad partners; cross-product behavioral profiling; first- and third-party cookies. Privacy Watchdog grade D. Modifier stacks: privacy -0.10, ad/tracking -0.10, ed. code +0.10. Net context on Art.12: -0.10 (within cap). Note: modifier from privacy and ad/tracking partially offset by ed. code modifier. Capped net applied: -0.10."
+    },
+    {
+      "section": "Art. 13",
+      "editorial": null,
+      "structural": -0.1,
+      "combined": -0.1,
+      "context_modifier": -0.10,
+      "final": -0.14,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "Paywall restricts default access; this URL unlocked via gift link but default model is gated. Access modifier -0.10."
+    },
+    {
+      "section": "Art. 14",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on asylum."
+    },
+    {
+      "section": "Art. 15",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on nationality."
+    },
+    {
+      "section": "Art. 16",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on marriage or family."
+    },
+    {
+      "section": "Art. 17",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on property rights."
+    },
+    {
+      "section": "Art. 18",
+      "editorial": 0.2,
+      "structural": null,
+      "combined": 0.2,
+      "context_modifier": null,
+      "final": 0.12,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "Article presents evidence-based reasoning; implicitly supports freedom of thought by presenting evolutionary science without deference to creationist counter-claims (notes them historically, then proceeds with evidence). Score capped at 0.12 due to L evidence (indirect signal). Note: combined is editorial-only since S=ND; final = 0.6 * 0.2 = 0.12."
+    },
+    {
+      "section": "Art. 19",
+      "editorial": 0.3,
+      "structural": -0.2,
+      "combined": 0.10,
+      "context_modifier": 0.00,
+      "final": 0.10,
+      "directionality": ["C", "P"],
+      "evidence": "M",
+      "note": "E: quality science journalism; open reporting; named expert sources across 4 institutions (Lund, Sussex, UC Berkeley, Bristol). S: paywall restricts default access. Context modifiers: ed. code +0.10, access -0.10 = net 0.00."
+    },
+    {
+      "section": "Art. 20",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on assembly or association."
+    },
+    {
+      "section": "Art. 21",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on political participation."
+    },
+    {
+      "section": "Art. 22",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on social security or cultural rights."
+    },
+    {
+      "section": "Art. 23",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on work or equal pay."
+    },
+    {
+      "section": "Art. 24",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on rest and leisure."
+    },
+    {
+      "section": "Art. 25",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on standard of living."
+    },
+    {
+      "section": "Art. 26",
+      "editorial": 0.3,
+      "structural": -0.1,
+      "combined": 0.14,
+      "context_modifier": -0.10,
+      "final": 0.04,
+      "directionality": ["C", "P"],
+      "evidence": "M",
+      "note": "E: high-quality science education for lay audience; cites peer-reviewed research (Current Biology); names researchers and institutions. S: paywall restricts educational access by default. Access modifier -0.10."
+    },
+    {
+      "section": "Art. 27",
+      "editorial": 0.3,
+      "structural": null,
+      "combined": 0.3,
+      "context_modifier": null,
+      "final": 0.18,
+      "directionality": ["C", "F"],
+      "evidence": "M",
+      "note": "Article makes scientific research accessible to general public; supports cultural participation in scientific knowledge; credits researchers and institutions by name. Final = 0.6 * 0.3 = 0.18."
+    },
+    {
+      "section": "Art. 28",
+      "editorial": 0.2,
+      "structural": null,
+      "combined": 0.2,
+      "context_modifier": null,
+      "final": 0.12,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "International scientific collaboration modeled (Sweden, UK, US, China). Tangential alignment with social and international order enabling scientific progress. Score capped at 0.12 due to L evidence. Final = 0.6 * 0.2 = 0.12."
+    },
+    {
+      "section": "Art. 29",
+      "editorial": null,
+      "structural": -0.1,
+      "combined": -0.1,
+      "context_modifier": null,
+      "final": -0.04,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "Ad tracking and data collection create tension with responsible data stewardship. Minor. Final = 0.4 * -0.1 = -0.04."
+    },
+    {
+      "section": "Art. 30",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on destruction of rights."
+    }
+  ],
+  "l2_scores": [],
+  "adversarial_gap": {
+    "per_article": [],
+    "mean_ag": null,
+    "ag_coverage": 0,
+    "ag_classification": null
+  },
+  "aggregates": {
+    "weighted_mean": -0.01,
+    "unweighted_mean": -0.01,
+    "max": {
+      "value": 0.18,
+      "section": "Art. 27"
+    },
+    "min": {
+      "value": -0.26,
+      "section": "Art. 12"
+    },
+    "negative_count": 4,
+    "nd_count": 22,
+    "signal_sections": 9,
+    "evidence_profile": {
+      "H": 0,
+      "M": 4,
+      "L": 5,
+      "ND": 22
+    },
+    "channel_balance": {
+      "E_only": 4,
+      "S_only": 4,
+      "both": 1
+    },
+    "directionality_profile": {
+      "A": 0,
+      "P": 6,
+      "F": 1,
+      "C": 6
+    },
+    "volatility": {
+      "value": 0.14,
+      "label": "Medium"
+    },
+    "classification": "Neutral"
+  }
+}
