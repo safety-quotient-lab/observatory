@@ -1,0 +1,62 @@
+---
+import { modifierColor, formatScore } from '../lib/colors';
+import type { DcpElement } from '../lib/types';
+
+interface Props {
+  elements: Record<string, DcpElement>;
+}
+
+const { elements } = Astro.props;
+
+const DCP_LABELS: Record<string, string> = {
+  privacy: 'Privacy',
+  tos: 'Terms of Service',
+  accessibility: 'Accessibility',
+  mission: 'Mission',
+  editorial_code: 'Editorial Code',
+  ownership: 'Ownership',
+  access_model: 'Access Model',
+  ad_tracking: 'Ad/Tracking',
+};
+---
+
+<div class="overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-surface-3">
+        <th class="text-left py-2 px-3 text-gray-400 font-medium">Element</th>
+        <th class="text-center py-2 px-3 text-gray-400 font-medium w-24">Modifier</th>
+        <th class="text-left py-2 px-3 text-gray-400 font-medium">Affects</th>
+        <th class="text-left py-2 px-3 text-gray-400 font-medium">Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {Object.entries(elements).map(([key, el]) => {
+        const color = modifierColor(el.modifier);
+        return (
+          <tr class="border-b border-surface-3/50 hover:bg-surface-2/50 transition-colors">
+            <td class="py-2 px-3 font-medium text-gray-300">{DCP_LABELS[key] || key}</td>
+            <td class="py-2 px-3 text-center">
+              <span
+                class="badge"
+                style={`background: ${color}20; color: ${color}; border: 1px solid ${color}40`}
+              >
+                {el.modifier === null ? '—' : formatScore(el.modifier)}
+              </span>
+            </td>
+            <td class="py-2 px-3">
+              <div class="flex flex-wrap gap-1">
+                {el.affects.map((a) => (
+                  <span class="text-xs px-1.5 py-0.5 rounded bg-surface-3 text-gray-400 score-font">
+                    {a}
+                  </span>
+                ))}
+              </div>
+            </td>
+            <td class="py-2 px-3 text-gray-400 text-xs max-w-md">{el.note}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,113 @@
+---
+import { scoreToColor, formatScore, classificationColor, classificationTextColor } from '../lib/colors';
+import HeatMap from './HeatMap.astro';
+import type { Score } from '../lib/types';
+import type { Story } from '../lib/db';
+
+interface Props {
+  story: Story;
+  scores?: Score[];
+  rank?: number;
+}
+
+const { story, scores, rank } = Astro.props;
+
+const hasEval = story.eval_status === 'done' && story.hcb_weighted_mean !== null;
+const meanColor = hasEval ? scoreToColor(story.hcb_weighted_mean) : '#555';
+const classColor = hasEval ? classificationColor(story.hcb_classification!) : '#6b7280';
+const classText = hasEval ? classificationTextColor(story.hcb_classification!) : '#ffffff';
+
+function timeAgo(unixTime: number): string {
+  const seconds = Math.floor(Date.now() / 1000 - unixTime);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+---
+
+<div class="flex items-start gap-3 py-2.5 px-4 hover:bg-surface-1/80 transition-colors group">
+  {/* Rank */}
+  {rank !== undefined && (
+    <span class="score-font text-sm text-gray-500 w-6 text-right shrink-0 pt-0.5">
+      {rank}.
+    </span>
+  )}
+
+  {/* HRCB Score Badge */}
+  <div class="shrink-0 pt-0.5">
+    {hasEval ? (
+      <a
+        href={`/item/${story.hn_id}`}
+        class="w-14 h-7 rounded flex items-center justify-center score-font text-xs font-bold hover:ring-1 hover:ring-indigo-500/50 transition-all"
+        style={`background: ${meanColor}20; color: ${meanColor}; border: 1px solid ${meanColor}40`}
+        title={`HRCB: ${formatScore(story.hcb_weighted_mean)} — ${story.hcb_classification}`}
+      >
+        {formatScore(story.hcb_weighted_mean)}
+      </a>
+    ) : (
+      <div
+        class="w-14 h-7 rounded flex items-center justify-center text-[10px] text-gray-500 border border-surface-3"
+        title={story.eval_status === 'pending' ? 'Evaluation pending' : story.eval_status === 'evaluating' ? 'Evaluating...' : story.eval_status === 'failed' ? 'Evaluation failed' : 'Skipped'}
+      >
+        {story.eval_status === 'pending' ? '...' : story.eval_status === 'evaluating' ? '...' : story.eval_status === 'failed' ? 'ERR' : 'SKIP'}
+      </div>
+    )}
+  </div>
+
+  {/* Story content */}
+  <div class="flex-1 min-w-0">
+    <div class="flex items-start gap-2">
+      <div class="min-w-0 flex-1">
+        {/* Title row */}
+        <div>
+          <a
+            href={story.url || `https://news.ycombinator.com/item?id=${story.hn_id}`}
+            class="text-sm text-gray-200 hover:text-indigo-400 transition-colors"
+            target={story.url ? '_blank' : undefined}
+            rel={story.url ? 'noopener' : undefined}
+          >
+            {story.title}
+          </a>
+          {story.domain && (
+            <span class="text-xs text-gray-500 ml-1.5">
+              ({story.domain})
+            </span>
+          )}
+        </div>
+
+        {/* Meta row */}
+        <div class="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
+          {story.hn_score !== null && <span>{story.hn_score} points</span>}
+          {story.hn_by && <span>by {story.hn_by}</span>}
+          <span>{timeAgo(story.hn_time)}</span>
+          {story.hn_comments !== null && (
+            <a
+              href={`https://news.ycombinator.com/item?id=${story.hn_id}`}
+              class="hover:text-gray-300 transition-colors"
+              target="_blank"
+              rel="noopener"
+            >
+              {story.hn_comments} comments
+            </a>
+          )}
+          {hasEval && (
+            <a href={`/item/${story.hn_id}`} class="hover:text-indigo-400 transition-colors">
+              HRCB detail
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+
+    {/* Mini heatmap for evaluated stories */}
+    {hasEval && scores && scores.length > 0 && (
+      <div class="mt-1.5">
+        <HeatMap scores={scores} compact={true} showLabels={false} />
+      </div>
+    )}
+  </div>
+</div>

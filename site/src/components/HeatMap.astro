@@ -1,0 +1,93 @@
+---
+import { scoreToColor, formatScore } from '../lib/colors';
+import { ARTICLE_TITLES, ALL_SECTIONS } from '../lib/udhr';
+import type { Score } from '../lib/types';
+
+interface Props {
+  scores: Score[];
+  compact?: boolean;
+  showLabels?: boolean;
+}
+
+const { scores, compact = false, showLabels = true } = Astro.props;
+
+const scoreMap = new Map(scores.map((s) => [s.section, s]));
+
+const cellW = compact ? 14 : 28;
+const cellH = compact ? 14 : 28;
+const gap = compact ? 1 : 2;
+const labelW = showLabels ? (compact ? 0 : 72) : 0;
+const titleW = showLabels ? (compact ? 0 : 160) : 0;
+const cols = 31;
+
+// For compact mode: single row of 31 cells
+// For full mode: single row with labels
+const svgW = compact
+  ? cols * (cellW + gap)
+  : labelW + cols * (cellW + gap) + titleW;
+const svgH = compact ? cellH : cellH + (showLabels ? 16 : 0);
+---
+
+<div class={compact ? 'inline-block' : 'overflow-x-auto'}>
+  <svg
+    width={svgW}
+    height={compact ? svgH : svgH + 20}
+    viewBox={`0 0 ${svgW} ${compact ? svgH : svgH + 20}`}
+    class="rounded"
+  >
+    {!compact && (
+      <defs>
+        <pattern id="nd-hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="4" stroke="#3a3a45" stroke-width="1" />
+        </pattern>
+      </defs>
+    )}
+
+    {ALL_SECTIONS.map((section, i) => {
+      const s = scoreMap.get(section);
+      const finalScore = s?.final ?? null;
+      const color = scoreToColor(finalScore);
+      const x = (compact ? 0 : labelW) + i * (cellW + gap);
+      const y = 0;
+
+      return (
+        <>
+          <rect
+            x={x}
+            y={y}
+            width={cellW}
+            height={cellH}
+            fill={finalScore === null ? '#1a1a25' : color}
+            rx={compact ? 1 : 2}
+          >
+            <title>{section}: {formatScore(finalScore)} — {ARTICLE_TITLES[section]}</title>
+          </rect>
+          {finalScore === null && (
+            <rect
+              x={x}
+              y={y}
+              width={cellW}
+              height={cellH}
+              fill="url(#nd-hatch)"
+              rx={compact ? 1 : 2}
+            >
+              <title>{section}: ND — {ARTICLE_TITLES[section]}</title>
+            </rect>
+          )}
+          {!compact && (
+            <text
+              x={x + cellW / 2}
+              y={cellH + 12}
+              fill="#666"
+              font-size="7"
+              text-anchor="middle"
+              font-family="monospace"
+            >
+              {section === 'Preamble' ? 'P' : section.replace('Article ', '')}
+            </text>
+          )}
+        </>
+      );
+    })}
+  </svg>
+</div>

@@ -1,0 +1,14 @@
+name = "hn-hrcb"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "udhr-hrcb"
+database_id = "placeholder-replace-with-real-id"
+
+[triggers]
+crons = ["*/10 * * * *"]
+
+# Secrets (set via `wrangler secret put`):
+# ANTHROPIC_API_KEY

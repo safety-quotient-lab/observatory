@@ -1,0 +1,40 @@
+---
+const currentPath = Astro.url.pathname;
+const links = [
+  { href: '/', label: 'Feed' },
+  { href: '/article/19', label: 'By Article' },
+  { href: '/about', label: 'About' },
+];
+---
+
+<nav class="border-b border-surface-3 bg-surface-1/80 backdrop-blur-sm sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-14">
+      <a href="/" class="flex items-center gap-2 group">
+        <span class="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors">
+          HN HRCB
+        </span>
+        <span class="text-xs text-gray-500 hidden sm:inline">Human Rights Compatibility Bias</span>
+      </a>
+
+      <div class="flex items-center gap-1">
+        {links.map(({ href, label }) => {
+          const active = currentPath === href || (href !== '/' && currentPath.startsWith(href));
+          return (
+            <a
+              href={href}
+              class:list={[
+                'px-3 py-1.5 rounded-md text-sm transition-colors',
+                active
+                  ? 'bg-surface-3 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-surface-2',
+              ]}
+            >
+              {label}
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</nav>

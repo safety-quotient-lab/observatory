@@ -1,0 +1,230 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="About">
+  <section class="border-b border-surface-3">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <h1 class="text-2xl font-bold text-white mb-2">About HN HRCB</h1>
+      <p class="text-gray-400">Hacker News stories scored against the Universal Declaration of Human Rights.</p>
+    </div>
+  </section>
+
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">What is this?</h2>
+      <p class="text-gray-300 leading-relaxed mb-4">
+        HN HRCB is a mirror of Hacker News that evaluates every story's linked content against the
+        30 articles and preamble of the UN Universal Declaration of Human Rights. Each evaluation
+        produces a Human Rights Compatibility Bias (HRCB) score showing how the content's editorial
+        and structural signals align with fundamental human rights provisions.
+      </p>
+      <p class="text-gray-300 leading-relaxed">
+        A cron worker fetches top HN stories every 10 minutes, retrieves each linked URL's content,
+        and uses Claude Haiku to evaluate it against the UDHR methodology (v3.4). Results are stored
+        and displayed alongside the standard HN story metadata.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">Core Construct: HRCB</h2>
+      <p class="text-gray-300 leading-relaxed mb-4">
+        <strong class="text-white">Human Rights Compatibility Bias (HRCB)</strong> measures the directional lean
+        of web content relative to the provisions of the UN Universal Declaration of Human Rights.
+        A positive score indicates content that aligns with UDHR provisions; a negative score indicates
+        content that conflicts with them.
+      </p>
+      <div class="card p-4 score-font text-sm">
+        <div class="flex items-center gap-4 justify-center">
+          <span class="text-red-400">-1.0</span>
+          <span class="text-gray-500">&larr;</span>
+          <span class="text-gray-400">Strong negative</span>
+          <span class="text-gray-500">|</span>
+          <span class="text-gray-400">Neutral</span>
+          <span class="text-gray-500">|</span>
+          <span class="text-gray-400">Strong positive</span>
+          <span class="text-gray-500">&rarr;</span>
+          <span class="text-green-400">+1.0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Signal Channels -->
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">Signal Channels</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="card p-4">
+          <h3 class="text-sm font-semibold text-blue-400 mb-2">Editorial (E)</h3>
+          <p class="text-sm text-gray-400">
+            What the content <strong class="text-gray-300">says</strong>. Analyzes the text, arguments,
+            framing, and sourcing of the content itself.
+          </p>
+        </div>
+        <div class="card p-4">
+          <h3 class="text-sm font-semibold text-cyan-400 mb-2">Structural (S)</h3>
+          <p class="text-sm text-gray-400">
+            What the site <strong class="text-gray-300">does</strong>. Examines privacy practices,
+            accessibility, tracking, access models, and platform policies.
+          </p>
+        </div>
+      </div>
+      <p class="text-sm text-gray-500 mt-3">
+        Channels are weighted by content type (e.g., editorial content: E=0.6, S=0.4).
+        The combined score is: <span class="score-font">(w_E &times; E) + (w_S &times; S)</span>.
+      </p>
+    </section>
+
+    <!-- ND vs 0.0 -->
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">ND vs 0.0</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="card p-4">
+          <h3 class="text-sm font-semibold text-gray-400 mb-2">ND (No Data)</h3>
+          <p class="text-sm text-gray-400">
+            No relevant content for this UDHR article. The topic is simply absent. Not scored, not averaged.
+          </p>
+        </div>
+        <div class="card p-4">
+          <h3 class="text-sm font-semibold text-gray-300 mb-2">0.0 (Neutral)</h3>
+          <p class="text-sm text-gray-400">
+            Relevant content exists but has balanced positive and negative signals, netting to zero.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Domain Context Profile -->
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">Domain Context Profile (DCP)</h2>
+      <p class="text-gray-300 leading-relaxed mb-4">
+        Eight domain-level elements provide context modifiers that adjust article scores based on
+        the website's overall practices:
+      </p>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {['Privacy', 'ToS', 'Accessibility', 'Mission', 'Editorial Code', 'Ownership', 'Access Model', 'Ad/Tracking'].map((el) => (
+          <div class="card p-3 text-center">
+            <span class="text-sm text-gray-300">{el}</span>
+          </div>
+        ))}
+      </div>
+      <p class="text-sm text-gray-500 mt-3">
+        Modifiers range from -0.20 to +0.30 (capped) and apply only to specified articles.
+      </p>
+    </section>
+
+    <!-- Evidence Strength -->
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">Evidence Strength</h2>
+      <div class="space-y-2">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-green-500/20 text-green-400 w-8 justify-center">H</span>
+          <span class="text-sm text-gray-300">High — direct, explicit content with strong sourcing</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="badge bg-yellow-500/20 text-yellow-400 w-8 justify-center">M</span>
+          <span class="text-sm text-gray-300">Medium — clear signal but may be secondary or partially sourced</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="badge bg-gray-500/20 text-gray-400 w-8 justify-center">L</span>
+          <span class="text-sm text-gray-300">Low — tangential, indirect, or weakly sourced</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Directionality -->
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">Directionality Markers</h2>
+      <div class="space-y-2">
+        <div class="flex items-center gap-3">
+          <span class="badge bg-indigo-500/20 text-indigo-400 w-8 justify-center">A</span>
+          <span class="text-sm text-gray-300">Advocacy — explicitly argues for or against a right</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="badge bg-cyan-500/20 text-cyan-400 w-8 justify-center">P</span>
+          <span class="text-sm text-gray-300">Practice — site infrastructure reflects a rights stance</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="badge bg-violet-500/20 text-violet-400 w-8 justify-center">F</span>
+          <span class="text-sm text-gray-300">Framing — presents issues in a rights-aligned or rights-opposed frame</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="badge bg-orange-500/20 text-orange-400 w-8 justify-center">C</span>
+          <span class="text-sm text-gray-300">Content — factual content relevant to human rights topics</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- How Evaluations Work -->
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">How Evaluations Work</h2>
+      <div class="space-y-3 text-gray-300 leading-relaxed">
+        <p>Each evaluation follows a structured process:</p>
+        <ol class="list-decimal list-inside space-y-2 text-gray-400">
+          <li>A URL from HN's top stories is fetched as the unit of analysis</li>
+          <li>The page's content type is classified (Editorial, Commentary, HR, etc.)</li>
+          <li>Channel weights are assigned based on content type</li>
+          <li>A Domain Context Profile (DCP) is constructed from 8 domain-level elements</li>
+          <li>Each of 31 UDHR provisions is scored for editorial and structural signals</li>
+          <li>Context modifiers from the DCP are applied to relevant articles</li>
+          <li>Aggregate statistics are computed (weighted mean, evidence profile, etc.)</li>
+          <li>A final classification is assigned (Strong positive to Strong negative)</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- Version history -->
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">Version History</h2>
+      <div class="space-y-3">
+        {[
+          { v: 'v1', desc: 'External-source methodology, domain-level evaluation' },
+          { v: 'v2', desc: 'On-domain-only, ND vs 0.0 distinction, evidence strength, off-domain toggle' },
+          { v: 'v3', desc: 'URL-level HRCB with E/S channels, content types, rubrics, calibration' },
+          { v: 'v3.3', desc: 'Consolidation + roadmap' },
+          { v: 'v3.4', desc: 'Current — Batch protocol, adversarial robustness, JSON/CSV machine-readable output' },
+        ].map(({ v, desc }) => (
+          <div class="flex items-start gap-3">
+            <span class={`badge shrink-0 ${v === 'v3.4' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-surface-3 text-gray-400'}`}>
+              {v}
+            </span>
+            <span class="text-sm text-gray-400">{desc}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Technical Details -->
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">Technical Details</h2>
+      <p class="text-gray-300 leading-relaxed mb-4">
+        This site is built with Astro and deployed on Cloudflare Pages with D1 (SQLite) for storage.
+        A cron-triggered Cloudflare Worker fetches HN top stories and evaluates them via the Anthropic
+        API (Claude Haiku). All visualizations are server-rendered SVG with zero client-side JavaScript.
+      </p>
+      <div class="card p-4 score-font text-sm text-gray-400">
+        <div class="grid grid-cols-2 gap-2">
+          <span>Schema version:</span><span class="text-gray-300">3.4</span>
+          <span>Methodology:</span><span class="text-gray-300">v3.4</span>
+          <span>Evaluator:</span><span class="text-gray-300">claude-haiku-4-5-20251001</span>
+          <span>Framework:</span><span class="text-gray-300">Astro + Cloudflare Pages</span>
+          <span>Database:</span><span class="text-gray-300">Cloudflare D1 (SQLite)</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-bold text-white mb-4">The Universal Declaration of Human Rights</h2>
+      <p class="text-gray-300 leading-relaxed mb-4">
+        Adopted by the United Nations General Assembly on 10 December 1948 (Resolution 217 A),
+        the UDHR is a milestone document in the history of human rights. It sets out, for the
+        first time, fundamental human rights to be universally protected. It has been translated
+        into over 500 languages.
+      </p>
+      <p class="text-gray-300 leading-relaxed">
+        The Declaration consists of a Preamble and 30 Articles covering civil, political,
+        economic, social, and cultural rights. These range from the right to life and liberty
+        (Article 3) to freedom of expression (Article 19) to the right to education (Article 26).
+      </p>
+    </section>
+  </div>
+</Base>

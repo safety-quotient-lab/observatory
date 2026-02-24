@@ -1,0 +1,84 @@
+---
+import Base from '../layouts/Base.astro';
+import EvalCard from '../components/EvalCard.astro';
+import { scoreToColor, formatScore } from '../lib/colors';
+import { getTopStories, getStoryScores, getEvaluatedCount, getScoreStats } from '../lib/db';
+import type { Score } from '../lib/types';
+
+const db = Astro.locals.runtime.env.DB;
+
+const stories = await getTopStories(db, 60);
+const evaluatedCount = await getEvaluatedCount(db);
+const stats = await getScoreStats(db);
+
+// Fetch scores for evaluated stories (for mini heatmaps)
+const storyScoresMap = new Map<number, Score[]>();
+for (const story of stories) {
+  if (story.eval_status === 'done') {
+    const scores = await getStoryScores(db, story.hn_id);
+    storyScoresMap.set(story.hn_id, scores);
+  }
+}
+---
+
+<Base title="Feed" description="Hacker News stories with UDHR Human Rights Compatibility Bias scores">
+  <!-- Hero -->
+  <section class="border-b border-surface-3">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2">
+        HN
+        <span class="text-indigo-400">HRCB</span>
+      </h1>
+      <p class="text-gray-400 max-w-2xl text-sm leading-relaxed">
+        Hacker News stories scored against the 31 provisions of the
+        UN Universal Declaration of Human Rights. Each story's linked
+        content is evaluated for editorial and structural signals.
+      </p>
+    </div>
+  </section>
+
+  <!-- Stats bar -->
+  {evaluatedCount > 0 && (
+    <section class="border-b border-surface-3 bg-surface-1">
+      <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
+        <div class="flex items-center gap-6 text-xs">
+          <div>
+            <span class="text-gray-500 uppercase tracking-wider">Evaluated</span>
+            <span class="score-font text-white ml-1.5">{evaluatedCount}</span>
+          </div>
+          <div>
+            <span class="text-gray-500 uppercase tracking-wider">Mean HRCB</span>
+            <span class="score-font ml-1.5" style={`color: ${scoreToColor(stats.avgScore)}`}>
+              {formatScore(stats.avgScore)}
+            </span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-green-400 score-font">{stats.positiveCount}+</span>
+            <span class="text-gray-400 score-font">{stats.neutralCount}~</span>
+            <span class="text-red-400 score-font">{stats.negativeCount}-</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- Feed -->
+  <section class="max-w-5xl mx-auto px-4 sm:px-6 py-4">
+    <div class="divide-y divide-surface-3/50">
+      {stories.map((story, i) => (
+        <EvalCard
+          story={story}
+          scores={storyScoresMap.get(story.hn_id)}
+          rank={i + 1}
+        />
+      ))}
+    </div>
+
+    {stories.length === 0 && (
+      <div class="card p-12 text-center">
+        <p class="text-gray-500 text-lg">No stories yet. The cron worker will populate stories from HN.</p>
+        <p class="text-gray-600 text-sm mt-2">Run the seed script or wait for the next cron cycle.</p>
+      </div>
+    )}
+  </section>
+</Base>

@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-surface-0 text-gray-200 antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    @apply min-h-screen;
+  }
+
+  ::selection {
+    @apply bg-indigo-500/30;
+  }
+}
+
+@layer components {
+  .score-font {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .card {
+    @apply bg-surface-1 border border-surface-3 rounded-lg;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium score-font;
+  }
+}

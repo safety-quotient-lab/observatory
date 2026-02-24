@@ -1,0 +1,125 @@
+---
+import { ARTICLE_GROUPS } from '../lib/udhr';
+import type { Score } from '../lib/types';
+
+interface Props {
+  scores: Score[];
+  size?: number;
+}
+
+const { scores, size = 300 } = Astro.props;
+const scoreMap = new Map(scores.map((s) => [s.section, s]));
+
+const groups = Object.entries(ARTICLE_GROUPS);
+const numAxes = groups.length;
+const cx = size / 2;
+const cy = size / 2;
+const radius = size / 2 - 40;
+
+// Calculate average score for each group
+const groupScores = groups.map(([name, articles]) => {
+  const articleScores = articles
+    .map((a) => scoreMap.get(a)?.final)
+    .filter((s): s is number => s !== null);
+  if (articleScores.length === 0) return { name, avg: 0, count: 0 };
+  const avg = articleScores.reduce((a, b) => a + b, 0) / articleScores.length;
+  return { name, avg, count: articleScores.length };
+});
+
+function polarToXY(angle: number, r: number): [number, number] {
+  const rad = ((angle - 90) * Math.PI) / 180;
+  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+}
+
+const angleStep = 360 / numAxes;
+
+// Grid rings at 0.25, 0.5, 0.75, 1.0
+const rings = [0.25, 0.5, 0.75, 1.0];
+
+// Polygon points for the data
+const points = groupScores.map((gs, i) => {
+  const angle = i * angleStep;
+  // Map score from [-1, 1] to [0, 1] for radius
+  const normalizedR = (gs.avg + 1) / 2;
+  return polarToXY(angle, normalizedR * radius);
+});
+
+const polygonPoints = points.map(([x, y]) => `${x},${y}`).join(' ');
+
+// Zero line (center ring at r=0.5 of radius = score 0)
+const zeroR = 0.5 * radius;
+---
+
+<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} class="mx-auto">
+  <!-- Grid rings -->
+  {rings.map((r) => {
+    const ringR = r * radius;
+    const ringPoints = Array.from({ length: numAxes }, (_, i) => {
+      const [x, y] = polarToXY(i * angleStep, ringR);
+      return `${x},${y}`;
+    }).join(' ');
+    return (
+      <polygon
+        points={ringPoints}
+        fill="none"
+        stroke="#2a2a35"
+        stroke-width="1"
+      />
+    );
+  })}
+
+  <!-- Zero line (special) -->
+  {(() => {
+    const zeroPoints = Array.from({ length: numAxes }, (_, i) => {
+      const [x, y] = polarToXY(i * angleStep, zeroR);
+      return `${x},${y}`;
+    }).join(' ');
+    return (
+      <polygon
+        points={zeroPoints}
+        fill="none"
+        stroke="#555"
+        stroke-width="1"
+        stroke-dasharray="4,2"
+      />
+    );
+  })()}
+
+  <!-- Axes -->
+  {groups.map(([name], i) => {
+    const angle = i * angleStep;
+    const [x, y] = polarToXY(angle, radius);
+    const [lx, ly] = polarToXY(angle, radius + 20);
+    return (
+      <>
+        <line x1={cx} y1={cy} x2={x} y2={y} stroke="#2a2a35" stroke-width="1" />
+        <text
+          x={lx}
+          y={ly}
+          fill="#888"
+          font-size="9"
+          text-anchor="middle"
+          dominant-baseline="middle"
+          font-family="Inter, sans-serif"
+        >
+          {name}
+        </text>
+      </>
+    );
+  })}
+
+  <!-- Data polygon -->
+  <polygon
+    points={polygonPoints}
+    fill="rgba(99, 102, 241, 0.15)"
+    stroke="#6366f1"
+    stroke-width="2"
+  />
+
+  <!-- Data points -->
+  {points.map(([x, y], i) => (
+    <circle cx={x} cy={y} r="4" fill="#6366f1" stroke="#1a1a25" stroke-width="2">
+      <title>{groupScores[i].name}: {groupScores[i].avg.toFixed(2)} ({groupScores[i].count} articles)</title>
+    </circle>
+  ))}
+</svg>

@@ -1,0 +1,146 @@
+---
+import Base from '../../layouts/Base.astro';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor } from '../../lib/colors';
+import { ARTICLE_TITLES, ALL_SECTIONS } from '../../lib/udhr';
+import { getArticleRanking } from '../../lib/db';
+
+const { n } = Astro.params;
+const articleNum = parseInt(n!, 10);
+
+if (isNaN(articleNum) || articleNum < 0 || articleNum > 30) {
+  return Astro.redirect('/');
+}
+
+const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
+const articleTitle = ARTICLE_TITLES[section] || section;
+
+const db = Astro.locals.runtime.env.DB;
+const rankings = await getArticleRanking(db, articleNum, 100);
+
+// Build nav links for adjacent articles
+const prevNum = articleNum > 0 ? articleNum - 1 : null;
+const nextNum = articleNum < 30 ? articleNum + 1 : null;
+---
+
+<Base title={`${section}: ${articleTitle} — Rankings`}>
+  <section class="border-b border-surface-3">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+      <div class="flex items-center gap-2 mb-1">
+        <a href="/" class="text-gray-500 hover:text-gray-300 text-sm">&larr; Feed</a>
+      </div>
+      <h1 class="text-2xl font-bold text-white mb-1">{section}</h1>
+      <p class="text-lg text-gray-400">{articleTitle}</p>
+      <p class="text-sm text-gray-500 mt-2">
+        Stories ranked by their score on this UDHR provision.
+      </p>
+
+      {/* Article navigation */}
+      <div class="flex items-center gap-2 mt-4">
+        {prevNum !== null && (
+          <a
+            href={`/article/${prevNum}`}
+            class="badge bg-surface-3 text-gray-400 hover:text-white hover:bg-surface-2 transition-colors"
+          >
+            &larr; {prevNum === 0 ? 'Preamble' : `Article ${prevNum}`}
+          </a>
+        )}
+        <div class="flex-1"></div>
+        {nextNum !== null && (
+          <a
+            href={`/article/${nextNum}`}
+            class="badge bg-surface-3 text-gray-400 hover:text-white hover:bg-surface-2 transition-colors"
+          >
+            Article {nextNum} &rarr;
+          </a>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+    {rankings.length > 0 ? (
+      <div class="card overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-surface-3">
+              <th class="text-left py-2.5 px-3 text-gray-400 font-medium w-8">#</th>
+              <th class="text-center py-2.5 px-3 text-gray-400 font-medium w-20">Score</th>
+              <th class="text-left py-2.5 px-3 text-gray-400 font-medium">Story</th>
+              <th class="text-center py-2.5 px-3 text-gray-400 font-medium w-16">E</th>
+              <th class="text-center py-2.5 px-3 text-gray-400 font-medium w-16">S</th>
+              <th class="text-center py-2.5 px-3 text-gray-400 font-medium w-16">Ev.</th>
+              <th class="text-center py-2.5 px-3 text-gray-400 font-medium w-20">Overall</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rankings.map((row, i) => (
+              <tr class="border-b border-surface-3/50 hover:bg-surface-2/50 transition-colors">
+                <td class="py-2 px-3 score-font text-gray-500">{i + 1}</td>
+                <td class="py-2 px-3 text-center">
+                  <span
+                    class="score-font text-sm font-bold"
+                    style={`color: ${scoreToColor(row.final)}`}
+                  >
+                    {formatScore(row.final)}
+                  </span>
+                </td>
+                <td class="py-2 px-3">
+                  <a href={`/item/${row.hn_id}`} class="text-gray-200 hover:text-indigo-400 transition-colors">
+                    {row.title}
+                  </a>
+                  {row.domain && (
+                    <span class="text-xs text-gray-500 ml-1.5">({row.domain})</span>
+                  )}
+                </td>
+                <td class="py-2 px-3 text-center score-font text-xs" style={`color: ${scoreToColor(row.editorial)}`}>
+                  {formatScore(row.editorial)}
+                </td>
+                <td class="py-2 px-3 text-center score-font text-xs" style={`color: ${scoreToColor(row.structural)}`}>
+                  {formatScore(row.structural)}
+                </td>
+                <td class="py-2 px-3 text-center">
+                  {row.evidence && (
+                    <span class="badge text-[10px]" style={`background: ${scoreToColor(null)}; color: #888`}>
+                      {row.evidence}
+                    </span>
+                  )}
+                </td>
+                <td class="py-2 px-3 text-center score-font text-xs" style={`color: ${scoreToColor(row.hcb_weighted_mean)}`}>
+                  {formatScore(row.hcb_weighted_mean)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <div class="card p-12 text-center">
+        <p class="text-gray-500">No evaluated stories with scores for {section} yet.</p>
+      </div>
+    )}
+
+    {/* Quick links to all articles */}
+    <div class="mt-8">
+      <h2 class="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">All Articles</h2>
+      <div class="flex flex-wrap gap-1.5">
+        {ALL_SECTIONS.map((sec, i) => {
+          const num = sec === 'Preamble' ? 0 : i;
+          const isActive = num === articleNum;
+          return (
+            <a
+              href={`/article/${num}`}
+              class:list={[
+                'badge text-xs transition-colors',
+                isActive
+                  ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40'
+                  : 'bg-surface-3 text-gray-400 hover:text-white hover:bg-surface-2',
+              ]}
+            >
+              {sec === 'Preamble' ? 'P' : i}
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</Base>

@@ -1,0 +1,92 @@
+---
+import { scoreToColor, formatScore, evidenceColor, directionalityColor } from '../lib/colors';
+import { ARTICLE_TITLES } from '../lib/udhr';
+import type { Score } from '../lib/types';
+
+interface Props {
+  score: Score;
+  index: number;
+}
+
+const { score, index } = Astro.props;
+const isND = score.final === null;
+const color = scoreToColor(score.final);
+const title = ARTICLE_TITLES[score.section] || score.section;
+---
+
+<details class="group border-b border-surface-3/50">
+  <summary class="flex items-center gap-3 py-3 px-4 cursor-pointer hover:bg-surface-2/50 transition-colors select-none">
+    <!-- Score cell -->
+    <div
+      class="w-10 h-10 rounded flex items-center justify-center score-font text-xs font-bold shrink-0"
+      style={`background: ${isND ? '#1a1a2510' : color + '30'}; color: ${isND ? '#555' : color}; border: 1px solid ${isND ? '#2a2a35' : color}40`}
+    >
+      {formatScore(score.final)}
+    </div>
+
+    <!-- Section info -->
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2">
+        <span class="score-font text-sm text-gray-300">{score.section}</span>
+        <span class="text-sm text-gray-500">{title}</span>
+      </div>
+    </div>
+
+    <!-- Badges -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      {score.evidence && (
+        <span
+          class="badge text-[10px]"
+          style={`background: ${evidenceColor(score.evidence)}20; color: ${evidenceColor(score.evidence)}`}
+        >
+          {score.evidence}
+        </span>
+      )}
+      {score.directionality.map((d) => (
+        <span
+          class="badge text-[10px]"
+          style={`background: ${directionalityColor(d)}20; color: ${directionalityColor(d)}`}
+        >
+          {d}
+        </span>
+      ))}
+    </div>
+
+    <!-- Chevron -->
+    <svg class="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </summary>
+
+  <div class="px-4 pb-4 pt-1 ml-[52px]">
+    {!isND ? (
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        <div class="bg-surface-2 rounded px-3 py-2">
+          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Editorial</div>
+          <div class="score-font text-sm" style={`color: ${scoreToColor(score.editorial)}`}>
+            {formatScore(score.editorial)}
+          </div>
+        </div>
+        <div class="bg-surface-2 rounded px-3 py-2">
+          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Structural</div>
+          <div class="score-font text-sm" style={`color: ${scoreToColor(score.structural)}`}>
+            {formatScore(score.structural)}
+          </div>
+        </div>
+        <div class="bg-surface-2 rounded px-3 py-2">
+          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Combined</div>
+          <div class="score-font text-sm" style={`color: ${scoreToColor(score.combined)}`}>
+            {formatScore(score.combined)}
+          </div>
+        </div>
+        <div class="bg-surface-2 rounded px-3 py-2">
+          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Context Mod.</div>
+          <div class="score-font text-sm" style={`color: ${scoreToColor(score.context_modifier)}`}>
+            {formatScore(score.context_modifier)}
+          </div>
+        </div>
+      </div>
+    ) : null}
+    <p class="text-sm text-gray-400 leading-relaxed">{score.note}</p>
+  </div>
+</details>

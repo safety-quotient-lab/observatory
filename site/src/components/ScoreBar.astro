@@ -1,0 +1,59 @@
+---
+import { scoreToColor, formatScore } from '../lib/colors';
+
+interface Props {
+  score: number | null;
+  label?: string;
+  width?: number;
+  height?: number;
+}
+
+const { score, label, width = 200, height = 24 } = Astro.props;
+const isND = score === null;
+const color = scoreToColor(score);
+const markerX = isND ? width / 2 : ((score + 1) / 2) * width;
+const centerX = width / 2;
+---
+
+<div class="inline-flex items-center gap-2">
+  {label && <span class="text-xs text-gray-400 w-12">{label}</span>}
+  <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} class="rounded overflow-hidden">
+    <!-- Background -->
+    <rect x="0" y="0" width={width} height={height} fill="#1a1a25" />
+
+    <!-- Center line -->
+    <line x1={centerX} y1="0" x2={centerX} y2={height} stroke="#333" stroke-width="1" />
+
+    {!isND ? (
+      <>
+        {/* Score fill */}
+        <rect
+          x={score >= 0 ? centerX : markerX}
+          y="2"
+          width={Math.abs(markerX - centerX)}
+          height={height - 4}
+          fill={color}
+          opacity="0.7"
+          rx="1"
+        />
+        {/* Marker line */}
+        <line x1={markerX} y1="0" x2={markerX} y2={height} stroke={color} stroke-width="2" />
+      </>
+    ) : (
+      <>
+        {/* ND pattern */}
+        <defs>
+          <pattern id="nd-stripe" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="6" stroke="#3a3a45" stroke-width="2" />
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width={width} height={height} fill="url(#nd-stripe)" />
+      </>
+    )}
+
+    <!-- Scale labels -->
+    <text x="3" y={height / 2 + 1} fill="#666" font-size="8" dominant-baseline="middle" font-family="monospace">-1</text>
+    <text x={width - 3} y={height / 2 + 1} fill="#666" font-size="8" dominant-baseline="middle" text-anchor="end" font-family="monospace">+1</text>
+  </svg>
+  <span class="score-font text-sm" style={`color: ${color}`}>{formatScore(score)}</span>
+</div>
