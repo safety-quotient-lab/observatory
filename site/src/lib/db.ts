@@ -51,6 +51,8 @@ export interface ArticleRankingRow {
   hn_comments: number | null;
   hcb_weighted_mean: number | null;
   hcb_classification: string | null;
+  hcb_signal_sections: number | null;
+  hcb_nd_count: number | null;
   section: string;
   final: number | null;
   editorial: number | null;
@@ -243,6 +245,7 @@ export async function getArticleRanking(
     .prepare(
       `SELECT s.hn_id, s.title, s.domain, s.url, s.hn_score, s.hn_comments,
               s.hcb_weighted_mean, s.hcb_classification,
+              s.hcb_signal_sections, s.hcb_nd_count,
               sc.section, sc.final, sc.editorial, sc.structural,
               sc.evidence, sc.note
        FROM scores sc
@@ -349,27 +352,42 @@ export async function getContentTypeStats(db: D1Database): Promise<ContentTypeSt
   return results;
 }
 
-export interface ArticleAvg {
+export interface ArticleDetailedStat {
   section: string;
   sort_order: number;
-  avg_final: number;
+  avg_final: number | null;
+  avg_editorial: number | null;
+  avg_structural: number | null;
+  stddev_final: number;
   signal_count: number;
   nd_count: number;
+  evidence_h: number;
+  evidence_m: number;
+  evidence_l: number;
 }
 
-export async function getArticleAverages(db: D1Database): Promise<ArticleAvg[]> {
+export async function getArticleDetailedStats(db: D1Database): Promise<ArticleDetailedStat[]> {
   const { results } = await db
     .prepare(
       `SELECT section, sort_order,
               AVG(final) as avg_final,
+              AVG(editorial) as avg_editorial,
+              AVG(structural) as avg_structural,
+              AVG(final * final) as avg_final_sq,
               SUM(CASE WHEN final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
-              SUM(CASE WHEN final IS NULL THEN 1 ELSE 0 END) as nd_count
-       FROM scores
-       GROUP BY section
-       ORDER BY sort_order`
+              SUM(CASE WHEN final IS NULL THEN 1 ELSE 0 END) as nd_count,
+              SUM(CASE WHEN evidence = 'H' THEN 1 ELSE 0 END) as evidence_h,
+              SUM(CASE WHEN evidence = 'M' THEN 1 ELSE 0 END) as evidence_m,
+              SUM(CASE WHEN evidence = 'L' THEN 1 ELSE 0 END) as evidence_l
+       FROM scores GROUP BY section ORDER BY sort_order`
     )
-    .all<ArticleAvg>();
-  return results;
+    .all<ArticleDetailedStat & { avg_final_sq: number | null }>();
+  return results.map(r => {
+    const avgFinalSq = r.avg_final_sq ?? 0;
+    const avgFinal = r.avg_final ?? 0;
+    const stddev = Math.sqrt(Math.max(0, avgFinalSq - avgFinal * avgFinal));
+    return { ...r, stddev_final: stddev };
+  });
 }
 
 export async function getTopPositiveStories(db: D1Database, limit = 5): Promise<Story[]> {
@@ -846,4 +864,107 @@ export async function getStoryComments(
     .bind(hnId, limit)
     .all<StoryComment>();
   return results;
+}
+
+// --- Article sparklines ---
+
+export interface SparklinePoint {
+  section: string;
+  final: number;
+  evaluated_at: string;
+}
+
+export async function getArticleSparklines(db: D1Database, perArticle = 30): Promise<Map<string, number[]>> {
+  const limit = perArticle * 31; // 31 articles max
+  const { results } = await db
+    .prepare(
+      `SELECT sc.section, sc.final, s.evaluated_at
+       FROM scores sc JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE s.eval_status = 'done' AND sc.final IS NOT NULL AND s.evaluated_at IS NOT NULL
+       ORDER BY s.evaluated_at DESC LIMIT ?`
+    )
+    .bind(limit)
+    .all<SparklinePoint>();
+
+  const grouped = new Map<string, number[]>();
+  for (const r of results) {
+    let arr = grouped.get(r.section);
+    if (!arr) {
+      arr = [];
+      grouped.set(r.section, arr);
+    }
+    if (arr.length < perArticle) {
+      arr.push(r.final);
+    }
+  }
+  // Reverse for chronological order (query was DESC)
+  for (const [, arr] of grouped) {
+    arr.reverse();
+  }
+  return grouped;
+}
+
+// --- Article pair stats (co-occurrence + correlation) ---
+
+export interface ArticlePairData {
+  cooccurrence: Map<string, number>;
+  correlation: Map<string, number>;
+  maxCooccurrence: number;
+}
+
+export async function getArticlePairStats(db: D1Database): Promise<ArticlePairData> {
+  const { results } = await db
+    .prepare(
+      `SELECT a.section as section_a, b.section as section_b,
+        COUNT(*) as n,
+        SUM(a.final * b.final) as sum_ab,
+        SUM(a.final) as sum_a, SUM(b.final) as sum_b,
+        SUM(a.final * a.final) as sum_a2, SUM(b.final * b.final) as sum_b2
+       FROM scores a JOIN scores b ON a.hn_id = b.hn_id
+       WHERE a.final IS NOT NULL AND b.final IS NOT NULL AND a.sort_order <= b.sort_order
+       GROUP BY a.section, b.section`
+    )
+    .all<{
+      section_a: string; section_b: string;
+      n: number; sum_ab: number;
+      sum_a: number; sum_b: number;
+      sum_a2: number; sum_b2: number;
+    }>();
+
+  const cooccurrence = new Map<string, number>();
+  const correlation = new Map<string, number>();
+  let maxCo = 0;
+
+  for (const r of results) {
+    const key = `${r.section_a}|${r.section_b}`;
+    cooccurrence.set(key, r.n);
+    if (r.n > maxCo) maxCo = r.n;
+
+    // Pearson r
+    if (r.n > 1) {
+      const num = r.n * r.sum_ab - r.sum_a * r.sum_b;
+      const denA = r.n * r.sum_a2 - r.sum_a * r.sum_a;
+      const denB = r.n * r.sum_b2 - r.sum_b * r.sum_b;
+      const den = Math.sqrt(Math.max(0, denA) * Math.max(0, denB));
+      if (den > 0) {
+        correlation.set(key, num / den);
+      }
+    }
+  }
+
+  return { cooccurrence, correlation, maxCooccurrence: maxCo };
+}
+
+// --- Domain DCP cache ---
+
+export async function getDomainDcp(db: D1Database, domain: string): Promise<string | null> {
+  try {
+    const row = await db
+      .prepare(`SELECT dcp_json FROM domain_dcp WHERE domain = ? LIMIT 1`)
+      .bind(domain)
+      .first<{ dcp_json: string }>();
+    return row?.dcp_json ?? null;
+  } catch {
+    return null; // table may not exist
+  }
 }

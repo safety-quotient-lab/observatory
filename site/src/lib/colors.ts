@@ -134,6 +134,27 @@ export function hotlToColor(hotl: number | null): string {
   return scoreToColor(-hotl);
 }
 
+/** Compute confidence proxy from signal sections and ND count */
+export function computeConfidence(signalSections: number | null, ndCount: number | null): number | null {
+  if (signalSections === null || ndCount === null) return null;
+  const total = signalSections + ndCount;
+  if (total === 0) return null;
+  return signalSections / total;
+}
+
+/** Map confidence (0–1) to a color: dim gray at low, bright at high */
+export function confidenceToColor(confidence: number | null): string {
+  if (confidence === null) return '#4b5563';
+  const l = Math.round(40 + confidence * 50); // 40% to 90% lightness
+  return `hsl(220, 5%, ${l}%)`;
+}
+
+/** Format confidence for display */
+export function formatConfidence(confidence: number | null): string {
+  if (confidence === null) return 'ND';
+  return Math.round(confidence * 100) + '%';
+}
+
 /** DCP modifier color */
 export function modifierColor(mod: number | null): string {
   if (mod === null) return '#3a3a45';

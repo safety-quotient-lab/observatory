@@ -1,5 +1,5 @@
 ---
-import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor } from '../lib/colors';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../lib/colors';
 import MiniBar from './MiniBar.astro';
 import type { Story, StoryWithMiniScores } from '../lib/db';
 
@@ -28,6 +28,9 @@ const aggSetl = setlValues.length > 0
 // Compute HOTL from HN points/comments
 const hotl = computeHotl(story.hn_score, story.hn_comments);
 
+// Compute confidence proxy
+const confidence = computeConfidence(story.hcb_signal_sections, story.hcb_nd_count);
+
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
   if (seconds < 60) return `${seconds} seconds ago`;
@@ -47,31 +50,51 @@ function timeAgo(unixTime: number): string {
       {rank !== undefined ? `${rank}.` : ''}
     </span>
   </td>
-  <td valign="top" style="padding-right: 5px; width: 44px; text-align: center;">
+  <td valign="top" style="padding-right: 5px; width: 90px; text-align: left;">
     {hasEval ? (
-      <a href={`/item/${story.hn_id}`} title={`HRCB: ${formatScore(story.hcb_weighted_mean)} — ${classLabel} | SETL: ${formatSetl(aggSetl)} | HOTL: ${formatHotl(hotl)}`}>
-        <span
-          class="score-font"
-          style={`color: ${meanColor}; font-size: var(--font-md); font-weight: bold;`}
-        >
-          {formatScore(story.hcb_weighted_mean)}
-        </span>
-        {aggSetl !== null && (
+      <a href={`/item/${story.hn_id}`} style="text-decoration: none;" title={`HRCB: ${formatScore(story.hcb_weighted_mean)} — ${classLabel} | Conf: ${formatConfidence(confidence)} | SETL: ${formatSetl(aggSetl)} | HOTL: ${formatHotl(hotl)}`}>
+        <div style="white-space: nowrap;">
+          <span class="score-font" style="color: #555; font-size: var(--font-xs);" title="Human Rights Compatibility Bias">HRCB</span>
           <span
             class="score-font"
-            style={`color: ${setlToColor(aggSetl)}; font-size: var(--font-sm); display: block; margin-top: var(--space-xs);`}
+            style={`color: ${meanColor}; font-size: var(--font-md); font-weight: bold; margin-left: 2px;`}
           >
-            {formatSetl(aggSetl)}
+            {formatScore(story.hcb_weighted_mean)}
           </span>
-        )}
-        {hotl !== null && (
-          <span
-            class="score-font"
-            style={`color: ${hotlToColor(hotl)}; font-size: var(--font-sm); display: block; margin-top: var(--space-xs);`}
-          >
-            {formatHotl(hotl)}
-          </span>
-        )}
+          {confidence !== null && (
+            <span
+              class="score-font"
+              style={`color: ${confidenceToColor(confidence)}; font-size: var(--font-sm); margin-left: 4px;`}
+              title={`Confidence: ${story.hcb_signal_sections}/${(story.hcb_signal_sections || 0) + (story.hcb_nd_count || 0)} articles scored`}
+            >
+              {formatConfidence(confidence)}
+            </span>
+          )}
+        </div>
+        <div style="white-space: nowrap; margin-top: 1px;">
+          {aggSetl !== null && (
+            <>
+              <span class="score-font" style="color: #555; font-size: var(--font-xs);" title="Structural-Editorial Tension Level">SETL</span>
+              <span
+                class="score-font"
+                style={`color: ${setlToColor(aggSetl)}; font-size: var(--font-sm); margin-left: 2px;`}
+              >
+                {formatSetl(aggSetl)}
+              </span>
+            </>
+          )}
+          {hotl !== null && (
+            <>
+              <span class="score-font" style={`color: #555; font-size: var(--font-xs); margin-left: ${aggSetl !== null ? '6px' : '0'};`} title="Higher Order Tension Level">HOTL</span>
+              <span
+                class="score-font"
+                style={`color: ${hotlToColor(hotl)}; font-size: var(--font-sm); margin-left: 2px;`}
+              >
+                {formatHotl(hotl)}
+              </span>
+            </>
+          )}
+        </div>
       </a>
     ) : story.eval_status === 'evaluating' ? (
       <span class="eval-spinner" style="color: #60a5fa; font-size: var(--font-sm); display: inline-block;" title="Evaluating...">&#9881;</span>

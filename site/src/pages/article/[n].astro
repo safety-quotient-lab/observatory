@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor } from '../../lib/colors';
+import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
 import { getArticleRanking } from '../../lib/db';
 
@@ -120,6 +120,7 @@ const jsonLd = udhrSection ? {
       <tr style="color: #828282; font-size: var(--font-sm);">
         <td width="30">#</td>
         <td width="60" align="center">HRCB</td>
+        <td width="34" align="center" title="Confidence: signal coverage" style="cursor: help;">Conf</td>
         <td>Story</td>
         <td width="60" align="center" title="Editorial — what the content says" style="cursor: help;">Editorial</td>
         <td width="60" align="center" title="Structural — what the site does" style="cursor: help;">Structural</td>
@@ -131,6 +132,7 @@ const jsonLd = udhrSection ? {
       {rankings.map((row, i) => {
         const rowSetl = computeSetl(row.structural, row.editorial);
         const rowHotl = computeHotl(row.hn_score, row.hn_comments);
+        const rowConf = computeConfidence(row.hcb_signal_sections, row.hcb_nd_count);
         return (
         <tr style="border-top: 1px solid #222230;">
           <td style="color: #828282;" class="score-font">{i + 1}.</td>
@@ -138,6 +140,9 @@ const jsonLd = udhrSection ? {
             <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
               {formatScore(row.final)}
             </span>
+          </td>
+          <td align="center" class="score-font" style={`color: ${confidenceToColor(rowConf)}; font-size: var(--font-sm);`}>
+            {formatConfidence(rowConf)}
           </td>
           <td>
             <a href={`/item/${row.hn_id}`}>{row.title}</a>
@@ -171,7 +176,11 @@ const jsonLd = udhrSection ? {
     <table width="100%">
       <tr>
         <td style="padding: 20px; text-align: center; color: #828282;">
-          No evaluated stories with scores for {section} yet.
+          <div style="margin-bottom: 8px;">No stories have scored on this provision yet.</div>
+          <div style="font-size: var(--font-sm); color: #555;">
+            When stories are evaluated, those with signal on <strong style="color: #888;">{section}</strong> will be ranked here.
+            Browse other articles above to see existing rankings.
+          </div>
         </td>
       </tr>
     </table>

@@ -1,13 +1,15 @@
 ---
 import Base from '../layouts/Base.astro';
-import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor } from '../lib/colors';
+import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS } from '../lib/udhr';
 import { CONTENT_TYPE_LABELS } from '../lib/types';
 import {
   getStatusCounts,
   getScoreStats,
   getContentTypeStats,
-  getArticleAverages,
+  getArticleDetailedStats,
+  getArticleSparklines,
+  getArticlePairStats,
   getTopPositiveStories,
   getTopNegativeStories,
   getRecentEvaluations,
@@ -27,11 +29,13 @@ import {
 
 const db = Astro.locals.runtime.env.DB;
 
-const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, topSetl, bottomSetl, topHotl, bottomHotl, recent, domains, failed, queue, models, meanSetl, meanHotl, modelComparison, costStats] = await Promise.all([
+const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, topHotl, bottomHotl, recent, domains, failed, queue, models, meanSetl, meanHotl, modelComparison, costStats] = await Promise.all([
   getStatusCounts(db),
   getScoreStats(db),
   getContentTypeStats(db),
-  getArticleAverages(db),
+  getArticleDetailedStats(db),
+  getArticleSparklines(db, 30),
+  getArticlePairStats(db),
   getTopPositiveStories(db, 5),
   getTopNegativeStories(db, 5),
   getTopSetlStories(db, 5),
@@ -82,7 +86,13 @@ const pctFailed = status.total > 0 ? Math.round((status.failed / status.total) *
 const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total) * 100) : 0;
 
 // Find the max signal count for relative bar widths
-const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
+const maxSignal = Math.max(...articleStats.map(a => a.signal_count), 1);
+const totalEvaluated = status.done;
+
+// Helper: confidence proxy for dashboard story rows
+function storyConfidence(s: { hcb_signal_sections: number | null; hcb_nd_count: number | null }): number | null {
+  return computeConfidence(s.hcb_signal_sections, s.hcb_nd_count);
+}
 ---
 
 <Base title="Dashboard">
@@ -224,11 +234,11 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
         <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Average Score by UDHR Article</div>
-        {articleAvgs.length > 0 ? (
+        {articleStats.length > 0 ? (
           <>
             <table cellpadding="0" cellspacing="2" width="100%" style="font-size: var(--font-xs);">
               <tr>
-                {articleAvgs.map((a) => {
+                {articleStats.map((a) => {
                   const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
                   return (
                     <td style="text-align: center; vertical-align: bottom; width: 3.2%;">
@@ -255,42 +265,217 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
     </tr>
   </table>
 
-  {/* Signal Coverage — bar chart showing how many stories have signal per article */}
+  {/* Enhanced Signal Coverage by Article */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
         <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Signal Coverage by Article</div>
-        {articleAvgs.length > 0 ? (
-          <table cellpadding="1" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-            {articleAvgs.map((a) => {
-              const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
-              const pct = maxSignal > 0 ? Math.round((a.signal_count / maxSignal) * 100) : 0;
-              return (
-                <tr>
-                  <td style="color: #666; width: 20px; text-align: right; padding-right: 6px;" class="score-font">
-                    <a href={`/article/${a.sort_order}`} style="color: #666;">{label}</a>
-                  </td>
-                  <td>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                      <div style={`height: 6px; width: ${Math.max(pct, 2)}%; background: ${scoreToColor(a.signal_count > 0 ? a.avg_final : null)}; border-radius: 2px;`}></div>
-                      <span style="color: #555;" class="score-font">{a.signal_count}</span>
-                    </div>
-                  </td>
-                  <td style="width: 50px; text-align: right;" class="score-font">
-                    <span style={`color: ${scoreToColor(a.signal_count > 0 ? a.avg_final : null)};`}>
-                      {a.signal_count > 0 ? formatScore(a.avg_final) : <span title="No Data">—</span>}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </table>
+        {articleStats.length > 0 ? (
+          <>
+            <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+              <tr style="color: #555; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em;">
+                <td style="width: 20px;"></td>
+                <td title="Editorial (top) / Structural (bottom) channel bars">E/S</td>
+                <td style="width: 75px; text-align: right;" title="Signal count / total evaluated (%)">Cov</td>
+                <td style="width: 50px; text-align: right;" title="No-data count (%)">ND</td>
+                <td style="width: 32px; text-align: center;" title="Evidence quality: High (green), Medium (yellow), Low (gray)">Evid</td>
+                <td style="width: 65px; text-align: center;" title="Score range: mean with standard deviation">Range</td>
+                <td style="width: 85px; text-align: center;" title="Trend sparkline of last 30 scores">Trend</td>
+                <td style="width: 50px; text-align: right;" title="Average final score">Score</td>
+              </tr>
+              {articleStats.map((a) => {
+                const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                const ePct = maxSignal > 0 ? Math.round((a.signal_count / maxSignal) * 100) : 0;
+                const total = totalEvaluated || (a.signal_count + a.nd_count);
+                const covPct = total > 0 ? Math.round((a.signal_count / total) * 100) : 0;
+                const ndPct = total > 0 ? Math.round((a.nd_count / total) * 100) : 0;
+                const evidTotal = a.evidence_h + a.evidence_m + a.evidence_l;
+                const hPct = evidTotal > 0 ? (a.evidence_h / evidTotal) * 28 : 0;
+                const mPct = evidTotal > 0 ? (a.evidence_m / evidTotal) * 28 : 0;
+                const lPct = evidTotal > 0 ? (a.evidence_l / evidTotal) * 28 : 0;
+                const mean = a.avg_final ?? 0;
+                const sd = a.stddev_final;
+                const meanX = 30 + (mean + 1) * 30; // map -1..+1 to 0..60
+                const sdLow = 30 + Math.max(-1, mean - sd + 1) * 30;
+                const sdHigh = 30 + Math.min(1, mean + sd + 1) * 30;
+                const spark = sparklines.get(a.section) || [];
+                let sparkPath = '';
+                if (spark.length > 1) {
+                  const w = 80, h = 16;
+                  const step = w / (spark.length - 1);
+                  sparkPath = spark.map((v, i) => {
+                    const x = i * step;
+                    const y = h / 2 - (v * h / 2);
+                    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+                  }).join(' ');
+                }
+                return (
+                  <tr>
+                    <td style="color: #666; width: 20px; text-align: right; padding-right: 6px;" class="score-font">
+                      <a href={`/article/${a.sort_order}`} style="color: #666;" title={`${a.section}: ${ARTICLE_TITLES[a.section]}`}>{label}</a>
+                    </td>
+                    <td>
+                      <div style="display: flex; flex-direction: column; gap: 1px;">
+                        <div style={`height: 6px; width: ${Math.max(ePct, 2)}%; background: ${scoreToColor(a.signal_count > 0 ? a.avg_editorial : null)}; border-radius: 2px 2px 0 0;`} title={`Editorial: ${a.avg_editorial !== null ? formatScore(a.avg_editorial) : 'ND'}`}></div>
+                        <div style={`height: 6px; width: ${Math.max(ePct, 2)}%; background: ${scoreToColor(a.signal_count > 0 ? a.avg_structural : null)}; border-radius: 0 0 2px 2px; opacity: 0.7;`} title={`Structural: ${a.avg_structural !== null ? formatScore(a.avg_structural) : 'ND'}`}></div>
+                      </div>
+                    </td>
+                    <td style="width: 75px; text-align: right; color: #888;" class="score-font">
+                      {a.signal_count}/{total} <span style="color: #555;">({covPct}%)</span>
+                    </td>
+                    <td style="width: 50px; text-align: right; color: #555;" class="score-font">
+                      {a.nd_count} <span style="color: #444;">({ndPct}%)</span>
+                    </td>
+                    <td style="width: 32px; text-align: center;">
+                      {evidTotal > 0 ? (
+                        <svg width="28" height="10" viewBox="0 0 28 10">
+                          <rect x="0" y="0" width={hPct} height="10" fill="#22c55e" rx="1" />
+                          <rect x={hPct} y="0" width={mPct} height="10" fill="#eab308" />
+                          <rect x={hPct + mPct} y="0" width={lPct} height="10" fill="#6b7280" rx="1" />
+                          <title>H:{a.evidence_h} M:{a.evidence_m} L:{a.evidence_l}</title>
+                        </svg>
+                      ) : (
+                        <span style="color: #444;">—</span>
+                      )}
+                    </td>
+                    <td style="width: 65px; text-align: center;">
+                      {a.signal_count > 0 ? (
+                        <svg width="60" height="10" viewBox="0 0 60 10">
+                          <line x1="0" y1="5" x2="60" y2="5" stroke="#1a1a25" stroke-width="1" />
+                          <line x1="30" y1="2" x2="30" y2="8" stroke="#333" stroke-width="0.5" />
+                          <rect x={sdLow} y="1" width={Math.max(sdHigh - sdLow, 1)} height="8" fill="rgba(99,102,241,0.25)" rx="1" />
+                          <circle cx={meanX} cy="5" r="2.5" fill={scoreToColor(a.avg_final)} />
+                          <title>Mean: {formatScore(a.avg_final)}, StdDev: {sd.toFixed(2)}</title>
+                        </svg>
+                      ) : (
+                        <span style="color: #444;">—</span>
+                      )}
+                    </td>
+                    <td style="width: 85px; text-align: center;">
+                      {spark.length > 1 ? (
+                        <svg width="80" height="16" viewBox="0 0 80 16">
+                          <line x1="0" y1="8" x2="80" y2="8" stroke="#1a1a25" stroke-width="0.5" />
+                          <path d={sparkPath} fill="none" stroke="#6366f1" stroke-width="1" />
+                          <title>Last {spark.length} scores</title>
+                        </svg>
+                      ) : (
+                        <span style="color: #444;">—</span>
+                      )}
+                    </td>
+                    <td style="width: 50px; text-align: right;" class="score-font">
+                      <span style={`color: ${scoreToColor(a.signal_count > 0 ? a.avg_final : null)};`}>
+                        {a.signal_count > 0 ? formatScore(a.avg_final) : <span title="No Data">—</span>}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </table>
+            <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 9px; color: #444;">
+              <span>E/S: top bar = editorial avg, bottom = structural avg</span>
+              <span>Evid: <span style="color: #22c55e;">H</span> <span style="color: #eab308;">M</span> <span style="color: #6b7280;">L</span></span>
+              <span>Range: <span style="color: rgba(99,102,241,0.6);">shaded</span> = 1 stddev</span>
+              <span>Trend: <span style="color: #6366f1;">sparkline</span> last 30</span>
+            </div>
+          </>
         ) : (
           <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
         )}
       </td>
     </tr>
   </table>
+
+  {/* Article Correlation Matrix */}
+  {articleStats.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+            Article Correlation Matrix
+          </div>
+          <div style="margin-bottom: 8px; font-size: var(--font-xs);">
+            <span id="tab-cooccurrence" style="color: #ff6600; cursor: pointer; font-weight: bold; margin-right: 12px;" data-tab="cooccurrence">Co-occurrence</span>
+            <span id="tab-correlation" style="color: #555; cursor: pointer; margin-right: 12px;" data-tab="correlation">Score Correlation</span>
+          </div>
+          {/* Co-occurrence matrix */}
+          <div id="matrix-cooccurrence">
+            <svg width={22 + articleStats.length * 14} height={22 + articleStats.length * 14} viewBox={`0 0 ${22 + articleStats.length * 14} ${22 + articleStats.length * 14}`}>
+              {/* Column labels */}
+              {articleStats.map((a, i) => {
+                const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                return <text x={22 + i * 14 + 7} y={12} text-anchor="middle" fill="#555" font-size="8" font-family="monospace">{label}</text>;
+              })}
+              {/* Row labels + cells */}
+              {articleStats.map((a, i) => {
+                const labelA = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                return (
+                  <>
+                    <text x={18} y={22 + i * 14 + 10} text-anchor="end" fill="#555" font-size="8" font-family="monospace">{labelA}</text>
+                    {articleStats.map((b, j) => {
+                      const keyFwd = `${a.section}|${b.section}`;
+                      const keyRev = `${b.section}|${a.section}`;
+                      const co = pairStats.cooccurrence.get(keyFwd) ?? pairStats.cooccurrence.get(keyRev) ?? 0;
+                      const maxCo = pairStats.maxCooccurrence || 1;
+                      const intensity = co / maxCo;
+                      const r = Math.round(26 + intensity * (99 - 26));
+                      const g = Math.round(26 + intensity * (102 - 26));
+                      const bl = Math.round(37 + intensity * (241 - 37));
+                      return (
+                        <rect x={22 + j * 14} y={22 + i * 14} width="13" height="13" rx="1"
+                              fill={`rgb(${r},${g},${bl})`}>
+                          <title>{a.section} × {b.section}: {co} co-occurrences</title>
+                        </rect>
+                      );
+                    })}
+                  </>
+                );
+              })}
+            </svg>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 9px; color: #444;">
+              <span>0</span>
+              <div style="width: 60px; height: 8px; background: linear-gradient(to right, #1a1a25, #6366f1); border-radius: 2px;"></div>
+              <span>{pairStats.maxCooccurrence}</span>
+            </div>
+          </div>
+          {/* Score correlation matrix */}
+          <div id="matrix-correlation" style="display: none;">
+            <svg width={22 + articleStats.length * 14} height={22 + articleStats.length * 14} viewBox={`0 0 ${22 + articleStats.length * 14} ${22 + articleStats.length * 14}`}>
+              {/* Column labels */}
+              {articleStats.map((a, i) => {
+                const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                return <text x={22 + i * 14 + 7} y={12} text-anchor="middle" fill="#555" font-size="8" font-family="monospace">{label}</text>;
+              })}
+              {/* Row labels + cells */}
+              {articleStats.map((a, i) => {
+                const labelA = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                return (
+                  <>
+                    <text x={18} y={22 + i * 14 + 10} text-anchor="end" fill="#555" font-size="8" font-family="monospace">{labelA}</text>
+                    {articleStats.map((b, j) => {
+                      const keyFwd = `${a.section}|${b.section}`;
+                      const keyRev = `${b.section}|${a.section}`;
+                      const corr = pairStats.correlation.get(keyFwd) ?? pairStats.correlation.get(keyRev) ?? (i === j ? 1 : null);
+                      return (
+                        <rect x={22 + j * 14} y={22 + i * 14} width="13" height="13" rx="1"
+                              fill={corr !== null ? scoreToColor(corr) : '#1a1a25'}>
+                          <title>{a.section} × {b.section}: {corr !== null ? `r = ${corr.toFixed(3)}` : 'N/A'}</title>
+                        </rect>
+                      );
+                    })}
+                  </>
+                );
+              })}
+            </svg>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 9px; color: #444;">
+              <span>-1</span>
+              <div style="width: 60px; height: 8px; background: linear-gradient(to right, #dc2626, #eab308, #16a34a); border-radius: 2px;"></div>
+              <span>+1</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
 
   {/* Most/Least HRCB */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
@@ -300,14 +485,21 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most HRCB</div>
           {topPositive.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
+                <td width="16">#</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="30" title="Confidence: signal coverage">Conf</td><td width="36" title="Structural-Editorial Tension Level">SETL</td><td width="36" title="Higher Order Tension Level">HOTL</td><td>Story</td>
+              </tr>
               {topPositive.map((s, i) => {
                 const setl = storySetl(s);
                 const hotl = storyHotl(s);
+                const conf = storyConfidence(s);
                 return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px; font-weight: bold;`}>
                     {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
+                    {formatConfidence(conf)}
                   </td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
@@ -333,14 +525,21 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Least HRCB</div>
           {topNegative.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
+                <td width="16">#</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">SETL</td><td width="36">HOTL</td><td>Story</td>
+              </tr>
               {topNegative.map((s, i) => {
                 const setl = storySetl(s);
                 const hotl = storyHotl(s);
+                const conf = storyConfidence(s);
                 return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px; font-weight: bold;`}>
                     {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
+                    {formatConfidence(conf)}
                   </td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
@@ -372,16 +571,23 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most SETL <span style="text-transform: none; color: #555; letter-spacing: 0;">(E-dominant)</span></div>
           {topSetl.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
+                <td width="16">#</td><td width="44">SETL</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">HOTL</td><td>Story</td>
+              </tr>
               {topSetl.map((s, i) => {
                 const hotl = storyHotl(s);
+                const conf = storyConfidence(s);
                 return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
                   <td class="score-font" style={`color: ${setlToColor(s.story_setl)}; width: 44px; font-weight: bold;`}>
                     {formatSetl(s.story_setl)}
                   </td>
-                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 36px;`}>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
                     {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
+                    {formatConfidence(conf)}
                   </td>
                   <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
                     {formatHotl(hotl)}
@@ -404,16 +610,23 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Least SETL <span style="text-transform: none; color: #555; letter-spacing: 0;">(S-dominant)</span></div>
           {bottomSetl.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
+                <td width="16">#</td><td width="44">SETL</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">HOTL</td><td>Story</td>
+              </tr>
               {bottomSetl.map((s, i) => {
                 const hotl = storyHotl(s);
+                const conf = storyConfidence(s);
                 return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
                   <td class="score-font" style={`color: ${setlToColor(s.story_setl)}; width: 44px; font-weight: bold;`}>
                     {formatSetl(s.story_setl)}
                   </td>
-                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 36px;`}>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
                     {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
+                    {formatConfidence(conf)}
                   </td>
                   <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
                     {formatHotl(hotl)}
@@ -442,16 +655,23 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most HOTL <span style="text-transform: none; color: #555; letter-spacing: 0;">(contentious)</span></div>
           {topHotl.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
+                <td width="16">#</td><td width="44">HOTL</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">SETL</td><td>Story</td>
+              </tr>
               {topHotl.map((s, i) => {
                 const setl = storySetl(s);
+                const conf = storyConfidence(s);
                 return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
                   <td class="score-font" style={`color: ${hotlToColor(s.story_hotl)}; width: 44px; font-weight: bold;`}>
                     {formatHotl(s.story_hotl)}
                   </td>
-                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 36px;`}>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
                     {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
+                    {formatConfidence(conf)}
                   </td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
@@ -474,16 +694,23 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Least HOTL <span style="text-transform: none; color: #555; letter-spacing: 0;">(consensus)</span></div>
           {bottomHotl.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
+                <td width="16">#</td><td width="44">HOTL</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">SETL</td><td>Story</td>
+              </tr>
               {bottomHotl.map((s, i) => {
                 const setl = storySetl(s);
+                const conf = storyConfidence(s);
                 return (
                 <tr>
                   <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
                   <td class="score-font" style={`color: ${hotlToColor(s.story_hotl)}; width: 44px; font-weight: bold;`}>
                     {formatHotl(s.story_hotl)}
                   </td>
-                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 36px;`}>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
                     {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
+                    {formatConfidence(conf)}
                   </td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
@@ -518,7 +745,8 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
               <td width="50" align="center" title="Structural-Editorial Tension Level">SETL</td>
               <td width="50" align="center" title="Higher Order Tension Level">HOTL</td>
             </tr>
-            {domains.map((d) => (
+            {domains.map((d) => {
+              return (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td style="color: #c9c9c9;">
                   <a href={`/domain/${d.domain}`} style="color: #c9c9c9;">{d.domain}</a>
@@ -534,7 +762,8 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
                   {formatHotl(d.avg_hotl)}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </table>
         ) : (
           <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
@@ -552,6 +781,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr style="color: #555; font-size: var(--font-xs);">
               <td width="50">HRCB</td>
+              <td width="34">Conf</td>
               <td width="40">SETL</td>
               <td width="40">HOTL</td>
               <td>Story</td>
@@ -561,10 +791,14 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
             {recent.map((s) => {
               const setl = storySetl(s);
               const hotl = storyHotl(s);
+              const conf = storyConfidence(s);
               return (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; font-weight: bold;`}>
                   {formatScore(s.hcb_weighted_mean)}
+                </td>
+                <td class="score-font" style={`color: ${confidenceToColor(conf)}; font-size: var(--font-sm);`}>
+                  {formatConfidence(conf)}
                 </td>
                 <td class="score-font" style={`color: ${setlToColor(setl)}; font-size: var(--font-sm);`}>
                   {formatSetl(setl)}
@@ -792,6 +1026,24 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
 
   <script is:inline>
   (function() {
+    // Correlation matrix tab toggle
+    var tabCo = document.getElementById('tab-cooccurrence');
+    var tabCorr = document.getElementById('tab-correlation');
+    var matCo = document.getElementById('matrix-cooccurrence');
+    var matCorr = document.getElementById('matrix-correlation');
+    if (tabCo && tabCorr && matCo && matCorr) {
+      tabCo.addEventListener('click', function() {
+        matCo.style.display = ''; matCorr.style.display = 'none';
+        tabCo.style.color = '#ff6600'; tabCo.style.fontWeight = 'bold';
+        tabCorr.style.color = '#555'; tabCorr.style.fontWeight = 'normal';
+      });
+      tabCorr.addEventListener('click', function() {
+        matCorr.style.display = ''; matCo.style.display = 'none';
+        tabCorr.style.color = '#ff6600'; tabCorr.style.fontWeight = 'bold';
+        tabCo.style.color = '#555'; tabCo.style.fontWeight = 'normal';
+      });
+    }
+
     const indicator = document.getElementById('live-indicator');
     const feed = document.getElementById('live-feed');
     let es;

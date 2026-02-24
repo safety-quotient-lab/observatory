@@ -4,8 +4,8 @@ import HeatMap from '../../components/HeatMap.astro';
 import RadarChart from '../../components/RadarChart.astro';
 import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
-import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor } from '../../lib/colors';
-import { getStory, getStoryComments } from '../../lib/db';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
+import { getStory, getStoryComments, getDomainDcp } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
 
@@ -18,21 +18,44 @@ if (isNaN(hnId)) {
 }
 
 const storyData = await getStory(db, hnId);
-if (!storyData || storyData.eval_status !== 'done' || !storyData.hcb_json) {
+if (!storyData) {
   return Astro.redirect('/');
 }
 
-let evalData: Evaluation;
-try {
-  evalData = JSON.parse(storyData.hcb_json) as Evaluation;
-} catch {
+// Handle failed/non-done status
+const isFailed = storyData.eval_status === 'failed';
+const isDone = storyData.eval_status === 'done' && !!storyData.hcb_json;
+
+if (!isDone && !isFailed) {
   return Astro.redirect('/');
 }
-const { evaluation, domain_context_profile, aggregates } = evalData;
-const scores = storyData.scores.length > 0 ? storyData.scores : evalData.scores;
 
-const classColor = classificationColor(aggregates.classification);
-const classText = classificationTextColor(aggregates.classification);
+let evalData: Evaluation | null = null;
+let cachedDcp: string | null = null;
+if (isDone) {
+  try {
+    evalData = JSON.parse(storyData.hcb_json!) as Evaluation;
+  } catch (_e) {
+    return Astro.redirect('/');
+  }
+}
+let cachedDcpElements: any[] | null = null;
+if (isFailed && storyData.domain) {
+  cachedDcp = await getDomainDcp(db, storyData.domain);
+  if (cachedDcp) {
+    try {
+      const dcpData = JSON.parse(cachedDcp);
+      cachedDcpElements = dcpData.elements || dcpData;
+    } catch (_e) { /* ignore parse errors */ }
+  }
+}
+const evaluation = evalData?.evaluation;
+const domain_context_profile = evalData?.domain_context_profile;
+const aggregates = evalData?.aggregates;
+const scores = isDone ? (storyData.scores.length > 0 ? storyData.scores : evalData!.scores) : [];
+
+const classColor = aggregates ? classificationColor(aggregates.classification) : '#555';
+const classText = aggregates ? classificationTextColor(aggregates.classification) : '#ccc';
 
 // Compute aggregate SETL from scores
 const setlValues = scores
@@ -44,6 +67,9 @@ const aggSetl = setlValues.length > 0
 
 const hotl = computeHotl(storyData.hn_score, storyData.hn_comments);
 
+// Confidence
+const confidence = computeConfidence(storyData.hcb_signal_sections, storyData.hcb_nd_count);
+
 let comments: Awaited<ReturnType<typeof getStoryComments>> = [];
 try {
   comments = await getStoryComments(db, hnId);
@@ -53,7 +79,7 @@ try {
 
 const siteUrl = Astro.url.origin;
 
-const jsonLd = {
+const jsonLd = isDone && aggregates && evaluation ? {
   '@context': 'https://schema.org',
   '@type': 'Review',
   name: `HRCB Evaluation: ${storyData.title}`,
@@ -91,7 +117,7 @@ const jsonLd = {
       name: 'United Nations General Assembly',
     },
   },
-};
+} : null;
 
 const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low', ND: 'No Data'};
 
@@ -108,13 +134,106 @@ function timeAgo(unixTime: number): string {
 ---
 
 <Base
-  title={`${storyData.title} — HRCB`}
-  ogTitle={`${formatScore(aggregates.weighted_mean)} ${storyData.title}`}
-  ogDescription={`HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}`}
+  title={`${storyData.title} — ${isFailed ? 'Failed' : 'HRCB'}`}
+  ogTitle={isDone && aggregates ? `${formatScore(aggregates.weighted_mean)} ${storyData.title}` : storyData.title}
+  ogDescription={isDone && aggregates ? `HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}` : `Evaluation failed for ${storyData.title}`}
   ogUrl={`${siteUrl}/item/${storyData.hn_id}`}
   canonicalUrl={`${siteUrl}/item/${storyData.hn_id}`}
 >
-  <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+  {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
+
+  {isFailed ? (
+    <>
+      {/* Failed evaluation page */}
+      <table cellpadding="0" cellspacing="0" width="100%">
+        <tr class="athing">
+          <td valign="top" style="padding: 5px var(--space-lg) 0 0; text-align: center; width: 44px;">
+            <span style="color: #dc2626; font-size: var(--font-lg);">&#10007;</span>
+          </td>
+          <td>
+            <span class="titleline" style="font-size: var(--font-md);">
+              <a href={storyData.url || `https://news.ycombinator.com/item?id=${storyData.hn_id}`}
+                 target="_blank" rel="noopener"
+              >
+                {storyData.title}
+              </a>
+            </span>
+            {storyData.domain && (
+              <span class="sitebit" style="font-size: var(--font-sm); margin-left: 5px;">
+                (<a href={`/domain/${storyData.domain}`}>{storyData.domain}</a>)
+              </span>
+            )}
+          </td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="subtext" style="padding-bottom: 8px;">
+            {storyData.hn_score !== null && <span>{storyData.hn_score} points</span>}
+            {storyData.hn_by && <span> by <a href={`https://news.ycombinator.com/user?id=${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
+            <span> {timeAgo(storyData.hn_time)}</span>
+            <span> | </span>
+            <a href={`https://news.ycombinator.com/item?id=${storyData.hn_id}`} target="_blank" rel="noopener">
+              {storyData.hn_comments ?? 0} comments on HN
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
+        <tr>
+          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Evaluation Failed</div>
+            <div style="color: #dc2626; font-size: var(--font-base); padding: 8px 0; line-height: 1.5;">
+              {storyData.eval_error || 'Unknown error'}
+            </div>
+            <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-top: 8px;">
+              {storyData.domain && (
+                <tr>
+                  <td style="color: #666; width: 100px;">Domain</td>
+                  <td><a href={`/domain/${storyData.domain}`} style="color: #c9c9c9;">{storyData.domain}</a></td>
+                </tr>
+              )}
+              {storyData.content_type && (
+                <tr>
+                  <td style="color: #666;">Content Type</td>
+                  <td style="color: #888;">{CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}</td>
+                </tr>
+              )}
+              <tr>
+                <td style="color: #666;">Created</td>
+                <td style="color: #555;">{storyData.created_at}</td>
+              </tr>
+            </table>
+            <div style="margin-top: 12px;">
+              <button
+                class="trigger-btn"
+                data-hn-id={storyData.hn_id}
+                title="Retry evaluation"
+                style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 4px 12px; font-size: var(--font-sm); color: #dc2626; border-radius: 4px;"
+              >
+                &#9654; Retry Evaluation
+              </button>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      {cachedDcpElements && (
+        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+          <tr>
+            <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                Cached Domain Context Profile
+                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">from previous evaluation</span>
+              </div>
+              <DcpTable elements={cachedDcpElements} />
+            </td>
+          </tr>
+        </table>
+      )}
+    </>
+  ) : isDone && aggregates && evaluation ? (
+    <>
   {/* Story header - HN style */}
   <table cellpadding="0" cellspacing="0" width="100%">
     <tr class="athing">
@@ -168,7 +287,7 @@ function timeAgo(unixTime: number): string {
     </tr>
   </table>
 
-  <tr style="height: 10px;"></tr>
+  <div style="height: 10px;"></div>
 
   {/* Heatmap */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
@@ -212,16 +331,18 @@ function timeAgo(unixTime: number): string {
               <td class="score-font" style="color: #666;">{aggregates.nd_count}</td>
             </tr>
             <tr>
-              <td style="color: #666;">Negative</td>
-              <td class="score-font" style="color: #ef4444;">{aggregates.negative_count}</td>
+              <td style="color: #666;">Confidence</td>
+              <td class="score-font" style={`color: ${confidenceToColor(confidence)};`} title={`${aggregates.signal_sections}/${aggregates.signal_sections + aggregates.nd_count} articles scored`}>{formatConfidence(confidence)}</td>
               <td style="color: #666;">Volatility</td>
               <td class="score-font" style="color: #ccc;">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
             </tr>
             <tr>
+              <td style="color: #666;">Negative</td>
+              <td class="score-font" style="color: #ef4444;">{aggregates.negative_count}</td>
               <td style="color: #666;">Channels</td>
-              <td colspan="3" class="score-font">
-                <span style="color: #60a5fa;" title="What the content says">Editorial: {evaluation.channel_weights.editorial}</span>
-                <span style="color: #22d3ee; margin-left: 6px;" title="What the site does">Structural: {evaluation.channel_weights.structural}</span>
+              <td class="score-font">
+                <span style="color: #60a5fa;" title="What the content says">E: {evaluation.channel_weights.editorial}</span>
+                <span style="color: #22d3ee; margin-left: 6px;" title="What the site does">S: {evaluation.channel_weights.structural}</span>
               </td>
             </tr>
             <tr>
@@ -261,6 +382,7 @@ function timeAgo(unixTime: number): string {
   </table>
 
   {/* DCP */}
+  {domain_context_profile && (
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
@@ -269,6 +391,7 @@ function timeAgo(unixTime: number): string {
       </td>
     </tr>
   </table>
+  )}
 
   {/* HN Comments */}
   {comments.length > 0 && (
@@ -315,4 +438,33 @@ function timeAgo(unixTime: number): string {
       </td>
     </tr>
   </table>
+    </>
+  ) : null}
+
+  {isFailed && (
+    <script is:inline>
+    document.querySelectorAll('.trigger-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var hnId = this.getAttribute('data-hn-id');
+        this.disabled = true;
+        this.textContent = 'Submitting...';
+        fetch('/api/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hn_id: parseInt(hnId) })
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          if (d.ok) {
+            btn.textContent = 'Queued';
+            btn.style.color = '#eab308';
+            btn.style.borderColor = 'rgba(234,179,8,0.3)';
+            btn.style.background = 'rgba(234,179,8,0.15)';
+          } else {
+            btn.textContent = 'Error: ' + (d.error || 'unknown');
+            btn.disabled = false;
+          }
+        }).catch(function() { btn.textContent = 'Network error'; btn.disabled = false; });
+      });
+    });
+    </script>
+  )}
 </Base>
