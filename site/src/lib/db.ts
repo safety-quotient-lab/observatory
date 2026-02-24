@@ -394,6 +394,86 @@ export async function getTopNegativeStories(db: D1Database, limit = 5): Promise<
   return results;
 }
 
+export interface SetlStory extends Story {
+  story_setl: number | null;
+}
+
+export async function getTopSetlStories(db: D1Database, limit = 5): Promise<SetlStory[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT s.*,
+              (SELECT AVG(
+                CAST((sc.editorial - sc.structural) AS REAL) /
+                MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+               )
+               FROM scores sc
+               WHERE sc.hn_id = s.hn_id
+                 AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+                 AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
+              ) as story_setl
+       FROM stories s WHERE s.eval_status = 'done'
+       ORDER BY story_setl DESC NULLS LAST LIMIT ?`
+    )
+    .bind(limit)
+    .all<SetlStory>();
+  return results;
+}
+
+export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<SetlStory[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT s.*,
+              (SELECT AVG(
+                CAST((sc.editorial - sc.structural) AS REAL) /
+                MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+               )
+               FROM scores sc
+               WHERE sc.hn_id = s.hn_id
+                 AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+                 AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
+              ) as story_setl
+       FROM stories s WHERE s.eval_status = 'done'
+       ORDER BY story_setl ASC NULLS LAST LIMIT ?`
+    )
+    .bind(limit)
+    .all<SetlStory>();
+  return results;
+}
+
+export interface HotlStory extends Story {
+  story_hotl: number | null;
+}
+
+export async function getTopHotlStories(db: D1Database, limit = 5): Promise<HotlStory[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT *,
+              CASE WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
+                   THEN CAST((hn_comments - hn_score) AS REAL) / (hn_comments + hn_score)
+                   ELSE NULL END as story_hotl
+       FROM stories WHERE eval_status = 'done'
+       ORDER BY story_hotl DESC NULLS LAST LIMIT ?`
+    )
+    .bind(limit)
+    .all<HotlStory>();
+  return results;
+}
+
+export async function getBottomHotlStories(db: D1Database, limit = 5): Promise<HotlStory[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT *,
+              CASE WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
+                   THEN CAST((hn_comments - hn_score) AS REAL) / (hn_comments + hn_score)
+                   ELSE NULL END as story_hotl
+       FROM stories WHERE eval_status = 'done'
+       ORDER BY story_hotl ASC NULLS LAST LIMIT ?`
+    )
+    .bind(limit)
+    .all<HotlStory>();
+  return results;
+}
+
 export async function getRecentEvaluations(db: D1Database, limit = 10): Promise<Story[]> {
   const { results } = await db
     .prepare(

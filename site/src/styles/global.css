@@ -46,6 +46,14 @@
   ::selection {
     background: rgba(255, 102, 0, 0.3);
   }
+
+  /* Focus states for keyboard accessibility (WCAG 2.1 AA) */
+  a:focus-visible,
+  button:focus-visible {
+    outline: 2px solid #ff6600;
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
 
 @layer components {
@@ -98,6 +106,7 @@
   /* Evaluating spinner */
   .eval-spinner {
     animation: spin 2s linear infinite;
+    will-change: transform;
   }
 
   @keyframes spin {
@@ -108,5 +117,12 @@
   /* Play button hover */
   .trigger-btn:hover {
     color: #ff6600 !important;
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .eval-spinner {
+    animation: none;
   }
 }

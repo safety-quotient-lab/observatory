@@ -19,17 +19,25 @@ import {
   getMeanHotl,
   getModelComparisonStats,
   getCostStats,
+  getTopSetlStories,
+  getBottomSetlStories,
+  getTopHotlStories,
+  getBottomHotlStories,
 } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recent, domains, failed, queue, models, meanSetl, meanHotl, modelComparison, costStats] = await Promise.all([
+const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, topSetl, bottomSetl, topHotl, bottomHotl, recent, domains, failed, queue, models, meanSetl, meanHotl, modelComparison, costStats] = await Promise.all([
   getStatusCounts(db),
   getScoreStats(db),
   getContentTypeStats(db),
   getArticleAverages(db),
   getTopPositiveStories(db, 5),
   getTopNegativeStories(db, 5),
+  getTopSetlStories(db, 5),
+  getBottomSetlStories(db, 5),
+  getTopHotlStories(db, 5),
+  getBottomHotlStories(db, 5),
   getRecentEvaluations(db, 10),
   getDomainStats(db, 10),
   getFailedStories(db, 5),
@@ -284,12 +292,12 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
     </tr>
   </table>
 
-  {/* Top Positive + Top Negative */}
+  {/* Most/Least HRCB */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
       <td width="50%" valign="top" style="padding-right: 5px;">
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Positive</div>
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most HRCB</div>
           {topPositive.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               {topPositive.map((s, i) => {
@@ -322,7 +330,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
       </td>
       <td width="50%" valign="top" style="padding-left: 5px;">
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Negative</div>
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Least HRCB</div>
           {topNegative.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               {topNegative.map((s, i) => {
@@ -339,6 +347,146 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
                   </td>
                   <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
                     {formatHotl(hotl)}
+                  </td>
+                  <td>
+                    <a href={`/item/${s.hn_id}`}>{s.title}</a>
+                    {s.domain && <span style="color: #555; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
+                  </td>
+                </tr>
+                );
+              })}
+            </table>
+          ) : (
+            <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
+          )}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* Most/Least SETL */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td width="50%" valign="top" style="padding-right: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most SETL <span style="text-transform: none; color: #555; letter-spacing: 0;">(E-dominant)</span></div>
+          {topSetl.length > 0 ? (
+            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              {topSetl.map((s, i) => {
+                const hotl = storyHotl(s);
+                return (
+                <tr>
+                  <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
+                  <td class="score-font" style={`color: ${setlToColor(s.story_setl)}; width: 44px; font-weight: bold;`}>
+                    {formatSetl(s.story_setl)}
+                  </td>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 36px;`}>
+                    {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
+                    {formatHotl(hotl)}
+                  </td>
+                  <td>
+                    <a href={`/item/${s.hn_id}`}>{s.title}</a>
+                    {s.domain && <span style="color: #555; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
+                  </td>
+                </tr>
+                );
+              })}
+            </table>
+          ) : (
+            <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
+          )}
+        </div>
+      </td>
+      <td width="50%" valign="top" style="padding-left: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Least SETL <span style="text-transform: none; color: #555; letter-spacing: 0;">(S-dominant)</span></div>
+          {bottomSetl.length > 0 ? (
+            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              {bottomSetl.map((s, i) => {
+                const hotl = storyHotl(s);
+                return (
+                <tr>
+                  <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
+                  <td class="score-font" style={`color: ${setlToColor(s.story_setl)}; width: 44px; font-weight: bold;`}>
+                    {formatSetl(s.story_setl)}
+                  </td>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 36px;`}>
+                    {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
+                    {formatHotl(hotl)}
+                  </td>
+                  <td>
+                    <a href={`/item/${s.hn_id}`}>{s.title}</a>
+                    {s.domain && <span style="color: #555; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
+                  </td>
+                </tr>
+                );
+              })}
+            </table>
+          ) : (
+            <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
+          )}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* Most/Least HOTL */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td width="50%" valign="top" style="padding-right: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most HOTL <span style="text-transform: none; color: #555; letter-spacing: 0;">(contentious)</span></div>
+          {topHotl.length > 0 ? (
+            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              {topHotl.map((s, i) => {
+                const setl = storySetl(s);
+                return (
+                <tr>
+                  <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
+                  <td class="score-font" style={`color: ${hotlToColor(s.story_hotl)}; width: 44px; font-weight: bold;`}>
+                    {formatHotl(s.story_hotl)}
+                  </td>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 36px;`}>
+                    {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
+                    {formatSetl(setl)}
+                  </td>
+                  <td>
+                    <a href={`/item/${s.hn_id}`}>{s.title}</a>
+                    {s.domain && <span style="color: #555; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
+                  </td>
+                </tr>
+                );
+              })}
+            </table>
+          ) : (
+            <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
+          )}
+        </div>
+      </td>
+      <td width="50%" valign="top" style="padding-left: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Least HOTL <span style="text-transform: none; color: #555; letter-spacing: 0;">(consensus)</span></div>
+          {bottomHotl.length > 0 ? (
+            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+              {bottomHotl.map((s, i) => {
+                const setl = storySetl(s);
+                return (
+                <tr>
+                  <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
+                  <td class="score-font" style={`color: ${hotlToColor(s.story_hotl)}; width: 44px; font-weight: bold;`}>
+                    {formatHotl(s.story_hotl)}
+                  </td>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 36px;`}>
+                    {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
+                    {formatSetl(setl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
