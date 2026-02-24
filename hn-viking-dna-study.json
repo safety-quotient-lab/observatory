@@ -1,0 +1,454 @@
+{
+  "schema_version": "3.4",
+  "evaluation": {
+    "url": "https://news.ycombinator.com/item?id=47100612",
+    "domain": "news.ycombinator.com",
+    "content_type": {
+      "primary": "CO",
+      "secondary": ["ED"]
+    },
+    "channel_weights": {
+      "editorial": 0.4,
+      "structural": 0.6
+    },
+    "eval_depth": "STANDARD",
+    "date": "2026-02-23",
+    "methodology": "v3.4",
+    "off_domain": false,
+    "external_evidence": false,
+    "operator": "claude-opus-4-6"
+  },
+  "domain_context_profile": {
+    "domain": "news.ycombinator.com",
+    "eval_date": "2026-02-23",
+    "elements": {
+      "privacy": {
+        "modifier": 0.10,
+        "affects": ["Art. 12", "Art. 13"],
+        "note": "Minimal data collection. No third-party ad tracking. No cookie consent banners (minimal cookie use — session auth only). No analytics scripts. Privacy-positive design."
+      },
+      "tos": {
+        "modifier": null,
+        "affects": ["Art. 8", "Art. 17", "Art. 29", "Art. 30"],
+        "note": "Not directly evaluated. No modifier applied."
+      },
+      "accessibility": {
+        "modifier": -0.05,
+        "affects": ["Art. 2", "Art. 26"],
+        "note": "No accessibility statement. Plain HTML table-based layout. No ARIA landmarks or skip-to-content links. Faded comments create contrast issues. Functional but not accessible."
+      },
+      "mission": {
+        "modifier": 0.10,
+        "affects": ["Preamble", "Art. 1", "Art. 28"],
+        "note": "Platform for intellectual curiosity. 'Anything that good hackers would find interesting.' Anti-flamebait, anti-ragebait ethos. Depth over engagement metrics."
+      },
+      "editorial_code": {
+        "modifier": 0.10,
+        "affects": ["Art. 11", "Art. 12", "Art. 19"],
+        "note": "Published community guidelines. Detailed FAQ. Active human moderation (dang, tomhow). Guidelines emphasize intellectual curiosity, substantive discussion, good faith, civility. Community vouching system."
+      },
+      "ownership": {
+        "modifier": 0.05,
+        "affects": ["Art. 19"],
+        "note": "Y Combinator (venture capital). Spun out with full editorial independence. YC receives job ad placement and startup visibility. For-profit parent but editorially independent."
+      },
+      "access_model": {
+        "modifier": 0.15,
+        "affects": ["Art. 13", "Art. 19", "Art. 26"],
+        "note": "No paywall. No registration to read. Free account creation (no email required). API publicly available. RSS available. Complete open access."
+      },
+      "ad_tracking": {
+        "modifier": 0.10,
+        "affects": ["Art. 12"],
+        "note": "Zero third-party advertising. Zero ad networks. Only YC startup job ads (non-tracking). No analytics scripts. No behavioral tracking. Minimal JavaScript."
+      }
+    }
+  },
+  "scores": [
+    {
+      "section": "Preamble",
+      "editorial": 0.2,
+      "structural": 0.2,
+      "combined": 0.20,
+      "context_modifier": 0.10,
+      "final": 0.30,
+      "directionality": ["C", "P"],
+      "evidence": "M",
+      "note": "Discussion centers on human heritage and genetic diversity. Viking study challenges ethno-nationalist narratives. S: open forum. Mission modifier +0.10."
+    },
+    {
+      "section": "Art. 1",
+      "editorial": 0.3,
+      "structural": 0.2,
+      "combined": 0.24,
+      "context_modifier": null,
+      "final": 0.24,
+      "directionality": ["C", "F"],
+      "evidence": "M",
+      "note": "Study: 'Viking was a job, not heredity' — diverse genetic backgrounds participated as equals. Non-Scandinavian and Saami individuals in Viking burials. Equality as historical reality."
+    },
+    {
+      "section": "Art. 2",
+      "editorial": 0.4,
+      "structural": 0.3,
+      "combined": 0.34,
+      "context_modifier": -0.05,
+      "final": 0.29,
+      "directionality": ["C", "F"],
+      "evidence": "H",
+      "note": "Central finding: diverse genetic backgrounds (Southern European, British Isles, Saami, East Asian/Siberian) among Vikings. Challenges racial essentialism. Comments discuss identity politics implications. S: guidelines enforce civility. Accessibility modifier -0.05."
+    },
+    {
+      "section": "Art. 3",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on life, liberty, or security in modern rights sense."
+    },
+    {
+      "section": "Art. 4",
+      "editorial": 0.1,
+      "structural": null,
+      "combined": 0.04,
+      "context_modifier": null,
+      "final": 0.04,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "Tangential: Viking raiding involved enslavement (historical context). Salme burial of 41 males after battle. Very weak signal."
+    },
+    {
+      "section": "Art. 5",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on torture or degrading treatment."
+    },
+    {
+      "section": "Art. 6",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on legal personhood."
+    },
+    {
+      "section": "Art. 7",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on equality before law."
+    },
+    {
+      "section": "Art. 8",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on right to remedy."
+    },
+    {
+      "section": "Art. 9",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on arbitrary detention."
+    },
+    {
+      "section": "Art. 10",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on fair hearing."
+    },
+    {
+      "section": "Art. 11",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on presumption of innocence."
+    },
+    {
+      "section": "Art. 12",
+      "editorial": null,
+      "structural": 0.4,
+      "combined": 0.4,
+      "context_modifier": 0.20,
+      "final": 0.44,
+      "directionality": ["P"],
+      "evidence": "M",
+      "note": "S-only. HN: zero third-party tracking, zero ad networks, zero analytics scripts, minimal cookies (session auth only). No cookie banner needed. Exemplary privacy practice among commercial platforms. Privacy +0.10, ad/tracking +0.10 = +0.20."
+    },
+    {
+      "section": "Art. 13",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on freedom of movement."
+    },
+    {
+      "section": "Art. 14",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on asylum."
+    },
+    {
+      "section": "Art. 15",
+      "editorial": 0.2,
+      "structural": null,
+      "combined": 0.08,
+      "context_modifier": null,
+      "final": 0.08,
+      "directionality": ["C"],
+      "evidence": "L",
+      "note": "Norse identity was occupational/cultural, not ethnic. Comments discuss nationality as constructed. Icelandic speakers note 'Viking' was never an ethnonym. Indirect."
+    },
+    {
+      "section": "Art. 16",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on marriage or family."
+    },
+    {
+      "section": "Art. 17",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on property rights."
+    },
+    {
+      "section": "Art. 18",
+      "editorial": 0.3,
+      "structural": 0.3,
+      "combined": 0.30,
+      "context_modifier": null,
+      "final": 0.30,
+      "directionality": ["C", "P"],
+      "evidence": "M",
+      "note": "Multiple perspectives debated openly. Comments challenge and refine article thesis. Scientific thinking applied to cultural questions. S: guidelines protect intellectual curiosity and substantive disagreement."
+    },
+    {
+      "section": "Art. 19",
+      "editorial": 0.3,
+      "structural": 0.5,
+      "combined": 0.42,
+      "context_modifier": 0.30,
+      "final": 0.72,
+      "directionality": ["C", "P"],
+      "evidence": "H",
+      "note": "E: 139 comments with diverse perspectives (historical, genetic, linguistic, political). Source criticism present. S: open platform, no registration to read, voting for quality, community vouching. Context: ed. code +0.10, ownership +0.05, access +0.15 = +0.30 (at cap)."
+    },
+    {
+      "section": "Art. 20",
+      "editorial": null,
+      "structural": 0.3,
+      "combined": 0.3,
+      "context_modifier": null,
+      "final": 0.18,
+      "directionality": ["P"],
+      "evidence": "M",
+      "note": "S-only. HN is a functioning assembly — 139 commenters in open discourse. Community self-governance through voting and vouching. Guidelines protect right to participate. No registration fee."
+    },
+    {
+      "section": "Art. 21",
+      "editorial": null,
+      "structural": 0.2,
+      "combined": 0.2,
+      "context_modifier": null,
+      "final": 0.12,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "S-only. Community governance: voting, flagging, vouching (Modnesty). Karma-based privileges. Some participatory governance, though moderator-controlled."
+    },
+    {
+      "section": "Art. 22",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on social security or cultural rights."
+    },
+    {
+      "section": "Art. 23",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on work or equal pay."
+    },
+    {
+      "section": "Art. 24",
+      "editorial": null,
+      "structural": 0.2,
+      "combined": 0.2,
+      "context_modifier": null,
+      "final": 0.12,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "S-only. Noprocrast feature: users can limit site access time (20 min on, 180 min off). Anti-addictive design respecting rest/leisure needs. Unusual among social platforms."
+    },
+    {
+      "section": "Art. 25",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on standard of living."
+    },
+    {
+      "section": "Art. 26",
+      "editorial": 0.3,
+      "structural": 0.3,
+      "combined": 0.30,
+      "context_modifier": -0.05,
+      "final": 0.25,
+      "directionality": ["C", "P"],
+      "evidence": "M",
+      "note": "E: genuinely educational — ancient DNA methodology, Viking Age chronology, Norse etymology, genetic vs cultural identity, settlement patterns. Corrects misconceptions. S: freely accessible. Accessibility modifier -0.05."
+    },
+    {
+      "section": "Art. 27",
+      "editorial": 0.4,
+      "structural": 0.2,
+      "combined": 0.28,
+      "context_modifier": null,
+      "final": 0.28,
+      "directionality": ["C", "F"],
+      "evidence": "M",
+      "note": "Vikings as culturally (not genetically) defined community. 442 genomes sequenced — massive scientific collaboration. Discussion engages with cultural heritage questions. S: platform shares scientific findings freely."
+    },
+    {
+      "section": "Art. 28",
+      "editorial": null,
+      "structural": null,
+      "combined": null,
+      "context_modifier": null,
+      "final": null,
+      "directionality": [],
+      "evidence": null,
+      "note": "No content on social or international order."
+    },
+    {
+      "section": "Art. 29",
+      "editorial": null,
+      "structural": 0.3,
+      "combined": 0.3,
+      "context_modifier": null,
+      "final": 0.18,
+      "directionality": ["P"],
+      "evidence": "M",
+      "note": "S-only. Guidelines frame community duties: 'maintain kindness and curiosity,' 'reply substantively,' 'assume good faith,' 'flag rather than engage.' Active moderation. Prohibition against upvote solicitation."
+    },
+    {
+      "section": "Art. 30",
+      "editorial": null,
+      "structural": 0.2,
+      "combined": 0.2,
+      "context_modifier": null,
+      "final": 0.12,
+      "directionality": ["P"],
+      "evidence": "L",
+      "note": "S-only. Guidelines protect against rights destruction on platform: no dismissing others' work, no ideological battles, vouching restores removed content. Anti-abuse systems."
+    }
+  ],
+  "l2_scores": [],
+  "adversarial_gap": {
+    "per_article": [],
+    "mean_ag": null,
+    "ag_coverage": 0,
+    "ag_classification": null
+  },
+  "aggregates": {
+    "weighted_mean": 0.24,
+    "unweighted_mean": 0.22,
+    "max": {
+      "value": 0.72,
+      "section": "Art. 19"
+    },
+    "min": {
+      "value": 0.04,
+      "section": "Art. 4"
+    },
+    "negative_count": 0,
+    "nd_count": 12,
+    "signal_sections": 19,
+    "evidence_profile": {
+      "H": 3,
+      "M": 12,
+      "L": 4,
+      "ND": 12
+    },
+    "channel_balance": {
+      "E_only": 3,
+      "S_only": 6,
+      "both": 10
+    },
+    "directionality_profile": {
+      "A": 0,
+      "P": 16,
+      "F": 4,
+      "C": 13
+    },
+    "volatility": {
+      "value": 0.14,
+      "label": "Medium"
+    },
+    "classification": "Moderate positive"
+  }
+}
