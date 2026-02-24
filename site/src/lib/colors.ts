@@ -1,25 +1,43 @@
-/** Map a score [-1, +1] to a hex color on a diverging red-yellow-green scale */
+/** Convert HSL (h: 0-360, s: 0-1, l: 0-1) to RGB string */
+function hslToRgb(h: number, s: number, l: number): string {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) { r = c; g = x; }
+  else if (h < 120) { r = x; g = c; }
+  else if (h < 180) { g = c; b = x; }
+  else if (h < 240) { g = x; b = c; }
+  else if (h < 300) { r = x; b = c; }
+  else { r = c; b = x; }
+  return `rgb(${Math.round((r + m) * 255)}, ${Math.round((g + m) * 255)}, ${Math.round((b + m) * 255)})`;
+}
+
+/** Map a score [-1, +1] to a color via HSL interpolation for clean transitions.
+ *  -1.0 = red (hue 0°), 0.0 = amber (hue 40°), +1.0 = green (hue 142°).
+ *  Interpolates through HSL so mid-tones stay vibrant instead of going muddy brown. */
 export function scoreToColor(score: number | null): string {
-  if (score === null) return '#6b7280'; // ND gray
+  if (score === null) return '#4b5563'; // ND gray (gray-600)
 
   const clamped = Math.max(-1, Math.min(1, score));
 
-  // Midpoint: yellow (#eab308)
+  // Piecewise-linear hue mapping: -1→0°, 0→40°, +1→142°
+  let hue: number;
   if (clamped < 0) {
-    // Red (#dc2626) ← yellow (#eab308): interpolate from yellow to red
-    const t = Math.abs(clamped);
-    const r = Math.round(0xea + (0xdc - 0xea) * t);
-    const g = Math.round(0xb3 + (0x26 - 0xb3) * t);
-    const b = Math.round(0x08 + (0x26 - 0x08) * t);
-    return `rgb(${r}, ${g}, ${b})`;
+    // red (0°) to amber (40°)
+    hue = 40 * (1 + clamped); // clamped=-1→0°, clamped=0→40°
   } else {
-    // Yellow (#eab308) → green (#16a34a): interpolate from yellow to green
-    const t = clamped;
-    const r = Math.round(0xea + (0x16 - 0xea) * t);
-    const g = Math.round(0xb3 + (0xa3 - 0xb3) * t);
-    const b = Math.round(0x08 + (0x4a - 0x08) * t);
-    return `rgb(${r}, ${g}, ${b})`;
+    // amber (40°) to green (142°)
+    hue = 40 + 102 * clamped; // clamped=0→40°, clamped=1→142°
   }
+
+  // Saturation: high throughout, slight dip near zero for a muted amber midpoint
+  const sat = 0.75 + 0.15 * Math.abs(clamped);
+
+  // Lightness: brighter at extremes, slightly dimmer at midpoint for depth on dark bg
+  const lit = 0.42 + 0.08 * Math.abs(clamped);
+
+  return hslToRgb(hue, sat, lit);
 }
 
 /** Get a text color (white or black) with enough contrast for a given score */
@@ -27,23 +45,21 @@ export function scoreTextColor(score: number | null): string {
   return '#e5e5e5';
 }
 
-/** Get classification badge color */
+/** Get classification badge color (derived from scoreToColor scale) */
 export function classificationColor(classification: string): string {
   const lower = classification.toLowerCase();
-  if (lower.includes('strong positive')) return '#16a34a';
-  if (lower.includes('moderate positive')) return '#22c55e';
-  if (lower.includes('mild positive')) return '#86efac';
-  if (lower.includes('neutral')) return '#eab308';
-  if (lower.includes('mild negative')) return '#fca5a5';
-  if (lower.includes('moderate negative')) return '#ef4444';
-  if (lower.includes('strong negative')) return '#dc2626';
-  return '#6b7280';
+  if (lower.includes('strong positive')) return scoreToColor(0.9);
+  if (lower.includes('moderate positive')) return scoreToColor(0.55);
+  if (lower.includes('mild positive')) return scoreToColor(0.25);
+  if (lower.includes('neutral')) return scoreToColor(0);
+  if (lower.includes('mild negative')) return scoreToColor(-0.25);
+  if (lower.includes('moderate negative')) return scoreToColor(-0.55);
+  if (lower.includes('strong negative')) return scoreToColor(-0.9);
+  return '#4b5563';
 }
 
 /** Get classification badge text color */
 export function classificationTextColor(classification: string): string {
-  const lower = classification.toLowerCase();
-  if (lower.includes('mild positive') || lower.includes('mild negative') || lower.includes('neutral')) return '#1a1a25';
   return '#ffffff';
 }
 
@@ -121,9 +137,7 @@ export function hotlToColor(hotl: number | null): string {
 /** DCP modifier color */
 export function modifierColor(mod: number | null): string {
   if (mod === null) return '#3a3a45';
-  if (mod > 0.05) return '#22c55e';
-  if (mod > 0) return '#86efac';
-  if (mod === 0) return '#eab308';
-  if (mod > -0.05) return '#fca5a5';
-  return '#ef4444';
+  // Map modifier (typically small, e.g. -0.1 to +0.1) to score scale
+  const scaled = Math.max(-1, Math.min(1, mod * 10));
+  return scoreToColor(scaled);
 }
