@@ -37,7 +37,8 @@ const title = ARTICLE_TITLES[score.section] || score.section;
       {score.evidence && (
         <span
           class="badge text-[10px]"
-          style={`background: ${evidenceColor(score.evidence)}20; color: ${evidenceColor(score.evidence)}`}
+          title={({H: 'High evidence', M: 'Medium evidence', L: 'Low evidence'} as Record<string, string>)[score.evidence] || score.evidence}
+          style={`background: ${evidenceColor(score.evidence)}20; color: ${evidenceColor(score.evidence)}; cursor: help;`}
         >
           {score.evidence}
         </span>
@@ -45,7 +46,8 @@ const title = ARTICLE_TITLES[score.section] || score.section;
       {score.directionality.map((d) => (
         <span
           class="badge text-[10px]"
-          style={`background: ${directionalityColor(d)}20; color: ${directionalityColor(d)}`}
+          title={({A: 'Advocacy', F: 'Framing', P: 'Practice', C: 'Coverage'} as Record<string, string>)[d] || d}
+          style={`background: ${directionalityColor(d)}20; color: ${directionalityColor(d)}; cursor: help;`}
         >
           {d}
         </span>

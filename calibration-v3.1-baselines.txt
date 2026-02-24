@@ -1,0 +1,747 @@
+# Calibration Set — Baseline Evaluations for 9 New URLs
+
+```
+================================================================
+UDHR HCB Methodology — v3.1 Addendum §11c
+Component:   Calibration Baseline Evaluations (Batch 2)
+Status:      COMPLETE
+Date:        2026-02-23
+Scored:      10 Discriminator Articles per URL
+================================================================
+```
+
+---
+
+## EP-3: `https://www.hrw.org`
+
+```
+Content Type:    HR (Human Rights Specific) | Secondary: MI
+Channel Weights: E=0.5, S=0.5
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+**Human Rights Watch** "defends the rights of people in 100 countries worldwide, spotlighting abuses and bringing perpetrators to justice" [^16]. Founded in 1978 as Helsinki Watch to monitor Soviet compliance with the Helsinki Accords [^26]. Operates as a 501(c)(3) [^70] with an explicit commitment to "uphold human dignity and advance the cause of human rights for all" [^57]. Researchers work in the field across 100+ countries [^58], and the organization publishes findings freely to drive policy change [^67].
+
+**Domain Context Profile:**
+
+| Element | Mod. | Notes |
+|---|---|---|
+| Privacy | +0.05 | Policy exists, committed to privacy [^91]. Uses cookies and third-party analytics [^23]. |
+| Accessibility | +0.10 | Dedicated accessibility page [^23]. Accessible versions of video content [^92]. Disability rights is a core campaign area [^59]. |
+| Mission | +0.15 | Explicit UDHR-aligned mission. "Investigate, Expose, Change" framework [^16]. |
+| Ownership | +0.15 | 501(c)(3), refuses most government funding [^60]. Independent. |
+| Access | +0.15 | All reports and publications freely accessible [^63]. No paywall. |
+| Ad/tracking | −0.05 | Third-party analytics cookies acknowledged [^23]. |
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | 0.8 | 0.5 | **0.8** | A,F | H | Mission directly references human dignity, human rights protection. "Protecting Rights, Saving Lives" [^61]. Free access to all work. |
+| Art. 1 | 0.6 | 0.4 | **0.6** | A,F | H | Universal equality is organizational principle. Global scope — 100+ countries [^58]. Less explicit "brotherhood" language than Amnesty; more focused on accountability. |
+| Art. 2 | 0.7 | 0.5 | **0.7** | A,P | H | Non-discrimination central to campaigns: disability rights [^59][^64], LGBT rights [^65], racial justice. Accessibility page exists [^23]. Multiple languages. |
+| Art. 12 | 0.6 | 0.2 | **0.5** | A,P | M | Explicit "Data Privacy Is a Human Right" article [^62]. Covers UK encryption orders [^66], technology and rights [^74]. Own privacy practices are NGO-standard; uses cookies/analytics [^23]. |
+| Art. 19 | 0.8 | 0.5 | **0.8** | A,P | H | Free expression is a named campaign area. Reports published openly, freely accessible. Organization founded to monitor compliance with speech/conscience provisions of Helsinki Accords. |
+| Art. 20 | 0.6 | 0.3 | **0.6** | A,C | M | Covers protest rights, civil society, freedom of association globally. Less community infrastructure than advocacy platforms — primarily a publishing organization. |
+| Art. 26 | 0.5 | 0.5 | **0.6** | P,C | M | Reports serve as educational resources. Free access. School education campaigns. Children's rights reporting [^46]. |
+| Art. 28 | 0.8 | 0.4 | **0.8** | A,F | H | Entire mission targets just international order. Works with UN system [^47], IOC [^75]. Advocacy for international law enforcement. |
+| Art. 29 | 0.5 | 0.4 | **0.5** | F,P | M | Financial transparency page [^60]. Research methodology documented [^76]. Models institutional responsibility. |
+| Art. 30 | 0.5 | 0.4 | **0.5** | A,P | M | Core function: documenting when states and corporations destroy others' rights. Site policies prevent platform misuse. |
+
+```
+AGGREGATES (EP-3):
+  Mean:        0.64
+  Max:         0.8  (Preamble, Art. 19, Art. 28)
+  Min:         0.5  (Art. 12, Art. 29, Art. 30)
+  Negatives:   0
+  Class:       STRONG POSITIVE ✅
+  EP-1 divergence: |0.64 − 0.62| = 0.02 < 0.15 ✅
+```
+
+---
+
+## EP-4: `https://www.propublica.org`
+
+```
+Content Type:    ED (Editorial) | Secondary: HR
+Channel Weights: E=0.6, S=0.4
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+**ProPublica** is "an independent, nonprofit newsroom that produces investigative journalism with moral force" [^5]. Founded 2007–2008 with the belief that "investigative journalism is critical to our democracy" [^5]. 501(c)(3) nonprofit [^77], primarily donor-funded with limited advertising since 2011 [^48]. Publishes a comprehensive Code of Ethics [^38] and makes stories available under Creative Commons [^39]. The board of directors "does not know in advance what [staff are] going to report on" [^40].
+
+**Domain Context Profile:**
+
+| Element | Mod. | Notes |
+|---|---|---|
+| Privacy | +0.10 | Explicit privacy commitment: "The importance of privacy is something we know a little bit about at ProPublica" [^41]. Covers patient privacy [^84], data brokers [^85]. |
+| Ed. code | +0.10 | Comprehensive Code of Ethics [^38]. No editorial page; no policy advocacy [^42]. Board independence. |
+| Mission | +0.15 | "Investigative journalism with moral force" [^5]. Impact-centered [^43]. |
+| Ownership | +0.15 | 501(c)(3) nonprofit. Board independence [^40]. |
+| Access | +0.15 | No paywall. Creative Commons republishing [^39][^93]. "Steal Our Stories" policy. |
+| Ad/tracking | −0.05 | Accepts advertising since 2011 [^48]. PixelPing tracking tag used in republished stories. |
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | 0.6 | 0.4 | **0.6** | F | M | "Journalism with moral force" implies dignity/justice values [^5]. "Shining a light on abuses of power and betrayals of public trust." Not as explicit as HR orgs. |
+| Art. 1 | 0.3 | 0.4 | **0.4** | F | L | Free access for all. Diversity programs support equitable participation [^21]. Less explicit equality language than HR sites. |
+| Art. 2 | 0.5 | 0.3 | **0.5** | C,F | M | Investigations cover discrimination in housing, policing, healthcare. Diverse staff recruitment [^21]. No accessibility statement found. |
+| Art. 12 | 0.5 | 0.3 | **0.5** | C,P | M | Covers Google privacy [^94], period app privacy [^95], data brokers [^85], digital privacy [^96]. Own privacy policy is strong for a news org [^41]. Non-profit = less ad tracking than commercial news. |
+| Art. 19 | 0.7 | 0.5 | **0.8** | A,P | H | "A Free Press Works for All of Us" [^42]. Editorial independence from board [^40]. Free access. Creative Commons [^39]. No paywall. FOIA-driven work. Publishing partnerships extend reach [^97]. |
+| Art. 20 | 0.2 | 0.2 | **0.3** | C | L | Reports on civil society. Local Reporting Network partners with local newsrooms [^83][^98]. Less community infrastructure than social platforms. |
+| Art. 26 | 0.5 | 0.5 | **0.6** | P,C | M | Data journalism tools published. Educational mission inherent in "explaining" investigations. Free access to all content. School voucher investigations [^44]. |
+| Art. 28 | 0.6 | 0.4 | **0.6** | F,C | M | Accountability journalism targets systemic failures. Impact tracking [^43]. Investigations lead to law changes, official resignations. |
+| Art. 29 | 0.4 | 0.4 | **0.5** | P | M | Transparent donor list [^78]. Code of Ethics governs conduct [^38]. Corrections policy. Transparent funding model. |
+| Art. 30 | 0.3 | 0.3 | **0.4** | C,P | L | Investigations expose power abuses. "Betrayals of public trust" framing [^5]. Site policies prevent misuse. |
+
+```
+AGGREGATES (EP-4):
+  Mean:        0.52
+  Max:         0.8  (Art. 19)
+  Min:         0.3  (Art. 20)
+  Negatives:   0
+  Class:       STRONG POSITIVE ✅
+  Gap below EP-1/3: ~0.12 (expected — journalism vs. advocacy)
+```
+
+---
+
+## EP-5: `https://archive.org`
+
+```
+Content Type:    MI (Mission/Values) | Secondary: PR (Product)
+Channel Weights: E=0.7, S=0.3
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+The **Internet Archive** is "a 501(c)(3) non-profit, building a digital library of Internet sites and other cultural artifacts in digital form" with the mission to "provide Universal Access to All Knowledge" [^2]. Founded in 1996, it provides free access to texts, movies, music, and 624 billion archived web pages [^18]. The Wayback Machine preserves the public web, including censored and deleted content [^17]. The site strives for "AA-level WCAG compliance" and maintains a print disability access program [^22]. Its Access Policy commits to ensuring resources are "accessible to all users, irrespective of their physical abilities, geographical location, economic status, or institutional affiliation" [^8].
+
+**Domain Context Profile:**
+
+| Element | Mod. | Notes |
+|---|---|---|
+| Privacy | +0.10 | Non-profit, no ad tracking. ToS prohibits users from violating others' privacy or collecting personal data [^11]. |
+| Accessibility | +0.15 | WCAG AA target [^22]. Print disability access program with qualifying authorities [^45]. DAISY files for public domain books [^22]. |
+| Mission | +0.15 | "Universal Access to All Knowledge" [^2]. Foundational commitment to equitable access [^8]. |
+| Ownership | +0.15 | 501(c)(3) nonprofit [^79]. Funded by donations, grants, partnerships [^80]. |
+| Access | +0.15 | Entirely free. No paywall. No registration to browse. Open API. |
+| Ad/tracking | +0.10 | No advertising whatsoever. |
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | 0.5 | 0.5 | **0.6** | F,P | M | "Universal Access to All Knowledge" is a dignity-through-access statement [^2]. Access Policy explicitly addresses equity [^8]. No explicit rights language. |
+| Art. 1 | 0.4 | 0.5 | **0.5** | P | M | Free, universal access regardless of identity or status [^8]. "Like a paper library, we provide free access to researchers, historians, scholars, people with print disabilities, and the general public" [^2]. |
+| Art. 2 | 0.3 | 0.5 | **0.5** | P | M | WCAG AA compliance target [^22]. Print disability program [^45]. Access irrespective of "physical abilities, geographical location, economic status" [^8]. Multilingual collections. |
+| Art. 12 | 0.2 | 0.7 | **0.5** | P | M | No advertising, no commercial tracking, no ad-tech stack. ToS explicitly prohibits collecting personal data [^11]. Non-profit with no data monetization incentive. Strongest structural privacy in the EP set. |
+| Art. 19 | 0.5 | 0.6 | **0.7** | P,F | H | Wayback Machine preserves censored/deleted content — an extraordinary structural implementation of information freedom [^17]. Preserving local news [^81]. Mission = free information access. All content freely available. |
+| Art. 20 | 0.1 | 0.2 | **0.2** | P | L | Community Webs program with public libraries [^19]. Open-source contributions. But Archive.org is a library, not a community platform. Minimal assembly dimension. |
+| Art. 26 | 0.7 | 0.7 | **0.8** | P | H | **Highest score in EP set.** Free access to millions of books, educational materials, courses, lectures [^18]. Print disability access expands educational reach [^22]. "Universal Access to All Knowledge" IS Art. 26 in structural form. This is what a digital library exists to do. |
+| Art. 28 | 0.4 | 0.4 | **0.4** | P,F | M | Open knowledge infrastructure contributes to equitable information order. Community archiving supports democratic memory [^19]. Less explicit than HR orgs about "just order." |
+| Art. 29 | 0.3 | 0.3 | **0.4** | P | L | ToS sets user responsibilities [^11][^82]. Non-profit transparency. Community norms for contributions. |
+| Art. 30 | 0.2 | 0.3 | **0.3** | P | L | DMCA compliance. ToS restricts harmful activities [^11]. Copyright lawsuit history suggests tension between access mission and IP protections [^50]. |
+
+```
+AGGREGATES (EP-5):
+  Mean:        0.49
+  Max:         0.8  (Art. 26)
+  Min:         0.2  (Art. 20)
+  Negatives:   0
+  Class:       MODERATE POSITIVE ✅
+  Differentiator: Highest Art. 26 (0.8) and Art. 12 (0.5) in EP set.
+                  Practice (P) dominant — 10/10 sections have P marker.
+                  Archive.org proves rights can be advanced through
+                  infrastructure alone, without explicit advocacy.
+```
+
+---
+
+## EN-3: `https://www.xe.com`
+
+```
+Content Type:    LP (Landing) | Secondary: PR (Product)
+Channel Weights: E=0.3, S=0.7
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+**Xe.com** is a currency conversion and international money transfer platform owned by Euronet Worldwide [^51], with "more than 25 years' experience in the industry" [^71]. The homepage presents a conversion tool, rate tables, and charts. A Global Privacy Notice exists [^20], a Cookie Policy is published [^52], and data rights are documented [^72]. The site is ad-supported for its free tier, with premium financial services available.
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | ND | 0.0 | **0.0** | — | L | Utility site. No values or dignity language. |
+| Art. 1 | ND | 0.0 | **0.0** | — | L | Available to all. No equality framing. |
+| Art. 2 | ND | 0.0 | **0.0** | — | L | No accessibility statement found. Multiple currency/language support is functional, not rights-based. |
+| Art. 12 | ND | −0.1 | **−0.1** | P | L | Ad-supported with cookies [^52]. Privacy notice discloses sharing data with "Euronet Group companies, legal authorities, and selected third parties/partners" [^20]. Data collection "necessary to provide our services" [^20]. Mild negative from commercial tracking on a utility site. |
+| Art. 19 | ND | 0.0 | **0.0** | — | L | Publishes exchange rate data. No editorial expression dimension. |
+| Art. 20 | ND | ND | **ND** | | | No community features. |
+| Art. 26 | ND | 0.1 | **0.1** | P | L | Currency education blog content. Free tools support financial literacy. Minimal. |
+| Art. 28 | ND | 0.0 | **0.0** | — | L | No signal. |
+| Art. 29 | ND | 0.0 | **0.0** | — | L | ToS exists [^73]. Standard obligations. |
+| Art. 30 | ND | 0.0 | **0.0** | — | L | Standard protections. |
+
+```
+AGGREGATES (EN-3):
+  Mean (excl. ND):  0.00
+  Max:              0.1  (Art. 26)
+  Min:             -0.1  (Art. 12)
+  ND:               1/10
+  Negatives:        1
+  Class:            NEUTRAL ✅
+```
+
+---
+
+## EN-4: `https://en.wikipedia.org/wiki/Oxygen`
+
+```
+Content Type:    ED (Editorial)
+Channel Weights: E=0.6, S=0.4
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+Wikipedia's **Neutral Point of View** policy requires content be "presented without the influence of editorial bias" [^53] — "representing fairly, proportionately, and, as far as possible, without editorial bias, all the significant views" [^54]. The Oxygen article is a stable scientific reference page with zero political, social, or rights-related editorial dimension. All structural signals are inherited from the Wikipedia/Wikimedia platform: no advertising, Wikimedia Foundation privacy policy [^6], CC licensing, WCAG accessibility guidelines in the Manual of Style [^49], and community governance through core content policies of verifiability, NPOV, and no original research [^33].
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | ND | 0.1 | **0.1** | P | L | Free, community-created knowledge. No values language in article content itself. |
+| Art. 1 | ND | 0.1 | **0.1** | P | L | Equal access, no registration, no paywall, no ads. Community-created. |
+| Art. 2 | ND | 0.2 | **0.2** | P | L | No advertising. Multilingual (100+ languages). WikiProject Accessibility [^34]. MoS accessibility guidelines [^49]. |
+| Art. 12 | ND | 0.2 | **0.2** | P | M | No commercial tracking whatsoever. Wikimedia Foundation privacy policy with strong commitments [^6]. No ad-tech. Strongest privacy profile among EN sites. |
+| Art. 19 | ND | 0.1 | **0.1** | P | L | Open editing model. CC licensing. But this single article shows the result, not the process. Weak signal from one static page. |
+| Art. 20 | ND | 0.1 | **0.1** | P | L | Talk page and edit history exist = community features. Not the primary content on this URL. |
+| Art. 26 | ND | 0.2 | **0.2** | P | L | Free encyclopedic content. Wikipedia's raison d'être is education. But on this single scientific article, the signal is inherited from platform, not unique to the URL. |
+| Art. 28 | ND | 0.0 | **0.0** | — | L | No signal from a chemistry article. |
+| Art. 29 | ND | 0.1 | **0.1** | P | L | NPOV, verifiability, no original research [^33] model responsible knowledge creation. |
+| Art. 30 | ND | 0.1 | **0.1** | P | L | Edit protection prevents vandalism. Standard. |
+
+```
+AGGREGATES (EN-4):
+  Mean:         0.12
+  Max:          0.2  (Art. 2, Art. 12, Art. 26)
+  Min:          0.0  (Art. 28)
+  Negatives:    0
+  Class:        NEUTRAL (upper edge) ✅
+  Note:         All scores are structural (S-channel). Editorial
+                channel is ND across all 10 sections — a scientific
+                article about oxygen has zero HR editorial signal.
+                Scores reflect Wikipedia's platform virtues, not
+                this article's content.
+```
+
+---
+
+## EN-5: `https://www.speedtest.net`
+
+```
+Content Type:    PR (Product/Feature)
+Channel Weights: E=0.5, S=0.5
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+**Speedtest.net** is a network speed test utility operated by **Ookla**, a subsidiary of **Ziff Davis** [^35]. The site serves 500 million unique visitors annually [^86]. Ookla's privacy policy discloses collection of data "that may be considered personally identifiable" and sharing it with "certain internet providers, hardware manufacturers, and industry regulators" [^12]. A $5 ad-free option is available, implying the free version carries advertising [^12]. Ookla's business model includes enterprise data analytics products [^36].
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | ND | 0.0 | **0.0** | — | L | Speed test tool. No values framing. |
+| Art. 1 | ND | 0.0 | **0.0** | — | L | Available to all. |
+| Art. 2 | ND | 0.0 | **0.0** | — | L | No accessibility statement found. |
+| Art. 12 | ND | −0.2 | **−0.2** | P | M | Collects IP addresses, ISP info, location data, device data [^37]. Shares with ISPs, hardware manufacturers, regulators [^12]. Business model partially built on aggregating network data [^36]. Ad-supported [^86]. CCPA compliance exists [^87], but data collection is functionally extensive. |
+| Art. 19 | ND | 0.0 | **0.0** | — | L | No expression dimension. |
+| Art. 20 | ND | ND | **ND** | | | No community features. |
+| Art. 26 | ND | 0.0 | **0.0** | — | L | Speed guides exist [^88]. Minimal. |
+| Art. 28 | ND | 0.0 | **0.0** | — | L | No signal. |
+| Art. 29 | ND | 0.0 | **0.0** | — | L | ToS exists [^35]. Standard Ziff Davis terms. |
+| Art. 30 | ND | 0.0 | **0.0** | — | L | Standard protections. |
+
+```
+AGGREGATES (EN-5):
+  Mean (excl. ND):  −0.02
+  Max:               0.0  (multiple)
+  Min:              −0.2  (Art. 12)
+  ND:                1/10
+  Negatives:         1
+  Class:             NEUTRAL (lower edge) ✅
+  Note:              More negative than EN-2 (timeanddate, 0.00) due
+                     to heavier data monetization model. The EN-2
+                     vs EN-5 gradient is -0.1 vs -0.2 on Art. 12 —
+                     confirming the methodology can distinguish between
+                     light tracking (EN-2) and heavier data
+                     monetization (EN-5).
+```
+
+---
+
+## EX-3: `https://www.booking.com`
+
+```
+Content Type:    LP (Landing) | Secondary: AD (Advertising/Commerce)
+Channel Weights: E=0.3, S=0.7
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+**Booking.com** is one of the world's largest online travel agencies, headquartered in Amsterdam, serving over 45 million monthly EU recipients [^27], and is a subsidiary of Booking Holdings [^89]. The site's **dark patterns** have been extensively documented — urgency timers, artificial scarcity ("Only 2 rooms left!"), social proof manipulation ("43 people looking at this") [^14][^28] — and have attracted a **class-action lawsuit** by Dutch consumer groups for "misleading customers by illegally using dark patterns" including "fake discounts, incomplete prices, and made-up scarcity" [^1]. The privacy notice discloses extensive data collection [^3].
+
+**Domain Context Profile:**
+
+| Element | Mod. | Notes |
+|---|---|---|
+| Privacy | −0.10 | Comprehensive notice but discloses extensive data collection and sharing [^3]. |
+| Community | +0.05 | Anti-discrimination community guidelines exist [^15]. |
+| Ad/tracking | −0.10 | Retargeting, cross-site tracking, extensive cookie use [^3]. |
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | ND | −0.2 | **−0.1** | P | M | Urgency-driven UX treats user as conversion target. Dark patterns instrumentalize attention [^28][^90]. Less aggressive than Temu (no gamified consent). |
+| Art. 1 | ND | 0.0 | **0.0** | — | L | Available to all. No equality dimension beyond access. |
+| Art. 2 | ND | 0.1 | **0.1** | P | L | Anti-discrimination community guidelines: "Behavior promoting violence, discriminatory language, or hatred... is unacceptable" [^15]. |
+| Art. 12 | ND | −0.5 | **−0.4** | P | H | Extensive data collection: browsing behavior, search history, location, device data, booking history [^3]. Cross-site tracking for retargeting. Privacy notice is itself the primary evidence — it honestly describes invasive practices. Less extreme than Temu (no biometric/contact list collection) but still deeply negative. |
+| Art. 19 | ND | 0.0 | **0.0** | — | L | Not relevant to a booking platform. Reviews exist but are curated/filtered. |
+| Art. 20 | ND | ND | **ND** | | | No community/assembly dimension. |
+| Art. 26 | ND | 0.0 | **0.0** | — | L | No educational content. |
+| Art. 28 | ND | −0.1 | **−0.1** | P | L | Dark patterns contribute to manipulative commercial norms. Subject of regulatory action and litigation [^1]. |
+| Art. 29 | ND | −0.3 | **−0.2** | P | M | Dark patterns = shifting responsibility to user. "You missed a deal" framing blames user for platform's artificial scarcity [^14]. "Fake discounts, incomplete prices" [^1]. Complex return policies. |
+| Art. 30 | ND | −0.2 | **−0.2** | P | M | Manipulative consent architecture undermines informed decision-making. Retargeting follows users across the web. Class-action lawsuit alleges systematic deception [^1]. |
+
+```
+AGGREGATES (EX-3):
+  Mean (excl. ND):  −0.10
+  Max:               0.1  (Art. 2)
+  Min:              −0.4  (Art. 12)
+  ND:                1/10
+  Negatives:         4
+  Class:             MILD-TO-MODERATE NEGATIVE ✅
+  EX-1 divergence: Art. 12: |-0.4 − (-0.5)| = 0.1 < 0.15 ✅
+                   Art. 29: |-0.2 − (-0.3)| = 0.1 < 0.15 ✅
+  Note:             Fewer negatives than Temu (4 vs 7) because
+                    Booking.com doesn't gamify consent and doesn't
+                    collect biometric data. But Art. 12 still deeply
+                    negative. Anti-discrimination guidelines (Art. 2:
+                    +0.1) provide a rare positive signal in the EX set.
+```
+
+---
+
+## EX-4: `https://gab.com`
+
+```
+Content Type:    LP (Landing) | Secondary: CO (Community)
+Channel Weights: E=0.3, S=0.7
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+**Gab** is "an American alt-tech microblogging and social networking service" [^7] that "champions free speech, individual liberty and the free flow of information online" [^29]. "Widely described as a haven for far-right and alt-right users," Gab "has attracted users and groups who have been banned from other social media platforms" [^7]. The homepage promotes "family, faith and free speech" [^4]. Moderation exists for "direct threats, porn, doxxing, fedposting" [^13]. Privacy policy [^30] and CCPA compliance [^31] are published. The platform markets itself as an alternative to "Big Tech" [^9].
+
+**Domain Context Profile:**
+
+| Element | Mod. | Notes |
+|---|---|---|
+| Privacy | +0.05 | Privacy policy exists [^30]. Markets as privacy-respecting alternative to Big Tech. No mainstream ad-tech. |
+| Mission | +0.05 | Explicit free speech mission [^9]. |
+| Community | −0.10 | Permissive moderation tolerates extremist content [^7]. |
+| Ownership | −0.05 | Gab AI Inc., private company, single-founder control [^31]. |
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | −0.1 | −0.2 | **−0.2** | F,P | M | Platform ethos prioritizes expression over dignity. "Family, faith and free speech" framing excludes secular, non-traditional family perspectives [^4]. Unmoderated hostile content visible on public feed undermines dignity framework. |
+| Art. 1 | 0.0 | −0.1 | **0.0** | — | L | "All are welcome" [^29] but community norms create hostile environment for many groups. Practical equality undermined by tolerance of discriminatory content. Net neutral. |
+| Art. 2 | −0.2 | −0.2 | **−0.3** | P | M | Permissive moderation tolerates discriminatory content. Platform described as "haven for far-right and alt-right users" [^7]. On-domain public content may include visible discrimination against protected groups. |
+| Art. 12 | ND | 0.2 | **0.2** | P | L | Markets privacy as feature. No mainstream ad-tech network. Alternative to Big Tech surveillance [^9]. Privacy policy and CCPA compliance exist [^30][^31]. Mild positive — interesting contrast with community negatives. |
+| Art. 19 | 0.5 | 0.3 | **0.5** | A,P | H | **Expected positive outlier.** Gab's entire identity is Art. 19 maximalism. "Speaks Freely" [^4]. Minimal content removal beyond illegal material [^13]. No algorithmic suppression. Explicit free-speech commitment [^9]. Users "control their social media experience on their own terms" [^9]. This genuinely implements freedom of expression — the score reflects structural reality regardless of the content produced. |
+| Art. 20 | 0.1 | 0.2 | **0.2** | P | L | Platform enables group formation and assembly. Open registration. Community features. |
+| Art. 26 | ND | 0.0 | **0.0** | — | L | No educational dimension. |
+| Art. 28 | −0.1 | −0.1 | **−0.1** | F | L | Tolerance of extremist content arguably undermines just social order. But "just order" is contested — Gab would argue its model IS more just. Scored conservatively. |
+| Art. 29 | −0.2 | −0.2 | **−0.3** | P | M | Minimal moderation = minimal community responsibility enforcement [^13]. Platform abdicates duty to prevent harm beyond bare illegality. Users are told to block/mute rather than platform enforcing norms [^32]. |
+| Art. 30 | −0.2 | −0.2 | **−0.3** | P | M | Permissive policy enables use of platform to undermine others' rights (harassment, hate speech — observable on public-facing pages). Platform structures do not prevent this beyond ToS liability protections [^24]. |
+
+```
+AGGREGATES (EX-4):
+  Mean:         −0.03
+  Max:           0.5  (Art. 19)
+  Min:          −0.3  (Art. 2, Art. 29, Art. 30)
+  Negatives:     5
+  Class:         NEUTRAL-TO-MILD NEGATIVE ✅
+  
+  CRITICAL CALIBRATION TESTS:
+    Art. 19 ≥ +0.2?   YES (+0.5)  ✅
+    Art. 2  ≤ −0.1?   YES (−0.3)  ✅
+    Art. 29 ≤ −0.1?   YES (−0.3)  ✅
+  
+  MIXED PROFILE VALIDATED: Gab produces both +0.5 and −0.3
+  within the same evaluation. This is the only calibration URL
+  where the maximum score and minimum score differ by > 0.5.
+  The mean alone (−0.03) conceals extreme internal tension.
+```
+
+---
+
+## EX-5: `https://english.news.cn` (Xinhua)
+
+```
+Content Type:    LP (Landing) | Secondary: ED (Editorial)
+Channel Weights: E=0.3, S=0.7
+Eval Depth:      SPOT (Level 1 — Calibration)
+```
+
+**Xinhuanet** is "a state media company controlled by Xinhua News Agency" [^55], which is itself "the official state news agency of the People's Republic of China" and "a ministry-level institution" [^10]. The site "provides authoritative and timely global news and information service 24 hours a day" with approximately "15,000 media publications per day" in 11 languages [^25]. Government affiliation is stated on-domain.
+
+**Domain Context Profile:**
+
+| Element | Mod. | Notes |
+|---|---|---|
+| Mission | −0.05 | "Authoritative" framing implies state-endorsed truth [^25]. |
+| Ed. code | −0.10 | No editorial independence from state. Ministry-level institutional status [^10]. |
+| Ownership | −0.15 | Chinese government, ministry-level [^10]. Strongest form of state control. |
+| Access | +0.10 | Free, 11 languages, global reach [^25]. |
+| Ad/tracking | −0.05 | Some tracking. Privacy policy primarily for app [^56]. |
+
+**Scoring Matrix:**
+
+| Section | E Ch. | S Ch. | Final | Dir | Ev | Notes |
+|---|---|---|---|---|---|---|
+| Preamble | −0.1 | 0.1 | **0.0** | F | M | International coverage includes rights-adjacent language but filtered through state-interest lens. Free access provides structural baseline. |
+| Art. 1 | −0.1 | 0.1 | **0.0** | F | L | Coverage of equality topics filtered through state priorities. |
+| Art. 2 | −0.2 | 0.0 | **−0.2** | F | M | Selective coverage of discrimination: reports extensively on discrimination in Western countries and allied nations, minimal coverage of domestic issues. Observable pattern from on-domain editorial emphasis. |
+| Art. 12 | 0.1 | −0.1 | **−0.1** | C,P | L | Covers Chinese government's privacy regulation efforts (positive framing) [^68][^69]. Own privacy practices are standard. State media may have data-sharing obligations to state entities (inferred, L evidence). |
+| Art. 19 | −0.4 | −0.2 | **−0.5** | F,P | H | **Critical dimension.** State news agency = structural editorial constraint at its most complete. Ministry-level status [^10] means direct government control over editorial output. Content consistently aligns with Chinese government positions. This is not inference — it is the institutional design. The funder IS the government. Art. 19 score reflects structural incompatibility between state editorial control and "freedom to hold opinions without interference." |
+| Art. 20 | −0.1 | 0.0 | **−0.1** | F | L | Coverage of assembly/civil society is directionally selective. |
+| Art. 26 | 0.1 | 0.1 | **0.1** | C,P | L | Informational content in 11 languages. Free access. Educational value compromised by institutional constraints. |
+| Art. 28 | −0.2 | 0.0 | **−0.2** | F | M | Editorial line advocates for alternative international order emphasizing state sovereignty over universal rights. |
+| Art. 29 | −0.1 | 0.0 | **−0.1** | F | L | Accountable to state, not to audience. No visible corrections policy, ombudsman, or reader accountability. |
+| Art. 30 | −0.2 | 0.0 | **−0.2** | F | M | On-domain content framing may justify restriction of dissent, internet freedom limitations, and minority expression constraints as security or stability measures. |
+
+```
+AGGREGATES (EX-5):
+  Mean:         −0.13
+  Max:           0.1  (Art. 26)
+  Min:          −0.5  (Art. 19)
+  Negatives:     7
+  Class:         MODERATE NEGATIVE ✅
+  
+  CROSS-CALIBRATION WITH EX-2 (RT):
+    |EX-2 mean − EX-5 mean| = |−0.09 − (−0.13)| = 0.04 < 0.10 ✅
+    |EX-2 Art.19 − EX-5 Art.19| = |−0.4 − (−0.5)| = 0.1 < 0.15 ✅
+    
+  Note: Xinhua scores slightly more negative than RT (−0.13 vs −0.09)
+  because Xinhua is the ACTUAL state agency (ministry-level), while
+  RT is state-FUNDED but organizationally separate. This 0.04 gap
+  is small but directionally correct.
+```
+
+---
+
+## Full 15-URL Calibration Summary
+
+### Master Table
+
+| Slot | URL | Type | W.Mean | Max | Min | Neg. | ND | Class |
+|---|---|---|---|---|---|---|---|---|
+| **EP-3** | hrw.org | HR/MI | **+0.64** | +0.8 | +0.5 | 0 | 0 | Strong pos. |
+| **EP-1** | amnesty.org | HR/MI | **+0.62** | +0.8 | +0.4 | 0 | 0 | Strong pos. |
+| **EP-2** | eff.org/deeplinks | ED/HR | **+0.60** | +0.9 | +0.4 | 0 | 0 | Strong pos. |
+| **EP-4** | propublica.org | ED | **+0.52** | +0.8 | +0.3 | 0 | 0 | Strong pos. |
+| **EP-5** | archive.org | MI/PR | **+0.49** | +0.8 | +0.2 | 0 | 0 | Mod. pos. |
+| **EN-4** | wikipedia/Oxygen | ED | **+0.12** | +0.2 | 0.0 | 0 | 0 | Neutral |
+| **EN-1** | weather.gov | LP/PR | **+0.12** | +0.2 | +0.1 | 0 | 1 | Neutral |
+| **EN-3** | xe.com | LP/PR | **+0.00** | +0.1 | −0.1 | 1 | 1 | Neutral |
+| **EN-2** | timeanddate.com | LP/PR | **+0.00** | +0.1 | −0.1 | 1 | 1 | Neutral |
+| **EN-5** | speedtest.net | PR | **−0.02** | 0.0 | −0.2 | 1 | 1 | Neutral |
+| **EX-4** | gab.com | LP/CO | **−0.03** | +0.5 | −0.3 | 5 | 0 | Neut.–neg. |
+| **EX-2** | rt.com | LP/ED | **−0.09** | +0.1 | −0.4 | 7 | 0 | Neut.–neg. |
+| **EX-3** | booking.com | LP/AD | **−0.10** | +0.1 | −0.4 | 4 | 1 | Mild neg. |
+| **EX-5** | xinhuanet.com | LP/ED | **−0.13** | +0.1 | −0.5 | 7 | 0 | Mod. neg. |
+| **EX-1** | temu.com | LP/AD | **−0.18** | 0.0 | −0.5 | 7 | 1 | Mod. neg. |
+
+### Distribution Visualization
+
+```
+        EX              EN            EP
+    ◄──────────►  ◄──────────►  ◄────────────────────►
+  -0.2  -0.1   0.0  +0.1  +0.2  +0.3  +0.4  +0.5  +0.6  +0.7
+
+  EX-1 ████████████████░░  (-0.18)
+  EX-5 ██████████████░░░░  (-0.13)
+  EX-3 █████████████░░░░░  (-0.10)
+  EX-2 ████████████░░░░░░  (-0.09)
+  EX-4 ███████████░░░░░░░  (-0.03)
+  ────────────────────────────────────
+  EN-5 ░░░░░░░░░░░█░░░░░  (-0.02)
+  EN-2 ░░░░░░░░░░░░█░░░░  ( 0.00)
+  EN-3 ░░░░░░░░░░░░█░░░░  ( 0.00)
+  EN-1 ░░░░░░░░░░░░░█░░░  (+0.12)
+  EN-4 ░░░░░░░░░░░░░█░░░  (+0.12)
+  ────────────────────────────────────
+  EP-5 ░░░░░░░░░░░░░░░░░░░░░░░░████  (+0.49)
+  EP-4 ░░░░░░░░░░░░░░░░░░░░░░░░░░████  (+0.52)
+  EP-2 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░████  (+0.60)
+  EP-1 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░████  (+0.62)
+  EP-3 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░████  (+0.64)
+```
+
+---
+
+## Validation Checks
+
+### Class Ordering
+
+| Test | Condition | Result |
+|---|---|---|
+| All EP > all EN? | EP min (0.49) > EN max (0.12) | **0.49 > 0.12 ✅** |
+| All EN > all EX? | EN min (−0.02) > EX max (−0.03) | **−0.02 > −0.03 ✅** (margin: 0.01) |
+
+### Class Mean Thresholds
+
+| Class | Mean | Threshold | Result |
+|---|---|---|---|
+| EP | +0.57 | > +0.35 | ✅ |
+| EN | +0.04 | within ±0.12 | ✅ |
+| EX | −0.11 | < +0.05 | ✅ |
+
+### Within-Class Consistency
+
+| Test | Divergence | Threshold | Result |
+|---|---|---|---|
+| EP-1 vs EP-3 (HR orgs) | 0.02 | < 0.15 | ✅ |
+| EX-2 vs EX-5 (state media) | 0.04 | < 0.10 | ✅ |
+| EX-1 vs EX-3 (dark patterns) | 0.08 | < 0.12 | ✅ |
+
+### Negative Score Distribution
+
+| Metric | Value | Threshold | Result |
+|---|---|---|---|
+| Total negatives across all 15 URLs | **31** | ≥ 25 | ✅ |
+| Total negatives across EX sites | **30** | ≥ 15 | ✅ |
+| Any EX site with 0 negatives? | No | — | ✅ |
+| Minimum negatives per EX site | 4 (EX-3) | ≥ 2 | ✅ |
+
+### Gab Critical Tests (EX-4)
+
+| Test | Score | Threshold | Result |
+|---|---|---|---|
+| Art. 19 must be positive | +0.5 | ≥ +0.2 | ✅ |
+| Art. 2 must be negative | −0.3 | ≤ −0.1 | ✅ |
+| Art. 29 must be negative | −0.3 | ≤ −0.1 | ✅ |
+
+### Art. 12 (Privacy) Gradient
+
+| URL | Art. 12 | Type | Expected Order |
+|---|---|---|---|
+| EFF (EP-2) | **+0.9** | Non-profit, privacy-by-design | ↑ Best |
+| Archive (EP-5) | **+0.5** | Non-profit, no ads, no tracking | |
+| HRW (EP-3) | **+0.5** | Non-profit, some analytics | |
+| ProPublica (EP-4) | **+0.5** | Non-profit, some ads | |
+| Amnesty (EP-1) | **+0.5** | Non-profit, fundraising data | |
+| Wikipedia (EN-4) | **+0.2** | No ads, Wikimedia privacy | |
+| Weather.gov (EN-1) | **+0.2** | Government, no commercial tracking | |
+| Xe (EN-3) | **−0.1** | Commercial, light tracking | |
+| Timeanddate (EN-2) | **−0.1** | Commercial, light tracking | |
+| Speedtest (EN-5) | **−0.2** | Commercial, data monetization | |
+| Gab (EX-4) | **+0.2** | Markets privacy, no ad-tech | ← Outlier |
+| RT (EX-2) | **−0.1** | State media, standard tracking | |
+| Xinhua (EX-5) | **−0.1** | State media, standard tracking | |
+| Booking (EX-3) | **−0.4** | Extensive tracking, retargeting | |
+| Temu (EX-1) | **−0.5** | Biometric, cross-device, broad sharing | ↓ Worst |
+
+The gradient is largely monotonic, with one notable **outlier**: **Gab (EX-4) at +0.2 on Art. 12** despite being in the EX class. This validates the mixed-profile design — Gab's privacy posture is genuinely better than many neutral sites, even as its community norms are worse. The methodology correctly captures this without forcing all EX scores to be negative on all dimensions.
+
+---
+
+## Analysis
+
+### 1. The Boundary Condition: EN-5 vs. EX-4
+
+The tightest class boundary is between **EN-5 (Speedtest, −0.02)** and **EX-4 (Gab, −0.03)** — a margin of only **0.01.** This reveals an important property of the methodology:
+
+**Mean HCB alone cannot distinguish between a genuinely neutral site (low signal, low variance) and a highly polarized site (high signal, high variance).** Both produce means near zero.
+
+| Metric | EN-5 (Speedtest) | EX-4 (Gab) |
+|---|---|---|
+| Mean | −0.02 | −0.03 |
+| Max | 0.0 | **+0.5** |
+| Min | −0.2 | **−0.3** |
+| Range | 0.2 | **0.8** |
+| Negatives | 1 | **5** |
+| Std Dev (approx.) | 0.06 | **0.26** |
+
+The solution is to supplement the mean with a **volatility metric**. Proposed for v3.2:
+
+```
+HCB Volatility = Standard deviation of non-ND scores
+  Low volatility  (σ < 0.10): Uniformly neutral or uniformly positive
+  Medium volatility (σ 0.10-0.20): Some directional spread
+  High volatility (σ > 0.20): Mixed profile — rights tensions present
+```
+
+Speedtest would be classified as **Neutral, Low Volatility** while Gab would be **Neutral Mean, High Volatility** — a fundamentally different and more dangerous profile.
+
+### 2. The Non-Profit Privacy Ceiling
+
+All five EP sites scored between **+0.5 and +0.9 on Art. 12 (Privacy)**. This creates a clear finding:
+
+> **Non-profit ownership is the strongest single predictor of positive Art. 12 scores in the calibration set.**
+
+No commercial site scored above +0.2 on Art. 12. The ownership model creates a structural ceiling: commercial sites monetize data, which inherently limits Art. 12 scores regardless of editorial privacy coverage. This validates the v3 Signal Channel separation — editorial coverage of privacy (E channel) cannot fully compensate for structural data monetization (S channel).
+
+### 3. State Media Convergence
+
+EX-2 (RT) and EX-5 (Xinhua) converge tightly on both the mean (−0.09 vs. −0.13, Δ = 0.04) and on Art. 19 (−0.4 vs. −0.5, Δ = 0.1). This validates the **structural scoring principle**: state editorial control produces similar Art. 19 outcomes regardless of the specific content or national context. The methodology successfully identifies the institutional constraint as the primary signal rather than requiring article-by-article content analysis.
+
+### 4. Dark Pattern Gradient
+
+EX-1 (Temu) and EX-3 (Booking) both exhibit dark patterns but score differently:
+
+| Metric | Temu (EX-1) | Booking (EX-3) |
+|---|---|---|
+| Mean | −0.18 | −0.10 |
+| Art. 12 | −0.5 | −0.4 |
+| Art. 29 | −0.3 | −0.2 |
+| Negatives | 7 | 4 |
+
+Booking scores less negative because:
+- No gamified consent (spin-to-win)
+- No biometric data collection
+- Anti-discrimination community guidelines (+0.1 on Art. 2)
+- EU regulatory compliance (DSA page)
+
+The methodology successfully distinguishes between **aggressive dark patterns** (Temu) and **moderate dark patterns** (Booking) rather than treating all manipulative UX as equivalent.
+
+### 5. The Practice-Only EP: Archive.org
+
+Archive.org is the only EP site where every score carries a **Practice (P)** directionality marker and zero carry **Advocacy (A)**. It proves that:
+
+> **Rights can be advanced through infrastructure alone, without explicit advocacy.**
+
+The Internet Archive never says "we believe in Article 26 of the UDHR." It just builds a free library for everyone. This produces an Art. 26 score of **+0.8** — the highest single score in the EP set, tied with EFF's Art. 12. The methodology correctly credits structural implementation as equally valid to verbal advocacy.
+
+---
+
+## Updated Implementation Checklist
+
+```
+☑ Original 6 URLs baselined (Batch 1)
+☑ 9 new URLs baselined (Batch 2 — this document)
+☑ Full 15-URL calibration set complete
+☑ Class ordering validated (EP > EN > EX)
+☑ Class mean thresholds met
+☑ Within-class consistency verified (3/3 pairs pass)
+☑ Negative distribution validated (31 total, ≥4 per EX site)
+☑ Gab critical tests passed (Art. 19 positive, Art. 2/29 negative)
+☑ State media cross-calibration passed
+☑ Art. 12 gradient validated
+☑ Boundary condition identified and volatility metric proposed
+
+☐ First operational calibration run (next batch)
+☐ Volatility metric formalized (proposed for v3.2)
+☐ 12-month calibration history tracking (ongoing)
+```
+
+[^1]: [Booking.com sued over dark patterns | Cybernews](https://cybernews.com/cybercrime/booking-com-sued-misleading-consumers-dark-patterns/) (4%)
+[^2]: [About the Internet Archive](https://archive.org/about/) (4%)
+[^3]: [Privacy & Cookie Statement. | Booking.com](https://www.booking.com/content/privacy.html) (3%)
+[^4]: [Gab - Speak Freely](https://gab.com/) (3%)
+[^5]: [About Us - ProPublica](https://www.propublica.org/about) (3%)
+[^6]: [Wikimedia Foundation Privacy Policy](https://foundation.wikimedia.org/wiki/Policy:Privacy_policy) (3%)
+[^7]: [Gab (social network) - Wikipedia](https://en.wikipedia.org/wiki/Gab_(social_network)) (3%)
+[^8]: [Internet Archive Access Policy – Internet Archive Help Center](https://help.archive.org/help/internet-archive-access-policy/) (3%)
+[^9]: [Speak Freely - Gab](https://gab.com/about) (3%)
+[^10]: [Xinhua News Agency - Wikipedia](https://en.wikipedia.org/wiki/Xinhua_News_Agency) (3%)
+[^11]: [Internet Archive Terms of Use](https://archive.org/download/05132021/Internet%20Archive%20Terms%20of%20Use.mhtml) (3%)
+[^12]: [Speedtest by Ookla - The Global Broadband Speed Test](https://www.speedtest.net/settings) (2%)
+[^13]: [Moderating and Reporting Gab Posts - Gab Help](https://help.gab.com/article/gab-social-moderation) (2%)
+[^14]: [Bad UX: How Booking.com deceives clients | Hacker News](https://news.ycombinator.com/item?id=15152155) (2%)
+[^15]: [Our community guidelines - Booking.com](https://www.booking.com/trust-and-safety/guidelines.html) (2%)
+[^16]: [Human Rights Watch | Defending Human Rights Worldwide](https://www.hrw.org/) (2%)
+[^17]: [Wayback Machine - Wikipedia](https://en.wikipedia.org/wiki/Wayback_Machine) (2%)
+[^18]: [Internet Archive: Digital Library of Free & Borrowable Texts, Movies...](https://archive.org/) (2%)
+[^19]: [Community Webs Receives $750,000 Grant ... - Internet Archive Blogs](https://blog.archive.org/2024/02/01/community-webs-receives-750000-grant-to-expand-community-archiving-by-public-libraries/) (2%)
+[^20]: [Global Privacy Notice - Xe Help Centre](https://help.xe.com/hc/en-gb/articles/19592734245009-Global-Privacy-Notice) (2%)
+[^21]: [ProPublica Programs Are Helping Diverse Candidates](https://www.propublica.org/article/propublica-programs-are-helping-diverse-candidates-break-into-newsrooms-here-are-their-inspiring-stories) (2%)
+[^22]: [Print Disability Access - Internet Archive Help Center](https://help.archive.org/help/print-disability-access-general-information/) (2%)
+[^23]: [Accessibility - Human Rights Watch](https://www.hrw.org/about/accessibility) (2%)
+[^24]: [Website Terms of Service - Gab](https://gab.com/about/tos) (2%)
+[^25]: [About us - Xinhua](https://english.news.cn/20230130/3f2ba4b7cd214a209dda790ddbdcb620/c.html) (2%)
+[^26]: [Human Rights Watch - Wikipedia](https://en.wikipedia.org/wiki/Human_Rights_Watch) (1%)
+[^27]: [Booking.com: Digital Services Act](https://www.booking.com/content/dsa.html) (1%)
+[^28]: [Featured Brands - Booking.com - Deceptive Patterns](https://www.deceptive.design/brands/booking-com) (1%)
+[^29]: [Log in - Gab Social](https://gab.com/about/guidelines) (1%)
+[^30]: [Privacy Policy - Gab - Speak Freely](https://gab.com/about/privacy) (1%)
+[^31]: [Terms of Service - Gab Social](https://gab.com/about/ccpa) (1%)
+[^32]: [Gab Social User Account Moderation - Gab Help](https://help.gab.com/faq/basics) (1%)
+[^33]: [Wikipedia:Core content policies - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Core_content_policies) (1%)
+[^34]: [Wikipedia:WikiProject Accessibility](https://en.wikipedia.org/wiki/Wikipedia:WikiProject_Accessibility) (1%)
+[^35]: [Ookla ® Terms Of Use](https://www.speedtest.net/about/terms) (1%)
+[^36]: [Enterprise | Ookla®](https://www.ookla.com/enterprise) (1%)
+[^37]: [Ookla Privacy Policy](https://www.speedtest.net/about/privacy) (1%)
+[^38]: [Code of Ethics - ProPublica](https://www.propublica.org/code-of-ethics) (1%)
+[^39]: [How You or Your Newsroom Can Republish ProPublica's Stories](https://www.propublica.org/article/how-you-or-your-newsroom-can-republish-propublicas-stories-515) (1%)
+[^40]: [ProPublica - Wikipedia](https://en.wikipedia.org/wiki/ProPublica) (1%)
+[^41]: [Privacy Policy and Other Terms - ProPublica](https://www.propublica.org/legal) (1%)
+[^42]: [A Free Press Works for All of Us - ProPublica](https://www.propublica.org/article/a-free-press-works-for-all-of-us) (1%)
+[^43]: [Impact — ProPublica](https://www.propublica.org/impact) (1%)
+[^44]: [What an Unregulated School Voucher Program Looks](https://www.propublica.org/article/arizona-private-school-vouchers-no-transparency) (1%)
+[^45]: [Qualifying Authorities for Print-Disabled Access - Archive.org](https://archive.org/details/print_disability_access) (1%)
+[^46]: [Independent Living Begins in Childhood | Human Rights Watch](https://www.hrw.org/news/2026/02/23/independent-living-begins-in-childhood) (1%)
+[^47]: [Human Rights Watch submission to the UN Special](https://www.hrw.org/news/2024/01/31/human-rights-watch-submission-un-special-rapporteur-violence-against-women-and) (1%)
+[^48]: [Advertising - ProPublica](https://www.propublica.org/advertising) (1%)
+[^49]: [Wikipedia:Manual of Style/Accessibility - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Manual_of_Style/Accessibility) (1%)
+[^50]: [Hachette v. Internet Archive - Wikipedia](https://en.wikipedia.org/wiki/Hachette_v._Internet_Archive) (1%)
+[^51]: [XE.com - Wikipedia](https://en.wikipedia.org/wiki/XE.com) (1%)
+[^52]: [Xe.com Cookie Policy – Xe Help Centre](https://help.xe.com/hc/en-gb/articles/4408642862865-Xe-com-Cookie-Policy) (1%)
+[^53]: [Wikipedia:NPOV means neutral editing, not neutral content - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:NPOV_means_neutral_editing,_not_neutral_content) (1%)
+[^54]: [Wikipedia:Neutral point of view](https://en.wikipedia.org/wiki/Wikipedia:Neutral_point_of_view) (1%)
+[^55]: [Xinhuanet - Wikipedia](https://en.wikipedia.org/wiki/Xinhuanet) (1%)
+[^56]: [Privacy Policy](https://xhnews-static.xinhuaxmt.com/privacypolicy/google/index.html) (1%)
+[^57]: [Careers](https://www.hrw.org/careers) (1%)
+[^58]: [About Us | Human Rights Watch](https://www.hrw.org/about-us) (1%)
+[^59]: [Disability Rights | Human Rights Watch](https://www.hrw.org/topic/disability-rights) (1%)
+[^60]: [Financials | Human Rights Watch](https://www.hrw.org/financials) (1%)
+[^61]: [HRW Mission Statement](https://www.hrw.org/video-photos/interactive/2018/09/21/hrw-mission-statement) (1%)
+[^62]: [Data Privacy Is a Human Right](https://www.hrw.org/news/2018/04/19/data-privacy-human-right) (1%)
+[^63]: [Reports | Human Rights Watch](https://www.hrw.org/publications) (< 1%)
+[^64]: [Why Disability Inclusion Matters](https://www.hrw.org/news/2023/11/28/why-disability-inclusion-matters) (< 1%)
+[^65]: [LGBT Rights](https://www.hrw.org/topic/lgbt-rights) (< 1%)
+[^66]: [UK Encryption Order Threatens Global Privacy Rights](https://www.hrw.org/news/2025/02/14/uk-encryption-order-threatens-global-privacy-rights) (< 1%)
+[^67]: [Impact | Human Rights Watch](https://www.hrw.org/impact) (< 1%)
+[^68]: [China online service providers improve privacy](http://www.xinhuanet.com/english/2017-09/24/c_136634592.htm) (< 1%)
+[^69]: [China to regulate apps' collection of personal](http://www.xinhuanet.com/english/2019-05/07/c_138040524.htm) (< 1%)
+[^70]: [Contact Us](https://www.hrw.org/contact-us) (< 1%)
+[^71]: [About Xe | Xe FAQ](https://www.xe.com/faq/topic/about-xe/) (< 1%)
+[^72]: [Understanding your data rights: what you can request and how](https://help.xe.com/hc/en-gb/articles/34897227019281-Understanding-your-data-rights-what-you-can-request-and-how) (< 1%)
+[^73]: [Terms of Use - Xe](https://www.xe.com/en-us/legal/) (< 1%)
+[^74]: [Technology and Rights](https://www.hrw.org/topic/technology-and-rights) (< 1%)
+[^75]: [Human Rights Watch Submission to Olympic Agenda](https://www.hrw.org/news/2014/04/11/human-rights-watch-submission-olympic-agenda-2020) (< 1%)
+[^76]: [About Our Research | Human Rights Watch](https://www.hrw.org/about/about-us/about-our-research) (< 1%)
+[^77]: [Donate to ProPublica](https://www.propublica.org/donate) (< 1%)
+[^78]: [Supporters — ProPublica](https://www.propublica.org/supporters) (< 1%)
+[^79]: [Internet Archive - Wikipedia](https://en.wikipedia.org/wiki/Internet_Archive) (< 1%)
+[^80]: [Internet Archive General Information](https://help.archive.org/help/internet-archive-general-information/) (< 1%)
+[^81]: [Internet Archive and Partners Receive Press Forward Funding to Support ...](https://blog.archive.org/2025/07/16/internet-archive-and-partners-receive-press-forward-funding-to-support-preserving-local-news/) (< 1%)
+[^82]: [Internet Archive's Terms of Use, Privacy Policy, and Copyright Policy](https://archive.org/about/terms.php) (< 1%)
+[^83]: [How to Apply — ProPublica](https://www.propublica.org/how-to-apply/local-reporting-network) (< 1%)
+[^84]: [Policing Patient Privacy Archives - ProPublica](https://www.propublica.org/series/patient-privacy) (< 1%)
+[^85]: [Privacy Tools: Opting Out from Data Brokers - ProPublica](https://www.propublica.org/article/privacy-tools-opting-out-from-data-brokers) (< 1%)
+[^86]: [Speedtest Advertising](https://www.speedtest.net/about/advertising) (< 1%)
+[^87]: [California Consumer Privacy Act](https://www.speedtest.net/about/ccpa) (< 1%)
+[^88]: [Speedtest Guides - Get the Most from Your Internet](https://www.speedtest.net/about/knowledge/guides) (< 1%)
+[^89]: [Booking.com](https://en.wikipedia.org/wiki/Booking.com) (< 1%)
+[^90]: [Articles - How Booking.com manipulates you. - Deceptive Patterns](https://www.deceptive.design/articles/how-bookingcom-manipulates-you) (< 1%)
+[^91]: [Human Rights Watch Privacy Policy | Human Rights](https://www.hrw.org/privacy-policy) (< 1%)
+[^92]: [Gaza: Power Cuts Harm People with Disabilities (Accessible)](https://www.hrw.org/video-photos/video/2021/01/12/gaza-power-cuts-harm-people-disabilities-accessible) (< 1%)
+[^93]: [Steal Our Stories - ProPublica](https://www.propublica.org/steal-our-stories) (< 1%)
+[^94]: [Google Has Quietly Dropped Ban on Personally](https://www.propublica.org/article/google-has-quietly-dropped-ban-on-personally-identifiable-web-tracking) (< 1%)
+[^95]: [Federal Patient Privacy Law Does Not Cover Most Period-Tracking ...](https://www.propublica.org/article/period-app-privacy-hipaa) (< 1%)
+[^96]: [How to Protect Your Digital Privacy in the Era of Public Shaming](https://www.propublica.org/article/how-to-protect-your-digital-privacy-in-the-era-of-public-shaming) (< 1%)
+[^97]: [Publishing Partners](https://www.propublica.org/partners/) (< 1%)
+[^98]: [Impact - ProPublica](https://www.propublica.org/impact/local-reporting-network) (< 1%)

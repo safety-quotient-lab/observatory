@@ -1,0 +1,287 @@
+UDHR Website Compatibility Evaluation -- Methodology v2
+========================================================
+
+Version:  2.0
+Date:     2026-02-23
+Status:   Superseded by v3. Used for kashifshah-net-v2.txt trial evaluation.
+
+Supersedes: methodology-v1.txt
+Superseded by: methodology-v3.txt
+
+================================================================================
+
+CHANGES FROM v1
+---------------
+
+  [x] Dimension-level scoring: All 31 UDHR sections scored per site
+  [x] Clearer separation of "no data" (ND) vs. "genuinely neutral" (0.0)
+  [x] Evidence strength indicator paired with each score
+  [x] Consistent granularity: same 31-section matrix for all sites
+  [x] Source constraint: Only the site's own content is evaluated
+      (v1 used external reports from HRW, Amnesty, RDR, etc.)
+  [ ] Formal weighting between UDHR articles (TBD)
+  [ ] Reduced subjectivity via scoring rubric with examples (TBD)
+
+================================================================================
+
+1. SCOPE
+--------
+
+Every evaluated website receives a full 31-row matrix: Preamble + Articles
+1-30. This is the same approach used for kashifshah-net in v1, now applied
+uniformly to all sites.
+
+Each cell in the matrix contains three values:
+  - Compatibility score
+  - Evidence strength
+  - Notes (citing specific on-site content)
+
+1a. Source Constraint: Site Content Only
+
+  The evaluation is based EXCLUSIVELY on the website's own content --
+  what the site itself presents, publishes, hosts, and states. This
+  includes:
+
+    INCLUDED (on-domain content):
+      - Published pages, articles, posts, and media on the domain
+      - Terms of service, privacy policies, community guidelines
+      - About pages, mission statements, value statements
+      - User-facing features, UI design, and interaction patterns
+      - Help documentation, FAQs, support pages
+      - Accessibility features and language availability
+      - Cookie banners, consent flows, data controls
+      - Content moderation policies (as stated on the site)
+      - Public transparency reports hosted on the site
+      - Site structure: what is free vs. paywalled
+      - Advertising presence and type (on-site observation)
+      - Login/registration requirements and data requested
+      - Subdomains of the evaluated domain (e.g., blog.example.com)
+
+    EXCLUDED (off-domain and external):
+      - Content on other domains, even if linked from the site
+      - Third-party investigations (HRW, Amnesty, etc.)
+      - News reporting about the site
+      - Court filings, lawsuits, regulatory actions
+      - Employee accounts, whistleblower reports
+      - Academic research about the site
+      - Government reports or audits
+      - Ranking indices (RDR, Freedom House, etc.)
+      - Social media commentary about the site
+      - Social media profiles on other platforms
+      - Linked communities, forums, or content on other domains
+
+    OPTIONAL TOGGLE -- Off-domain linked content [DEFAULT: OFF]:
+      When enabled, the following may be considered as supplementary
+      evidence (scored separately or noted alongside on-domain scores):
+      - Content on platforms linked from the site (social profiles,
+        communities, repositories, portfolios)
+      - The existence of the link itself is always on-domain evidence
+        (i.e., the fact that /social/ links to a human rights community
+        is on-domain; the community's content is off-domain)
+      When disabled (default), only on-domain content is scored. The
+      presence of outbound links may be noted but the linked content
+      is not evaluated.
+
+  Rationale: This evaluates what the site SAYS and SHOWS, not what
+  outsiders report about it. A site's own content is the most direct
+  evidence of its expressed values and user-facing practices. External
+  sources measure behavior and impact; on-site content measures intent
+  and presentation.
+
+  Consequence: Sites may score differently under v2 than v1. A site
+  with documented labor abuses (v1: negative) but no labor-related
+  content (v2: ND) will diverge. This is expected and intentional --
+  the two methodologies answer different questions:
+
+    v1: "How does this site's RECORD align with the UDHR?"
+    v2: "How does this site's OWN CONTENT align with the UDHR?"
+
+2. SCORING SCALE
+-----------------
+
+2a. Compatibility Score
+
+  Range: [-1.0, 1.0]
+
+    -1.0  Site content actively contradicts this UDHR provision
+    -0.5  Site content shows significant tension with this provision
+     0.0  Site content is genuinely neutral on this provision
+     0.5  Site content is generally compatible with this provision
+     1.0  Site content strongly advances this UDHR provision
+     ND   No relevant on-site content found; cannot score
+
+  Scores may use any increment (e.g., -0.3, 0.7). The five named points
+  above are anchors, not the only valid values.
+
+  Key distinction:
+    0.0 = We examined the site and its content is neutral on this point.
+    ND  = The site has no content relevant to this provision.
+
+  Examples:
+    A privacy policy that exists but says nothing notable about
+    data minimization: 0.0 on Art. 12.
+    A sports site with no privacy policy or data-related pages
+    visible: ND on Art. 12.
+    A privacy policy that commits to data minimization and gives
+    users deletion controls: positive on Art. 12.
+    A privacy policy that claims broad rights to sell user data
+    with no opt-out: negative on Art. 12.
+
+2b. Evidence Strength
+
+  Each score is paired with an evidence strength indicator:
+
+    H   High    -- Multiple on-site pages/sections directly address
+                   this provision (e.g., dedicated policy page, mission
+                   statement, and feature implementation all align)
+    M   Medium  -- At least one on-site page or feature directly
+                   addresses this provision
+    L   Low     -- Inferred from site design, tone, or indirect signals
+                   (e.g., absence of tracking suggests privacy respect,
+                   but no explicit policy found)
+
+  ND scores do not carry an evidence strength.
+
+3. UDHR SECTIONS
+-----------------
+
+All 31 sections scored individually:
+
+  Section     | Topic
+  ------------|------------------------------------------
+  Preamble    | Inherent dignity, equal rights, rule of law
+  Article 1   | Born free and equal; spirit of brotherhood
+  Article 2   | Non-discrimination
+  Article 3   | Life, liberty, security
+  Article 4   | Prohibition of slavery
+  Article 5   | Prohibition of torture
+  Article 6   | Recognition as person before law
+  Article 7   | Equal protection of law
+  Article 8   | Right to effective remedy
+  Article 9   | No arbitrary arrest
+  Article 10  | Fair and public hearing
+  Article 11  | Presumption of innocence
+  Article 12  | Privacy, honour, reputation
+  Article 13  | Freedom of movement
+  Article 14  | Right to asylum
+  Article 15  | Right to nationality
+  Article 16  | Right to marry / found family
+  Article 17  | Right to own property
+  Article 18  | Freedom of thought, conscience, religion
+  Article 19  | Freedom of opinion and expression
+  Article 20  | Freedom of assembly / association
+  Article 21  | Participation in government
+  Article 22  | Social security, cultural rights
+  Article 23  | Right to work, equal pay
+  Article 24  | Right to rest and leisure
+  Article 25  | Adequate standard of living
+  Article 26  | Right to education
+  Article 27  | Cultural participation, IP
+  Article 28  | Just social / international order
+  Article 29  | Duties to community
+  Article 30  | No right to destroy others' rights
+
+4. WEIGHTING
+-------------
+
+(TBD -- to be decided before first v2 evaluation)
+
+  Options under consideration:
+
+  a) Equal weight across all 31 sections
+  b) Weight by relevance to site type
+  c) Weight by severity
+  d) User-configurable weights
+  e) No weighting; report dimension scores without collapsing to composite
+
+5. AGGREGATE METRICS
+---------------------
+
+Per-site aggregates computed from the 31 scores:
+
+  - Mean score (excluding ND)
+  - Mean of non-zero scores (excluding ND and 0.0)
+  - Max score and which article
+  - Min score and which article
+  - Count of negative scores
+  - Count of ND scores
+  - Sections with signal (non-zero, non-ND)
+  - Evidence profile (count of H/M/L ratings)
+
+Cross-site aggregates:
+
+  - Per-article mean across all sites
+  - Per-article worst/best site
+  - Overall mean, median, standard deviation
+  - Tier breakdown
+  - Regional/country patterns
+
+6. SCORING RUBRIC
+------------------
+
+(TBD -- concrete examples needed for each score level, drawn from
+ on-site content types, to reduce subjectivity)
+
+  Rubric should address common on-site content types:
+  - Privacy policies (Art. 12)
+  - Terms of service (Art. 8, 19)
+  - Community guidelines / content policies (Art. 2, 18, 19, 20)
+  - Accessibility features (Art. 2, 26)
+  - Paywalls and free-tier scope (Art. 19, 26, 27)
+  - Mission / values / about pages (Preamble, Art. 1)
+  - Advertising density and type (Art. 12)
+  - Login / data collection requirements (Art. 12, 13)
+  - Language and regional availability (Art. 2, 26)
+  - Human rights or sustainability reports hosted on-site (multiple)
+  - Content diversity and representation (Art. 2, 27)
+
+7. PROCESS
+----------
+
+  a) Fetch and review the site's publicly accessible content:
+       - Homepage and primary navigation
+       - Privacy policy / data practices page
+       - Terms of service / user agreement
+       - About / mission / values pages
+       - Community guidelines / content policy
+       - Accessibility statement
+       - Transparency reports (if hosted on-site)
+       - Help / support documentation
+       - Any human rights, sustainability, or ethics pages
+  b) For each of the 31 UDHR sections, assess whether on-site content
+     is relevant, and if so, score it
+  c) Assign score + evidence strength + notes per section
+  d) Notes must cite specific on-site pages or features as evidence
+  e) Compute per-site aggregates
+  f) After all sites scored, compute cross-site aggregates
+  g) Consistency check: verify similar sites scored similarly
+
+8. OUTPUT FORMAT
+-----------------
+
+Per-site output (one file or one section per site):
+
+  Section      | Score | Ev | Notes
+  -------------|-------|----|------
+  Preamble     |  0.5  | M  | Mission statement emphasizes dignity
+  Article 1    |  ND   |    | No relevant on-site content
+  Article 2    |  0.3  | M  | Anti-discrimination policy on /community
+  Article 12   | -0.4  | H  | Privacy policy claims broad data sharing
+  ...
+
+  Aggregate:
+    Mean score:            X.XX
+    Sections with signal:  N / 31
+    ND count:              N / 31
+    Evidence profile:      H:N  M:N  L:N  ND:N
+
+Cross-site summary output:
+
+  Domain       | Mean  | Min   | Max   | ND ct | Ev profile
+  -------------|-------|-------|-------|-------|------------
+  google.com   | -0.10 | -0.40 | 0.30  |  12   | H:3 M:8 L:8
+  ...
+
+================================================================================
+
+End of Methodology v2 (DRAFT)

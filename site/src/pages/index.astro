@@ -1,15 +1,23 @@
 ---
 import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
-import { scoreToColor, formatScore } from '../lib/colors';
-import { getTopStories, getStoryScores, getEvaluatedCount, getScoreStats } from '../lib/db';
+import { getFilteredStories, getStoryScores, getEvaluatedCount } from '../lib/db';
+import type { SortOption, FilterOption } from '../lib/db';
 import type { Score } from '../lib/types';
 
 const db = Astro.locals.runtime.env.DB;
 
-const stories = await getTopStories(db, 60);
+const url = new URL(Astro.request.url);
+const sort = (url.searchParams.get('sort') || 'time') as SortOption;
+const filter = (url.searchParams.get('filter') || 'all') as FilterOption;
+
+const validSorts: SortOption[] = ['time', 'score_desc', 'score_asc', 'hn_points'];
+const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
+const safeSort = validSorts.includes(sort) ? sort : 'time';
+const safeFilter = validFilters.includes(filter) ? filter : 'all';
+
+const stories = await getFilteredStories(db, safeSort, safeFilter, 500);
 const evaluatedCount = await getEvaluatedCount(db);
-const stats = await getScoreStats(db);
 
 // Fetch scores for evaluated stories (for mini heatmaps)
 const storyScoresMap = new Map<number, Score[]>();
@@ -19,66 +27,132 @@ for (const story of stories) {
     storyScoresMap.set(story.hn_id, scores);
   }
 }
+
+function buildUrl(params: Record<string, string>): string {
+  const p = new URLSearchParams();
+  const s = params.sort ?? safeSort;
+  const f = params.filter ?? safeFilter;
+  if (s !== 'time') p.set('sort', s);
+  if (f !== 'all') p.set('filter', f);
+  const qs = p.toString();
+  return qs ? `/?${qs}` : '/';
+}
+
+const SORT_OPTIONS = [
+  { value: 'time', label: 'new' },
+  { value: 'score_desc', label: 'top hrcb' },
+  { value: 'score_asc', label: 'bottom hrcb' },
+  { value: 'hn_points', label: 'points' },
+] as const;
+
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'all' },
+  { value: 'evaluated', label: 'evaluated' },
+  { value: 'positive', label: 'positive' },
+  { value: 'negative', label: 'negative' },
+  { value: 'neutral', label: 'neutral' },
+  { value: 'pending', label: 'pending' },
+  { value: 'failed', label: 'failed' },
+] as const;
 ---
 
-<Base title="Feed" description="Hacker News stories with UDHR Human Rights Compatibility Bias scores">
-  <!-- Hero -->
-  <section class="border-b border-surface-3">
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-      <h1 class="text-2xl sm:text-3xl font-bold text-white mb-2">
-        HN
-        <span class="text-indigo-400">HRCB</span>
-      </h1>
-      <p class="text-gray-400 max-w-2xl text-sm leading-relaxed">
-        Hacker News stories scored against the 31 provisions of the
-        UN Universal Declaration of Human Rights. Each story's linked
-        content is evaluated for editorial and structural signals.
-      </p>
-    </div>
-  </section>
+<Base title="HN HRCB">
+  {/* Filter/sort bar */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 4px 0;">
+        <span class="subtext" style="font-size: 8pt;">
+          <span style="color: #666;">sort:</span>
+          {SORT_OPTIONS.map((opt, i) => (
+            <>
+              {i > 0 && <span style="color: #444;"> | </span>}
+              {safeSort === opt.value
+                ? <span style="color: #ff6600; font-weight: bold;">{opt.label}</span>
+                : <a href={buildUrl({ sort: opt.value })}>{opt.label}</a>
+              }
+            </>
+          ))}
+          <span style="color: #444; margin: 0 6px;">·</span>
+          <span style="color: #666;">show:</span>
+          {FILTER_OPTIONS.map((opt, i) => (
+            <>
+              {i > 0 && <span style="color: #444;"> | </span>}
+              {safeFilter === opt.value
+                ? <span style="color: #ff6600; font-weight: bold;">{opt.label}</span>
+                : <a href={buildUrl({ filter: opt.value })}>{opt.label}</a>
+              }
+            </>
+          ))}
+          <span style="color: #444; margin: 0 6px;">·</span>
+          <span style="color: #555;">{stories.length} stories</span>
+          {evaluatedCount > 0 && <span style="color: #555;"> ({evaluatedCount} evaluated)</span>}
+        </span>
+      </td>
+    </tr>
+  </table>
 
-  <!-- Stats bar -->
-  {evaluatedCount > 0 && (
-    <section class="border-b border-surface-3 bg-surface-1">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3">
-        <div class="flex items-center gap-6 text-xs">
-          <div>
-            <span class="text-gray-500 uppercase tracking-wider">Evaluated</span>
-            <span class="score-font text-white ml-1.5">{evaluatedCount}</span>
+  <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
+    {stories.map((story, i) => (
+      <EvalCard
+        story={story}
+        scores={storyScoresMap.get(story.hn_id)}
+        rank={i + 1}
+      />
+    ))}
+  </table>
+
+  {stories.length === 0 && (
+    <table width="100%">
+      <tr>
+        <td style="padding: 40px 20px; text-align: center;">
+          <div style="color: #828282; margin-bottom: 12px;">
+            {safeFilter !== 'all'
+              ? `No stories match the "${safeFilter}" filter.`
+              : 'No stories yet.'}
           </div>
-          <div>
-            <span class="text-gray-500 uppercase tracking-wider">Mean HRCB</span>
-            <span class="score-font ml-1.5" style={`color: ${scoreToColor(stats.avgScore)}`}>
-              {formatScore(stats.avgScore)}
-            </span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="text-green-400 score-font">{stats.positiveCount}+</span>
-            <span class="text-gray-400 score-font">{stats.neutralCount}~</span>
-            <span class="text-red-400 score-font">{stats.negativeCount}-</span>
-          </div>
-        </div>
-      </div>
-    </section>
+          {safeFilter !== 'all' ? (
+            <a href="/" style="color: #ff6600;">clear filters</a>
+          ) : (
+            <>
+              <button
+                id="init-btn"
+                style="background: #ff6600; color: #fff; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-size: 10pt; font-family: inherit;"
+              >
+                Fetch HN Top Stories
+              </button>
+              <div id="init-status" style="color: #828282; font-size: 8pt; margin-top: 8px;"></div>
+              <script>
+                document.getElementById('init-btn')!.addEventListener('click', async (e) => {
+                  const btn = e.target as HTMLButtonElement;
+                  const status = document.getElementById('init-status')!;
+                  btn.disabled = true;
+                  btn.style.opacity = '0.5';
+                  btn.textContent = 'Fetching...';
+                  status.textContent = 'Loading stories from Hacker News API...';
+                  try {
+                    const res = await fetch('/api/init', { method: 'POST' });
+                    const data = await res.json();
+                    if (res.ok) {
+                      status.innerHTML = `<span style="color: #16a34a;">Loaded ${data.inserted} stories. Refreshing...</span>`;
+                      setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                      status.innerHTML = `<span style="color: #dc2626;">${data.error}</span>`;
+                      btn.disabled = false;
+                      btn.style.opacity = '1';
+                      btn.textContent = 'Fetch HN Top Stories';
+                    }
+                  } catch (err) {
+                    status.innerHTML = `<span style="color: #dc2626;">Network error: ${err}</span>`;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.textContent = 'Fetch HN Top Stories';
+                  }
+                });
+              </script>
+            </>
+          )}
+        </td>
+      </tr>
+    </table>
   )}
-
-  <!-- Feed -->
-  <section class="max-w-5xl mx-auto px-4 sm:px-6 py-4">
-    <div class="divide-y divide-surface-3/50">
-      {stories.map((story, i) => (
-        <EvalCard
-          story={story}
-          scores={storyScoresMap.get(story.hn_id)}
-          rank={i + 1}
-        />
-      ))}
-    </div>
-
-    {stories.length === 0 && (
-      <div class="card p-12 text-center">
-        <p class="text-gray-500 text-lg">No stories yet. The cron worker will populate stories from HN.</p>
-        <p class="text-gray-600 text-sm mt-2">Run the seed script or wait for the next cron cycle.</p>
-      </div>
-    )}
-  </section>
 </Base>

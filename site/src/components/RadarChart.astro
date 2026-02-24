@@ -12,9 +12,11 @@ const scoreMap = new Map(scores.map((s) => [s.section, s]));
 
 const groups = Object.entries(ARTICLE_GROUPS);
 const numAxes = groups.length;
-const cx = size / 2;
-const cy = size / 2;
-const radius = size / 2 - 40;
+const margin = 80;
+const cx = size / 2 + margin;
+const cy = size / 2 + margin;
+const radius = size / 2 - 20;
+const svgSize = size + margin * 2;
 
 // Calculate average score for each group
 const groupScores = groups.map(([name, articles]) => {
@@ -50,7 +52,7 @@ const polygonPoints = points.map(([x, y]) => `${x},${y}`).join(' ');
 const zeroR = 0.5 * radius;
 ---
 
-<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} class="mx-auto">
+<svg width="100%" viewBox={`0 0 ${svgSize} ${svgSize}`} class="mx-auto" style={`max-width: ${svgSize}px;`}>
   <!-- Grid rings -->
   {rings.map((r) => {
     const ringR = r * radius;
@@ -89,7 +91,10 @@ const zeroR = 0.5 * radius;
   {groups.map(([name], i) => {
     const angle = i * angleStep;
     const [x, y] = polarToXY(angle, radius);
-    const [lx, ly] = polarToXY(angle, radius + 20);
+    const [lx, ly] = polarToXY(angle, radius + 16);
+    const angleRad = ((angle - 90) * Math.PI) / 180;
+    const cosA = Math.cos(angleRad);
+    const anchor = Math.abs(cosA) < 0.15 ? 'middle' : cosA > 0 ? 'start' : 'end';
     return (
       <>
         <line x1={cx} y1={cy} x2={x} y2={y} stroke="#2a2a35" stroke-width="1" />
@@ -97,8 +102,8 @@ const zeroR = 0.5 * radius;
           x={lx}
           y={ly}
           fill="#888"
-          font-size="9"
-          text-anchor="middle"
+          font-size="10"
+          text-anchor={anchor}
           dominant-baseline="middle"
           font-family="Inter, sans-serif"
         >

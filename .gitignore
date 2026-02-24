@@ -1,0 +1,13 @@
+# secrets
+*.key
+.env
+.env.*
+
+# OS
+.DS_Store
+
+# wrangler local state
+.wrangler/
+
+# node
+node_modules/

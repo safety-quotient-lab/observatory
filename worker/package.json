@@ -1,0 +1,11 @@
+{
+  "name": "hn-hrcb-cron",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "wrangler": "^4.14.0",
+    "@cloudflare/workers-types": "^4.20241230.0",
+    "typescript": "^5.7.0"
+  }
+}

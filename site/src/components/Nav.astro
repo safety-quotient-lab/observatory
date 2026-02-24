@@ -1,40 +1,33 @@
 ---
 const currentPath = Astro.url.pathname;
-const links = [
-  { href: '/', label: 'Feed' },
-  { href: '/article/19', label: 'By Article' },
-  { href: '/about', label: 'About' },
-];
 ---
 
-<nav class="border-b border-surface-3 bg-surface-1/80 backdrop-blur-sm sticky top-0 z-50">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex items-center justify-between h-14">
-      <a href="/" class="flex items-center gap-2 group">
-        <span class="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors">
-          HN HRCB
-        </span>
-        <span class="text-xs text-gray-500 hidden sm:inline">Human Rights Compatibility Bias</span>
+<table style="background-color: #ff6600; padding: 2px;" width="100%" cellpadding="0" cellspacing="0">
+  <tr>
+    <td style="width: 18px; padding-right: 4px; padding-left: 4px;">
+      <a href="/">
+        <div style="width: 18px; height: 18px; border: 1px solid white; display: flex; align-items: center; justify-content: center;">
+          <span style="color: white; font-weight: bold; font-size: 13px; line-height: 1;">Y</span>
+        </div>
       </a>
-
-      <div class="flex items-center gap-1">
-        {links.map(({ href, label }) => {
-          const active = currentPath === href || (href !== '/' && currentPath.startsWith(href));
-          return (
-            <a
-              href={href}
-              class:list={[
-                'px-3 py-1.5 rounded-md text-sm transition-colors',
-                active
-                  ? 'bg-surface-3 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-surface-2',
-              ]}
-            >
-              {label}
-            </a>
-          );
-        })}
-      </div>
-    </div>
-  </div>
-</nav>
+    </td>
+    <td style="line-height: 12px; height: 10px; padding: 4px;">
+      <span class="pagetop">
+        <b class="hnname">
+          <a href="/" style="color: black; text-decoration: none;">HN HRCB</a>
+        </b>
+        <span style="margin-left: 10px; font-size: 10pt;">
+          <a href="/new" style="color: black;">new</a> |
+          <a href="https://news.ycombinator.com/past" style="color: black;">past</a> |
+          <a href="https://news.ycombinator.com/newcomments" style="color: black;">comments</a> |
+          <a href="/ask" style="color: black;">ask</a> |
+          <a href="/show" style="color: black;">show</a> |
+          <a href="https://news.ycombinator.com/jobs" style="color: black;">jobs</a> |
+          <a href="/article/19" style="color: black;">by article</a> |
+          <a href="/dashboard" style="color: black;">dashboard</a> |
+          <a href="/about" style="color: black;">about hrcb</a>
+        </span>
+      </span>
+    </td>
+  </tr>
+</table>

@@ -2,7 +2,6 @@
 import Base from '../../layouts/Base.astro';
 import HeatMap from '../../components/HeatMap.astro';
 import RadarChart from '../../components/RadarChart.astro';
-import ScoreBar from '../../components/ScoreBar.astro';
 import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor } from '../../lib/colors';
@@ -22,240 +21,184 @@ if (!storyData || storyData.eval_status !== 'done' || !storyData.hcb_json) {
   return Astro.redirect('/');
 }
 
-// Parse the full evaluation JSON for DCP and aggregates
 const evalData = JSON.parse(storyData.hcb_json) as Evaluation;
 const { evaluation, domain_context_profile, aggregates } = evalData;
-
-// Use scores from DB (or from eval JSON as fallback)
 const scores = storyData.scores.length > 0 ? storyData.scores : evalData.scores;
 
 const classColor = classificationColor(aggregates.classification);
 const classText = classificationTextColor(aggregates.classification);
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
-  ED: 'Editorial',
-  CO: 'Commentary',
-  HR: 'Human Rights',
-  PO: 'Policy',
-  MI: 'Mixed',
-  ME: 'Media',
-  LP: 'Landing Page',
-  PR: 'Product',
-  AD: 'Advertising',
-  AC: 'Academic',
-  MX: 'Mixed',
+  ED: 'Editorial', CO: 'Community', HR: 'Human Rights', PO: 'Policy',
+  MI: 'Mission', ME: 'Media', LP: 'Landing Page', PR: 'Product',
+  AD: 'Advertising', AC: 'Academic', MX: 'Mixed',
 };
 
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
-  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 60) return `${seconds} seconds ago`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes} minutes ago`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours} hours ago`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${days} days ago`;
 }
 ---
 
 <Base title={`${storyData.title} — HRCB`}>
-  <!-- Header -->
-  <section class="border-b border-surface-3">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div class="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <a href="/" class="text-gray-500 hover:text-gray-300 text-sm">&larr; Feed</a>
-          </div>
-          <h1 class="text-xl sm:text-2xl font-bold text-white mb-2">{storyData.title}</h1>
-          <p class="text-sm text-gray-400 break-all">
-            <a href={storyData.url || `https://news.ycombinator.com/item?id=${storyData.hn_id}`} target="_blank" rel="noopener" class="hover:text-indigo-400 transition-colors">
-              {(storyData.url || `https://news.ycombinator.com/item?id=${storyData.hn_id}`).replace(/^https?:\/\//, '').slice(0, 80)}
-            </a>
-          </p>
-          <div class="flex items-center flex-wrap gap-2 mt-3">
-            <span
-              class="badge"
-              style={`background: ${classColor}; color: ${classText}`}
-            >
-              {aggregates.classification}
-            </span>
-            <span class="badge bg-surface-3 text-gray-400">
-              {CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}
-            </span>
-            <span class="badge bg-surface-3 text-gray-400">
-              v{evaluation.methodology}
-            </span>
-            <span class="badge bg-surface-3 text-gray-400">
-              {evaluation.date}
-            </span>
-          </div>
-          <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
-            {storyData.hn_score !== null && <span>{storyData.hn_score} points</span>}
-            {storyData.hn_by && <span>by {storyData.hn_by}</span>}
-            <span>{timeAgo(storyData.hn_time)}</span>
-            {storyData.hn_comments !== null && (
-              <a
-                href={`https://news.ycombinator.com/item?id=${storyData.hn_id}`}
-                class="hover:text-gray-300 transition-colors"
-                target="_blank"
-                rel="noopener"
-              >
-                {storyData.hn_comments} comments on HN
-              </a>
-            )}
-          </div>
-        </div>
-        <div class="text-right">
-          <div class="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Weighted Mean</div>
-          <div class="score-font text-4xl font-bold" style={`color: ${scoreToColor(aggregates.weighted_mean)}`}>
-            {formatScore(aggregates.weighted_mean)}
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  {/* Story header - HN style */}
+  <table cellpadding="0" cellspacing="0" width="100%">
+    <tr class="athing">
+      <td valign="top" style="padding: 5px 10px 0 0; text-align: center; width: 44px;">
+        <span
+          class="score-font"
+          style={`color: ${scoreToColor(aggregates.weighted_mean)}; font-size: 14pt; font-weight: bold;`}
+        >
+          {formatScore(aggregates.weighted_mean)}
+        </span>
+      </td>
+      <td>
+        <span class="titleline" style="font-size: 12pt;">
+          <a href={storyData.url || `https://news.ycombinator.com/item?id=${storyData.hn_id}`}
+             target="_blank" rel="noopener"
+          >
+            {storyData.title}
+          </a>
+        </span>
+        {storyData.domain && (
+          <span class="sitebit" style="font-size: 8pt; margin-left: 5px;">
+            (<a href={`https://${storyData.domain}`} target="_blank" rel="noopener">{storyData.domain}</a>)
+          </span>
+        )}
+      </td>
+    </tr>
+    <tr>
+      <td></td>
+      <td class="subtext" style="padding-bottom: 8px;">
+        {storyData.hn_score !== null && <span>{storyData.hn_score} points</span>}
+        {storyData.hn_by && <span> by <a href={`https://news.ycombinator.com/user?id=${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
+        <span> {timeAgo(storyData.hn_time)}</span>
+        <span> | </span>
+        <a href={`https://news.ycombinator.com/item?id=${storyData.hn_id}`} target="_blank" rel="noopener">
+          {storyData.hn_comments ?? 0} comments on HN
+        </a>
+        <span> | </span>
+        <span
+          class="badge"
+          style={`background: ${classColor}; color: ${classText}; font-size: 7pt;`}
+        >
+          {aggregates.classification}
+        </span>
+        <span style="color: #828282; margin-left: 4px;">
+          <span title={`Content type: ${CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}`} style="cursor: help;">
+            {CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}
+          </span>
+          · v{evaluation.methodology} · {evaluation.date}
+        </span>
+      </td>
+    </tr>
+  </table>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-    <!-- Article Heatmap -->
-    <section class="card p-6">
-      <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Article Heatmap</h2>
-      <HeatMap scores={scores} compact={false} showLabels={true} />
-      <div class="flex items-center gap-4 mt-4 text-xs text-gray-500">
-        <div class="flex items-center gap-1.5">
-          <div class="w-3 h-3 rounded" style="background: #dc2626"></div>
-          <span>Negative</span>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <div class="w-3 h-3 rounded" style="background: #555"></div>
-          <span>Neutral</span>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <div class="w-3 h-3 rounded" style="background: #16a34a"></div>
-          <span>Positive</span>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <div class="w-3 h-3 rounded" style="background: repeating-linear-gradient(45deg, #1a1a25, #1a1a25 2px, #2a2a35 2px, #2a2a35 4px)"></div>
-          <span>ND</span>
-        </div>
-      </div>
-    </section>
+  <tr style="height: 10px;"></tr>
 
-    <!-- Stats + Radar side by side -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Aggregate stats -->
-      <section class="card p-6">
-        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Aggregates</h2>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-surface-2 rounded-lg p-3">
-            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Weighted Mean</div>
-            <div class="score-font text-xl font-bold" style={`color: ${scoreToColor(aggregates.weighted_mean)}`}>
-              {formatScore(aggregates.weighted_mean)}
-            </div>
-          </div>
-          <div class="bg-surface-2 rounded-lg p-3">
-            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Unweighted Mean</div>
-            <div class="score-font text-xl font-bold" style={`color: ${scoreToColor(aggregates.unweighted_mean)}`}>
-              {formatScore(aggregates.unweighted_mean)}
-            </div>
-          </div>
-          <div class="bg-surface-2 rounded-lg p-3">
-            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Max</div>
-            <div class="score-font text-lg font-bold" style={`color: ${scoreToColor(aggregates.max.value)}`}>
-              {formatScore(aggregates.max.value)}
-            </div>
-            <div class="text-[10px] text-gray-500 score-font">{aggregates.max.section}</div>
-          </div>
-          <div class="bg-surface-2 rounded-lg p-3">
-            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Min</div>
-            <div class="score-font text-lg font-bold" style={`color: ${scoreToColor(aggregates.min.value)}`}>
-              {formatScore(aggregates.min.value)}
-            </div>
-            <div class="text-[10px] text-gray-500 score-font">{aggregates.min.section}</div>
-          </div>
+  {/* Heatmap */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Article Heatmap</div>
+        <HeatMap scores={scores} compact={false} showLabels={true} />
+        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 7pt; color: #666;">
+          <span><span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 2px;"></span> Negative</span>
+          <span><span style="display: inline-block; width: 8px; height: 8px; background: #555; border-radius: 2px;"></span> Neutral</span>
+          <span><span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 2px;"></span> Positive</span>
+          <span title="No Data — insufficient evidence to score" style="cursor: help;"><span style="display: inline-block; width: 8px; height: 8px; background: #2a2a35; border-radius: 2px;"></span> ND</span>
         </div>
+      </td>
+    </tr>
+  </table>
 
-        <div class="mt-4 grid grid-cols-3 gap-3">
-          <div class="bg-surface-2 rounded-lg p-3 text-center">
-            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Signal</div>
-            <div class="score-font text-lg font-bold text-white">{aggregates.signal_sections}</div>
-          </div>
-          <div class="bg-surface-2 rounded-lg p-3 text-center">
-            <div class="text-[10px] text-gray-500 uppercase tracking-wider">ND</div>
-            <div class="score-font text-lg font-bold text-gray-500">{aggregates.nd_count}</div>
-          </div>
-          <div class="bg-surface-2 rounded-lg p-3 text-center">
-            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Negative</div>
-            <div class="score-font text-lg font-bold text-red-400">{aggregates.negative_count}</div>
-          </div>
-        </div>
-
-        <!-- Evidence profile -->
-        <div class="mt-4">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Evidence Profile</div>
-          <div class="flex gap-2">
+  {/* Stats + Radar */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td width="50%" valign="top" style="padding-right: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
+            <tr>
+              <td style="color: #666;">Weighted Mean</td>
+              <td class="score-font" style={`color: ${scoreToColor(aggregates.weighted_mean)}`}>{formatScore(aggregates.weighted_mean)}</td>
+              <td style="color: #666;">Unweighted Mean</td>
+              <td class="score-font" style={`color: ${scoreToColor(aggregates.unweighted_mean)}`}>{formatScore(aggregates.unweighted_mean)}</td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Max</td>
+              <td class="score-font" style={`color: ${scoreToColor(aggregates.max.value)}`}>{formatScore(aggregates.max.value)} <span style="color: #555;">{aggregates.max.section}</span></td>
+              <td style="color: #666;">Min</td>
+              <td class="score-font" style={`color: ${scoreToColor(aggregates.min.value)}`}>{formatScore(aggregates.min.value)} <span style="color: #555;">{aggregates.min.section}</span></td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Signal</td>
+              <td class="score-font" style="color: #ccc;">{aggregates.signal_sections}</td>
+              <td style="color: #666; cursor: help;" title="No Data — articles with insufficient evidence to score">ND</td>
+              <td class="score-font" style="color: #666;">{aggregates.nd_count}</td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Negative</td>
+              <td class="score-font" style="color: #ef4444;">{aggregates.negative_count}</td>
+              <td style="color: #666;">Volatility</td>
+              <td class="score-font" style="color: #ccc;">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Channels</td>
+              <td colspan="3" class="score-font">
+                <span style="color: #60a5fa; cursor: help;" title="Editorial — what the content says">E:{evaluation.channel_weights.editorial}</span>
+                <span style="color: #22d3ee; margin-left: 6px; cursor: help;" title="Structural — what the site does">S:{evaluation.channel_weights.structural}</span>
+              </td>
+            </tr>
+          </table>
+          <div style="margin-top: 6px;">
+            <span style="color: #666; font-size: 7pt;">Evidence: </span>
             {Object.entries(aggregates.evidence_profile).map(([key, count]) => (
-              <div class="flex items-center gap-1">
-                <span class="badge text-[10px]" style={`background: ${evidenceColor(key === 'ND' ? null : key)}30; color: ${evidenceColor(key === 'ND' ? null : key)}`}>
-                  {key}: {count}
-                </span>
-              </div>
+              <span
+                class="badge"
+                title={({H: 'High evidence', M: 'Medium evidence', L: 'Low evidence', ND: 'No data'} as Record<string, string>)[key] || key}
+                style={`background: ${evidenceColor(key === 'ND' ? null : key)}30; color: ${evidenceColor(key === 'ND' ? null : key)}; font-size: 7pt; margin-right: 3px; cursor: help;`}
+              >
+                {key}:{count}
+              </span>
             ))}
           </div>
         </div>
-
-        <!-- Channel balance -->
-        <div class="mt-3">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-2">Channel Balance</div>
-          <div class="flex gap-2">
-            <span class="badge bg-blue-500/20 text-blue-400 text-[10px]">E: {aggregates.channel_balance.E_only}</span>
-            <span class="badge bg-cyan-500/20 text-cyan-400 text-[10px]">S: {aggregates.channel_balance.S_only}</span>
-            <span class="badge bg-purple-500/20 text-purple-400 text-[10px]">Both: {aggregates.channel_balance.both}</span>
-          </div>
+      </td>
+      <td width="50%" valign="top" style="padding-left: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
+          <RadarChart scores={scores} size={300} />
         </div>
+      </td>
+    </tr>
+  </table>
 
-        <!-- Volatility -->
-        <div class="mt-3">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Volatility</div>
-          <span class="score-font text-sm text-gray-300">
-            {aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})
-          </span>
-        </div>
+  {/* DCP */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Domain Context Profile</div>
+        <DcpTable elements={domain_context_profile.elements} />
+      </td>
+    </tr>
+  </table>
 
-        <!-- Channel weights -->
-        <div class="mt-3">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Channel Weights</div>
-          <div class="flex gap-4 score-font text-sm text-gray-300">
-            <span>E: {evaluation.channel_weights.editorial}</span>
-            <span>S: {evaluation.channel_weights.structural}</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Radar chart -->
-      <section class="card p-6">
-        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Theme Radar</h2>
-        <RadarChart scores={scores} size={340} />
-        <p class="text-xs text-gray-500 text-center mt-2">
-          Average score per article group. Dashed line = 0.0 (neutral).
-        </p>
-      </section>
-    </div>
-
-    <!-- Domain Context Profile -->
-    <section class="card p-6">
-      <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Domain Context Profile</h2>
-      <DcpTable elements={domain_context_profile.elements} />
-    </section>
-
-    <!-- Article detail accordion -->
-    <section class="card overflow-hidden">
-      <div class="px-6 py-4 border-b border-surface-3">
-        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Score Breakdown</h2>
-      </div>
-      {scores.map((score, i) => (
-        <ArticleDetail score={score} index={i} />
-      ))}
-    </section>
-  </div>
+  {/* Score breakdown */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Score Breakdown</div>
+        {scores.map((score, i) => (
+          <ArticleDetail score={score} index={i} />
+        ))}
+      </td>
+    </tr>
+  </table>
 </Base>

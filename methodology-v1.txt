@@ -1,0 +1,111 @@
+UDHR Website Compatibility Evaluation -- Methodology v1
+========================================================
+
+Version:  1.0
+Date:     2026-02-23
+Status:   Used for kashifshah-net and top-100-sfw-udhr-evaluation
+
+================================================================================
+
+1. SCOPE
+--------
+
+Two evaluation modes were used:
+
+  A) Single-site deep evaluation (kashifshah-net)
+     - Score each UDHR section (Preamble + Articles 1-30) individually
+     - 31 rows, one per section
+
+  B) Multi-site comparative evaluation (top-100-sfw)
+     - Score each website with a single composite number
+     - Grouped by category (Search, Social, E-commerce, etc.)
+     - Qualitative key factors listed per site
+
+2. SCORING SCALE
+-----------------
+
+Range: [-1.0, 1.0]
+
+  -1.0  Actively undermines UDHR principles
+  -0.5  Significant documented concerns
+   0.0  Neutral / No relevant content / Insufficient data
+   0.5  Generally compatible with some concerns
+   1.0  Strongly advances UDHR principles
+
+Scores are assigned as a single composite value. There is no formal
+weighting between articles or dimensions.
+
+3. UDHR DIMENSIONS EVALUATED
+------------------------------
+
+For the multi-site evaluation, eight thematic clusters were used:
+
+  Privacy                  (Art. 12)
+  Expression               (Art. 18, 19)
+  Non-discrimination       (Art. 1, 2, 7)
+  Labor                    (Art. 4, 23, 24)
+  Education / Culture      (Art. 26, 27)
+  Due Process              (Art. 8-11)
+  Assembly                 (Art. 20)
+  Life / Security          (Art. 3)
+
+For the single-site evaluation, all 31 sections (Preamble + Articles 1-30)
+were scored individually.
+
+4. SOURCES
+----------
+
+  - Ranking Digital Rights (RDR) 2025 Big Tech Edition
+  - Amnesty International reports (2023-2025)
+  - Human Rights Watch reports and investigations
+  - Reporters Without Borders (RSF) press freedom data
+  - Freedom House "Freedom on the Net" reports (2023-2024)
+  - Electronic Frontier Foundation (EFF) investigations
+  - China Labor Watch reports
+  - Citizen Lab research
+  - Business & Human Rights Resource Centre
+  - Court filings, regulatory actions, and news reporting
+  - Original web research (site content, privacy policies, terms of service)
+
+5. PROCESS
+----------
+
+  a) Initial categorization of sites by type/region
+  b) Parallel research across five batches:
+       - Big Tech (Google, Meta, Apple, Microsoft, Amazon, X)
+       - Social / Communications platforms
+       - E-commerce / AI platforms
+       - News / Media / Information sites
+       - Regional and specialized sites
+  c) Web searches for human rights reports, investigations, lawsuits,
+     regulatory actions, and documented incidents (2023-2026)
+  d) Scoring based on balance of documented harms vs. positive contributions
+  e) Aggregation into composite score per site
+  f) Cross-site statistical analysis (mean, median, tier breakdown,
+     regional patterns)
+
+6. KNOWN LIMITATIONS
+---------------------
+
+  - Single composite score obscures dimension-level variation
+    (e.g., a site strong on privacy but weak on labor gets a blended score)
+  - No formal weighting between UDHR articles
+  - Recency bias: more recent incidents may dominate scoring
+  - Research depth varied by site prominence (top sites got more scrutiny)
+  - Western/English-language source bias in research
+  - Subjective judgment in score assignment (no inter-rater reliability)
+  - "Neutral" (0.0) conflates "no data found" with "genuinely neutral"
+  - Single-site mode (kashifshah-net) and multi-site mode (top-100)
+    used different granularity, making direct comparison imprecise
+
+7. OUTPUT FORMAT
+-----------------
+
+  Single-site:  Table with Section | Topic | Score | Notes
+  Multi-site:   Table with Rank | Domain | Score | Category | Key Factors
+                Plus: Aggregate statistics, tier breakdown, top/bottom 10,
+                regional analysis, and concluding notes
+
+================================================================================
+
+End of Methodology v1

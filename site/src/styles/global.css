@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,16 +6,26 @@
 
 @layer base {
   html {
-    @apply bg-surface-0 text-gray-200 antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-surface-0 text-gray-300 antialiased;
+    font-family: Verdana, Geneva, sans-serif;
+    font-size: 10pt;
   }
 
   body {
     @apply min-h-screen;
   }
 
+  a {
+    color: #c9c9c9;
+    text-decoration: none;
+  }
+
+  a:visited {
+    color: #888;
+  }
+
   ::selection {
-    @apply bg-indigo-500/30;
+    background: rgba(255, 102, 0, 0.3);
   }
 }
 
@@ -30,5 +40,54 @@
 
   .badge {
     @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium score-font;
+  }
+
+  /* HN-style centered container */
+  .hn-page {
+    width: 85%;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  /* HN subtext style */
+  .subtext {
+    font-size: 7pt;
+    color: #828282;
+  }
+
+  .subtext a {
+    color: #828282;
+  }
+
+  .subtext a:hover {
+    text-decoration: underline;
+  }
+
+  /* Title links */
+  .titleline a {
+    color: #c9c9c9;
+  }
+
+  .titleline a:visited {
+    color: #888;
+  }
+
+  .sitebit a {
+    color: #828282;
+  }
+
+  /* Evaluating spinner */
+  .eval-spinner {
+    animation: spin 2s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* Play button hover */
+  .trigger-btn:hover {
+    color: #ff6600 !important;
   }
 }

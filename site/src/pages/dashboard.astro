@@ -1,0 +1,466 @@
+---
+import Base from '../layouts/Base.astro';
+import { scoreToColor, formatScore } from '../lib/colors';
+import { ARTICLE_TITLES, ALL_SECTIONS } from '../lib/udhr';
+import {
+  getStatusCounts,
+  getScoreStats,
+  getContentTypeStats,
+  getArticleAverages,
+  getTopPositiveStories,
+  getTopNegativeStories,
+  getRecentEvaluations,
+  getDomainStats,
+  getFailedStories,
+  getQueueStories,
+  getModelStats,
+} from '../lib/db';
+
+const db = Astro.locals.runtime.env.DB;
+
+const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recent, domains, failed, queue, models] = await Promise.all([
+  getStatusCounts(db),
+  getScoreStats(db),
+  getContentTypeStats(db),
+  getArticleAverages(db),
+  getTopPositiveStories(db, 5),
+  getTopNegativeStories(db, 5),
+  getRecentEvaluations(db, 10),
+  getDomainStats(db, 10),
+  getFailedStories(db, 5),
+  getQueueStories(db, 1000),
+  getModelStats(db),
+]);
+
+const CONTENT_TYPE_LABELS: Record<string, string> = {
+  ED: 'Editorial', CO: 'Community', HR: 'Human Rights', PO: 'Policy',
+  MI: 'Mission', ME: 'Media', LP: 'Landing Page', PR: 'Product',
+  AD: 'Advertising', AC: 'Academic', MX: 'Mixed',
+};
+
+const pctDone = status.total > 0 ? Math.round((status.done / status.total) * 100) : 0;
+const pctPending = status.total > 0 ? Math.round((status.pending / status.total) * 100) : 0;
+const pctFailed = status.total > 0 ? Math.round((status.failed / status.total) * 100) : 0;
+const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total) * 100) : 0;
+
+// Find the max signal count for relative bar widths
+const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
+---
+
+<Base title="Dashboard">
+  {/* Header */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
+    <tr>
+      <td>
+        <span style="font-size: 12pt; color: #c9c9c9; font-weight: bold;">Dashboard</span>
+        <span style="color: #828282; margin-left: 8px;">Evaluation pipeline status &amp; analytics</span>
+      </td>
+    </tr>
+  </table>
+
+  {/* Pipeline Status */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Pipeline</div>
+
+        {/* Progress bar */}
+        <div style="width: 100%; height: 8px; background: #1a1a25; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 10px;">
+          {status.done > 0 && <div style={`width: ${pctDone}%; background: #16a34a;`}></div>}
+          {status.skipped > 0 && <div style={`width: ${pctSkipped}%; background: #555;`}></div>}
+          {status.failed > 0 && <div style={`width: ${pctFailed}%; background: #dc2626;`}></div>}
+          {status.pending > 0 && <div style={`width: ${pctPending}%; background: #333;`}></div>}
+        </div>
+
+        <table cellpadding="0" cellspacing="0" width="100%" style="font-size: 9pt;">
+          <tr>
+            <td style="text-align: center; width: 20%;">
+              <div class="score-font" style="font-size: 16pt; color: #16a34a; font-weight: bold;">{status.done}</div>
+              <div style="color: #666; font-size: 7pt; text-transform: uppercase;">Done</div>
+            </td>
+            <td style="text-align: center; width: 20%;">
+              <div class="score-font" style="font-size: 16pt; color: #eab308; font-weight: bold;">{status.pending}</div>
+              <div style="color: #666; font-size: 7pt; text-transform: uppercase;">Pending</div>
+            </td>
+            <td style="text-align: center; width: 20%;">
+              <div class="score-font" style="font-size: 16pt; color: #60a5fa; font-weight: bold;">{status.evaluating}</div>
+              <div style="color: #666; font-size: 7pt; text-transform: uppercase;">Evaluating</div>
+            </td>
+            <td style="text-align: center; width: 20%;">
+              <div class="score-font" style="font-size: 16pt; color: #dc2626; font-weight: bold;">{status.failed}</div>
+              <div style="color: #666; font-size: 7pt; text-transform: uppercase;">Failed</div>
+            </td>
+            <td style="text-align: center; width: 20%;">
+              <div class="score-font" style="font-size: 16pt; color: #555; font-weight: bold;">{status.skipped}</div>
+              <div style="color: #666; font-size: 7pt; text-transform: uppercase;">Skipped</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {/* Score Overview + Distribution */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td width="50%" valign="top" style="padding-right: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Score Overview</div>
+          <table cellpadding="6" cellspacing="0" width="100%" style="font-size: 9pt;">
+            <tr>
+              <td style="color: #666;">Mean HRCB</td>
+              <td class="score-font" style={`color: ${scoreToColor(stats.avgScore)}; font-size: 14pt; font-weight: bold;`}>
+                {formatScore(stats.avgScore)}
+              </td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Positive (&gt;+0.05)</td>
+              <td>
+                <span class="score-font" style="color: #16a34a;">{stats.positiveCount}</span>
+                {status.done > 0 && <span style="color: #555; font-size: 8pt; margin-left: 4px;">({Math.round((stats.positiveCount / status.done) * 100)}%)</span>}
+              </td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Neutral</td>
+              <td>
+                <span class="score-font" style="color: #888;">{stats.neutralCount}</span>
+                {status.done > 0 && <span style="color: #555; font-size: 8pt; margin-left: 4px;">({Math.round((stats.neutralCount / status.done) * 100)}%)</span>}
+              </td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Negative (&lt;-0.05)</td>
+              <td>
+                <span class="score-font" style="color: #dc2626;">{stats.negativeCount}</span>
+                {status.done > 0 && <span style="color: #555; font-size: 8pt; margin-left: 4px;">({Math.round((stats.negativeCount / status.done) * 100)}%)</span>}
+              </td>
+            </tr>
+          </table>
+        </div>
+      </td>
+      <td width="50%" valign="top" style="padding-left: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Content Types</div>
+          {contentTypes.length > 0 ? (
+            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: 8pt;">
+              {contentTypes.map((ct) => (
+                <tr>
+                  <td style="color: #c9c9c9; width: 80px;">
+                    <span class="badge" style="background: #1a1a25; color: #888; font-size: 7pt; cursor: help;"
+                          title={CONTENT_TYPE_LABELS[ct.content_type] || ct.content_type}>
+                      {ct.content_type}
+                    </span>
+                    <span style="margin-left: 3px;">{CONTENT_TYPE_LABELS[ct.content_type] || ct.content_type}</span>
+                  </td>
+                  <td class="score-font" style="color: #888; text-align: right; width: 30px;">{ct.count}</td>
+                  <td class="score-font" style={`color: ${scoreToColor(ct.avg_score)}; text-align: right; width: 50px;`}>
+                    {formatScore(ct.avg_score)}
+                  </td>
+                </tr>
+              ))}
+            </table>
+          ) : (
+            <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
+          )}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* UDHR Article Heatmap — aggregate across all stories */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Average Score by UDHR Article</div>
+        {articleAvgs.length > 0 ? (
+          <>
+            <table cellpadding="0" cellspacing="2" width="100%" style="font-size: 7pt;">
+              <tr>
+                {articleAvgs.map((a) => {
+                  const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                  return (
+                    <td style="text-align: center; vertical-align: bottom; width: 3.2%;">
+                      <a href={`/article/${a.sort_order}`} title={`${a.section}: ${ARTICLE_TITLES[a.section]}`} style="text-decoration: none;">
+                        <div style={`width: 100%; height: 24px; background: ${scoreToColor(a.signal_count > 0 ? a.avg_final : null)}; border-radius: 2px; margin-bottom: 2px;`}></div>
+                        <div style="color: #555;">{label}</div>
+                      </a>
+                    </td>
+                  );
+                })}
+              </tr>
+            </table>
+            <div style="display: flex; gap: 12px; margin-top: 6px; font-size: 7pt; color: #555;">
+              <span><span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 2px;"></span> Negative</span>
+              <span><span style="display: inline-block; width: 8px; height: 8px; background: #555; border-radius: 2px;"></span> Neutral</span>
+              <span><span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 2px;"></span> Positive</span>
+              <span title="No Data — insufficient evidence to score" style="cursor: help;"><span style="display: inline-block; width: 8px; height: 8px; background: #2a2a35; border-radius: 2px;"></span> ND</span>
+            </div>
+          </>
+        ) : (
+          <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
+        )}
+      </td>
+    </tr>
+  </table>
+
+  {/* Signal Coverage — bar chart showing how many stories have signal per article */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Signal Coverage by Article</div>
+        {articleAvgs.length > 0 ? (
+          <table cellpadding="1" cellspacing="0" width="100%" style="font-size: 7pt;">
+            {articleAvgs.map((a) => {
+              const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+              const pct = maxSignal > 0 ? Math.round((a.signal_count / maxSignal) * 100) : 0;
+              return (
+                <tr>
+                  <td style="color: #666; width: 20px; text-align: right; padding-right: 6px;" class="score-font">
+                    <a href={`/article/${a.sort_order}`} style="color: #666;">{label}</a>
+                  </td>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <div style={`height: 6px; width: ${Math.max(pct, 2)}%; background: ${scoreToColor(a.signal_count > 0 ? a.avg_final : null)}; border-radius: 2px;`}></div>
+                      <span style="color: #555;" class="score-font">{a.signal_count}</span>
+                    </div>
+                  </td>
+                  <td style="width: 50px; text-align: right;" class="score-font">
+                    <span style={`color: ${scoreToColor(a.signal_count > 0 ? a.avg_final : null)};`}>
+                      {a.signal_count > 0 ? formatScore(a.avg_final) : <span title="No Data">ND</span>}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+        ) : (
+          <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
+        )}
+      </td>
+    </tr>
+  </table>
+
+  {/* Top Positive + Top Negative */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td width="50%" valign="top" style="padding-right: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Most Positive</div>
+          {topPositive.length > 0 ? (
+            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: 8pt;">
+              {topPositive.map((s, i) => (
+                <tr>
+                  <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px; font-weight: bold;`}>
+                    {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td>
+                    <a href={`/item/${s.hn_id}`}>{s.title}</a>
+                    {s.domain && <span style="color: #555; font-size: 7pt; margin-left: 3px;">({s.domain})</span>}
+                  </td>
+                </tr>
+              ))}
+            </table>
+          ) : (
+            <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
+          )}
+        </div>
+      </td>
+      <td width="50%" valign="top" style="padding-left: 5px;">
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Most Negative</div>
+          {topNegative.length > 0 ? (
+            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: 8pt;">
+              {topNegative.map((s, i) => (
+                <tr>
+                  <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
+                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px; font-weight: bold;`}>
+                    {formatScore(s.hcb_weighted_mean)}
+                  </td>
+                  <td>
+                    <a href={`/item/${s.hn_id}`}>{s.title}</a>
+                    {s.domain && <span style="color: #555; font-size: 7pt; margin-left: 3px;">({s.domain})</span>}
+                  </td>
+                </tr>
+              ))}
+            </table>
+          ) : (
+            <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
+          )}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* Domains */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Top Domains</div>
+        {domains.length > 0 ? (
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
+            <tr style="color: #555; font-size: 7pt;">
+              <td>Domain</td>
+              <td width="60" align="center">Stories</td>
+              <td width="60" align="center">Avg HRCB</td>
+            </tr>
+            {domains.map((d) => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td style="color: #c9c9c9;">
+                  <a href={`https://${d.domain}`} target="_blank" rel="noopener" style="color: #c9c9c9;">{d.domain}</a>
+                </td>
+                <td align="center" class="score-font" style="color: #888;">{d.count}</td>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
+                  {formatScore(d.avg_score)}
+                </td>
+              </tr>
+            ))}
+          </table>
+        ) : (
+          <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
+        )}
+      </td>
+    </tr>
+  </table>
+
+  {/* Recent Evaluations */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Recent Evaluations</div>
+        {recent.length > 0 ? (
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
+            <tr style="color: #555; font-size: 7pt;">
+              <td width="50">Score</td>
+              <td>Story</td>
+              <td width="60">Type</td>
+              <td width="120">Evaluated</td>
+            </tr>
+            {recent.map((s) => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; font-weight: bold;`}>
+                  {formatScore(s.hcb_weighted_mean)}
+                </td>
+                <td>
+                  <a href={`/item/${s.hn_id}`}>{s.title}</a>
+                  {s.domain && <span style="color: #555; font-size: 7pt; margin-left: 3px;">({s.domain})</span>}
+                </td>
+                <td>
+                  <span class="badge" style="background: #1a1a25; color: #888; font-size: 7pt; cursor: help;"
+                        title={CONTENT_TYPE_LABELS[s.content_type] || s.content_type}>
+                    {s.content_type}
+                  </span>
+                </td>
+                <td style="color: #555; font-size: 7pt;">{s.evaluated_at || ''}</td>
+              </tr>
+            ))}
+          </table>
+        ) : (
+          <div style="color: #555; font-size: 8pt; padding: 10px;">No evaluations yet.</div>
+        )}
+      </td>
+    </tr>
+  </table>
+
+  {/* Failed Stories */}
+  {failed.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Recent Failures</div>
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
+            {failed.map((s) => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td style="color: #c9c9c9;">
+                  {s.title}
+                  {s.domain && <span style="color: #555; font-size: 7pt; margin-left: 3px;">({s.domain})</span>}
+                </td>
+                <td style="color: #dc2626; font-size: 7pt; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {s.eval_error?.slice(0, 80) || 'Unknown error'}
+                </td>
+              </tr>
+            ))}
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+  )}
+
+  {/* Eval Model */}
+  {models.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Evaluation Model</div>
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
+            <tr style="color: #555; font-size: 7pt;">
+              <td>Model</td>
+              <td width="80" align="center">Evaluations</td>
+              <td width="80" align="center">Avg Score</td>
+            </tr>
+            {models.map((m) => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td style="color: #c9c9c9;" class="score-font">{m.eval_model}</td>
+                <td align="center" class="score-font" style="color: #888;">{m.count}</td>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(m.avg_score)};`}>
+                  {formatScore(m.avg_score)}
+                </td>
+              </tr>
+            ))}
+          </table>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Evaluation Queue */}
+  {queue.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Queue
+            <span style="color: #555; text-transform: none; letter-spacing: 0; margin-left: 6px;">
+              {queue.length} stories waiting &middot; ~3 per cycle &middot; est. {Math.ceil(queue.length / 3) * 10} min to clear
+            </span>
+          </div>
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: 8pt;">
+            <tr style="color: #555; font-size: 7pt;">
+              <td width="24">#</td>
+              <td width="70">Status</td>
+              <td>Story</td>
+              <td width="140">Domain</td>
+            </tr>
+            {queue.map((s, i) => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td style="color: #555;" class="score-font">{i + 1}</td>
+                <td>
+                  {s.eval_status === 'evaluating' ? (
+                    <span class="badge" style="background: rgba(96,165,250,0.2); color: #60a5fa; font-size: 7pt;">evaluating</span>
+                  ) : (
+                    <span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308; font-size: 7pt;">pending</span>
+                  )}
+                </td>
+                <td>
+                  <a href={s.url || `https://news.ycombinator.com/item?id=${s.hn_id}`}
+                     target="_blank" rel="noopener" style="color: #c9c9c9;">
+                    {s.title}
+                  </a>
+                </td>
+                <td style="color: #555; font-size: 7pt;">{s.domain || 'self'}</td>
+              </tr>
+            ))}
+          </table>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 15px 0;">
+    <tr>
+      <td style="color: #555; font-size: 7pt;">
+        Cron runs every 10 minutes &middot; 3 evaluations per cycle
+      </td>
+    </tr>
+  </table>
+</Base>

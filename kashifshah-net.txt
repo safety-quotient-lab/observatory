@@ -1,0 +1,60 @@
+UDHR Compatibility Matrix: kashifshah.net
+==========================================
+
+Score range: [-1.0, 1.0]
+  -1.0 = Incompatible
+   0.0 = Neutral / No relevant content
+   1.0 = Strongly compatible
+
+Section          | Topic                                    | Score | Notes
+-----------------|------------------------------------------|-------|------
+Preamble         | Inherent dignity, equal rights, rule of law | 0.5 | Multi-tradition humility ethos aligns with dignity and friendly relations
+Article 1        | Born free and equal; spirit of brotherhood | 0.4 | Contemplative wisdom and restraint reflect brotherhood
+Article 2        | Non-discrimination                       |  0.6  | Buddhist, Taoist, Islamic teachings presented without hierarchy
+Article 3        | Life, liberty, security                  |  0.0  | No relevant content
+Article 4        | Prohibition of slavery                   |  0.0  | No relevant content
+Article 5        | Prohibition of torture                   |  0.0  | No relevant content
+Article 6        | Recognition as person before law         |  0.0  | No relevant content
+Article 7        | Equal protection of law                  |  0.0  | No relevant content
+Article 8        | Right to effective remedy                |  0.0  | No relevant content
+Article 9        | No arbitrary arrest                      |  0.0  | No relevant content
+Article 10       | Fair and public hearing                  |  0.0  | No relevant content
+Article 11       | Presumption of innocence                 |  0.0  | No relevant content
+Article 12       | Privacy, honour, reputation              |  0.1  | Minimalist site with no visible data collection
+Article 13       | Freedom of movement                      |  0.0  | No relevant content
+Article 14       | Right to asylum                          |  0.0  | No relevant content
+Article 15       | Right to nationality                     |  0.0  | No relevant content
+Article 16       | Right to marry/found family              |  0.0  | No relevant content
+Article 17       | Right to own property                    |  0.0  | No relevant content
+Article 18       | Freedom of thought, conscience, religion |  0.9  | Core of site -- three faith traditions presented freely and equally
+Article 19       | Freedom of opinion and expression        |  0.8  | The site itself is an exercise of this right
+Article 20       | Freedom of assembly/association          |  0.1  | Social section implies voluntary association
+Article 21       | Participation in government              |  0.0  | Laozi's withdrawal is personal, not anti-civic
+Article 22       | Social security, cultural rights         |  0.0  | No relevant content
+Article 23       | Right to work, equal pay                 |  0.0  | No relevant content
+Article 24       | Right to rest and leisure                |  0.0  | No relevant content
+Article 25       | Adequate standard of living              |  0.0  | No relevant content
+Article 26       | Right to education                       |  0.3  | Public sharing of teachings supports educational access
+Article 27       | Cultural participation, IP               |  0.8  | Shares art/text/tools publicly; credits design inspirations
+Article 28       | Just social/international order          |  0.0  | No relevant content
+Article 29       | Duties to community                      |  0.4  | Philosophy of restraint aligns with responsible exercise of freedoms
+Article 30       | No right to destroy others' rights       |  0.3  | Restraint philosophy supports this; nothing advocates harm
+
+Aggregate
+---------
+Mean score:              0.14
+Mean (non-zero only):    0.43
+Max:                     0.9  (Article 18)
+Min:                     0.0  (17 articles)
+Negative scores:         0
+Sections with signal:    14 / 31
+
+Summary
+-------
+The site registers no negative compatibility with any UDHR provision. Its strongest
+signals cluster around freedom of religion (0.9), expression (0.8), and cultural
+participation (0.8). The overall low mean (0.14) reflects that most UDHR articles
+cover legal/civil/economic rights the site simply doesn't address -- absence, not
+opposition.
+
+Evaluated: 2026-02-23

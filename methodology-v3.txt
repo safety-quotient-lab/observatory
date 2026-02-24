@@ -1,0 +1,873 @@
+# UDHR Website Compatibility Evaluation — Methodology v3
+
+```
+========================================================
+Version:  3.0 (DRAFT)
+Date:     2026-02-23
+Status:   Proposed — developed from v2 field experience
+Supersedes: methodology-v2.txt
+========================================================
+```
+
+---
+
+## CHANGES FROM v2
+
+| Status | Change |
+|---|---|
+| ✅ | **Unit of analysis shifted from domain to URL** |
+| ✅ | **HR Compatibility Bias (HCB) as the core measured construct** |
+| ✅ | **Content Type Classification** — each URL is typed before scoring |
+| ✅ | **Signal Channel separation** — Editorial vs. Structural signals scored independently |
+| ✅ | **Scoring rubric with concrete examples** (was TBD in v2) |
+| ✅ | **Formal weighting scheme** resolved (was TBD in v2) |
+| ✅ | **Aggregation model** — URL → Page Group → Domain |
+| ✅ | **Bias directionality** — distinguishes advocacy, neutrality, and hostility |
+| ✅ | **Inherited context model** — how domain-level context propagates to URL scores |
+| ✅ | **Reduced ND prevalence** — structural redesign minimizes unscoreable sections |
+| ✅ | **Cross-URL consistency rules** formalized |
+| ☐ | Multi-language normalization (TBD) |
+| ☐ | Automated scoring pipeline specification (TBD) |
+
+---
+
+## 1. SCOPE AND CORE CONCEPT
+
+### 1a. Unit of Analysis
+
+The **primary unit of analysis is a single URL**. Every evaluation begins
+with a specific URL and produces a score matrix for the content at
+that address.
+
+```
+v1: "How does this site's RECORD align with the UDHR?"
+v2: "How does this site's OWN CONTENT align with the UDHR?"
+v3: "What HR compatibility bias does the content at this URL exhibit?"
+```
+
+### 1b. HR Compatibility Bias (HCB) — Definition
+
+**HR Compatibility Bias** (HCB) measures the directional lean of
+content at a given URL relative to the provisions of the Universal
+Declaration of Human Rights.
+
+HCB answers the question:
+
+> "If a person consumed only the content at this URL, would their
+> understanding of human rights be advanced, undermined, or
+> unaffected — and in which specific dimensions?"
+
+HCB is not a moral judgment on the content creator. It is a
+**measurement of alignment** between content and the UDHR framework.
+Content may exhibit negative HCB for legitimate reasons (e.g., a
+privacy policy that discloses broad data sharing is honest but still
+negatively aligned with Article 12).
+
+### 1c. Source Constraint (inherited from v2, modified)
+
+The evaluation is based on content **at the evaluated URL and its
+inherited domain context**.
+
+```
+PRIMARY EVIDENCE (scored directly):
+  - All content visible at the evaluated URL
+  - Embedded media, interactive elements, and metadata at the URL
+  - Comment sections, user contributions visible on the page
+  - Structured data (schema.org, OpenGraph) at the URL
+
+INHERITED CONTEXT (scored as context layer — see Section 7):
+  - The domain's privacy policy
+  - The domain's terms of service
+  - The domain's accessibility statement
+  - The domain's mission/about/values pages
+  - The domain's community guidelines
+  - The domain's editorial code of practice
+  Domain context is scored ONCE per domain and inherited by all
+  URLs on that domain. It provides floor/ceiling modifiers, not
+  primary scores.
+
+EXCLUDED (unchanged from v2):
+  - Off-domain content, third-party reports, external indices
+  - Content on other domains even if linked from the URL
+
+OPTIONAL TOGGLE — Off-domain linked content [DEFAULT: OFF]:
+  (unchanged from v2)
+```
+
+---
+
+## 2. CONTENT TYPE CLASSIFICATION
+
+Before scoring, every URL is classified into a **Content Type**.
+Content types determine which **Signal Channels** (Section 4) are
+applicable, which UDHR sections are expected to have signal, and
+which rubric rows apply.
+
+### 2a. Content Type Taxonomy
+
+```
+Code  | Type                  | Description
+------|----------------------|---------------------------------------------
+ED    | Editorial/Article     | News report, analysis, opinion, essay,
+      |                      | investigation, review, interview
+PO    | Policy/Legal          | Privacy policy, ToS, cookie policy, T&C,
+      |                      | legal notice, DMCA page
+MI    | Mission/Values        | About page, mission statement, values page,
+      |                      | editorial code, ethics page
+CO    | Community             | Forum post, comment thread, community
+      |                      | guidelines, user-generated content hub
+LP    | Landing/Index         | Homepage, section front, topic index,
+      |                      | category page, search results
+PR    | Product/Feature       | App page, tool, interactive feature, game,
+      |                      | calculator, widget
+ME    | Media                 | Video page, podcast page, audio player,
+      |                      | photo gallery, infographic
+AD    | Advertising/Commerce  | Sponsored content, advertorial, media kit,
+      |                      | ad policy, commerce disclosure
+HR    | Human Rights Specific | Dedicated HR mission, HR report, HR policy,
+      |                      | sustainability report, transparency report
+AC    | Accessibility         | Accessibility statement, accessibility help,
+      |                      | a11y tools page
+MX    | Mixed/Composite       | Pages containing multiple content types
+      |                      | (e.g., article + comments + sidebar ads)
+```
+
+### 2b. Classification Rules
+
+1. A URL receives **one primary type** and up to **two secondary types**.
+2. For MX (Mixed) pages, the primary type is the dominant content
+   area by visible area and editorial intent.
+3. Classification is recorded in the output and affects rubric
+   application.
+
+### 2c. Expected Signal Matrix
+
+Each content type has an **expected signal profile** — which UDHR
+sections are likely to produce meaningful scores. This replaces the
+v2 approach where many sections returned ND simply because a news
+site has no content about marriage rights.
+
+```
+Content Type  | High-Signal Articles           | Low/ND-Expected Articles
+--------------|-------------------------------|-------------------------
+ED (Editorial)| 3,5,9,12,18,19,21,28         | 4,6,15,16,24
+PO (Policy)   | 8,12,13,17,29,30             | 3,4,5,6,9,14,15,16
+MI (Mission)  | Preamble,1,2,18,19,28        | 4,5,6,9,15,16,24
+CO (Community) | 1,2,18,19,20,29,30           | 4,5,6,9,14,15,16
+HR (HR Spec.) | ALL                           | (none expected ND)
+AC (Access.)  | 2,26                          | most others
+```
+
+Sections outside the expected signal range are still scored if content
+is present, but ND is the default expectation rather than a gap.
+
+---
+
+## 3. SCORING SCALE
+
+### 3a. HCB Score (replaces "Compatibility Score")
+
+```
+Range: [-1.0, 1.0]
+
+  -1.0  Content actively hostile to this UDHR provision
+        (advocates against the right, implements its violation)
+  -0.5  Content shows significant tension with this provision
+        (undermines the right through practice or framing)
+   0.0  Content is genuinely neutral on this provision
+        (addresses the topic but takes no directional position)
+   0.5  Content is generally compatible with this provision
+        (supports the right through practice or framing)
+   1.0  Content strongly advances this UDHR provision
+        (explicitly champions the right, implements its protection)
+   ND   No relevant content found at this URL; cannot score
+
+Scores may use any increment (e.g., -0.3, 0.7).
+```
+
+### 3b. Bias Directionality Markers
+
+Each non-ND, non-zero score carries a **directionality marker**:
+
+```
+  A   Advocacy    — Content explicitly promotes or defends this right
+  P   Practice    — Site features/policies implement this right (or violate it)
+  F   Framing     — Content frames this right positively (or negatively)
+                    without explicit advocacy
+  C   Coverage    — Content reports on this right factually; directional
+                    lean is inferred from emphasis, sourcing, or selection
+```
+
+Multiple markers may apply. Example:
+  - An editorial arguing for press freedom: `0.8 | A,F`
+  - A privacy policy with strong data minimization: `0.7 | P`
+  - A news report on arbitrary detention: `0.3 | C`
+
+### 3c. Evidence Strength (inherited from v2)
+
+```
+  H   High    — Multiple on-page elements directly address this provision
+  M   Medium  — At least one on-page element directly addresses this provision
+  L   Low     — Inferred from design, tone, or indirect signals
+```
+
+### 3d. Signal Channel (NEW)
+
+Each score is tagged with its signal channel:
+
+```
+  E   Editorial   — Score derived from the editorial content itself
+                    (what the page says/argues/reports)
+  S   Structural  — Score derived from site structure, features, policies,
+                    and design choices (what the page does/enables)
+  B   Both        — Score has reinforcing signals from both channels
+```
+
+**Rationale for Signal Channel separation:**
+
+v2 field evaluations revealed that editorial coverage (Channel E)
+and structural implementation (Channel S) often diverge:
+
+```
+Example: A news article about privacy rights (E: +0.6 on Art. 12)
+         served on a page with invasive ad tracking (S: -0.3 on Art. 12)
+         Net HCB requires both signals.
+```
+
+When both channels produce scores for the same UDHR section:
+
+```
+  Combined HCB = (E_score × E_weight) + (S_score × S_weight)
+
+  Default weights:
+    For ED (Editorial) content:     E_weight = 0.6,  S_weight = 0.4
+    For PO (Policy) content:        E_weight = 0.2,  S_weight = 0.8
+    For MI (Mission) content:       E_weight = 0.7,  S_weight = 0.3
+    For CO (Community) content:     E_weight = 0.4,  S_weight = 0.6
+    For LP (Landing) content:       E_weight = 0.3,  S_weight = 0.7
+    For all other types:            E_weight = 0.5,  S_weight = 0.5
+
+  Combined scores are clamped to [-1.0, 1.0].
+```
+
+---
+
+## 4. UDHR SECTIONS
+
+All 31 sections scored individually (unchanged from v2):
+
+```
+Section     | Topic
+------------|------------------------------------------
+Preamble    | Inherent dignity, equal rights, rule of law
+Article 1   | Born free and equal; spirit of brotherhood
+Article 2   | Non-discrimination
+Article 3   | Life, liberty, security
+Article 4   | Prohibition of slavery
+Article 5   | Prohibition of torture
+Article 6   | Recognition as person before law
+Article 7   | Equal protection of law
+Article 8   | Right to effective remedy
+Article 9   | No arbitrary arrest
+Article 10  | Fair and public hearing
+Article 11  | Presumption of innocence
+Article 12  | Privacy, honour, reputation
+Article 13  | Freedom of movement
+Article 14  | Right to asylum
+Article 15  | Right to nationality
+Article 16  | Right to marry / found family
+Article 17  | Right to own property
+Article 18  | Freedom of thought, conscience, religion
+Article 19  | Freedom of opinion and expression
+Article 20  | Freedom of assembly / association
+Article 21  | Participation in government
+Article 22  | Social security, cultural rights
+Article 23  | Right to work, equal pay
+Article 24  | Right to rest and leisure
+Article 25  | Adequate standard of living
+Article 26  | Right to education
+Article 27  | Cultural participation, IP
+Article 28  | Just social / international order
+Article 29  | Duties to community
+Article 30  | No right to destroy others' rights
+```
+
+---
+
+## 5. WEIGHTING SCHEME (resolved from v2 TBD)
+
+### 5a. Article Relevance Weighting
+
+Each UDHR article receives a **relevance weight** based on the
+Content Type of the evaluated URL. Relevance weights affect
+aggregate computation but not individual section scores.
+
+```
+Weight tiers:
+  3  Primary relevance   — This article is directly addressable by
+                           this content type
+  2  Secondary relevance — This article is indirectly addressable
+  1  Peripheral relevance — This article is rarely addressed by
+                            this content type
+  0  Not applicable      — ND expected; excluded from aggregates
+```
+
+**Default Relevance Weight Matrix:**
+
+```
+UDHR Art. | ED | PO | MI | CO | LP | PR | ME | AD | HR | AC
+----------|----|----|----|----|----|----|----|----|----|----|
+Preamble  |  2 |  1 |  3 |  2 |  2 |  1 |  2 |  1 |  3 |  1 |
+Art. 1    |  2 |  1 |  3 |  3 |  1 |  1 |  2 |  1 |  3 |  2 |
+Art. 2    |  2 |  2 |  3 |  3 |  2 |  2 |  2 |  2 |  3 |  3 |
+Art. 3    |  3 |  1 |  1 |  1 |  1 |  1 |  3 |  0 |  3 |  0 |
+Art. 4    |  2 |  1 |  1 |  1 |  0 |  0 |  2 |  1 |  3 |  0 |
+Art. 5    |  3 |  1 |  1 |  1 |  0 |  0 |  3 |  0 |  3 |  0 |
+Art. 6    |  1 |  1 |  1 |  0 |  0 |  0 |  1 |  0 |  3 |  0 |
+Art. 7    |  2 |  2 |  2 |  2 |  1 |  1 |  1 |  1 |  3 |  2 |
+Art. 8    |  1 |  3 |  2 |  2 |  1 |  2 |  1 |  1 |  3 |  2 |
+Art. 9    |  3 |  1 |  1 |  1 |  0 |  0 |  3 |  0 |  3 |  0 |
+Art. 10   |  3 |  1 |  1 |  1 |  0 |  0 |  3 |  0 |  3 |  0 |
+Art. 11   |  3 |  1 |  1 |  1 |  0 |  0 |  2 |  0 |  3 |  0 |
+Art. 12   |  2 |  3 |  1 |  2 |  2 |  3 |  2 |  3 |  3 |  2 |
+Art. 13   |  2 |  2 |  1 |  1 |  2 |  2 |  1 |  1 |  3 |  2 |
+Art. 14   |  3 |  0 |  1 |  1 |  0 |  0 |  3 |  0 |  3 |  0 |
+Art. 15   |  1 |  0 |  0 |  0 |  0 |  0 |  1 |  0 |  3 |  0 |
+Art. 16   |  1 |  0 |  0 |  0 |  0 |  0 |  1 |  0 |  3 |  0 |
+Art. 17   |  1 |  3 |  1 |  1 |  1 |  2 |  1 |  2 |  3 |  0 |
+Art. 18   |  3 |  1 |  3 |  3 |  1 |  1 |  3 |  1 |  3 |  1 |
+Art. 19   |  3 |  2 |  3 |  3 |  2 |  2 |  3 |  2 |  3 |  1 |
+Art. 20   |  2 |  1 |  2 |  3 |  1 |  2 |  2 |  1 |  3 |  1 |
+Art. 21   |  3 |  1 |  2 |  2 |  1 |  1 |  3 |  0 |  3 |  0 |
+Art. 22   |  2 |  1 |  2 |  1 |  1 |  1 |  2 |  0 |  3 |  1 |
+Art. 23   |  1 |  1 |  2 |  1 |  1 |  1 |  1 |  1 |  3 |  0 |
+Art. 24   |  1 |  1 |  1 |  0 |  0 |  0 |  1 |  0 |  3 |  0 |
+Art. 25   |  2 |  1 |  1 |  1 |  1 |  1 |  2 |  0 |  3 |  1 |
+Art. 26   |  2 |  1 |  2 |  2 |  2 |  2 |  2 |  1 |  3 |  3 |
+Art. 27   |  2 |  2 |  2 |  2 |  1 |  2 |  2 |  2 |  3 |  1 |
+Art. 28   |  3 |  1 |  3 |  2 |  1 |  1 |  3 |  0 |  3 |  0 |
+Art. 29   |  1 |  3 |  2 |  3 |  1 |  2 |  1 |  2 |  3 |  1 |
+Art. 30   |  1 |  3 |  2 |  3 |  1 |  2 |  1 |  2 |  3 |  1 |
+```
+
+### 5b. Weighted Mean Computation
+
+```
+Weighted Mean HCB = Σ (score_i × weight_i) / Σ (weight_i)
+                    for all i where score_i ≠ ND and weight_i > 0
+```
+
+---
+
+## 6. SCORING RUBRIC
+
+### 6a. Editorial Content (Type ED) Rubric
+
+```
+Score Range | Criteria (Editorial Signal Channel)
+------------|-----------------------------------------------
+0.7 to 1.0 | Content explicitly advocates for this right.
+            | Named UDHR provision or equivalent language.
+            | Sources include affected populations or HR experts.
+            | Framing centers human dignity and justice.
+            | Example: Investigative article exposing arbitrary
+            | detention, sourcing prisoners and HR lawyers,
+            | explicitly calling for reform → Art. 9: 0.8 | A,F
+
+0.4 to 0.6 | Content reports substantively on this right.
+            | Multiple perspectives included.
+            | Framing is balanced but implicitly supportive.
+            | Example: Article covering asylum policy with
+            | refugee and government voices → Art. 14: 0.5 | C,F
+
+0.1 to 0.3 | Content mentions this right incidentally.
+            | Topic is adjacent; connection is inferred.
+            | Example: Economic analysis that notes labor
+            | conditions in passing → Art. 23: 0.2 | C
+
+0.0         | Content addresses the topic but takes no
+            | directional position, or positions cancel out.
+            | Example: Debate transcript with equal pro/anti
+            | privacy arguments → Art. 12: 0.0
+
+-0.1 to -0.3 | Content frames this right skeptically.
+              | Dismissive tone toward rights claims.
+              | Example: Op-ed questioning asylum system as
+              | "exploited" without counter-perspective →
+              | Art. 14: -0.2 | F
+
+-0.4 to -0.6 | Content actively undermines this right.
+              | One-sided framing against rights holders.
+              | Example: Article celebrating surveillance
+              | without privacy considerations → Art. 12: -0.5 | F
+
+-0.7 to -1.0 | Content advocates against this right.
+              | Calls for restriction, abolition, or violation.
+              | Example: Editorial calling for elimination of
+              | asylum protections → Art. 14: -0.8 | A,F
+```
+
+### 6b. Structural Signal Rubric (All Content Types)
+
+```
+Score Range | Criteria (Structural Signal Channel)
+------------|-----------------------------------------------
+0.7 to 1.0 | Page implements strong protections for this right.
+            | Multiple reinforcing features.
+            | Example: Page with no tracking, clear consent,
+            | data deletion link, minimal data collection →
+            | Art. 12: 0.9 | P
+
+0.4 to 0.6 | Page implements meaningful protections.
+            | At least one concrete feature supports this right.
+            | Example: Cookie consent banner with reject-all
+            | option and granular controls → Art. 12: 0.5 | P
+
+0.1 to 0.3 | Page has basic compliance without active support.
+            | Example: Cookie banner exists but defaults to
+            | accept-all → Art. 12: 0.2 | P
+
+0.0         | Page structure is genuinely neutral.
+            | Example: Static text page with no tracking,
+            | no consent, no interactive elements → Art. 12: 0.0
+
+-0.1 to -0.3 | Page creates minor friction with this right.
+              | Example: Mandatory registration to read, requiring
+              | email + name → Art. 13: -0.2 | P
+
+-0.4 to -0.6 | Page creates significant friction with this right.
+              | Example: Hard paywall + extensive ad tracking +
+              | no opt-out visible → Art. 12: -0.5, Art. 13: -0.4 | P
+
+-0.7 to -1.0 | Page actively violates this right structurally.
+              | Example: Dark patterns forcing consent, no way
+              | to use the page without surrendering data →
+              | Art. 12: -0.8 | P
+```
+
+### 6c. Policy Content (Type PO) Rubric
+
+```
+Score Range | Criteria
+------------|-----------------------------------------------
+0.7 to 1.0 | Policy commits to strong protections beyond
+            | legal minimum. Explicit data minimization,
+            | purpose limitation, user rights, deletion.
+            | Plain language. User-friendly format.
+            | Example: Privacy policy with data minimization
+            | pledge, GPC signal support, 30-day deletion,
+            | annual transparency report → Art. 12: 0.9
+
+0.4 to 0.6 | Policy provides meaningful protections at or
+            | above legal requirements. Clear opt-out.
+            | Example: Privacy policy with CCPA/GDPR compliance,
+            | opt-out page, cookie controls → Art. 12: 0.5
+
+0.1 to 0.3 | Policy exists but is minimal, vague, or legalistic.
+            | Meets bare legal compliance.
+            | Example: Boilerplate privacy policy with no
+            | specific commitments → Art. 12: 0.2
+
+0.0         | Policy exists but says nothing meaningful about
+            | this provision. Neither helps nor hurts.
+
+-0.1 to -0.3 | Policy contains concerning language.
+              | Broad data sharing permissions, vague retention.
+              | Example: "We may share data with affiliates and
+              | partners for business purposes" → Art. 12: -0.2
+
+-0.4 to -0.6 | Policy actively claims rights against the user.
+              | Broad indemnification, liability waivers,
+              | expansive data licensing.
+              | Example: "By using this site you grant us
+              | irrevocable license to all content you post" →
+              | Art. 17: -0.5
+
+-0.7 to -1.0 | Policy explicitly contradicts this provision.
+              | No user recourse, forced arbitration on all
+              | claims, explicit right to sell data without consent.
+```
+
+### 6d. Community Content (Type CO) Rubric
+
+```
+Score Range | Criteria
+------------|-----------------------------------------------
+0.7 to 1.0 | Community explicitly organized around HR values.
+            | Moderation enforces dignity and inclusion.
+            | Appeals process exists.
+            | Example: Community with UDHR-based guidelines,
+            | active moderation, diverse participation →
+            | Preamble: 0.8
+
+0.4 to 0.6 | Community standards promote respect and inclusion.
+            | Active moderation visible.
+            | Example: Forum with anti-harassment rules and
+            | visible moderator activity → Art. 2: 0.5
+
+0.1 to 0.3 | Basic community standards exist.
+            | Moderation is reactive or unclear.
+            | Example: Comment section with "be respectful"
+            | guideline but no visible enforcement → Art. 2: 0.2
+
+0.0         | Community space exists without meaningful rules.
+
+-0.1 to -0.3 | Community norms tolerate borderline content.
+              | Inconsistent moderation.
+
+-0.4 to -0.6 | Community actively hostile to certain groups.
+              | Discriminatory content tolerated.
+
+-0.7 to -1.0 | Community organized around violation of rights.
+              | Hate speech, doxxing, harassment as norm.
+```
+
+---
+
+## 7. INHERITED CONTEXT MODEL
+
+### 7a. Concept
+
+A URL does not exist in isolation. The domain's policies, mission,
+and infrastructure form an **inherited context** that modifies
+the URL-level score.
+
+```
+Final HCB = URL HCB + Context Modifier
+
+Context Modifier range: [-0.2, +0.2]
+  Applied per-article, based on domain-level evidence.
+```
+
+### 7b. Domain Context Evaluation
+
+The domain context is evaluated **once** and cached for all URLs
+on that domain. It covers:
+
+```
+Context Element         | Affects Articles        | Max Modifier
+------------------------|------------------------|-------------
+Privacy policy          | Art. 12, 13            | ±0.2
+Terms of service        | Art. 8, 17, 29, 30     | ±0.2
+Accessibility statement | Art. 2, 26             | ±0.2
+Mission/values page     | Preamble, Art. 1, 28   | ±0.2
+Community guidelines    | Art. 2, 18, 19, 20, 29 | ±0.2
+Editorial code          | Art. 11, 12, 19        | ±0.2
+Ownership structure     | Art. 19                | ±0.15
+Access model (paywall)  | Art. 13, 19, 26        | ±0.15
+Ad density/tracking     | Art. 12                | ±0.15
+```
+
+### 7c. Context Modifier Rules
+
+```
+1. Context modifiers apply ONLY to articles listed in the
+   "Affects" column for that context element.
+2. Context modifiers are ADDITIVE with URL-level scores.
+3. Final scores remain clamped to [-1.0, 1.0].
+4. Context modifiers from multiple elements are SUMMED but
+   the total context modification per article is capped at ±0.3.
+5. Context modifiers do not convert ND to a numeric score.
+   If URL-level score is ND, context alone does not produce
+   a score.
+6. Context modifiers are recorded separately in output.
+```
+
+### 7d. Context Evaluation Shorthand
+
+```
+Domain Context Profile (DCP):
+
+  Domain:        theguardian.com
+  Privacy:       +0.10  (comprehensive multi-document, but ad partners)
+  ToS:           +0.05  (consumer law acknowledgment, fair terms)
+  Accessibility: +0.10  (WCAG commitment, accessibility page)
+  Mission:       +0.15  (Scott Trust, social justice, independence)
+  Community:     +0.10  (detailed standards, active moderation)
+  Ed. Code:      +0.05  (code of practice exists)
+  Ownership:     +0.15  (Scott Trust — structural independence)
+  Access:        +0.15  (no paywall, free to all)
+  Ad/Tracking:   -0.10  (159 partners, cookie tracking)
+```
+
+---
+
+## 8. AGGREGATION MODEL
+
+### 8a. URL → Page Group
+
+URLs on the same domain can be grouped by:
+- Content Type (all ED pages, all PO pages, etc.)
+- Topic/Section (all `/politics/` URLs, all `/privacy/` URLs)
+- Time period (all URLs from a given month/year)
+
+Page Group HCB = Mean of URL-level HCB scores in the group,
+weighted by Article Relevance Weights.
+
+### 8b. Page Group → Domain
+
+```
+Domain HCB = Weighted mean across all evaluated Page Groups
+
+  Weights per Page Group:
+    HR (Human Rights Specific): 3.0
+    MI (Mission/Values):        2.5
+    PO (Policy/Legal):          2.0
+    CO (Community):             2.0
+    AC (Accessibility):         2.0
+    ED (Editorial):             1.5
+    LP (Landing):               1.0
+    PR (Product):               1.0
+    ME (Media):                 1.0
+    AD (Advertising):           0.5
+```
+
+### 8c. Minimum Sample Requirements
+
+```
+For URL-level evaluation:   No minimum (single URL is valid)
+For Page Group evaluation:  Minimum 3 URLs of the same type
+For Domain-level evaluation: Minimum coverage of:
+  - At least 1 PO page (privacy or ToS)
+  - At least 1 MI or LP page (mission or homepage)
+  - At least 3 ED pages (if site publishes editorial content)
+  - Total minimum: 5 URLs
+
+Evaluations below minimum sample are flagged as PARTIAL.
+```
+
+---
+
+## 9. PROCESS
+
+```
+a) CLASSIFY: Determine Content Type of the target URL
+b) INHERIT: Load or evaluate the Domain Context Profile
+c) EXTRACT: Identify all content elements at the URL:
+     - Primary editorial content (headline, body, media)
+     - Structural elements (ads, trackers, paywalls, consent)
+     - Interactive elements (comments, forms, tools)
+     - Metadata (schema.org, OG tags, publication date)
+d) SCORE EDITORIAL CHANNEL: For each of 31 UDHR sections,
+   assess editorial content using ED rubric
+e) SCORE STRUCTURAL CHANNEL: For each of 31 UDHR sections,
+   assess structural elements using Structural rubric
+f) COMBINE CHANNELS: Apply content-type-specific weights to
+   produce combined URL HCB per section
+g) APPLY CONTEXT: Add Domain Context Modifiers where applicable
+h) COMPUTE FINAL HCB: Clamp to [-1.0, 1.0]
+i) ASSIGN METADATA: Evidence strength, directionality markers,
+   signal channel tags, and notes per section
+j) COMPUTE AGGREGATES: Per-URL aggregates
+k) CONSISTENCY CHECK: If multiple URLs evaluated on same domain,
+   verify cross-URL consistency
+```
+
+---
+
+## 10. OUTPUT FORMAT
+
+### 10a. URL-Level Output
+
+```
+URL:           https://example.com/article/human-rights-analysis
+Domain:        example.com
+Content Type:  ED (Editorial/Article) | Secondary: CO (Community)
+Eval Date:     2026-02-23
+Methodology:   v3
+Context:       DCP loaded (example.com, eval 2026-02-23)
+
+Section      | E Ch. | S Ch. | Comb. | Ctx  | Final | Dir | Ev | Notes
+-------------|-------|-------|-------|------|-------|-----|----|---------
+Preamble     |  0.6  |  --   |  0.6  | +0.1 |  0.7  | A,F | M  | ...
+Article 1    |  0.3  |  --   |  0.3  | +0.1 |  0.4  | F   | L  | ...
+Article 2    |  0.4  |  0.2  |  0.32 | +0.1 |  0.42 | C,P | M  | ...
+Article 12   |  0.5  | -0.3  |  0.18 | -0.1 |  0.08 | C,P | H  | ...
+...
+
+Aggregates:
+  Weighted Mean HCB:     X.XX
+  Unweighted Mean HCB:   X.XX
+  Max HCB:               X.XX (Article N)
+  Min HCB:               X.XX (Article N)
+  Negative count:        N
+  ND count:              N / 31
+  Signal sections:       N / 31
+  Evidence profile:      H:N  M:N  L:N  ND:N
+  Channel balance:       E-only:N  S-only:N  Both:N
+  Directionality:        A:N  P:N  F:N  C:N
+
+HCB Classification:
+  Strong positive bias:   Mean > 0.5
+  Moderate positive bias: Mean 0.2 to 0.5
+  Neutral:                Mean -0.2 to 0.2
+  Moderate negative bias: Mean -0.5 to -0.2
+  Strong negative bias:   Mean < -0.5
+```
+
+### 10b. Domain Context Profile Output
+
+```
+Domain:         example.com
+DCP Eval Date:  2026-02-23
+
+Element          | Modifier | Notes
+-----------------|----------|---------------------------
+Privacy policy   |  +0.10   | GDPR/CCPA compliant, opt-out
+ToS              |  +0.00   | Standard, fair
+Accessibility    |  +0.10   | WCAG commitment
+Mission/values   |  +0.15   | Explicit social justice framing
+Community        |  +0.05   | Basic guidelines
+Ed. code         |  ND      | None found
+Ownership        |  +0.10   | Independent trust
+Access model     |  +0.15   | No paywall
+Ad/tracking      |  -0.10   | Moderate ad presence
+```
+
+### 10c. Cross-URL Comparison Output
+
+```
+URL              | Type | W.Mean | Max  | Min  | ND | Class
+-----------------|------|--------|------|------|----|-----------
+/article/1       | ED   | +0.42  | 0.8  | 0.0  | 8  | Mod. pos.
+/privacy-policy  | PO   | +0.25  | 0.5  | -0.2 | 12 | Mod. pos.
+/about           | MI   | +0.55  | 0.8  | 0.3  | 10 | Strong pos.
+/post/12345      | CO   | +0.38  | 0.7  | 0.0  | 14 | Mod. pos.
+```
+
+---
+
+## 11. CONSISTENCY AND VALIDATION RULES
+
+### 11a. Intra-Domain Consistency
+
+```
+1. Domain Context Profile must be identical for all URLs
+   on the same domain evaluated in the same session.
+2. Structural scores for the same element (e.g., cookie
+   consent banner) must be identical across URLs where the
+   element is identical.
+3. If two URLs of the same Content Type on the same domain
+   produce mean HCB scores differing by > 0.4, a
+   reconciliation note must explain the divergence.
+```
+
+### 11b. Cross-Domain Calibration
+
+```
+1. URLs of the same Content Type addressing the same topic
+   should produce comparable scores across domains, unless
+   content genuinely differs.
+2. Structural scores should be calibrated across domains:
+   similar privacy policies → similar Art. 12 structural
+   scores.
+3. A calibration set of 5 reference URLs (to be maintained)
+   should be periodically re-evaluated to detect scoring drift.
+```
+
+### 11c. Bias in the Evaluator
+
+```
+The evaluator must disclose and manage:
+1. Selection bias — which URLs are chosen for evaluation
+2. Interpretation bias — how ambiguous content is scored
+3. Anchoring bias — whether first-evaluated URLs set
+   implicit benchmarks
+
+Mitigation:
+- Randomize URL evaluation order when doing batch evaluations
+- Score each article independently before reviewing aggregates
+- Record confidence level (0-100%) alongside each score
+- Flag scores where evaluator uncertainty exceeds 40%
+```
+
+---
+
+## 12. VERSIONING AND COMPATIBILITY
+
+```
+v3 evaluations are NOT directly comparable to v2 evaluations due to:
+  - Different unit of analysis (URL vs. domain)
+  - Signal channel separation
+  - Context modifier layer
+  - Weighted aggregation
+  - Revised rubric definitions
+
+To compare:
+  - v3 Domain-level aggregates approximate v2 domain scores
+  - v3 unweighted mean (no context modifier) is closest to v2 mean
+  - A formal crosswalk table will be published when v3 is finalized
+
+v3 output format includes a compatibility field:
+  v2_approx: X.XX  (estimated v2-equivalent score)
+```
+
+---
+
+## 13. FUTURE WORK (Deferred to v3.1+)
+
+```
+[ ] Multi-language normalization — scoring content in non-English
+    languages, handling translation-mediated bias
+[ ] Automated scoring pipeline — machine-readable URL ingestion,
+    automated content extraction, and scoring assistance
+[ ] Temporal analysis — tracking HCB drift for a URL or domain
+    over time (requires periodic re-evaluation)
+[ ] Composite bias index — a single scalar summary of a URL's
+    overall HR compatibility bias (requires validated weighting)
+[ ] Sector benchmarks — reference HCB profiles for news sites,
+    social platforms, e-commerce, government sites, etc.
+[ ] Adversarial robustness — handling sites that appear HR-compatible
+    on the surface but undermine rights in practice (requires
+    off-domain toggle or v1-style external evidence)
+[ ] Inter-rater reliability study — multiple evaluators scoring
+    the same URLs to quantify subjectivity
+[ ] Community scoring — public participation in evaluation with
+    aggregation of crowd scores
+```
+
+---
+
+## APPENDIX A: Quick Reference — Evaluation Checklist
+
+```
+□ Record URL and access timestamp
+□ Classify Content Type (primary + secondary)
+□ Load or create Domain Context Profile
+□ Extract editorial content elements
+□ Extract structural content elements
+□ Score Editorial Channel (31 sections)
+□ Score Structural Channel (31 sections)
+□ Apply channel combination weights
+□ Apply Domain Context Modifiers
+□ Assign directionality markers (A/P/F/C)
+□ Assign evidence strength (H/M/L)
+□ Record notes with specific on-page citations
+□ Compute aggregates
+□ Classify overall HCB (strong pos / mod pos / neutral / mod neg / strong neg)
+□ Flag any low-confidence scores (uncertainty > 40%)
+□ Check cross-URL consistency (if batch)
+```
+
+---
+
+## APPENDIX B: Glossary
+
+| Term | Definition |
+|---|---|
+| **HCB** | HR Compatibility Bias — the directional lean of content relative to the UDHR |
+| **DCP** | Domain Context Profile — cached domain-level modifiers |
+| **Signal Channel** | Whether a score derives from editorial content (E), structural features (S), or both (B) |
+| **Directionality Marker** | Whether the bias is expressed through advocacy (A), practice (P), framing (F), or coverage (C) |
+| **Context Modifier** | Score adjustment from domain-level inherited context |
+| **Content Type** | Classification of the URL's primary content (ED, PO, MI, CO, etc.) |
+| **Relevance Weight** | How important a UDHR article is to a given content type |
+| **ND** | No Data — no relevant content at the URL for this UDHR section |
+| **Clamping** | Constraining combined scores to the [-1.0, 1.0] range |
+
+---
+
+```
+End of Methodology v3 (DRAFT)
+2026-02-23
+```

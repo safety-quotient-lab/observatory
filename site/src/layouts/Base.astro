@@ -20,11 +20,163 @@ const { title, description = 'HN HRCB — Hacker News stories scored against the
     <title>{title} | HN HRCB</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
-  <body class="flex flex-col min-h-screen">
-    <Nav />
-    <main class="flex-1">
-      <slot />
-    </main>
-    <Footer />
+  <body>
+    <center>
+      <table id="hnmain" width="85%" cellpadding="0" cellspacing="0" style="background-color: #0d0d14; max-width: 1280px;">
+        <tr>
+          <td>
+            <Nav />
+          </td>
+        </tr>
+        <tr style="height: 10px;"></tr>
+        <tr>
+          <td>
+            <slot />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <Footer />
+          </td>
+        </tr>
+      </table>
+    </center>
+    <script>
+      function scoreColor(score: number): string {
+        if (score > 0) {
+          const t = Math.min(score, 1);
+          return `rgb(${Math.round(0x55+(0x16-0x55)*t)},${Math.round(0x55+(0xa3-0x55)*t)},${Math.round(0x55+(0x4a-0x55)*t)})`;
+        } else if (score < 0) {
+          const t = Math.min(Math.abs(score), 1);
+          return `rgb(${Math.round(0x55+(0xdc-0x55)*t)},${Math.round(0x55+(0x26-0x55)*t)},${Math.round(0x55+(0x26-0x55)*t)})`;
+        }
+        return '#555';
+      }
+
+      function makeRetryBtn(hnId: string, title: string): HTMLButtonElement {
+        const btn = document.createElement('button');
+        btn.className = 'trigger-btn';
+        btn.dataset.hnId = hnId;
+        btn.title = title;
+        btn.style.cssText = 'background:none;border:none;cursor:pointer;padding:2px 4px;font-size:10pt;color:#dc2626;';
+        btn.textContent = '\u25B6';
+        return btn;
+      }
+
+      document.addEventListener('click', async (e) => {
+        const btn = (e.target as HTMLElement).closest('.trigger-btn') as HTMLButtonElement | null;
+        if (!btn) return;
+
+        const hnId = btn.dataset.hnId;
+        if (!hnId) return;
+
+        // Replace button with spinning gear
+        const spinner = document.createElement('span');
+        spinner.className = 'eval-spinner';
+        spinner.style.color = '#60a5fa';
+        spinner.style.fontSize = '8pt';
+        spinner.style.display = 'inline-block';
+        spinner.title = 'Starting...';
+        spinner.textContent = '\u2699';
+        btn.replaceWith(spinner);
+
+        // Find subtext elements
+        const row = spinner.closest('tr');
+        const subtextRow = row?.nextElementSibling;
+        const subtextTd = subtextRow?.querySelector('.subtext');
+
+        // Ensure status span exists in subtext
+        let statusEl = subtextTd?.querySelector('.eval-status') as HTMLElement | null;
+        if (!statusEl && subtextTd) {
+          statusEl = document.createElement('span');
+          statusEl.className = 'eval-status';
+          subtextTd.appendChild(statusEl);
+        }
+
+        function setStatus(html: string) {
+          if (statusEl) statusEl.innerHTML = ` | ${html}`;
+        }
+
+        setStatus('<span style="color: #60a5fa; font-size: 8pt;">connecting...</span>');
+
+        try {
+          const res = await fetch(`/api/trigger/${hnId}`, { method: 'POST' });
+
+          // Check if we got an SSE stream or a plain JSON error
+          const contentType = res.headers.get('content-type') || '';
+
+          if (contentType.includes('text/event-stream')) {
+            // Read SSE stream
+            const reader = res.body!.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+
+              // Parse complete SSE messages from buffer
+              const parts = buffer.split('\n\n');
+              buffer = parts.pop() || '';
+
+              for (const part of parts) {
+                if (!part.trim()) continue;
+                let event = 'message';
+                let data = '';
+                for (const line of part.split('\n')) {
+                  if (line.startsWith('event: ')) event = line.slice(7);
+                  else if (line.startsWith('data: ')) data = line.slice(6);
+                }
+                if (!data) continue;
+
+                const parsed = JSON.parse(data);
+
+                if (event === 'status') {
+                  spinner.title = parsed.message;
+                  if (parsed.step === 'fetching') {
+                    setStatus('<span style="color: #60a5fa; font-size: 8pt;">fetching page...</span>');
+                  } else if (parsed.step === 'evaluating') {
+                    setStatus('<span style="color: #60a5fa; font-size: 8pt;">calling Claude...</span>');
+                  } else if (parsed.step === 'writing') {
+                    setStatus('<span style="color: #60a5fa; font-size: 8pt;">saving results...</span>');
+                  }
+                } else if (event === 'done') {
+                  const score = parsed.score as number;
+                  const sign = score > 0 ? '+' : '';
+                  const formatted = `${sign}${score.toFixed(2)}`;
+
+                  const link = document.createElement('a');
+                  link.href = `/item/${hnId}`;
+                  link.title = `HRCB: ${formatted}`;
+                  const scoreEl = document.createElement('span');
+                  scoreEl.className = 'score-font';
+                  scoreEl.style.color = scoreColor(score);
+                  scoreEl.style.fontSize = '9pt';
+                  scoreEl.style.fontWeight = 'bold';
+                  scoreEl.textContent = formatted;
+                  link.appendChild(scoreEl);
+                  spinner.replaceWith(link);
+
+                  setStatus(`<a href="/item/${hnId}" style="color: #ff6600;">hrcb</a>`);
+                } else if (event === 'error') {
+                  spinner.replaceWith(makeRetryBtn(hnId, parsed.error || 'Failed — click to retry'));
+                  setStatus('<span style="color: #dc2626; font-size: 8pt;">failed</span>');
+                }
+              }
+            }
+          } else {
+            // Plain JSON error response (409, 404, etc.)
+            const data = await res.json();
+            spinner.replaceWith(makeRetryBtn(hnId, data.error || 'Failed — click to retry'));
+            setStatus(`<span style="color: #dc2626; font-size: 8pt;">${data.error || 'error'}</span>`);
+          }
+        } catch (err) {
+          spinner.replaceWith(makeRetryBtn(hnId, 'Network error — click to retry'));
+          setStatus('<span style="color: #dc2626; font-size: 8pt;">network error</span>');
+        }
+      });
+    </script>
   </body>
 </html>

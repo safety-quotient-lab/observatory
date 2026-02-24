@@ -1,0 +1,644 @@
+# Calibration Set Expansion — 15 URLs (v3.1 Addendum §11c, Rev. 1)
+
+```
+================================================================
+UDHR HCB Methodology — v3.1 Addendum
+Component:   §11c Calibration Set (Expanded)
+Status:      PROPOSED
+Date:        2026-02-23
+Supersedes:  §11c (6-URL set)
+================================================================
+```
+
+---
+
+## 1. Complete Calibration Set (15 URLs)
+
+### Overview
+
+| Slot | URL | Type | Expected Class | Expected Mean | New? |
+|---|---|---|---|---|---|
+| **EP-1** | `amnesty.org/en/what-we-do/` | HR/MI | Strong positive | +0.55 to +0.70 | ✅ Baselined |
+| **EP-2** | `eff.org/deeplinks` | ED/HR | Strong positive | +0.52 to +0.68 | ✅ Baselined |
+| **EP-3** | `hrw.org` | HR/MI | Strong positive | +0.50 to +0.65 | **NEW** |
+| **EP-4** | `propublica.org` | ED | Moderate-strong pos. | +0.40 to +0.55 | **NEW** |
+| **EP-5** | `archive.org` | MI/PR | Moderate positive | +0.35 to +0.50 | **NEW** |
+| **EN-1** | `weather.gov` | LP/PR | Neutral | +0.05 to +0.18 | ✅ Baselined |
+| **EN-2** | `timeanddate.com` | LP/PR | Neutral | −0.08 to +0.08 | ✅ Baselined |
+| **EN-3** | `xe.com` | LP/PR | Neutral | −0.05 to +0.10 | **NEW** |
+| **EN-4** | `en.wikipedia.org/wiki/Oxygen` | ED | Neutral-mild pos. | +0.00 to +0.15 | **NEW** |
+| **EN-5** | `speedtest.net` | PR | Neutral | −0.10 to +0.05 | **NEW** |
+| **EX-1** | `temu.com` | LP/AD | Moderate negative | −0.25 to −0.10 | ✅ Baselined |
+| **EX-2** | `rt.com` | LP/ED | Neutral-mod. neg. | −0.15 to −0.02 | ✅ Baselined |
+| **EX-3** | `booking.com` | LP/AD | Mild-mod. negative | −0.20 to −0.05 | **NEW** |
+| **EX-4** | `gab.com` | LP/CO | Mixed-negative | −0.20 to −0.05 | **NEW** |
+| **EX-5** | `xinhuanet.com` | LP/ED | Neutral-mod. neg. | −0.15 to −0.02 | **NEW** |
+
+---
+
+## 2. New Additions — Rationale and Expected Profiles
+
+### EP-3: `https://www.hrw.org`
+
+```
+Content Type:     HR (Human Rights Specific) | Secondary: MI (Mission)
+Selection Rationale:
+  - Validates EP-1 (Amnesty) by testing a second major HR org
+  - Different organizational focus: investigative reports vs. campaigns
+  - Tests scoring consistency across similar-class sites
+  - Homepage is stable, mission-driven landing page
+```
+
+**Human Rights Watch** describes itself as an organization that "defends the rights of people in 100 countries worldwide, spotlighting abuses and bringing perpetrators to justice" [^1]. The site hosts extensive investigative reports [^8], operates as a 501(c)(3) [^10], and publishes career and transparency information on-domain [^7].
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | +0.7 to +0.8 | A,F | Explicit human dignity mission, UDHR-aligned work |
+| Art. 1 | +0.6 to +0.7 | A,F | Universal equality language, global scope |
+| Art. 2 | +0.7 to +0.8 | A,P | Anti-discrimination is a core campaign area |
+| Art. 12 | +0.4 to +0.5 | A,P | Campaigns against surveillance; NGO data practices |
+| Art. 19 | +0.7 to +0.8 | A,P | Free expression central to mission; open reports |
+| Art. 20 | +0.5 to +0.6 | A,C | Covers assembly/association rights globally |
+| Art. 26 | +0.5 to +0.6 | P,C | Free educational reports and resources |
+| Art. 28 | +0.7 to +0.8 | A,F | Mission targets just international order |
+| Art. 29 | +0.4 to +0.5 | F,P | Models institutional responsibility |
+| Art. 30 | +0.5 to +0.6 | A,P | Documents and opposes state destruction of rights |
+
+```
+Expected Weighted Mean: +0.55 to +0.65
+Expected Classification: STRONG POSITIVE
+Validates:  EP-1 consistency (two major HR orgs should score similarly)
+Differentiator from EP-1: HRW is more report-heavy, less campaign/petition
+  oriented. May score slightly lower on Art. 20 (less community action),
+  slightly higher on Art. 28 (more policy/international law focus).
+  Divergence of >0.15 between EP-1 and EP-3 means should be investigated.
+```
+
+---
+
+### EP-4: `https://www.propublica.org`
+
+```
+Content Type:     ED (Editorial/Article) | Secondary: HR (Human Rights)
+Selection Rationale:
+  - First EP site with primary type ED (journalism, not advocacy org)
+  - Tests whether non-profit investigative journalism scores as
+    strongly positive as dedicated HR organizations
+  - Explicit "public interest" mission on-domain
+  - Free access, donor-funded, no paywall
+  - Structural independence (non-profit model)
+```
+
+**ProPublica** is "an independent, non-profit newsroom that produces investigative journalism in the public interest" [^3]. Its funding model (donor-supported, no paywall) and editorial mission are disclosed on-domain.
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | +0.5 to +0.6 | F | Public interest journalism framing implies dignity/justice values, but less explicit than HR orgs |
+| Art. 1 | +0.3 to +0.4 | F | Universal service ethos; free access; but less explicit equality language than HR sites |
+| Art. 2 | +0.4 to +0.5 | C,F | Investigative reporting on discrimination (housing, policing, healthcare); diverse sourcing |
+| Art. 12 | +0.3 to +0.5 | C,P | Covers privacy topics; non-profit model = less ad tracking than commercial news; but still has some analytics |
+| Art. 19 | +0.6 to +0.7 | A,P | Press freedom is existential for investigative journalism; free access; explicit independence; FOIA-driven work |
+| Art. 20 | +0.2 to +0.3 | C | Reports on civil society; less community infrastructure than social platforms |
+| Art. 26 | +0.5 to +0.6 | P,C | Data journalism tools often published as open-source; educational mission inherent in "explaining" function |
+| Art. 28 | +0.5 to +0.6 | F,C | Accountability journalism contributes to just social order; investigations target systemic failures |
+| Art. 29 | +0.4 to +0.5 | P | Transparent funding, corrections policy, editorial independence; models institutional responsibility |
+| Art. 30 | +0.3 to +0.4 | C,P | Investigations expose abuses of power; site policies prevent misuse |
+
+```
+Expected Weighted Mean: +0.40 to +0.50
+Expected Classification: MODERATE-TO-STRONG POSITIVE
+Validates:  Whether ED-type content can reach EP range without being
+            a dedicated HR organization. Tests the ceiling for journalism.
+Differentiator from EP-1/EP-2: Lower scores on Preamble, Art. 1
+  (less explicit rights language) but comparable on Art. 19, 26, 28
+  (functional alignment through journalism). Expected gap of 0.10-0.20
+  below HR-dedicated sites.
+Critical test: If ProPublica scores HIGHER than Amnesty or EFF on any
+  article, the rubric may overweight journalistic coverage relative
+  to direct advocacy.
+```
+
+---
+
+### EP-5: `https://archive.org`
+
+```
+Content Type:     MI (Mission/Values) | Secondary: PR (Product/Feature)
+Selection Rationale:
+  - First EP site with primary type MI (mission-driven landing page)
+  - Tests whether open-access infrastructure scores positively
+    without explicit HR language
+  - Mission: "Universal Access to All Knowledge"
+  - Non-profit, no tracking, no ads, no paywall
+  - Strongest possible structural privacy/access profile
+  - Different from advocacy (Amnesty/HRW) and journalism (EFF/ProPublica)
+```
+
+The **Internet Archive** operates as a non-profit digital library with the stated mission of "Universal Access to All Knowledge." The homepage provides access to the Wayback Machine, open-source book lending, audio/video archives, and software preservation. The site runs no advertising and collects minimal data.
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | +0.5 to +0.6 | F,P | "Universal Access to All Knowledge" — dignity through access to information; enacted, not just stated |
+| Art. 1 | +0.4 to +0.5 | P | Equality through free, universal access; no gatekeeping by class, geography, or identity |
+| Art. 2 | +0.3 to +0.4 | P | Available to all without discrimination; multilingual collections; some accessibility features |
+| Art. 12 | +0.4 to +0.6 | P | Non-profit model with no ad tracking, no behavioral targeting; minimal data collection; strongest structural privacy in the EP set |
+| Art. 19 | +0.5 to +0.7 | P,F | Digital preservation as expression infrastructure; Wayback Machine preserves censored/deleted content; open access to knowledge |
+| Art. 20 | +0.1 to +0.2 | P | Open-source community contributions; but Archive.org is a library, not a community platform |
+| Art. 26 | +0.6 to +0.8 | P | **Expected highest score in set.** Free access to millions of books, educational materials, courses. This is Art. 26 (education) in structural form. |
+| Art. 28 | +0.4 to +0.5 | P,F | Open knowledge infrastructure contributes to just information order |
+| Art. 29 | +0.3 to +0.4 | P | ToS sets responsibilities; respectful use expectations; non-profit transparency |
+| Art. 30 | +0.2 to +0.3 | P | DMCA compliance; prevents misuse for rights destruction; but has been criticized for copyright issues (scored from on-domain evidence only) |
+
+```
+Expected Weighted Mean: +0.38 to +0.48
+Expected Classification: MODERATE POSITIVE
+Validates:  Whether structural/practice (P) signals alone — without
+            editorial advocacy — can produce EP-class scores.
+Differentiator: Archive.org may score HIGHEST on Art. 12 (privacy)
+  and Art. 26 (education) due to pure structural implementation,
+  but LOWEST among EP sites on Preamble and Art. 1 (less explicit
+  rights language). Tests whether actions speak louder than words
+  in the methodology.
+```
+
+---
+
+### EN-3: `https://www.xe.com`
+
+```
+Content Type:     LP (Landing) | Secondary: PR (Product)
+Selection Rationale:
+  - Currency conversion utility; pure functional tool
+  - Commercial (ad-supported) unlike EN-1 (government)
+  - Minimal editorial content; no community features
+  - Tests whether a standard commercial utility site scores
+    truly neutral
+  - More advertising than EN-1 (weather.gov), less than EN-5
+    (speedtest.net)
+```
+
+**Xe.com** is a widely-used currency conversion utility. The homepage presents a conversion tool, rate tables, and currency charts. It is owned by Euronet Worldwide, is ad-supported, and requires no registration for basic use.
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | 0.0 | — | No values, mission, or dignity language. Pure utility. |
+| Art. 1 | 0.0 | — | Available to all, but no equality framing. |
+| Art. 2 | 0.0 | — | No discrimination-relevant content. No accessibility statement expected. |
+| Art. 12 | −0.1 to 0.0 | P | Ad-supported with standard tracking; cookie consent exists; mild structural negative from commercial ad-tech. |
+| Art. 19 | 0.0 | — | Publishes exchange rate data. No editorial expression. |
+| Art. 20 | ND | — | No community features. |
+| Art. 26 | 0.0 to +0.1 | P | Some educational content about currencies. Free access to tools supports financial literacy. Minimal. |
+| Art. 28 | 0.0 | — | No signal. |
+| Art. 29 | 0.0 | — | ToS exists. Standard. |
+| Art. 30 | 0.0 | — | Standard protections. |
+
+```
+Expected Weighted Mean: −0.02 to +0.03
+Expected Classification: NEUTRAL
+Validates:  True zero baseline for a commercial utility. Comparison
+            with EN-1 (weather.gov, government) tests whether
+            government vs. commercial utility scoring differs (it
+            should slightly — government = no tracking).
+```
+
+---
+
+### EN-4: `https://en.wikipedia.org/wiki/Oxygen`
+
+```
+Content Type:     ED (Editorial) | Secondary: n/a
+Selection Rationale:
+  - First EN site with ED (editorial) content type
+  - Tests whether NPOV (Neutral Point of View) encyclopedic
+    content scores as genuinely neutral
+  - Wikipedia has strong community norms, open editing, no ads,
+    but this is a single static article page, not the community
+  - Non-controversial scientific topic eliminates editorial lean
+  - Stable content (scientific article, rarely changes)
+```
+
+Wikipedia's **Neutral Point of View** policy requires that content be "presented without the influence of editorial bias" [^6][^9]. The Oxygen article is a stable scientific reference page with no political, social, or rights-related editorial dimension.
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | 0.0 | — | Scientific article. No dignity/values language. |
+| Art. 1 | 0.0 to +0.1 | P | Free, open access to knowledge. No registration. Community-created. Mild structural positive from open model. |
+| Art. 2 | 0.0 to +0.1 | P | No ads, free for all. Multilingual (article available in 100+ languages). Some accessibility features. |
+| Art. 12 | +0.1 to +0.2 | P | No advertising, no commercial tracking, minimal data collection. Wikimedia privacy practices are above average. Mild structural positive. |
+| Art. 19 | +0.1 to +0.2 | P | Open editing model = radical implementation of participatory expression. But this single article page shows only the result, not the process. Weak signal. |
+| Art. 20 | 0.0 to +0.1 | P | Edit history and talk page accessible = community assembly, but not the primary content on this URL. |
+| Art. 26 | +0.1 to +0.2 | P | Free educational content. Wikipedia's raison d'être is Art. 26. But on this single article, signal is mild. |
+| Art. 28 | 0.0 | — | No signal. |
+| Art. 29 | 0.0 to +0.1 | P | Wikipedia's community norms (verifiability, NPOV, no original research) [^4] model responsible knowledge creation. Weak but present. |
+| Art. 30 | 0.0 to +0.1 | P | Edit protection prevents vandalism/misuse. Standard. |
+
+```
+Expected Weighted Mean: +0.05 to +0.12
+Expected Classification: NEUTRAL (upper edge)
+Validates:  Whether Wikipedia's structural virtues (no ads, free,
+            open, community-governed) produce a slight positive lean
+            even on a content-neutral article. This tests the
+            boundary between "genuinely neutral" and "structurally
+            positive."
+Critical test: If this URL scores above +0.15, the methodology may
+  be over-crediting structural open-access features. If it scores
+  below 0.0, the methodology may be under-crediting them.
+```
+
+---
+
+### EN-5: `https://www.speedtest.net`
+
+```
+Content Type:     PR (Product/Feature) | Secondary: n/a
+Selection Rationale:
+  - Pure utility tool (network speed test)
+  - Owned by Ookla (Ziff Davis / Ziff Davis parent)
+  - Ad-supported with visible display advertising
+  - Heavier tracking than EN-1/EN-2 (commercial data analytics
+    company — Ookla monetizes aggregate speed data)
+  - Tests the negative edge of neutral: when does ad-tracking
+    on a utility site cross from neutral to mild negative?
+  - No editorial content whatsoever
+```
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | 0.0 | — | Speed test tool. No values framing. |
+| Art. 1 | 0.0 | — | Available to all. No equality dimension. |
+| Art. 2 | 0.0 | — | No discrimination-relevant content. |
+| Art. 12 | −0.2 to −0.1 | P | Ookla collects network performance data, IP addresses, ISP information, and location data. Ad-supported with display advertising and tracking. The business model is partially built on aggregating and selling network data. Stronger structural negative than EN-2 (timeanddate.com). |
+| Art. 19 | 0.0 | — | No expression dimension. |
+| Art. 20 | ND | — | No community features. |
+| Art. 26 | 0.0 | — | No educational content. |
+| Art. 28 | 0.0 | — | No signal. |
+| Art. 29 | 0.0 | — | ToS exists. Standard. |
+| Art. 30 | 0.0 | — | Standard. |
+
+```
+Expected Weighted Mean: −0.03 to +0.00
+Expected Classification: NEUTRAL (lower edge)
+Validates:  The negative boundary of neutral. Speedtest.net should
+            score slightly more negative than timeanddate.com (EN-2)
+            due to heavier data monetization model. Tests gradient
+            sensitivity: can the methodology distinguish between
+            "light tracking on a utility site" (EN-2: -0.1 on Art. 12)
+            and "heavier tracking + data monetization" (EN-5: -0.2
+            on Art. 12)?
+```
+
+---
+
+### EX-3: `https://www.booking.com`
+
+```
+Content Type:     LP (Landing) | Secondary: AD (Advertising/Commerce)
+Selection Rationale:
+  - Dark patterns in a DIFFERENT INDUSTRY than Temu (travel vs.
+    e-commerce) — validates that dark pattern scoring generalizes
+  - Well-documented manipulative design: urgency timers, artificial
+    scarcity ("Only 2 rooms left!"), social proof manipulation
+    ("43 people looking at this"), default opt-ins
+  - Privacy policy discloses extensive data collection
+  - Tests whether the methodology can score dark patterns in a
+    company with higher brand reputation than Temu
+  - Important for calibration: tests whether brand familiarity
+    biases the evaluator toward leniency
+```
+
+Booking.com is one of the world's largest travel platforms. Its homepage and search results pages prominently feature urgency-inducing UX patterns. The site's dark patterns have been documented extensively and have attracted regulatory attention in the EU [^2][^5].
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | −0.1 to 0.0 | P | Urgency design instrumentalizes user attention but less aggressively than Temu. No gamified consent (no spin-to-win). |
+| Art. 1 | 0.0 | — | Available to all. No equality dimension beyond access. |
+| Art. 2 | 0.0 | — | No observed discriminatory features (pricing algorithms may discriminate, but this is not observable from on-domain content). |
+| Art. 12 | −0.4 to −0.3 | P | Extensive data collection: browsing behavior, search history, location, device data, booking history. Cross-site tracking for retargeting. Cookie consent defaults to accept-all in many implementations. Privacy policy (on-domain) discloses broad data sharing with partners. |
+| Art. 19 | 0.0 | — | Not relevant to a booking platform. User reviews exist but are curated/filtered. |
+| Art. 20 | ND | — | No community/assembly dimension. |
+| Art. 26 | 0.0 | — | No educational content. |
+| Art. 28 | −0.1 to 0.0 | P | Manipulative design contributes to exploitative commercial norms. Mild signal. |
+| Art. 29 | −0.2 to −0.1 | P | Dark patterns shift responsibility to user: "You missed a deal" framing blames user for platform's artificial scarcity. Urgency/scarcity claims ("Only 1 room left at this price!") may be misleading. ToS claims broad rights. |
+| Art. 30 | −0.2 to −0.1 | P | Manipulative consent architecture undermines informed decision-making. Retargeting follows users across the web. Design works against user autonomy. |
+
+```
+Expected Weighted Mean: −0.10 to −0.03
+Expected Classification: NEUTRAL-TO-MILD NEGATIVE
+Validates:  1. Dark pattern scoring generalizes across industries
+            2. Brand-reputation bias test (Booking.com is more
+               "mainstream" than Temu — does the evaluator score
+               it more leniently for equivalent dark patterns?)
+            3. Expected to score LESS negative than Temu (-0.18)
+               because: fewer dark patterns, no gamified consent,
+               no biometric data collection. If Booking.com scores
+               equally negative, the evaluator is over-penalizing
+               dark patterns.
+```
+
+---
+
+### EX-4: `https://gab.com`
+
+```
+Content Type:     LP (Landing) | Secondary: CO (Community)
+Selection Rationale:
+  - ONLY community-type (CO) site in the calibration set
+  - Tests community moderation scoring dimension
+  - Gab explicitly positions itself as "free speech" platform
+    with minimal content moderation
+  - Creates an INTENTIONAL SCORING TENSION: strong on Art. 19
+    (free expression) but weak/negative on Art. 2 (non-discrimination),
+    Art. 29 (community responsibility), Art. 30 (preventing rights
+    destruction)
+  - Tests whether the methodology can produce MIXED scores
+    (positive + negative) for the same URL
+  - On-domain evidence: community guidelines, visible content,
+    moderation policy (or lack thereof), ToS
+```
+
+**Gab** is a social media platform that markets itself as a free-speech alternative to mainstream platforms. Its on-domain community guidelines are explicitly permissive. Content visible on the public-facing homepage may include material that mainstream platforms would moderate.
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | −0.2 to −0.1 | F,P | Platform ethos prioritizes expression over dignity. Unmoderated hostile content undermines dignity framework. |
+| Art. 1 | −0.1 to 0.0 | P | Available to all, but community norms may create hostile environment for many groups, undermining practical equality. |
+| Art. 2 | −0.3 to −0.2 | P | Permissive moderation tolerates discriminatory content. On-domain content may include visible discrimination against protected groups. Key negative dimension. |
+| Art. 12 | 0.0 to +0.2 | P | Gab markets privacy as a feature (no mainstream ad-tech). May score mildly positive on structural privacy. Interesting contrast with community negatives. |
+| Art. 19 | **+0.3 to +0.5** | A,P | **Expected positive outlier.** Gab's entire identity is Art. 19 maximalism. Minimal content removal, no algorithmic suppression, explicit free-speech commitment. This is the score that makes Gab analytically interesting — it *does* advance Art. 19, just at the expense of other articles. |
+| Art. 20 | +0.1 to +0.2 | P | Platform enables group formation and assembly. Community features. Open registration. |
+| Art. 26 | 0.0 | — | No educational dimension. |
+| Art. 28 | −0.2 to −0.1 | F | Platform's tolerance of extremist content arguably undermines just social order. But "just order" is contested — Gab would argue its model IS more just. Scored conservatively. |
+| Art. 29 | −0.3 to −0.2 | P | Minimal moderation = minimal community responsibility enforcement. Platform abdicates duty to prevent harm. On-domain guidelines reflect this explicitly. |
+| Art. 30 | −0.3 to −0.2 | P | Permissive policy enables use of the platform to undermine others' rights (harassment, doxxing, hate speech — if observable on-domain). Platform structures do not prevent this. |
+
+```
+Expected Weighted Mean: −0.08 to −0.02
+Expected Classification: NEUTRAL-TO-MILD NEGATIVE
+Validates:  1. MIXED SCORING — can the methodology produce +0.4
+               and -0.3 for the same URL on different articles?
+            2. Art. 19 tension — does maximizing one right at the
+               expense of others produce a net negative?
+            3. Community (CO) content type scoring
+            4. If Art. 19 scores NEGATIVE despite minimal censorship,
+               the evaluator is importing political bias. If Art. 2
+               scores POSITIVE despite unmoderated discrimination,
+               the evaluator is avoiding negative scores.
+Critical test: Art. 19 MUST be positive (≥+0.2) for calibration
+  to pass. Art. 2 and Art. 29 MUST be negative (≤-0.1) for
+  calibration to pass. If either condition fails, the evaluator
+  is not applying the rubric neutrally.
+```
+
+---
+
+### EX-5: `https://www.xinhuanet.com`
+
+```
+Content Type:     LP (Landing) | Secondary: ED (Editorial)
+Selection Rationale:
+  - Chinese state news agency — validates EX-2 (RT) by testing
+    a SECOND state media outlet from a different state
+  - Tests scoring consistency: two state-funded media sites
+    should produce similar Art. 19 negatives for the same
+    structural reason (institutional editorial constraint)
+  - Different editorial style from RT (Xinhua is more wire-service,
+    less commentary-driven)
+  - On-domain evidence: government affiliation is stated,
+    editorial line is observable
+```
+
+**Xinhua** is the official state news agency of the People's Republic of China. Its on-domain identity discloses its government affiliation. The site publishes news across topics including international relations, economics, and Chinese domestic affairs.
+
+| Discriminator | Expected Score | Expected Dir | Rationale |
+|---|---|---|---|
+| Preamble | −0.1 to 0.0 | F | Coverage of international topics includes rights-adjacent language but through state-interest lens. Free access. |
+| Art. 1 | 0.0 | F | Coverage of equality topics filtered through state priorities. |
+| Art. 2 | −0.2 to −0.1 | F | Selective coverage of discrimination (emphasizes discrimination abroad, silent on domestic issues). Same structural pattern as RT. |
+| Art. 12 | −0.1 to 0.0 | P | Standard tracking. State media may have data-sharing obligations to state entities (inferred). |
+| Art. 19 | **−0.5 to −0.3** | F,P | **Key negative.** State news agency = institutional editorial constraint. Strongest form of Art. 19 negative: the funding entity controls editorial output. Content consistently aligns with Chinese government positions on all contested topics. Observable from on-domain content patterns. Expected to be comparable to RT's −0.4. |
+| Art. 20 | −0.1 to 0.0 | F | Coverage of assembly/civil society is directionally selective. |
+| Art. 26 | 0.0 to +0.1 | P,C | Some informational content. Free access. Educational value compromised by institutional constraints. |
+| Art. 28 | −0.2 to −0.1 | F | Editorial line challenges existing international human rights order. Advocates for alternative frameworks (state sovereignty over universal rights). |
+| Art. 29 | −0.1 to 0.0 | F | Accountable to state, not to audience. No visible corrections or accountability mechanism. |
+| Art. 30 | −0.2 to −0.1 | F | Content framing may justify restriction of others' rights (dissent, minority expression, internet freedom). |
+
+```
+Expected Weighted Mean: −0.12 to −0.03
+Expected Classification: NEUTRAL-TO-MODERATE NEGATIVE
+Validates:  1. State media scoring consistency — EX-5 should score
+               within ±0.08 of EX-2 (RT) on weighted mean
+            2. Art. 19 should be within ±0.15 of RT's Art. 19
+            3. If Xinhua scores significantly BETTER than RT despite
+               similar structural constraints, evaluator may have
+               geographic/cultural bias
+            4. If Xinhua scores significantly WORSE, evaluator may
+               be anchoring on geopolitical assumptions rather than
+               on-domain evidence
+Cross-calibration rule: |EX-2 mean − EX-5 mean| > 0.10 → WARNING
+  Both are state media with the same structural Art. 19 problem;
+  their means should converge.
+```
+
+---
+
+## 3. Diversity Analysis
+
+### 3a. Content Type Coverage
+
+| Content Type | EP | EN | EX | Total |
+|---|---|---|---|---|
+| HR (Human Rights) | 3 (EP-1, EP-2, EP-3) | 0 | 0 | 3 |
+| MI (Mission) | 2 (EP-1, EP-5) | 0 | 0 | 2 |
+| ED (Editorial) | 2 (EP-2, EP-4) | 1 (EN-4) | 2 (EX-2, EX-5) | 5 |
+| LP (Landing) | 0 | 2 (EN-1, EN-3) | 3 (EX-1, EX-3, EX-4) | 5 |
+| PR (Product) | 1 (EP-5) | 3 (EN-1, EN-3, EN-5) | 0 | 4 |
+| AD (Advertising) | 0 | 0 | 2 (EX-1, EX-3) | 2 |
+| CO (Community) | 0 | 0 | 1 (EX-4) | 1 |
+
+**Coverage: 7 of 11 content types represented.** Missing: PO, AC, ME, MX — these could be added in a future expansion but are less critical for calibration.
+
+### 3b. Negative Signal Type Coverage
+
+| Negative Signal Type | Sites | Articles Affected |
+|---|---|---|
+| Dark patterns / manipulative UX | EX-1, EX-3 | Preamble, Art. 29, 30 |
+| Invasive data collection | EX-1, EX-3, EN-5 | Art. 12 |
+| State editorial control | EX-2, EX-5 | Art. 19 |
+| Community toxicity / weak moderation | EX-4 | Art. 2, 29, 30 |
+| Selective editorial framing | EX-2, EX-5 | Art. 2, 28, 30 |
+| Right-maximization tradeoff | EX-4 | Art. 19 vs. Art. 2/29/30 |
+
+### 3c. Ownership Model Coverage
+
+| Ownership | Sites |
+|---|---|
+| Non-profit / trust | EP-1, EP-2, EP-3, EP-4, EP-5 |
+| Government | EN-1, EX-2, EX-5 |
+| Public corporation | EN-2, EN-3, EN-5, EX-1, EX-3 |
+| Private / independent | EX-4 |
+| Wikimedia Foundation | EN-4 |
+
+### 3d. Signal Channel Balance
+
+| Primary Signal | Sites |
+|---|---|
+| **E-dominant** (editorial drives score) | EP-1, EP-2, EP-3, EP-4, EN-4, EX-2, EX-5 |
+| **S-dominant** (structural drives score) | EP-5, EN-1, EN-2, EN-3, EN-5, EX-1, EX-3 |
+| **Mixed E+S** | EX-4 |
+
+**7 E-dominant, 7 S-dominant, 1 mixed** — well balanced.
+
+---
+
+## 4. Consistency Tests Enabled by the Expanded Set
+
+The 15-URL set enables **paired consistency checks** that the 6-URL set could not:
+
+### 4a. Within-Class Pairs
+
+| Test | Sites | What it Validates | Alert Threshold |
+|---|---|---|---|
+| **HR org consistency** | EP-1 vs. EP-3 | Two major HR orgs should score similarly | Mean divergence > 0.15 |
+| **State media consistency** | EX-2 vs. EX-5 | Two state media sites should score similarly on Art. 19 | Art. 19 divergence > 0.15 |
+| **Dark pattern consistency** | EX-1 vs. EX-3 | Dark patterns should score similarly across industries | Art. 29/30 divergence > 0.15 |
+| **Utility site gradient** | EN-1 vs. EN-2 vs. EN-3 vs. EN-5 | Government > Wikimedia > commercial (no-data) > commercial (data) on Art. 12 | Order violation |
+| **EP gradient** | EP-1/3 vs. EP-2/4 vs. EP-5 | HR orgs > HR journalism > infrastructure | Order violation |
+
+### 4b. Cross-Class Boundary Tests
+
+| Test | Sites | What it Validates | Alert Threshold |
+|---|---|---|---|
+| **EP–EN boundary** | EP-5 vs. EN-4 | Archive.org should score higher than Wikipedia/Oxygen despite both being free/open | Mean divergence < 0.10 (too close) |
+| **EN–EX boundary** | EN-5 vs. EX-3 | Speedtest.net (neutral-tracked) should score higher than Booking.com (dark-patterns-tracked) | Mean divergence < 0.05 (too close) |
+| **Art. 19 spectrum** | EX-4 → EP-2 → EP-4 | Gab (+0.4) < EFF (+0.8) but both positive; ProPublica between them | Order violation |
+
+### 4c. Anti-Bias Specific Tests
+
+| Test | What it Detects |
+|---|---|
+| EP mean > +0.35 for all 5 EP sites | Confirms positive end of scale is reachable and consistent |
+| EX mean < −0.02 for all 5 EX sites | Confirms negative scores are produced reliably, not just for one outlier |
+| At least 3 EX sites have ≥2 negative article scores | Confirms negative scoring is systematic, not artifact of one article |
+| EN range stays within ±0.15 of zero for all 5 | Confirms neutral anchor is stable |
+| No EP site scores below any EN site | Class ordering is maintained |
+| No EN site scores below any EX site | Class ordering is maintained |
+| **Total negative article scores across all 15 URLs ≥ 25** | Sufficient negative representation in the calibration data |
+
+---
+
+## 5. Updated Drift Detection Protocol
+
+```
+DRIFT THRESHOLDS (updated for 15-URL set):
+
+  Per-URL weighted mean drift > ±0.12:          WARNING
+  Per-URL weighted mean drift > ±0.20:          HALT — recalibrate
+  
+  Class mean drift:
+    EP class mean drops below +0.35:             WARNING
+    EN class mean moves outside ±0.12:           WARNING
+    EX class mean rises above +0.05:             WARNING — positive bias
+  
+  Paired consistency:
+    |EP-1 mean − EP-3 mean| > 0.15:             WARNING
+    |EX-2 mean − EX-5 mean| > 0.10:             WARNING
+    |EX-1 mean − EX-3 mean| > 0.12:             WARNING
+  
+  Negative count:
+    Total negatives across EX sites < 15:        HALT — positive bias
+    Any EX site has 0 negative scores:           HALT
+    EX-4 Art. 19 < +0.2:                         HALT — anti-free-speech bias
+    EX-4 Art. 2 > −0.1:                          HALT — avoiding negatives
+  
+  Class ordering:
+    Any EP site < any EN site:                   HALT
+    Any EN site < any EX site:                   HALT
+    (on weighted mean)
+
+ABBREVIATED CALIBRATION (for routine checks):
+  Score only 5 URLs (one from each class + the two most
+  divergent from previous run):
+    - EP-1 (Amnesty) — anchor positive
+    - EN-2 (timeanddate.com) — anchor neutral-zero
+    - EX-1 (Temu) — anchor structural negative
+    - EX-4 (Gab) — anchor mixed/community negative
+    - [Most-drifted from previous run]
+  
+  Full 15-URL calibration: every 10th batch or quarterly.
+  Abbreviated 5-URL calibration: every batch.
+```
+
+---
+
+## 6. Expected Aggregate Profile
+
+When all 15 calibration URLs are scored, the resulting distribution should look like this:
+
+```
+                    EX           EN          EP
+                ◄────────►  ◄────────►  ◄────────────►
+    ──┼────┼────┼────┼────┼────┼────┼────┼────┼────┼──
+   -0.5  -0.4  -0.3  -0.2  -0.1  0.0  +0.1  +0.2  ... +0.6  +0.7
+
+    EX-1 ████████████░░░░  (-0.18)
+    EX-2 ██████████░░░░░░  (-0.09)
+    EX-3 ████████░░░░░░░░  (-0.06)
+    EX-5 ████████░░░░░░░░  (-0.08)
+    EX-4 ███████░░░░░░░░░  (-0.05)
+    EN-5 ░░░░░░░░░░█░░░░  (-0.01)
+    EN-2 ░░░░░░░░░░█░░░░  ( 0.00)
+    EN-3 ░░░░░░░░░░█░░░░  (+0.01)
+    EN-4 ░░░░░░░░░░░█░░░  (+0.08)
+    EN-1 ░░░░░░░░░░░██░░  (+0.12)
+    EP-5 ░░░░░░░░░░░░░░░░░░████  (+0.43)
+    EP-4 ░░░░░░░░░░░░░░░░░░░████  (+0.47)
+    EP-2 ░░░░░░░░░░░░░░░░░░░░░█████  (+0.60)
+    EP-1 ░░░░░░░░░░░░░░░░░░░░░██████  (+0.62)
+    EP-3 ░░░░░░░░░░░░░░░░░░░░░█████  (+0.60)
+```
+
+```
+Key distribution properties:
+  - Clear class separation (no overlap between EP and EX)
+  - EN cluster tightly around zero
+  - EP sites spread from +0.40 to +0.65 (healthy variance)
+  - EX sites spread from -0.18 to -0.02 (compressed range —
+    on-domain source constraint limits negative depth)
+  - Full range: -0.18 to +0.62 (0.80 span)
+  - Negative scores: ≥25 across all URLs
+```
+
+---
+
+## 7. Implementation Checklist (Updated)
+
+```
+☑ Original 6 URLs baselined (from §11c Rev. 0)
+☑ 9 new URLs proposed with rationale
+☑ Content type diversity verified (7/11 types covered)
+☑ Negative signal type diversity verified (6 categories)
+☑ Signal channel balance verified (7 E-dominant, 7 S-dominant, 1 mixed)
+☑ Paired consistency tests defined (5 within-class, 3 cross-class)
+☑ Anti-bias specific tests defined (7 tests)
+☑ Abbreviated calibration protocol defined
+☑ Expected aggregate profile documented
+
+☐ Baseline evaluations for 9 new URLs (next step)
+☐ Full 15-URL calibration run
+☐ Class ordering validation
+☐ Paired consistency check
+☐ Anti-bias test results
+```
+
+**Next step:** Baseline the 9 new URLs on the 10 discriminator articles to establish reference scores and validate the expected profiles above. Want me to proceed with those evaluations?
+
+[^1]: [Human Rights Watch | Defending Human Rights Worldwide](https://www.hrw.org/) (20%)
+[^2]: [Dark pattern - Wikipedia](https://en.wikipedia.org/wiki/Dark_pattern) (18%)
+[^3]: [ProPublica — Investigative Journalism and News in the Public Interest](https://www.propublica.org/) (13%)
+[^4]: [Wikipedia:Verifiability](https://en.wikipedia.org/wiki/Wikipedia:Verifiability) (11%)
+[^5]: [Types](https://www.deceptive.design/types) (10%)
+[^6]: [Wikipedia:NPOV means neutral editing, not neutral content - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:NPOV_means_neutral_editing,_not_neutral_content) (8%)
+[^7]: [Careers](https://www.hrw.org/careers) (7%)
+[^8]: [Reports](https://www.hrw.org/publications) (5%)
+[^9]: [Wikipedia:Neutral point of view - Wikipedia](https://en.wikipedia.org/wiki/Wikipedia:Neutral_point_of_view) (5%)
+[^10]: [Contact Us](https://www.hrw.org/contact-us) (3%)
