@@ -212,6 +212,7 @@ async function hashPrompt(system: string, user: string): Promise<string> {
 }
 
 export async function fetchUrlContent(url: string): Promise<string> {
+  const { errorSlugFromStatus, errorSlugFromException, ERROR_TYPES } = await import('./types');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
@@ -224,11 +225,15 @@ export async function fetchUrlContent(url: string): Promise<string> {
     });
     const text = await res.text();
     if (!res.ok) {
-      return `[HTTP ${res.status} error page for ${url}]\n\n${text}`.slice(0, 30000);
+      const slug = errorSlugFromStatus(res.status);
+      const label = ERROR_TYPES[slug].label;
+      return `[error:${slug}] HTTP ${res.status} ${label} for ${url}\n\n${text}`.slice(0, 30000);
     }
     return text.slice(0, 30000);
   } catch (err) {
-    return `[Fetch error for ${url}]: ${err}. The page could not be reached. This may indicate access restrictions, geo-blocking, or the site being unavailable.`;
+    const slug = errorSlugFromException(err);
+    const label = ERROR_TYPES[slug].label;
+    return `[error:${slug}] ${label} for ${url}: ${err}. The page could not be reached. This may indicate access restrictions, geo-blocking, or the site being unavailable.`;
   } finally {
     clearTimeout(timeout);
   }

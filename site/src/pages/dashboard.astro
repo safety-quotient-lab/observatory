@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { scoreToColor, formatScore } from '../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS } from '../lib/udhr';
+import { CONTENT_TYPE_LABELS } from '../lib/types';
 import {
   getStatusCounts,
   getScoreStats,
@@ -33,12 +34,6 @@ const [status, stats, contentTypes, articleAvgs, topPositive, topNegative, recen
   getModelStats(db),
   getTodayEvalCount(db),
 ]);
-
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  ED: 'Editorial', CO: 'Community', HR: 'Human Rights', PO: 'Policy',
-  MI: 'Mission', ME: 'Media', LP: 'Landing Page', PR: 'Product',
-  AD: 'Advertising', AC: 'Academic', MX: 'Mixed',
-};
 
 const pctDone = status.total > 0 ? Math.round((status.done / status.total) * 100) : 0;
 const pctPending = status.total > 0 ? Math.round((status.pending / status.total) * 100) : 0;

@@ -6,6 +6,7 @@ import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor } from '../../lib/colors';
 import { getStory } from '../../lib/db';
+import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
 
 const { id } = Astro.params;
@@ -27,12 +28,6 @@ const scores = storyData.scores.length > 0 ? storyData.scores : evalData.scores;
 
 const classColor = classificationColor(aggregates.classification);
 const classText = classificationTextColor(aggregates.classification);
-
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  ED: 'Editorial', CO: 'Community', HR: 'Human Rights', PO: 'Policy',
-  MI: 'Mission', ME: 'Media', LP: 'Landing Page', PR: 'Product',
-  AD: 'Advertising', AC: 'Academic', MX: 'Mixed',
-};
 
 const siteUrl = Astro.url.origin;
 

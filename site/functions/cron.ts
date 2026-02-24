@@ -245,6 +245,32 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+function errorSlugFromStatus(status: number): string {
+  if (status === 400) return 'http-400';
+  if (status === 401) return 'http-401';
+  if (status === 403) return 'http-403';
+  if (status === 404) return 'http-404';
+  if (status === 410) return 'http-410';
+  if (status === 429) return 'http-429';
+  if (status === 451) return 'http-451';
+  return 'http-5xx';
+}
+
+function errorSlugFromException(err: unknown): string {
+  const msg = String(err).toLowerCase();
+  if (msg.includes('abort') || msg.includes('timeout')) return 'timeout';
+  if (msg.includes('dns') || msg.includes('getaddrinfo') || msg.includes('enotfound')) return 'dns';
+  if (msg.includes('ssl') || msg.includes('tls') || msg.includes('cert')) return 'ssl';
+  return 'network';
+}
+
+const ERROR_LABELS: Record<string, string> = {
+  'http-400': 'Bad Request', 'http-401': 'Unauthorized', 'http-403': 'Forbidden',
+  'http-404': 'Not Found', 'http-410': 'Gone', 'http-429': 'Rate Limited',
+  'http-451': 'Unavailable For Legal Reasons', 'http-5xx': 'Server Error',
+  'timeout': 'Timeout', 'network': 'Network Error', 'dns': 'DNS Failure', 'ssl': 'SSL/TLS Error',
+};
+
 async function fetchUrlContent(url: string): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -258,13 +284,13 @@ async function fetchUrlContent(url: string): Promise<string> {
     });
     const text = await res.text();
     if (!res.ok) {
-      // Use the error page body as content — it still has evaluable signals
-      return `[HTTP ${res.status} error page for ${url}]\n\n${text}`.slice(0, 30000);
+      const slug = errorSlugFromStatus(res.status);
+      return `[error:${slug}] HTTP ${res.status} ${ERROR_LABELS[slug]} for ${url}\n\n${text}`.slice(0, 30000);
     }
     return text.slice(0, 30000);
   } catch (err) {
-    // Network error / timeout — return descriptive content instead of throwing
-    return `[Fetch error for ${url}]: ${err}. The page could not be reached. This may indicate access restrictions, geo-blocking, or the site being unavailable.`;
+    const slug = errorSlugFromException(err);
+    return `[error:${slug}] ${ERROR_LABELS[slug]} for ${url}: ${err}. The page could not be reached. This may indicate access restrictions, geo-blocking, or the site being unavailable.`;
   } finally {
     clearTimeout(timeout);
   }
