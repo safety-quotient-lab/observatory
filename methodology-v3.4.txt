@@ -1,0 +1,1037 @@
+# UDHR HCB Evaluation — Methodology v3.4
+
+```
+================================================================
+Version:  3.4
+Date:     2026-02-23
+Status:   Current
+Supersedes: methodology-v3.3.txt
+================================================================
+```
+
+---
+
+## CHANGES IN v3.4
+
+v3.4 adds three new capabilities to the methodology. No existing
+scoring rules, rubrics, weights, or procedures from v3/v3.1/v3.3
+are altered.
+
+| # | Feature | Section | Origin |
+|---|---------|---------|--------|
+| 1 | Batch Evaluation Protocol | Section A | B1 from v3.3 roadmap |
+| 2 | Adversarial Robustness Layer | Section B | A5 from v3.3 roadmap |
+| 3 | Machine-Readable Output Format | Section C | B8 from v3.3 roadmap |
+
+---
+
+## Inherited from v3.3 (unchanged)
+
+All items listed under "Inherited from v3.0 (unchanged)" and
+"Inherited from v3.1 (unchanged)" in methodology-v3.3.txt carry
+forward without modification:
+
+- URL as primary unit of analysis
+- HCB (HR Compatibility Bias) as core construct
+- Editorial (E) and Structural (S) signal channels
+- Content Type classification (ED, PO, MI, CO, LP, PR, ME, AD, HR, AC, MX)
+- Domain Context Profile (DCP) with modifiers
+- Relevance Weight Matrix (31 articles x 10 content types)
+- Concrete rubrics for editorial, structural, policy, and community content
+- ND vs 0.0 distinction
+- Evidence strength (H/M/L) with score caps
+- Directionality markers (A/P/F/C)
+- Aggregation model: URL -> Page Group -> Domain
+- Off-domain toggle (default: OFF)
+- 15-URL calibration set (5 expected-positive, 5 expected-neutral, 5 expected-negative)
+- SPOT mode (10 discriminator articles for fast screening)
+- Self-contained LLM evaluation prompt
+- Classification thresholds for overall HCB
+- Evidence cap enforcement
+- Volatility (sigma) reporting
+- Critical reminders (symmetry, conservatism, on-domain constraint acknowledgment)
+
+---
+
+## SECTION A: BATCH EVALUATION PROTOCOL (B1)
+
+This section formalizes the procedure for evaluating multiple URLs
+or domains in a single session. It was developed from lessons
+learned during the v2 bulk evaluation of 90 SFW sites, which
+failed due to rate limits and agent coordination issues.
+
+### A1. Batch Definition
+
+A **batch** is a single evaluation run consisting of:
+
+```
+batch = {
+  id:           Unique identifier (format: "batch-YYYYMMDD-NNN")
+  urls:         Ordered list of URLs or domains to evaluate
+  methodology:  Version string (e.g., "v3.4")
+  eval_mode:    STANDARD or SPOT (per v3.1 SPOT mode)
+  toggles:      {
+                  off_domain:        ON | OFF  (default: OFF)
+                  external_evidence: ON | OFF  (default: OFF)
+                }
+  created:      ISO 8601 timestamp
+  operator:     Identifier of the evaluator (human or agent)
+}
+```
+
+A batch may target:
+- A list of specific URLs (URL-level evaluation)
+- A list of domains (homepage evaluation)
+- A mix of both
+
+Each entry in the URL list is called a **batch item**.
+
+### A2. Site Ordering
+
+Evaluation order within a batch is significant because of
+anchoring bias (v3 Section 11c). The following rules apply:
+
+```
+DEFAULT ORDER: Randomized
+  - Shuffle the URL list before evaluation begins.
+  - Record the randomized order in the batch manifest.
+  - Rationale: mitigates anchoring bias per v3 Section 11c.
+
+OPTIONAL ORDER: Sector-grouped, then randomized within group
+  - Group URLs by sector (news, social, e-commerce, search,
+    government, tech, entertainment, other).
+  - Randomize within each group.
+  - Evaluate groups in random order.
+  - Rationale: allows sector-specific calibration while
+    maintaining within-sector randomization.
+
+CALIBRATION INTERSPERSION:
+  - Insert one calibration URL from calibration-v3.1-set.txt
+    every 15 batch items.
+  - Calibration URLs are evaluated identically to batch items.
+  - Calibration scores are compared against expected ranges in
+    calibration-v3.1-set.txt to detect evaluator drift.
+  - If a calibration score falls outside its expected range by
+    more than 0.15 on weighted mean, the evaluator must pause
+    and review the preceding 15 evaluations for consistency.
+```
+
+### A3. Parallelization Limits
+
+Concurrent evaluation is permitted but bounded:
+
+```
+MAX CONCURRENT EVALUATIONS:  3
+  - No more than 3 URLs may be evaluated simultaneously.
+  - Rationale: the 90-site v2 run attempted 9 concurrent agents
+    and failed due to rate limits and context confusion.
+
+PER-AGENT RATE LIMIT:  1 URL per 2 minutes (minimum)
+  - An agent must wait at least 2 minutes between starting
+    consecutive URL evaluations.
+  - This prevents API rate limit exhaustion.
+
+BACKOFF PROTOCOL:
+  1. On first rate limit error: pause the triggering agent for
+     60 seconds, then resume.
+  2. On second consecutive rate limit error: pause ALL agents
+     for 60 seconds.
+  3. On resume after all-agent pause: restart agents one at a
+     time with 30-second spacing.
+  4. On third consecutive rate limit error: reduce MAX CONCURRENT
+     to 1 and continue sequentially.
+  5. Log all backoff events in the batch manifest.
+
+AGENT ISOLATION:
+  - Each agent evaluates one URL at a time to completion before
+    starting the next.
+  - Agents do NOT share scoring context between URLs (each URL
+    evaluation is independent).
+  - Agents DO share the Domain Context Profile for URLs on the
+    same domain (per v3 Section 7).
+```
+
+### A4. Progress Checkpointing
+
+Each completed URL evaluation is persisted immediately:
+
+```
+DIRECTORY STRUCTURE:
+  batch-{id}/
+    manifest.json          Batch metadata and per-item status
+    url-001.json           Completed evaluation for item 1
+    url-002.json           Completed evaluation for item 2
+    ...
+    url-NNN.json           Completed evaluation for item N
+    dcp/
+      domain1.json         Cached DCP for domain1
+      domain2.json         Cached DCP for domain2
+
+CHECKPOINT FREQUENCY:
+  - Each URL evaluation is written to its individual file
+    immediately upon completion.
+  - The manifest is updated after each URL completion.
+  - No batching of writes; each write is atomic.
+
+MANIFEST SCHEMA:
+  {
+    "batch_id": "batch-20260223-001",
+    "methodology": "v3.4",
+    "eval_mode": "STANDARD",
+    "toggles": { "off_domain": false, "external_evidence": false },
+    "created": "2026-02-23T10:00:00Z",
+    "operator": "claude-agent-1",
+    "total_items": 90,
+    "order": ["url-042", "url-017", ...],   // randomized order
+    "items": [
+      {
+        "index": 1,
+        "url": "https://example.com",
+        "status": "completed",
+        "file": "url-001.json",
+        "started": "2026-02-23T10:00:00Z",
+        "completed": "2026-02-23T10:12:34Z",
+        "agent": "agent-1",
+        "attempt": 1
+      },
+      {
+        "index": 2,
+        "url": "https://example.org",
+        "status": "pending",
+        "file": null,
+        "started": null,
+        "completed": null,
+        "agent": null,
+        "attempt": 0
+      },
+      ...
+    ],
+    "calibration_checks": [
+      {
+        "after_item": 15,
+        "calibration_url": "https://www.un.org/en/about-us/universal-declaration-of-human-rights",
+        "expected_range": [0.75, 0.95],
+        "actual": 0.82,
+        "status": "pass"
+      }
+    ],
+    "backoff_events": []
+  }
+
+ITEM STATES:
+  pending      — Not yet started
+  in_progress  — Currently being evaluated by an agent
+  completed    — Evaluation finished, output file written
+  failed       — Evaluation attempted but errored (reason logged)
+  skipped      — Failed on retry, skipped with reason
+```
+
+### A5. Partial-Result Assembly
+
+Aggregate results can be computed from an incomplete batch:
+
+```
+ASSEMBLY TRIGGER:
+  - Assembly can run at any time, even mid-batch.
+  - Assembly reads all completed URL checkpoint files.
+
+PARTIAL AGGREGATE:
+  - Computed identically to full aggregate (v3 Section 8)
+    but only over completed items.
+  - Coverage percentage = completed / total * 100
+
+PARTIAL FLAG:
+  - If coverage < 80%, the aggregate is flagged as PARTIAL.
+  - The PARTIAL flag is included in all output formats.
+  - PARTIAL aggregates must not be cited as definitive results.
+
+PARTIAL AGGREGATE SCHEMA:
+  {
+    "batch_id": "batch-20260223-001",
+    "coverage": {
+      "completed": 72,
+      "total": 90,
+      "percentage": 80.0,
+      "partial": false
+    },
+    "aggregates": {
+      "weighted_mean": 0.28,
+      "max": { "value": 0.82, "url": "...", "section": "Preamble" },
+      "min": { "value": -0.45, "url": "...", "section": "Art. 12" },
+      "by_sector": { ... },
+      "by_content_type": { ... }
+    }
+  }
+```
+
+### A6. Resume Capability
+
+A batch that is interrupted (by error, rate limit, operator
+decision, or system failure) can be resumed:
+
+```
+RESUME PROCEDURE:
+  1. Read manifest.json from the batch directory.
+  2. Identify items with status "pending" or "failed".
+  3. Skip items with status "completed" or "skipped".
+  4. Resume evaluation in the original randomized order
+     (do not re-randomize).
+  5. Items with status "failed" are retried ONCE:
+     - On success: status changes to "completed".
+     - On second failure: status changes to "skipped" with
+       reason field populated.
+
+RESUME CONSTRAINTS:
+  - A resumed batch uses the same methodology version as the
+    original batch.
+  - A resumed batch uses the same toggles as the original batch.
+  - If the calibration set or methodology has been updated since
+    the batch was created, the batch must be restarted (not
+    resumed).
+  - Resume preserves the original operator field but may add
+    a "resumed_by" field.
+
+MAXIMUM RETRIES PER ITEM: 1
+  - Each failed item gets exactly one retry on resume.
+  - After two total attempts (original + retry), the item is
+    marked "skipped" with reason.
+  - Rationale: prevents infinite retry loops on systematically
+    failing URLs (e.g., sites that block automated access).
+```
+
+---
+
+## SECTION B: ADVERSARIAL ROBUSTNESS LAYER (A5)
+
+This section addresses a fundamental limitation of on-domain
+evaluation: sites can present HR-compatible content while
+undermining rights in practice. The adversarial robustness layer
+adds an optional external evidence overlay that operates alongside
+(not replacing) the standard on-domain evaluation.
+
+### B1. Problem Statement
+
+On-domain evaluation (v3 Section 1c) by design restricts evidence
+to content visible at the evaluated URL and its inherited domain
+context. This creates a systematic blind spot for:
+
+```
+CATEGORY                  | EXAMPLE
+--------------------------|---------------------------------------------
+Concealed surveillance    | Site's on-page privacy policy describes
+                          | limited data use, but external investigations
+                          | reveal extensive behavioral tracking
+Labor violations          | Site's mission page emphasizes worker dignity,
+                          | but regulatory findings document unsafe
+                          | conditions in content moderation teams
+Censorship practices      | Site's community guidelines promise open
+                          | discourse, but external reports document
+                          | systematic suppression of political speech
+Regulatory violations     | Site's ToS claims GDPR compliance, but
+                          | data protection authority has issued fines
+                          | for non-compliance
+Lobbying against rights   | Site's editorial content covers rights
+                          | neutrally, but the parent company lobbies
+                          | against privacy legislation
+```
+
+These are "adversarial" in the evaluation sense: the on-domain
+content is constructed (intentionally or not) in a way that
+produces higher HCB scores than the entity's actual behavior
+warrants.
+
+### B2. Dual-Layer Model
+
+v3.4 introduces a dual-layer evaluation model:
+
+```
+LAYER 1 (L1) — On-Domain Evaluation
+  - Identical to standard v3 evaluation.
+  - Uses only on-domain evidence (v3 Section 1c).
+  - Produces the standard HCB score matrix.
+  - This is the PRIMARY score and is ALWAYS computed.
+
+LAYER 2 (L2) — External Evidence Overlay
+  - Uses external sources to produce a parallel score matrix.
+  - Same 31-article structure, same [-1.0, +1.0] scale.
+  - External evidence is evaluated against the same rubrics
+    (adapted for external source material — see B4).
+  - L2 is OPTIONAL and controlled by a toggle.
+
+INDEPENDENCE PRINCIPLE:
+  - L1 and L2 are scored independently.
+  - L2 scores do NOT modify L1 scores.
+  - L2 scores are NOT combined into L1 scores.
+  - They are reported side by side, and the gap between them
+    (Adversarial Gap) is reported as a separate metric.
+```
+
+### B3. L2 Source Categories
+
+External evidence for L2 scoring must come from identifiable,
+attributable sources. Sources are ranked by reliability:
+
+```
+CATEGORY | LABEL                        | RELIABILITY | EXAMPLES
+---------|------------------------------|-------------|-------------------------
+1        | Government regulatory        | Highest     | FTC orders, EU DPA
+         | findings                     |             | decisions, ICO enforcement
+         |                              |             | actions, SEC filings
+2        | Court rulings and            | High        | Federal/national court
+         | settlements                  |             | decisions, class action
+         |                              |             | settlements, consent decrees
+3        | Established HR organizations | High        | Human Rights Watch, Amnesty
+         |                              |             | International, Ranking
+         |                              |             | Digital Rights (RDR),
+         |                              |             | Freedom House, RSF
+4        | Investigative journalism     | Medium-High | Major outlets with editorial
+         |                              |             | standards (NYT, Guardian,
+         |                              |             | Reuters, AP, BBC, etc.)
+5        | Academic research            | Medium      | Peer-reviewed publications,
+         |                              |             | university research centers
+```
+
+Source selection rules:
+
+```
+1. Each L2 score requires at least one source.
+2. Each source must be tagged with its category number (1-5).
+3. Category 4 and 5 sources require corroboration from at least
+   one additional source (same or higher category) to support
+   scores outside [-0.3, +0.3].
+4. Sources older than 3 years are permitted but must be flagged
+   with a recency warning.
+5. Sources must be specific to the evaluated entity (domain
+   owner, parent company, or direct subsidiary). Industry-wide
+   findings do not qualify unless the entity is specifically named.
+```
+
+### B4. L2 Scoring
+
+L2 uses the same [-1.0, +1.0] scale and the full 31-article
+matrix, with these modifications:
+
+```
+EVIDENCE STRENGTH CONSTRAINT:
+  - Only H (High) or M (Medium) evidence strength is permitted
+    for L2 scores.
+  - L (Low) evidence is NOT permitted for external claims.
+  - Rationale: external evidence that cannot meet at least M
+    threshold is too speculative to include in an adversarial
+    robustness check.
+
+CITATION REQUIREMENT:
+  - Every L2 score must include:
+    - Source name and publication
+    - Source category (1-5)
+    - Publication date
+    - URL or document reference
+    - Relevant excerpt or finding summary (1-2 sentences)
+
+L2 RUBRIC (adapted from v3 editorial rubric):
+
+  Score Range | Criteria (External Evidence)
+  ------------|-----------------------------------------------
+  0.7 to 1.0 | External evidence documents strong rights
+              | protection by this entity for this provision.
+              | Multiple authoritative sources confirm.
+              | Example: RDR report ranks entity in top 10%
+              | for privacy practices -> Art. 12: 0.8
+
+  0.4 to 0.6 | External evidence documents meaningful rights
+              | protection. At least one authoritative finding.
+              | Example: EU DPA audit finds full GDPR compliance
+              | -> Art. 12: 0.5
+
+  0.1 to 0.3 | External evidence is mildly positive.
+              | Compliance without notable protection.
+
+  0.0         | External evidence is neutral or absent.
+              | No significant findings in either direction.
+
+  -0.1 to -0.3 | External evidence raises concerns.
+                | Regulatory warnings or minor violations.
+                | Example: FTC warning letter about deceptive
+                | practices -> Art. 12: -0.2
+
+  -0.4 to -0.6 | External evidence documents significant
+                | rights violations. Regulatory action taken.
+                | Example: EU DPA fine for GDPR violation ->
+                | Art. 12: -0.5
+
+  -0.7 to -1.0 | External evidence documents severe or
+                | systematic rights violations. Multiple
+                | authoritative sources.
+                | Example: Court ruling + HRW report documenting
+                | forced labor in content moderation ->
+                | Art. 4: -0.8, Art. 23: -0.9
+
+ND HANDLING:
+  - L2 scores default to ND (not 0.0) when no external
+    evidence exists for an article.
+  - ND in L2 means "no external evidence found", not
+    "external evidence confirms neutrality".
+```
+
+### B5. Adversarial Gap (AG)
+
+The Adversarial Gap measures the discrepancy between how a site
+presents itself (L1) and how external evidence characterizes it
+(L2):
+
+```
+PER-ARTICLE AG:
+  AG_i = L1_score_i - L2_score_i
+
+  Where both L1 and L2 have numeric scores (neither is ND).
+
+INTERPRETATION:
+  AG > 0   Site presents BETTER than external evidence suggests.
+            Possible adversarial presentation or genuine
+            improvement since the external evidence was collected.
+  AG = 0   On-domain presentation matches external evidence.
+  AG < 0   Site presents WORSE than external evidence suggests.
+            Possible excessive self-criticism or outdated positive
+            external evidence.
+
+AGGREGATE AG:
+  Mean AG = mean(AG_i) for all articles where both L1 and L2
+            have numeric scores (ND excluded from both sides).
+
+AG CLASSIFICATION:
+  |Mean AG| < 0.1   — Consistent (on-domain aligns with external)
+  |Mean AG| 0.1-0.3 — Moderate gap (warrants investigation)
+  |Mean AG| > 0.3   — Significant gap (high adversarial risk)
+
+AG REPORTING:
+  - AG is reported as a separate metric, not folded into HCB.
+  - AG is only meaningful when external_evidence toggle is ON.
+  - AG coverage = number of articles with both L1 and L2 scores
+    / total articles (31). Low coverage (< 10 articles) means
+    the AG is unreliable and should be flagged.
+```
+
+### B6. Combined Reporting
+
+The external evidence layer is controlled by a toggle, preserving
+backward compatibility:
+
+```
+TOGGLE: external_evidence
+  Values: ON | OFF
+  Default: OFF
+
+MODE: L1 Only (external_evidence: OFF)
+  - Standard v3 evaluation.
+  - Output contains only L1 scores.
+  - No L2 scores, no AG.
+  - Fully backward-compatible with v3.0/v3.1/v3.3.
+
+MODE: Augmented (external_evidence: ON)
+  - L1 scores computed identically to standard mode.
+  - L2 scores computed from external evidence.
+  - AG computed where both layers have scores.
+  - Output contains L1, L2, and AG sections.
+  - The evaluation header clearly states: "Augmented mode
+    (external evidence: ON)".
+
+OUTPUT SECTIONS (Augmented mode):
+  1. Standard L1 output (identical to v3 Section 10a)
+  2. L2 Evidence Matrix (same format, with citations)
+  3. Adversarial Gap Table
+  4. Combined Summary
+
+RELATIONSHIP TO OFF-DOMAIN TOGGLE:
+  - The external_evidence toggle is independent of the
+    off-domain toggle (v3 Section 1c).
+  - off_domain controls whether LINKED content from OTHER
+    domains is followed during L1 evaluation.
+  - external_evidence controls whether EXTERNAL REPORTS ABOUT
+    the entity are consulted for L2 scoring.
+  - Both can be ON simultaneously; they address different
+    evidence sources.
+```
+
+---
+
+## SECTION C: MACHINE-READABLE OUTPUT FORMAT (B8)
+
+This section specifies structured output formats (JSON and CSV)
+for evaluation results. Text/markdown output per v3 Section 10
+remains the default and is unmodified.
+
+### C1. JSON Schema — URL-Level Evaluation
+
+The JSON format maps the text output specified in v3 Section 10a
+to a structured representation:
+
+```json
+{
+  "schema_version": "3.4",
+  "evaluation": {
+    "url": "https://example.com/article/human-rights-analysis",
+    "domain": "example.com",
+    "content_type": {
+      "primary": "ED",
+      "secondary": ["CO"]
+    },
+    "channel_weights": {
+      "editorial": 0.6,
+      "structural": 0.4
+    },
+    "eval_depth": "STANDARD",
+    "date": "2026-02-23",
+    "methodology": "v3.4",
+    "off_domain": false,
+    "external_evidence": false,
+    "operator": "claude-agent-1"
+  },
+  "domain_context_profile": {
+    "domain": "example.com",
+    "eval_date": "2026-02-23",
+    "elements": {
+      "privacy": {
+        "modifier": 0.10,
+        "affects": ["Art. 12", "Art. 13"],
+        "note": "GDPR/CCPA compliant, opt-out available"
+      },
+      "tos": {
+        "modifier": 0.00,
+        "affects": ["Art. 8", "Art. 17", "Art. 29", "Art. 30"],
+        "note": "Standard, fair terms"
+      },
+      "accessibility": {
+        "modifier": 0.10,
+        "affects": ["Art. 2", "Art. 26"],
+        "note": "WCAG commitment, accessibility page"
+      },
+      "mission": {
+        "modifier": 0.15,
+        "affects": ["Preamble", "Art. 1", "Art. 28"],
+        "note": "Explicit social justice framing"
+      },
+      "community": {
+        "modifier": 0.05,
+        "affects": ["Art. 2", "Art. 18", "Art. 19", "Art. 20", "Art. 29"],
+        "note": "Basic guidelines"
+      },
+      "editorial_code": {
+        "modifier": null,
+        "affects": ["Art. 11", "Art. 12", "Art. 19"],
+        "note": "None found"
+      },
+      "ownership": {
+        "modifier": 0.10,
+        "affects": ["Art. 19"],
+        "note": "Independent trust"
+      },
+      "access_model": {
+        "modifier": 0.15,
+        "affects": ["Art. 13", "Art. 19", "Art. 26"],
+        "note": "No paywall"
+      },
+      "ad_tracking": {
+        "modifier": -0.10,
+        "affects": ["Art. 12"],
+        "note": "Moderate ad presence"
+      }
+    }
+  },
+  "scores": [
+    {
+      "section": "Preamble",
+      "editorial": 0.6,
+      "structural": null,
+      "combined": 0.6,
+      "context_modifier": 0.1,
+      "final": 0.7,
+      "directionality": ["A", "F"],
+      "evidence": "M",
+      "note": "Mission statement centers dignity and equality"
+    },
+    {
+      "section": "Art. 1",
+      "editorial": 0.3,
+      "structural": null,
+      "combined": 0.3,
+      "context_modifier": 0.1,
+      "final": 0.4,
+      "directionality": ["F"],
+      "evidence": "L",
+      "note": "Implicit brotherhood framing in community content"
+    }
+  ],
+  "l2_scores": [],
+  "adversarial_gap": {
+    "per_article": [],
+    "mean_ag": null,
+    "ag_coverage": 0,
+    "ag_classification": null
+  },
+  "aggregates": {
+    "weighted_mean": 0.42,
+    "unweighted_mean": 0.38,
+    "max": {
+      "value": 0.8,
+      "section": "Preamble"
+    },
+    "min": {
+      "value": -0.2,
+      "section": "Art. 12"
+    },
+    "negative_count": 2,
+    "nd_count": 8,
+    "signal_sections": 23,
+    "evidence_profile": {
+      "H": 3,
+      "M": 12,
+      "L": 8,
+      "ND": 8
+    },
+    "channel_balance": {
+      "E_only": 10,
+      "S_only": 3,
+      "both": 10
+    },
+    "directionality_profile": {
+      "A": 4,
+      "P": 8,
+      "F": 15,
+      "C": 6
+    },
+    "volatility": {
+      "value": 0.15,
+      "label": "Medium"
+    },
+    "classification": "Moderate positive"
+  }
+}
+```
+
+Field definitions:
+
+```
+EVALUATION OBJECT:
+  schema_version    String. Always "3.4" for this version.
+  url               String. The evaluated URL.
+  domain            String. The domain extracted from the URL.
+  content_type      Object. Primary (required) and secondary
+                    (array, may be empty) content type codes.
+  channel_weights   Object. Editorial and structural weights
+                    applied (determined by content type).
+  eval_depth        String. "STANDARD" or "SPOT".
+  date              String. ISO 8601 date of evaluation.
+  methodology       String. Methodology version used.
+  off_domain        Boolean. Off-domain toggle state.
+  external_evidence Boolean. External evidence toggle state.
+  operator          String. Evaluator identifier.
+
+SCORES ARRAY (one entry per UDHR section, 31 total):
+  section           String. "Preamble" or "Art. N".
+  editorial         Number or null. E-channel score. null = ND.
+  structural        Number or null. S-channel score. null = ND.
+  combined          Number or null. Weighted combination.
+                    null if both channels are ND.
+  context_modifier  Number or null. DCP modifier applied.
+                    null if no modifier applies.
+  final             Number or null. Combined + context_modifier,
+                    clamped to [-1.0, 1.0]. null = ND.
+  directionality    Array of strings. Subset of ["A","P","F","C"].
+                    Empty array if ND.
+  evidence          String or null. "H", "M", "L", or null (ND).
+  note              String. Brief explanation with on-page citation.
+
+L2_SCORES ARRAY (populated only when external_evidence: true):
+  Same structure as scores array, with additional fields:
+  citations         Array of citation objects (see below).
+
+CITATION OBJECT:
+  source            String. Publication or organization name.
+  category          Number (1-5). Source category per B3.
+  date              String. ISO 8601 date of publication.
+  url               String or null. URL of the source document.
+  summary           String. 1-2 sentence finding summary.
+
+ADVERSARIAL_GAP OBJECT:
+  per_article       Array of { section, l1, l2, gap } objects.
+                    Only articles with both L1 and L2 scores.
+  mean_ag           Number or null. Mean AG across scored articles.
+  ag_coverage       Number. Count of articles with both scores.
+  ag_classification String or null. "Consistent", "Moderate gap",
+                    or "Significant gap".
+
+AGGREGATES OBJECT:
+  weighted_mean     Number. Per v3 Section 5b.
+  unweighted_mean   Number. Simple mean of non-ND final scores.
+  max               Object. Highest final score and its section.
+  min               Object. Lowest final score and its section.
+  negative_count    Number. Count of sections with final < 0.
+  nd_count          Number. Count of ND sections.
+  signal_sections   Number. 31 - nd_count.
+  evidence_profile  Object. Count of each evidence strength.
+  channel_balance   Object. Count of E-only, S-only, both.
+  directionality_profile  Object. Count of each marker.
+  volatility        Object. Standard deviation and label
+                    (Low < 0.10, Medium 0.10-0.25, High > 0.25).
+  classification    String. Overall HCB classification per v3
+                    Section 10a thresholds.
+```
+
+### C2. JSON Schema — Batch Output
+
+The batch output wraps multiple URL evaluations with batch-level
+metadata and cross-site aggregates:
+
+```json
+{
+  "schema_version": "3.4",
+  "batch": {
+    "batch_id": "batch-20260223-001",
+    "methodology": "v3.4",
+    "eval_mode": "STANDARD",
+    "toggles": {
+      "off_domain": false,
+      "external_evidence": false
+    },
+    "created": "2026-02-23T10:00:00Z",
+    "completed": "2026-02-23T18:45:00Z",
+    "operator": "claude-agent-1",
+    "coverage": {
+      "completed": 90,
+      "total": 90,
+      "percentage": 100.0,
+      "partial": false
+    }
+  },
+  "evaluations": [
+    { "... URL-level evaluation object (C1 schema) ..." }
+  ],
+  "cross_site_aggregates": {
+    "overall_weighted_mean": 0.18,
+    "by_sector": {
+      "news": { "count": 12, "weighted_mean": 0.35 },
+      "social": { "count": 8, "weighted_mean": 0.05 },
+      "e-commerce": { "count": 15, "weighted_mean": 0.12 }
+    },
+    "by_content_type": {
+      "LP": { "count": 90, "weighted_mean": 0.18 },
+      "PO": { "count": 45, "weighted_mean": 0.10 }
+    },
+    "distribution": {
+      "strong_positive": { "count": 5, "percentage": 5.6 },
+      "moderate_positive": { "count": 28, "percentage": 31.1 },
+      "neutral": { "count": 40, "percentage": 44.4 },
+      "moderate_negative": { "count": 14, "percentage": 15.6 },
+      "strong_negative": { "count": 3, "percentage": 3.3 }
+    },
+    "top_articles": {
+      "most_positive": { "section": "Art. 19", "mean": 0.42 },
+      "most_negative": { "section": "Art. 12", "mean": -0.18 },
+      "most_nd": { "section": "Art. 15", "nd_percentage": 92.2 }
+    }
+  },
+  "calibration_checks": [
+    {
+      "url": "https://www.un.org/en/about-us/universal-declaration-of-human-rights",
+      "expected_range": [0.75, 0.95],
+      "actual": 0.82,
+      "status": "pass"
+    }
+  ]
+}
+```
+
+### C3. CSV Format
+
+The CSV format provides a flat representation for simpler tooling
+(spreadsheets, pandas, R). One row per (URL, UDHR section) pair:
+
+```
+COLUMNS:
+  url               String. The evaluated URL.
+  domain            String. Domain extracted from URL.
+  content_type      String. Primary content type code.
+  section           String. "Preamble" or "Art. N".
+  e_score           Number or empty. Editorial channel score.
+  s_score           Number or empty. Structural channel score.
+  combined          Number or empty. Combined channel score.
+  ctx_mod           Number or empty. Context modifier applied.
+  final             Number or empty. Final HCB score.
+  dir               String. Comma-separated directionality markers.
+  evidence          String. "H", "M", "L", or empty.
+  note              String. Quoted if contains commas.
+  l2_score          Number or empty. L2 score (if augmented mode).
+  ag                Number or empty. Adversarial Gap (if augmented).
+
+EXAMPLE:
+  url,domain,content_type,section,e_score,s_score,combined,ctx_mod,final,dir,evidence,note,l2_score,ag
+  https://example.com/article,example.com,ED,Preamble,0.6,,0.6,0.1,0.7,"A,F",M,"Mission centers dignity",,
+  https://example.com/article,example.com,ED,Art. 1,0.3,,0.3,0.1,0.4,F,L,"Implicit brotherhood",,
+  https://example.com/article,example.com,ED,Art. 12,0.5,-0.3,0.18,-0.1,0.08,"C,P",H,"Editorial vs tracking",,
+
+CSV RULES:
+  1. Header row is always included.
+  2. Empty cells for ND values (not "ND", not "null").
+  3. Strings containing commas, quotes, or newlines are
+     double-quoted per RFC 4180.
+  4. UTF-8 encoding.
+  5. Line endings: CRLF (per RFC 4180) or LF (both accepted).
+```
+
+Batch-level CSV adds a summary row per URL:
+
+```
+BATCH CSV ADDITIONAL COLUMNS:
+  batch_id          String. Batch identifier.
+  eval_mode         String. "STANDARD" or "SPOT".
+  eval_date         String. ISO 8601 date.
+
+SUMMARY ROWS:
+  After all section rows for a URL, a summary row is appended:
+  - section = "AGGREGATE"
+  - final = weighted_mean
+  - note = classification label
+  - All other score columns empty.
+```
+
+### C4. Backward Compatibility
+
+```
+DEFAULT OUTPUT:
+  - Text/markdown output per v3 Section 10 remains the default.
+  - JSON and CSV are produced only when explicitly requested.
+
+FORMAT SELECTION:
+  When invoking an evaluation, the output format is specified:
+    --format text      Default. Human-readable text (v3 Section 10).
+    --format json      JSON per C1/C2 schema.
+    --format csv       CSV per C3 schema.
+    --format all       Produces all three formats simultaneously.
+
+  Multiple formats may be specified:
+    --format json,csv  Produces both JSON and CSV.
+
+FILE NAMING:
+  URL-level:
+    {domain}-{url-slug}.txt          Text output
+    {domain}-{url-slug}.json         JSON output
+    {domain}-{url-slug}.csv          CSV output
+
+  Batch-level:
+    batch-{id}-results.txt           Text summary
+    batch-{id}-results.json          JSON per C2 schema
+    batch-{id}-results.csv           CSV per C3 schema
+
+CANONICAL FORMAT:
+  - JSON is the canonical machine-readable format.
+  - CSV is derived from JSON (a projection/flattening).
+  - Text is the canonical human-readable format.
+  - In case of discrepancy, JSON takes precedence over CSV;
+    text takes precedence over both for human interpretation.
+
+ROUND-TRIP GUARANTEE:
+  - JSON -> Text: a compliant renderer can produce v3 Section 10
+    text output from JSON without information loss.
+  - JSON -> CSV: all non-aggregate data is preserved; some nested
+    structure (DCP details, citation objects) is omitted in CSV.
+  - CSV -> JSON: NOT guaranteed (CSV omits DCP and citation
+    structure).
+```
+
+---
+
+## IDENTIFIED IMPROVEMENTS (candidates for v3.5+)
+
+The following items from the v3.3 roadmap remain open:
+
+### A. From v3.0 Future Work (still open)
+
+| # | Item | Priority | Notes |
+|---|---|---|---|
+| A1 | Multi-language normalization | High | Unchanged from v3.3 |
+| A2 | Automated scoring pipeline | Medium | Partially addressed by B8 (output format); input pipeline still open |
+| A3 | Temporal analysis | Medium | Unchanged from v3.3 |
+| A4 | Sector benchmarks | Medium | Unchanged from v3.3 |
+| A6 | Inter-rater reliability | Low | Unchanged from v3.3 |
+| A7 | Community scoring | Low | Unchanged from v3.3 |
+
+### B. From project experience (still open)
+
+| # | Item | Priority | Notes |
+|---|---|---|---|
+| B2 | Domain-level shortcut for homepage evaluation | High | Unchanged from v3.3 |
+| B3 | Cross-version comparison protocol | Medium | Unchanged from v3.3 |
+| B4 | Calibration set coverage gap | Medium | Unchanged from v3.3 |
+| B5 | Evidence citation format | Low | Partially addressed by B4 citation requirement in Section B |
+| B6 | Structural signal automation | Medium | Unchanged from v3.3 |
+| B7 | Confidence intervals | Low | Unchanged from v3.3 |
+
+### C. Priority roadmap (updated)
+
+```
+v3.5:  B2 (homepage mode) + B4 (non-English calibration) + A1 (multi-language)
+v3.6:  B3 (cross-version comparison) + A4 (sector benchmarks)
+v3.7:  B6 (structural automation) + A2 (full input pipeline)
+Later: A3 (temporal), A6 (inter-rater), A7 (community), B7 (confidence intervals)
+```
+
+---
+
+## FILE MAP (as of v3.4)
+
+```
+unudhr.txt                          Source UDHR text
+top-100-websites-2026-sfw.txt       90 SFW sites (Similarweb Jan 2026)
+top-100-websites-2026-nsfw.txt      Full 100 sites
+
+methodology-v1.txt                  v1: External-source methodology (finalized)
+methodology-v2.txt                  v2: On-domain only (superseded)
+methodology-v3.txt                  v3: Full HCB methodology (superseded by v3.3)
+methodology-v3.1.prompt.md          v3.1: Self-contained LLM evaluation prompt
+methodology-v3.3.txt                v3.3: Consolidation + roadmap (superseded by v3.4)
+methodology-v3.4.txt                v3.4: This file — canonical reference
+
+calibration-v3.1-set.txt            15-URL calibration set with expected ranges
+calibration-v3.1-baselines.txt      Baseline evaluations for 9 calibration URLs
+
+kashifshah-net.txt                  v1 evaluation
+kashifshah-net.md                   v1 evaluation (markdown)
+kashifshah-net-v2.txt               v2 evaluation (on-domain, toggle OFF)
+top-100-sfw-udhr-evaluation.txt     v1 evaluation of 90 SFW sites
+
+CLAUDE.md                           Project guidance for Claude Code
+```
+
+---
+
+## CANONICAL REFERENCE
+
+This file (v3.4) is the project's canonical methodology reference. It
+extends v3.3 with three new capabilities:
+
+1. **Batch Evaluation Protocol** (Section A) — formal procedure for
+   multi-URL evaluation with ordering, parallelization, checkpointing,
+   and resume.
+2. **Adversarial Robustness Layer** (Section B) — optional dual-layer
+   evaluation that overlays external evidence onto on-domain scores
+   without modifying them.
+3. **Machine-Readable Output Format** (Section C) — JSON and CSV
+   schemas for structured evaluation output.
+
+All scoring rules, rubrics, weights, and procedures from v3.0/v3.1/v3.3
+are unchanged. For running evaluations, use `methodology-v3.1.prompt.md`
+(the self-contained LLM prompt) with the additional procedures specified
+in this document.
+
+For calibration, use `calibration-v3.1-set.txt` (expected ranges) and
+`calibration-v3.1-baselines.txt` (scored baselines).
+
+The full v3.0 methodology text in `methodology-v3.txt` remains as the
+detailed specification document for inherited rules.
+
+---
+
+```
+End of Methodology v3.4
+2026-02-23
+```

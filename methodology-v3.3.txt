@@ -1,0 +1,140 @@
+# UDHR HCB Evaluation — Methodology v3.3
+
+```
+================================================================
+Version:  3.3
+Date:     2026-02-23
+Status:   Superseded by v3.4
+Supersedes: methodology-v3.txt, methodology-v3.1.prompt.md
+================================================================
+```
+
+---
+
+## CHANGES IN v3.3
+
+### Resolved (project consistency fixes)
+
+| # | Issue | Resolution |
+|---|---|---|
+| 1 | Duplicate file `methodology-3.2.md` (identical to `methodology-v3.1.prompt.md`) | Deleted |
+| 2 | Calibration data misnamed as methodology versions (`methodology-v3.1.txt`, `methodology-v3.2.txt`) | Renamed to `calibration-v3.1-set.txt` and `calibration-v3.1-baselines.txt` |
+| 3 | `methodology-v2.txt` still marked as DRAFT despite being superseded | Updated status to "Superseded by v3" |
+| 4 | `CLAUDE.md` only described `unudhr.txt`, not the full project | Updated with methodology overview, file structure, key concepts |
+| 5 | No single canonical document — v3 methodology (873 lines), v3.1 prompt (312 lines), and calibration (1,391 lines combined) were spread across 4 files | This file is the canonical reference; prompt in `methodology-v3.1.prompt.md` remains the deployment artifact |
+
+### Inherited from v3.0 (unchanged)
+
+- URL as primary unit of analysis
+- HCB (HR Compatibility Bias) as core construct
+- Editorial (E) and Structural (S) signal channels
+- Content Type classification (ED, PO, MI, CO, LP, PR, ME, AD, HR, AC, MX)
+- Domain Context Profile (DCP) with modifiers
+- Relevance Weight Matrix (31 articles x 10 content types)
+- Concrete rubrics for editorial, structural, policy, and community content
+- ND vs 0.0 distinction
+- Evidence strength (H/M/L) with score caps
+- Directionality markers (A/P/F/C)
+- Aggregation model: URL → Page Group → Domain
+- Off-domain toggle (default: OFF)
+
+### Inherited from v3.1 (unchanged)
+
+- 15-URL calibration set (5 expected-positive, 5 expected-neutral, 5 expected-negative)
+- SPOT mode (10 discriminator articles for fast screening)
+- Self-contained LLM evaluation prompt
+- Classification thresholds for overall HCB
+- Evidence cap enforcement
+- Volatility (σ) reporting
+- Critical reminders (symmetry, conservatism, on-domain constraint acknowledgment)
+
+---
+
+## IDENTIFIED IMPROVEMENTS (candidates for v3.4+)
+
+### A. From v3.0 Future Work (still open)
+
+| # | Item | Priority | Notes |
+|---|---|---|---|
+| A1 | Multi-language normalization | High | Many top-100 sites are non-English (yandex.ru, baidu.com, bilibili.com, douyin.com, etc.). Current methodology has English-source bias. Need: translation handling rules, scoring parity across languages, guidance on using machine translation vs. native-language evaluation. |
+| A2 | Automated scoring pipeline | Medium | Machine-readable URL ingestion, automated content extraction. Could reduce per-site evaluation time from ~30 min to ~5 min. Requires: structured input format, API integration spec, output validation. |
+| A3 | Temporal analysis | Medium | Track HCB drift for a URL/domain over time. Requires: re-evaluation schedule, change-detection thresholds, versioned snapshots. Would catch policy changes (e.g., a privacy policy weakening). |
+| A4 | Sector benchmarks | Medium | Reference HCB profiles by sector (news, social, e-commerce, government). The calibration set partially addresses this but doesn't cover all sectors. |
+| A5 | Adversarial robustness | High | Sites that present HR-compatible content while undermining rights in practice. The on-domain constraint systematically misses this. Options: formalize a "v1-augmented" mode that layers external evidence onto v3 scores. |
+| A6 | Inter-rater reliability | Low | Multiple evaluators scoring same URLs. Blocked on having a second evaluator or automated pipeline. |
+| A7 | Community scoring | Low | Public participation in evaluation. Requires infrastructure beyond this repo. |
+
+### B. New improvements identified from project experience
+
+| # | Item | Priority | Notes |
+|---|---|---|---|
+| B1 | **Batch evaluation protocol** | High | The v2 bulk run (90 sites) failed due to rate limits and agent coordination issues. Need: formal batch evaluation procedure — site ordering, parallelization limits, progress checkpointing, partial-result assembly, and resume capability. |
+| B2 | **Domain-level shortcut for homepage evaluation** | High | For the top-100 list, the natural unit is the domain homepage (not an arbitrary URL). Need: a "homepage evaluation" mode that combines LP (Landing Page) scoring with automatic DCP construction in a single pass. This is the most common use case. |
+| B3 | **Cross-version comparison protocol** | Medium | v1, v2, and v3 evaluations of the same site (e.g., kashifshah.net) exist but aren't formally comparable. Need: a crosswalk table and conversion formulas. v3.0 mentions `v2_approx` field but never specifies the calculation. |
+| B4 | **Calibration set coverage gap** | Medium | The 15-URL calibration set has no non-English sites. Adding 3-5 non-English calibration URLs (one each in Russian, Chinese, Japanese, Portuguese, Korean) would validate cross-language scoring before tackling A1. |
+| B5 | **Evidence citation format** | Low | Calibration baselines use footnote references (`[^1]`, `[^2]`...) but the main methodology and v3.1 prompt don't specify a citation format. Standardize across all outputs. |
+| B6 | **Structural signal automation** | Medium | Many S-channel signals are mechanically detectable (tracking scripts, cookie banners, paywall presence, accessibility attributes, ad density). A browser-based audit tool could pre-populate S-channel scores, leaving only E-channel for human/LLM evaluation. |
+| B7 | **Confidence intervals** | Low | Current scores are point estimates. Adding a confidence range (e.g., Art. 12: -0.3 ± 0.1) would better represent uncertainty, especially at L evidence strength. |
+| B8 | **Result output format** | Medium | No machine-readable output format specified (JSON, CSV). Current outputs are human-readable text/markdown. Adding a structured format would enable aggregation tooling. |
+
+### C. Priority roadmap (suggested)
+
+```
+v3.4:  B1 (batch protocol) + B2 (homepage mode) — unblocks the top-100 evaluation
+v3.5:  B4 (non-English calibration) + A1 (multi-language) — unblocks non-English sites
+v3.6:  A5 (adversarial robustness) + B3 (cross-version comparison) — closes the
+       gap between "what the site says" and "what the site does"
+v3.7:  B6 (structural automation) + B8 (machine-readable output) — enables scale
+Later: A2 (full pipeline), A3 (temporal), A6 (inter-rater), A7 (community)
+```
+
+---
+
+## FILE MAP (as of v3.3)
+
+```
+unudhr.txt                          Source UDHR text
+top-100-websites-2026-sfw.txt       90 SFW sites (Similarweb Jan 2026)
+top-100-websites-2026-nsfw.txt      Full 100 sites
+
+methodology-v1.txt                  v1: External-source methodology (finalized)
+methodology-v2.txt                  v2: On-domain only (superseded)
+methodology-v3.txt                  v3: Full HCB methodology (superseded by v3.3)
+methodology-v3.1.prompt.md          v3.1: Self-contained LLM evaluation prompt
+methodology-v3.3.txt                v3.3: This file — canonical reference
+
+calibration-v3.1-set.txt            15-URL calibration set with expected ranges
+calibration-v3.1-baselines.txt      Baseline evaluations for 9 calibration URLs
+
+kashifshah-net.txt                  v1 evaluation
+kashifshah-net.md                   v1 evaluation (markdown)
+kashifshah-net-v2.txt               v2 evaluation (on-domain, toggle OFF)
+top-100-sfw-udhr-evaluation.txt     v1 evaluation of 90 SFW sites
+
+CLAUDE.md                           Project guidance for Claude Code
+```
+
+---
+
+## CANONICAL REFERENCE
+
+This file (v3.3) is the project's canonical methodology reference. It
+consolidates all decisions made in v3.0 through v3.1 and resolves the
+file-level inconsistencies identified during project review.
+
+For running evaluations, use `methodology-v3.1.prompt.md` — the self-contained
+LLM prompt. It implements the methodology specified here.
+
+For calibration, use `calibration-v3.1-set.txt` (expected ranges) and
+`calibration-v3.1-baselines.txt` (scored baselines).
+
+The full v3.0 methodology text in `methodology-v3.txt` remains as the
+detailed specification document. v3.3 does not alter any scoring rules,
+rubrics, weights, or procedures from v3.0/v3.1.
+
+---
+
+```
+End of Methodology v3.3
+2026-02-23
+```
