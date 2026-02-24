@@ -218,7 +218,7 @@ function timeAgo(unixTime: number): string {
             <tr>
               <td style="color: #666;" title="Structural-Editorial Tension Level: normalized difference between S and E channels">SETL</td>
               <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
-              <td style="color: #555; font-size: 7pt;" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Structural-dominant' : aggSetl < 0 ? 'Editorial-dominant' : 'Balanced') : ''}</td>
+              <td style="color: #555; font-size: 7pt;" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
             </tr>
           </table>
           <div style="margin-top: 6px;">

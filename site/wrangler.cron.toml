@@ -11,7 +11,7 @@ database_id = "d49c47bc-8107-4481-8aa1-6a9cf0b534c8"
 crons = ["*/10 * * * *"]
 
 [vars]
-DAILY_EVAL_BUDGET = "50"
+DAILY_EVAL_BUDGET = "200"
 BATCH_MODE = "true"
 
 # Secrets (set via `wrangler secret put --name hn-hrcb-cron`):

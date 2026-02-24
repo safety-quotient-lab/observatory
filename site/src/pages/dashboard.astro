@@ -132,7 +132,7 @@ const maxSignal = Math.max(...articleAvgs.map(a => a.signal_count), 1);
               <td style="color: #666;" title="Structural-Editorial Tension Level">Mean SETL</td>
               <td class="score-font" style={`color: ${setlToColor(meanSetl)}; font-size: 11pt;`}>
                 {formatSetl(meanSetl)}
-                <span style="color: #555; font-size: 7pt; margin-left: 4px;">{meanSetl !== null ? (meanSetl > 0 ? 'S-dominant' : meanSetl < 0 ? 'E-dominant' : 'Balanced') : ''}</span>
+                <span style="color: #555; font-size: 7pt; margin-left: 4px;">{meanSetl !== null ? (meanSetl > 0 ? 'E-dominant' : meanSetl < 0 ? 'S-dominant' : 'Balanced') : ''}</span>
               </td>
             </tr>
             <tr>

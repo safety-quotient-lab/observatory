@@ -393,7 +393,7 @@ export async function getDomainStats(db: D1Database, limit = 10): Promise<Domain
     .prepare(
       `SELECT s.domain, COUNT(*) as count, AVG(s.hcb_weighted_mean) as avg_score,
               (SELECT AVG(
-                CAST((sc.structural - sc.editorial) AS REAL) /
+                CAST((sc.editorial - sc.structural) AS REAL) /
                 MAX(ABS(sc.structural), ABS(sc.editorial))
                )
                FROM scores sc
@@ -529,7 +529,7 @@ export async function getMeanSetl(db: D1Database): Promise<number | null> {
   const row = await db
     .prepare(
       `SELECT AVG(
-        CAST((sc.structural - sc.editorial) AS REAL) /
+        CAST((sc.editorial - sc.structural) AS REAL) /
         MAX(ABS(sc.structural), ABS(sc.editorial))
        ) as mean_setl
        FROM scores sc
@@ -544,7 +544,7 @@ export async function getStorySetl(db: D1Database, hnId: number): Promise<number
   const row = await db
     .prepare(
       `SELECT AVG(
-        CAST((sc.structural - sc.editorial) AS REAL) /
+        CAST((sc.editorial - sc.structural) AS REAL) /
         MAX(ABS(sc.structural), ABS(sc.editorial))
        ) as setl
        FROM scores sc
@@ -561,7 +561,7 @@ export async function getDomainSetl(db: D1Database, domain: string): Promise<num
   const row = await db
     .prepare(
       `SELECT AVG(
-        CAST((sc.structural - sc.editorial) AS REAL) /
+        CAST((sc.editorial - sc.structural) AS REAL) /
         MAX(ABS(sc.structural), ABS(sc.editorial))
        ) as setl
        FROM scores sc
@@ -586,7 +586,7 @@ export async function getAllDomainStats(
       `SELECT s.domain, COUNT(*) as count,
               AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
               (SELECT AVG(
-                CAST((sc.structural - sc.editorial) AS REAL) /
+                CAST((sc.editorial - sc.structural) AS REAL) /
                 MAX(ABS(sc.structural), ABS(sc.editorial))
                )
                FROM scores sc

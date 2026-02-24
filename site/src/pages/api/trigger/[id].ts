@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
         send('status', { step: 'writing', message: 'Writing results...' });
 
         // Write results to D1
-        await writeEvalResult(db, hnId, evalCall);
+        await writeEvalResult(db, hnId, evalCall.result, evalCall.model, evalCall.promptHash);
 
         send('done', {
           hn_id: hnId,

@@ -79,7 +79,7 @@ export function computeSetl(structural: number | null, editorial: number | null)
   if (structural === null || editorial === null) return null;
   const denom = Math.max(Math.abs(structural), Math.abs(editorial));
   if (denom === 0) return null;
-  return (structural - editorial) / denom;
+  return (editorial - structural) / denom;
 }
 
 /** Format SETL value for display */
@@ -89,23 +89,23 @@ export function formatSetl(setl: number | null): string {
   return `${sign}${setl.toFixed(2)}`;
 }
 
-/** Map SETL [-1, +1] to a color: blue for structural-dominant, orange for editorial-dominant */
+/** Map SETL [-1, +1] to a color: orange for editorial-dominant (positive), blue for structural-dominant (negative) */
 export function setlToColor(setl: number | null): string {
   if (setl === null) return '#2a2a35';
   const clamped = Math.max(-1, Math.min(1, setl));
   if (clamped < 0) {
-    // Orange: interpolate gray (#555) → orange (#fb923c)
+    // Blue: interpolate gray (#555) → blue (#60a5fa) for structural-dominant (negative)
     const t = Math.abs(clamped);
-    const r = Math.round(0x55 + (0xfb - 0x55) * t);
-    const g = Math.round(0x55 + (0x92 - 0x55) * t);
-    const b = Math.round(0x55 + (0x3c - 0x55) * t);
-    return `rgb(${r}, ${g}, ${b})`;
-  } else {
-    // Blue: interpolate gray (#555) → blue (#60a5fa)
-    const t = clamped;
     const r = Math.round(0x55 + (0x60 - 0x55) * t);
     const g = Math.round(0x55 + (0xa5 - 0x55) * t);
     const b = Math.round(0x55 + (0xfa - 0x55) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  } else {
+    // Orange: interpolate gray (#555) → orange (#fb923c) for editorial-dominant (positive)
+    const t = clamped;
+    const r = Math.round(0x55 + (0xfb - 0x55) * t);
+    const g = Math.round(0x55 + (0x92 - 0x55) * t);
+    const b = Math.round(0x55 + (0x3c - 0x55) * t);
     return `rgb(${r}, ${g}, ${b})`;
   }
 }
