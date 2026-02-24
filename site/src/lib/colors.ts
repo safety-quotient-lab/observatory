@@ -1,6 +1,6 @@
 /** Map a score [-1, +1] to a hex color on a diverging red-yellow-green scale */
 export function scoreToColor(score: number | null): string {
-  if (score === null) return '#2a2a35'; // ND gray
+  if (score === null) return '#6b7280'; // ND gray
 
   const clamped = Math.max(-1, Math.min(1, score));
 
@@ -93,7 +93,7 @@ export function formatSetl(setl: number | null): string {
 
 /** Map SETL [-1, +1] to a color: green for positive, red for negative */
 export function setlToColor(setl: number | null): string {
-  if (setl === null) return '#2a2a35';
+  if (setl === null) return '#6b7280';
   return scoreToColor(setl);
 }
 
@@ -114,7 +114,7 @@ export function formatHotl(hotl: number | null): string {
 
 /** Map HOTL [-1, +1] to a color: green for negative (low tension = consensus), red for positive (high tension = contentious) */
 export function hotlToColor(hotl: number | null): string {
-  if (hotl === null) return '#2a2a35';
+  if (hotl === null) return '#6b7280';
   return scoreToColor(-hotl);
 }
 
