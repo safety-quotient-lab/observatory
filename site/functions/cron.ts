@@ -205,26 +205,66 @@ async function crawlComments(db: D1Database): Promise<number> {
       if (!item.kids || item.kids.length === 0) continue;
 
       // Fetch top-level comments (up to 20)
-      const commentIds = item.kids.slice(0, 20);
-      const comments = await fetchItemsBatched(commentIds);
+      const topCommentIds = item.kids.slice(0, 20);
+      const topComments = await fetchItemsBatched(topCommentIds);
 
-      const stmts = comments
-        .filter(c => c.text && !c.dead && !c.deleted)
-        .map(c =>
+      const stmts: D1PreparedStatement[] = [];
+
+      // Insert top-level comments (depth 0)
+      const validTopComments = topComments.filter(c => c.text && !c.dead && !c.deleted);
+      for (const c of validTopComments) {
+        stmts.push(
           db
             .prepare(
-              `INSERT OR IGNORE INTO story_comments (hn_id, comment_id, parent_id, author, text, time)
-               VALUES (?, ?, ?, ?, ?, ?)`
+              `INSERT OR IGNORE INTO story_comments (hn_id, comment_id, parent_id, author, text, time, depth, hn_score)
+               VALUES (?, ?, ?, ?, ?, ?, 0, ?)`
             )
             .bind(
               story.hn_id,
               c.id,
-              story.hn_id, // parent is the story itself for top-level
+              story.hn_id,
               c.by || null,
               c.text || null,
-              c.time || null
+              c.time || null,
+              c.score ?? null
             )
         );
+      }
+
+      // Crawl depth-1 replies for top comments with kids
+      const replyIds: number[] = [];
+      const replyParents = new Map<number, number>(); // reply_id -> parent_comment_id
+      for (const c of validTopComments) {
+        if (c.kids && c.kids.length > 0) {
+          for (const kid of c.kids.slice(0, 5)) { // Up to 5 replies per top comment
+            replyIds.push(kid);
+            replyParents.set(kid, c.id);
+          }
+        }
+      }
+
+      if (replyIds.length > 0) {
+        const replies = await fetchItemsBatched(replyIds);
+        for (const r of replies) {
+          if (!r.text || r.dead || r.deleted) continue;
+          stmts.push(
+            db
+              .prepare(
+                `INSERT OR IGNORE INTO story_comments (hn_id, comment_id, parent_id, author, text, time, depth, hn_score)
+                 VALUES (?, ?, ?, ?, ?, ?, 1, ?)`
+              )
+              .bind(
+                story.hn_id,
+                r.id,
+                replyParents.get(r.id) || story.hn_id,
+                r.by || null,
+                r.text || null,
+                r.time || null,
+                r.score ?? null
+              )
+          );
+        }
+      }
 
       if (stmts.length > 0) {
         for (let i = 0; i < stmts.length; i += 100) {

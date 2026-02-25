@@ -404,11 +404,11 @@ function timeAgo(unixTime: number): string {
           <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             HN Discussion
             <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-              {comments.length} top-level comments
+              {comments.filter(c => c.depth === 0).length} top-level · {comments.filter(c => c.depth > 0).length} replies
             </span>
           </div>
           {comments.map((c) => (
-            <div style="border-top: 1px solid #1a1a25; padding: 8px 0;">
+            <div style={`border-top: 1px solid #1a1a25; padding: 8px 0; margin-left: ${c.depth * 20}px;`}>
               <div style="font-size: var(--font-xs); color: #555; margin-bottom: 4px;">
                 <a href={`https://news.ycombinator.com/user?id=${c.author}`}
                    target="_blank" rel="noopener"

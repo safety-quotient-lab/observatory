@@ -894,21 +894,24 @@ export async function getCostStats(db: D1Database): Promise<CostStats> {
 
 export interface StoryComment {
   comment_id: number;
+  parent_id: number | null;
   author: string | null;
   text: string | null;
   time: number | null;
+  depth: number;
+  hn_score: number | null;
 }
 
 export async function getStoryComments(
   db: D1Database,
   hnId: number,
-  limit = 20
+  limit = 50
 ): Promise<StoryComment[]> {
   const { results } = await db
     .prepare(
-      `SELECT comment_id, author, text, time FROM story_comments
+      `SELECT comment_id, parent_id, author, text, time, depth, hn_score FROM story_comments
        WHERE hn_id = ?
-       ORDER BY time ASC
+       ORDER BY depth ASC, time ASC
        LIMIT ?`
     )
     .bind(hnId, limit)
