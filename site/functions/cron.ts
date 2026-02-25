@@ -393,14 +393,16 @@ export default {
     let bestIds: number[] = [];
     let askIds: number[] = [];
     let showIds: number[] = [];
+    let jobIds: number[] = [];
 
     try {
-      [topIds, newIds_hn, bestIds, askIds, showIds] = await Promise.all([
+      [topIds, newIds_hn, bestIds, askIds, showIds, jobIds] = await Promise.all([
         fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/topstories.json'),
         fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/newstories.json'),
         fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/beststories.json'),
         fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/askstories.json'),
         fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/showstories.json'),
+        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/jobstories.json'),
       ]);
     } catch (err) {
       console.error('Failed to fetch HN story lists:', err);
@@ -412,8 +414,25 @@ export default {
     for (const id of topIds) typeMap.set(id, 'story');
     for (const id of newIds_hn) typeMap.set(id, typeMap.get(id) || 'story');
     for (const id of bestIds) typeMap.set(id, typeMap.get(id) || 'story');
-    for (const id of showIds) typeMap.set(id, 'show'); // override if in both
-    for (const id of askIds) typeMap.set(id, 'ask');    // ask takes priority
+    for (const id of jobIds) typeMap.set(id, 'job');    // job before show/ask
+    for (const id of showIds) typeMap.set(id, 'show');  // override if in both
+    for (const id of askIds) typeMap.set(id, 'ask');     // ask takes priority
+
+    // Track which feed lists each story appeared on
+    const feedMap = new Map<number, Set<string>>();
+    function tagFeed(ids: number[], feed: string) {
+      for (const id of ids) {
+        let s = feedMap.get(id);
+        if (!s) { s = new Set(); feedMap.set(id, s); }
+        s.add(feed);
+      }
+    }
+    tagFeed(topIds, 'top');
+    tagFeed(newIds_hn, 'new');
+    tagFeed(bestIds, 'best');
+    tagFeed(askIds, 'ask');
+    tagFeed(showIds, 'show');
+    tagFeed(jobIds, 'job');
 
     const allIds = [...new Set([
       ...topIds.slice(0, 200),
@@ -421,8 +440,9 @@ export default {
       ...bestIds.slice(0, 200),
       ...askIds,
       ...showIds,
+      ...jobIds,
     ])];
-    console.log(`HN lists: ${topIds.length} top, ${newIds_hn.length} new, ${bestIds.length} best, ${askIds.length} ask, ${showIds.length} show → ${allIds.length} unique`);
+    console.log(`HN lists: ${topIds.length} top, ${newIds_hn.length} new, ${bestIds.length} best, ${askIds.length} ask, ${showIds.length} show, ${jobIds.length} job → ${allIds.length} unique`);
 
     // ─── STEP 2: Diff against DB — find genuinely new IDs ───
 

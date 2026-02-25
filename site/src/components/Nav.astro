@@ -23,6 +23,7 @@ const currentType = Astro.url.searchParams.get('type') || '';
           <a href="https://news.ycombinator.com/newcomments" style="color: black;">comments</a> |
           <a href="/?type=ask" style={`color: black;${currentType === 'ask' ? ' font-weight: bold;' : ''}`}>ask</a> |
           <a href="/?type=show" style={`color: black;${currentType === 'show' ? ' font-weight: bold;' : ''}`}>show</a> |
+          <a href="/?type=job" style={`color: black;${currentType === 'job' ? ' font-weight: bold;' : ''}`}>jobs</a> |
           <a href="/articles" style={`color: black;${currentPath === '/articles' || currentPath.startsWith('/article/') ? ' font-weight: bold;' : ''}`}>articles</a> |
           <a href="/domains" style={`color: black;${currentPath === '/domains' || currentPath.startsWith('/domain/') ? ' font-weight: bold;' : ''}`}>domains</a> |
           <a href="/dashboard" style={`color: black;${currentPath === '/dashboard' ? ' font-weight: bold;' : ''}`}>dashboard</a> |

@@ -14,7 +14,7 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
 const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'setl_desc', 'setl_asc'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
-const validTypes: TypeOption[] = ['all', 'ask', 'show'];
+const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
 const safeSort = validSorts.includes(sort) ? sort : 'top';
 const safeFilter = validFilters.includes(filter) ? filter : 'all';
 const safeType = validTypes.includes(type) ? type : 'all';
@@ -43,7 +43,7 @@ function buildUrl(params: Record<string, string>): string {
   return qs ? `/?${qs}` : '/';
 }
 
-const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN' : 'HN HRCB';
+const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN' : safeType === 'job' ? 'Jobs' : 'HN HRCB';
 
 // Canonical URL: include sort/filter/type but exclude pagination
 const canonicalParams = new URLSearchParams();

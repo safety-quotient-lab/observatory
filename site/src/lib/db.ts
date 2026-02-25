@@ -83,7 +83,7 @@ function scoreRowToScore(row: ScoreRow): Score {
 
 export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
-export type TypeOption = 'all' | 'ask' | 'show';
+export type TypeOption = 'all' | 'ask' | 'show' | 'job';
 
 // --- Feed page: single JOIN query replaces N+1 ---
 
@@ -128,6 +128,7 @@ export async function getFilteredStoriesWithScores(
   switch (type) {
     case 'ask': conditions.push("s.hn_type = 'ask'"); break;
     case 'show': conditions.push("s.hn_type = 'show'"); break;
+    case 'job': conditions.push("s.hn_type = 'job'"); break;
   }
 
   // Day filter: show stories from a specific date
