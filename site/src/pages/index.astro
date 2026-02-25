@@ -1,8 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
-import { getFilteredStoriesWithScores, getEvaluatedCount } from '../lib/db';
-import type { SortOption, FilterOption, TypeOption, VersionOption } from '../lib/db';
+import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
+import type { SortOption, FilterOption, TypeOption, ModelOption } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -10,23 +10,25 @@ const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'top') as SortOption;
 const filter = (url.searchParams.get('filter') || 'all') as FilterOption;
 const type = (url.searchParams.get('type') || 'all') as TypeOption;
-const version = (url.searchParams.get('version') || 'all') as VersionOption;
+const model = (url.searchParams.get('model') || 'all') as ModelOption;
 const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
 const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'setl_desc', 'setl_asc', 'velocity'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
-const validVersions: VersionOption[] = ['all', '3.4', '3.5', '3.6'];
 const safeSort = validSorts.includes(sort) ? sort : 'top';
 const safeFilter = validFilters.includes(filter) ? filter : 'all';
 const safeType = validTypes.includes(type) ? type : 'all';
-const safeVersion = validVersions.includes(version) ? version : 'all';
+
+// Fetch distinct models for the selector
+const distinctModels = await getDistinctModels(db);
+const safeModel = model === 'all' || distinctModels.includes(model) ? model : 'all';
 
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
 // Single JOIN query: stories + scores in one round-trip
-const stories = await getFilteredStoriesWithScores(db, safeSort, safeFilter, safeType, PER_PAGE + 1, offset, undefined, safeVersion);
+const stories = await getFilteredStoriesWithScores(db, safeSort, safeFilter, safeType, PER_PAGE + 1, offset, undefined, safeModel);
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
@@ -37,12 +39,12 @@ function buildUrl(params: Record<string, string>): string {
   const s = params.sort ?? safeSort;
   const f = params.filter ?? safeFilter;
   const t = params.type ?? safeType;
-  const v = params.version ?? safeVersion;
+  const m = params.model ?? safeModel;
   const pg = params.p ?? '1';
   if (s !== 'top') p.set('sort', s);
   if (f !== 'all') p.set('filter', f);
   if (t !== 'all') p.set('type', t);
-  if (v !== 'all') p.set('version', v);
+  if (m !== 'all') p.set('model', m);
   if (pg !== '1') p.set('p', pg);
   const qs = p.toString();
   return qs ? `/?${qs}` : '/';
@@ -50,12 +52,12 @@ function buildUrl(params: Record<string, string>): string {
 
 const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN' : safeType === 'job' ? 'Jobs' : 'HN HRCB';
 
-// Canonical URL: include sort/filter/type but exclude pagination
+// Canonical URL: include sort/filter/type/model but exclude pagination
 const canonicalParams = new URLSearchParams();
 if (safeSort !== 'top') canonicalParams.set('sort', safeSort);
 if (safeFilter !== 'all') canonicalParams.set('filter', safeFilter);
 if (safeType !== 'all') canonicalParams.set('type', safeType);
-if (safeVersion !== 'all') canonicalParams.set('version', safeVersion);
+if (safeModel !== 'all') canonicalParams.set('model', safeModel);
 const canonicalQs = canonicalParams.toString();
 const canonicalUrl = `${url.origin}${canonicalQs ? `/?${canonicalQs}` : '/'}`;
 
@@ -82,13 +84,14 @@ const FILTER_OPTIONS = [
   { value: 'failed', label: 'failed' },
 ] as const;
 
-const VERSION_OPTIONS = [
-  { value: 'all', label: 'all' },
-  { value: '3.4', label: 'v3.4' },
-  { value: '3.5', label: 'v3.5' },
-  { value: '3.6', label: 'v3.6' },
-  { value: '3.7', label: 'v3.7' },
-] as const;
+// Short display label for model IDs
+function modelLabel(id: string): string {
+  // claude-haiku-4-5-20251001 -> haiku-4.5
+  // claude-sonnet-4-5-20250514 -> sonnet-4.5
+  const m = id.match(/claude-(\w+)-(\d+)-(\d+)/);
+  if (m) return `${m[1]}-${m[2]}.${m[3]}`;
+  return id;
+}
 ---
 
 <Base title={pageTitle} canonicalUrl={canonicalUrl}>
@@ -118,17 +121,25 @@ const VERSION_OPTIONS = [
               }
             </>
           ))}
-          <br />
-          <span style="color: #666;">version:</span>
-          {VERSION_OPTIONS.map((opt, i) => (
+          {distinctModels.length > 1 && (
             <>
-              {i > 0 && <span style="color: #444;"> | </span>}
-              {safeVersion === opt.value
-                ? <span style="color: #ff6600; font-weight: bold;">{opt.label}</span>
-                : <a href={buildUrl({ version: opt.value, p: '1' })}>{opt.label}</a>
+              <br />
+              <span style="color: #666;">model:</span>
+              {safeModel === 'all'
+                ? <span style="color: #ff6600; font-weight: bold;"> all</span>
+                : <a href={buildUrl({ model: 'all', p: '1' })}> all</a>
               }
+              {distinctModels.map((m) => (
+                <>
+                  <span style="color: #444;"> | </span>
+                  {safeModel === m
+                    ? <span style="color: #ff6600; font-weight: bold;">{modelLabel(m)}</span>
+                    : <a href={buildUrl({ model: m, p: '1' })}>{modelLabel(m)}</a>
+                  }
+                </>
+              ))}
             </>
-          ))}
+          )}
           <br />
           <span style="color: #555;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
           {evaluatedCount > 0 && <span style="color: #555;"> ({evaluatedCount} evaluated)</span>}

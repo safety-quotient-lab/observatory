@@ -129,7 +129,18 @@ function scoreRowToScore(row: ScoreRow): Score {
 export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show' | 'job';
-export type VersionOption = 'all' | '3.4' | '3.5' | '3.6';
+export type ModelOption = string; // 'all' or a model ID like 'claude-haiku-4-5-20251001'
+
+export async function getDistinctModels(db: D1Database): Promise<string[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT DISTINCT eval_model FROM stories
+       WHERE eval_status = 'done' AND eval_model IS NOT NULL
+       ORDER BY eval_model`
+    )
+    .all<{ eval_model: string }>();
+  return results.map(r => r.eval_model);
+}
 
 // --- Feed page: single JOIN query replaces N+1 ---
 
@@ -160,7 +171,7 @@ export async function getFilteredStoriesWithScores(
   limit = 30,
   offset = 0,
   day?: string,
-  version: VersionOption = 'all'
+  model: ModelOption = 'all'
 ): Promise<StoryWithMiniScores[]> {
   const conditions: string[] = ['1=1'];
   switch (filter) {
@@ -180,9 +191,9 @@ export async function getFilteredStoriesWithScores(
 
   const bindParams: (string | number)[] = [];
 
-  if (version !== 'all') {
-    conditions.push(`s.schema_version = ?`);
-    bindParams.push(version);
+  if (model !== 'all') {
+    conditions.push(`s.eval_model = ?`);
+    bindParams.push(model);
   }
 
   // Day filter: show stories from a specific date
