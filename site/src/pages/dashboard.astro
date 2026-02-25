@@ -28,11 +28,12 @@ import {
   getVelocityStats,
   getTopConfidenceStories,
   getBottomConfidenceStories,
+  getStoryScatterData,
 } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, recent, domains, failed, queue, models, meanSetl, modelComparison, costStats, histogram, meanConfidence, dailyHrcb, topConf, bottomConf] = await Promise.all([
+const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, recent, domains, failed, queue, models, meanSetl, modelComparison, costStats, histogram, meanConfidence, dailyHrcb, topConf, bottomConf, scatterData] = await Promise.all([
   getStatusCounts(db),
   getScoreStats(db),
   getContentTypeStats(db),
@@ -56,6 +57,7 @@ const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPosi
   getDailyHrcb(db, 60),
   getTopConfidenceStories(db, 5),
   getBottomConfidenceStories(db, 5),
+  getStoryScatterData(db, 500),
 ]);
 
 // Velocity needs pending count from status
@@ -367,6 +369,228 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
       </td>
     </tr>
   </table>
+
+  {/* E vs S Scatter + Score vs Confidence Scatter */}
+  {scatterData.length > 2 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td width="50%" valign="top" style="padding-right: 5px;">
+          <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
+            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+              Editorial vs Structural
+              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">{scatterData.length} stories</span>
+            </div>
+            {(() => {
+              const w = 300, h = 270;
+              const m = { l: 32, r: 12, t: 12, b: 28 };
+              const pw = w - m.l - m.r;
+              const ph = h - m.t - m.b;
+              const toX = (v: number) => m.l + ((v + 1) / 2) * pw;
+              const toY = (v: number) => m.t + (1 - (v + 1) / 2) * ph;
+              return (
+                <>
+                  <svg viewBox={`0 0 ${w} ${h}`} width="100%" style="display: block;">
+                    {/* Background */}
+                    <rect x={m.l} y={m.t} width={pw} height={ph} fill="#0a0a12" rx="2" />
+                    {/* Grid lines */}
+                    {[-0.5, 0, 0.5].map(v => (
+                      <>
+                        <line x1={toX(v)} y1={m.t} x2={toX(v)} y2={m.t + ph} stroke={v === 0 ? '#2a2a35' : '#151520'} stroke-width="0.5" />
+                        <line x1={m.l} y1={toY(v)} x2={m.l + pw} y2={toY(v)} stroke={v === 0 ? '#2a2a35' : '#151520'} stroke-width="0.5" />
+                      </>
+                    ))}
+                    {/* Diagonal E=S (alignment line) */}
+                    <line x1={toX(-1)} y1={toY(-1)} x2={toX(1)} y2={toY(1)} stroke="#333" stroke-width="1" stroke-dasharray="4,3" />
+                    {/* Quadrant watermarks */}
+                    <text x={toX(0.55)} y={toY(0.55)} fill="#1a1a25" font-size="9" text-anchor="middle" font-weight="bold">aligned +</text>
+                    <text x={toX(-0.55)} y={toY(-0.55)} fill="#1a1a25" font-size="9" text-anchor="middle" font-weight="bold">aligned −</text>
+                    <text x={toX(0.6)} y={toY(-0.6)} fill="#1a1a25" font-size="8" text-anchor="middle">E &gt; S</text>
+                    <text x={toX(-0.6)} y={toY(0.6)} fill="#1a1a25" font-size="8" text-anchor="middle">S &gt; E</text>
+                    {/* Data points */}
+                    {scatterData.map(p => (
+                      <circle cx={toX(p.avg_editorial)} cy={toY(p.avg_structural)} r="3.5"
+                              fill={scoreToColor(p.hcb_weighted_mean)} opacity="0.6" stroke={scoreToColor(p.hcb_weighted_mean)} stroke-width="0.5" stroke-opacity="0.3">
+                        <title>{`${p.title}\n${p.domain || 'self'}\nEditorial: ${p.avg_editorial.toFixed(3)}\nStructural: ${p.avg_structural.toFixed(3)}\nHRCB: ${formatScore(p.hcb_weighted_mean)}`}</title>
+                      </circle>
+                    ))}
+                    {/* Axis tick labels */}
+                    <text x={toX(-1)} y={h - 14} fill="#444" font-size="7" font-family="monospace" text-anchor="middle">-1</text>
+                    <text x={toX(0)} y={h - 14} fill="#555" font-size="7" font-family="monospace" text-anchor="middle">0</text>
+                    <text x={toX(1)} y={h - 14} fill="#444" font-size="7" font-family="monospace" text-anchor="middle">+1</text>
+                    <text x={m.l - 4} y={toY(-1) + 3} fill="#444" font-size="7" font-family="monospace" text-anchor="end">-1</text>
+                    <text x={m.l - 4} y={toY(0) + 3} fill="#555" font-size="7" font-family="monospace" text-anchor="end">0</text>
+                    <text x={m.l - 4} y={toY(1) + 3} fill="#444" font-size="7" font-family="monospace" text-anchor="end">+1</text>
+                    {/* Axis labels */}
+                    <text x={m.l + pw / 2} y={h - 2} fill="#555" font-size="8" font-family="monospace" text-anchor="middle">Editorial →</text>
+                    <text x={8} y={m.t + ph / 2} fill="#555" font-size="8" font-family="monospace" text-anchor="middle" transform={`rotate(-90, 8, ${m.t + ph / 2})`}>Structural →</text>
+                  </svg>
+                  <div style="font-size: 9px; color: #444; margin-top: 2px;">
+                    <span style="color: #555;">---</span> E=S alignment · distance from diagonal = tension (SETL)
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </td>
+        <td width="50%" valign="top" style="padding-left: 5px;">
+          <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
+            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+              Score vs Confidence
+              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">{scatterData.length} stories</span>
+            </div>
+            {(() => {
+              const w = 300, h = 270;
+              const m = { l: 32, r: 12, t: 12, b: 28 };
+              const pw = w - m.l - m.r;
+              const ph = h - m.t - m.b;
+              const toX = (v: number) => m.l + ((v + 1) / 2) * pw;
+              const toY = (c: number) => m.t + (1 - c) * ph;
+              return (
+                <>
+                  <svg viewBox={`0 0 ${w} ${h}`} width="100%" style="display: block;">
+                    {/* Background */}
+                    <rect x={m.l} y={m.t} width={pw} height={ph} fill="#0a0a12" rx="2" />
+                    {/* Grid lines */}
+                    {[-0.5, 0, 0.5].map(v => (
+                      <line x1={toX(v)} y1={m.t} x2={toX(v)} y2={m.t + ph} stroke={v === 0 ? '#2a2a35' : '#151520'} stroke-width="0.5" />
+                    ))}
+                    {[0.25, 0.5, 0.75].map(c => (
+                      <line x1={m.l} y1={toY(c)} x2={m.l + pw} y2={toY(c)} stroke={c === 0.5 ? '#2a2a35' : '#151520'} stroke-width="0.5" />
+                    ))}
+                    {/* Danger zone: low confidence + extreme scores */}
+                    <rect x={toX(-1)} y={toY(0.3)} width={toX(-0.3) - toX(-1)} height={toY(0) - toY(0.3)} fill="rgba(220,38,38,0.04)" rx="2" />
+                    <rect x={toX(0.3)} y={toY(0.3)} width={toX(1) - toX(0.3)} height={toY(0) - toY(0.3)} fill="rgba(220,38,38,0.04)" rx="2" />
+                    <text x={toX(-0.65)} y={toY(0.12)} fill="#2a1515" font-size="7" text-anchor="middle">low trust</text>
+                    <text x={toX(0.65)} y={toY(0.12)} fill="#2a1515" font-size="7" text-anchor="middle">low trust</text>
+                    {/* High confidence zone */}
+                    <rect x={m.l} y={toY(1)} width={pw} height={toY(0.7) - toY(1)} fill="rgba(22,163,106,0.03)" rx="2" />
+                    {/* Data points */}
+                    {scatterData.map(p => (
+                      <circle cx={toX(p.hcb_weighted_mean ?? 0)} cy={toY(p.conf)} r="3.5"
+                              fill={scoreToColor(p.hcb_weighted_mean)} opacity="0.6" stroke={scoreToColor(p.hcb_weighted_mean)} stroke-width="0.5" stroke-opacity="0.3">
+                        <title>{`${p.title}\n${p.domain || 'self'}\nHRCB: ${formatScore(p.hcb_weighted_mean)}\nConfidence: ${Math.round(p.conf * 100)}%`}</title>
+                      </circle>
+                    ))}
+                    {/* Axis tick labels */}
+                    <text x={toX(-1)} y={h - 14} fill="#444" font-size="7" font-family="monospace" text-anchor="middle">-1</text>
+                    <text x={toX(0)} y={h - 14} fill="#555" font-size="7" font-family="monospace" text-anchor="middle">0</text>
+                    <text x={toX(1)} y={h - 14} fill="#444" font-size="7" font-family="monospace" text-anchor="middle">+1</text>
+                    <text x={m.l - 4} y={toY(0) + 3} fill="#444" font-size="7" font-family="monospace" text-anchor="end">0%</text>
+                    <text x={m.l - 4} y={toY(0.5) + 3} fill="#555" font-size="7" font-family="monospace" text-anchor="end">50%</text>
+                    <text x={m.l - 4} y={toY(1) + 3} fill="#444" font-size="7" font-family="monospace" text-anchor="end">100%</text>
+                    {/* Axis labels */}
+                    <text x={m.l + pw / 2} y={h - 2} fill="#555" font-size="8" font-family="monospace" text-anchor="middle">HRCB Score →</text>
+                    <text x={8} y={m.t + ph / 2} fill="#555" font-size="8" font-family="monospace" text-anchor="middle" transform={`rotate(-90, 8, ${m.t + ph / 2})`}>Confidence →</text>
+                  </svg>
+                  <div style="font-size: 9px; color: #444; margin-top: 2px;">
+                    extreme scores with low confidence = noise · high confidence = trustworthy signal
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* UDHR Rights Radar Chart */}
+  {articleStats.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+            UDHR Rights Profile
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">average score per provision across all evaluations</span>
+          </div>
+          {(() => {
+            const n = articleStats.length;
+            const cx = 230, cy = 220, R = 175;
+            const svgW = 460, svgH = 450;
+            const levels = [-1, -0.5, 0, 0.5, 1];
+
+            // Compute polygon vertices
+            const vertices = articleStats.map((a, i) => {
+              const angle = (2 * Math.PI * i / n) - Math.PI / 2;
+              const score = a.signal_count > 0 ? (a.avg_final ?? 0) : 0;
+              const normalized = (score + 1) / 2; // map -1..+1 to 0..1
+              const r = normalized * R;
+              return {
+                x: cx + r * Math.cos(angle),
+                y: cy + r * Math.sin(angle),
+                labelX: cx + (R + 16) * Math.cos(angle),
+                labelY: cy + (R + 16) * Math.sin(angle),
+                angle,
+                score: a.signal_count > 0 ? a.avg_final : null,
+                section: a.section,
+                label: a.section === 'Preamble' ? 'P' : a.section.replace('Article ', ''),
+              };
+            });
+
+            const polygonPath = vertices.map((v, i) =>
+              `${i === 0 ? 'M' : 'L'}${v.x.toFixed(1)},${v.y.toFixed(1)}`
+            ).join(' ') + ' Z';
+
+            return (
+              <svg viewBox={`0 0 ${svgW} ${svgH}`} width="100%" style="display: block; max-width: 520px; margin: 0 auto;">
+                {/* Reference circles */}
+                {levels.map((lev) => {
+                  const frac = (lev + 1) / 2;
+                  const r = frac * R;
+                  return (
+                    <circle cx={cx} cy={cy} r={r} fill="none"
+                            stroke={lev === 0 ? '#333' : '#1a1a25'}
+                            stroke-width={lev === 0 ? '1' : '0.5'}
+                            stroke-dasharray={lev === 0 ? '3,2' : 'none'} />
+                  );
+                })}
+                {/* Level labels on right axis */}
+                {levels.map((lev) => {
+                  const frac = (lev + 1) / 2;
+                  const r = frac * R;
+                  return (
+                    <text x={cx + r + 2} y={cy - 2} fill="#333" font-size="7" font-family="monospace">
+                      {lev === 0 ? '0' : (lev > 0 ? `+${lev}` : `${lev}`)}
+                    </text>
+                  );
+                })}
+                {/* Axis lines from center to edge */}
+                {vertices.map((v) => (
+                  <line x1={cx} y1={cy} x2={cx + R * Math.cos(v.angle)} y2={cy + R * Math.sin(v.angle)}
+                        stroke="#1a1a25" stroke-width="0.5" />
+                ))}
+                {/* Data polygon fill */}
+                <path d={polygonPath} fill="rgba(255,102,0,0.12)" stroke="#ff6600" stroke-width="1.5" />
+                {/* Data points at vertices */}
+                {vertices.map((v) => (
+                  <circle cx={v.x} cy={v.y} r="3" fill={scoreToColor(v.score)} stroke="#0a0a12" stroke-width="0.5">
+                    <title>{`${v.section}: ${v.score !== null ? formatScore(v.score) : 'No Data'}`}</title>
+                  </circle>
+                ))}
+                {/* Labels */}
+                {vertices.map((v) => {
+                  const cosA = Math.cos(v.angle);
+                  const anchor = Math.abs(cosA) < 0.15 ? 'middle' : cosA > 0 ? 'start' : 'end';
+                  const dy = Math.abs(Math.sin(v.angle)) > 0.9 ? (Math.sin(v.angle) > 0 ? 4 : -2) : 3;
+                  return (
+                    <text x={v.labelX} y={v.labelY + dy}
+                          text-anchor={anchor}
+                          fill={v.score !== null ? '#666' : '#333'}
+                          font-size="8" font-family="monospace">
+                      {v.label}
+                    </text>
+                  );
+                })}
+              </svg>
+            );
+          })()}
+          <div style="text-align: center; font-size: 9px; color: #444; margin-top: 4px;">
+            center = -1.0 · dashed ring = 0.0 (neutral) · outer edge = +1.0 · <span style="color: #ff6600;">polygon</span> = rights profile shape
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
 
   {/* UDHR Article Heatmap — aggregate across all stories */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">

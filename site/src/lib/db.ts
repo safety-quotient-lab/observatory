@@ -1038,6 +1038,37 @@ export async function getBottomConfidenceStories(db: D1Database, limit = 5): Pro
   return results;
 }
 
+// --- Scatter plot data (E vs S + Score vs Confidence combined) ---
+
+export interface StoryScatterPoint {
+  hn_id: number;
+  title: string;
+  domain: string | null;
+  hcb_weighted_mean: number | null;
+  avg_editorial: number;
+  avg_structural: number;
+  conf: number;
+}
+
+export async function getStoryScatterData(db: D1Database, limit = 500): Promise<StoryScatterPoint[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT s.hn_id, s.title, s.domain, s.hcb_weighted_mean,
+              AVG(sc.editorial) as avg_editorial,
+              AVG(sc.structural) as avg_structural,
+              CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL)
+              / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1) as conf
+       FROM stories s JOIN scores sc ON s.hn_id = sc.hn_id
+       WHERE s.eval_status = 'done' AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+       GROUP BY s.hn_id
+       ORDER BY s.evaluated_at DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<StoryScatterPoint>();
+  return results;
+}
+
 // --- Domain DCP cache ---
 
 export async function getDomainDcp(db: D1Database, domain: string): Promise<string | null> {
