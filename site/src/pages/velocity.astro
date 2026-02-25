@@ -1,0 +1,198 @@
+---
+import Base from '../layouts/Base.astro';
+import { getHighVelocityStories, getVelocityVsHrcb } from '../lib/db';
+import { scoreToColor, formatScore } from '../lib/colors';
+
+const db = Astro.locals.runtime.env.DB;
+
+const [highVelocity, velocityHrcb] = await Promise.all([
+  getHighVelocityStories(db, 30),
+  getVelocityVsHrcb(db, 200),
+]);
+
+function timeAgo(unixTime: number): string {
+  const seconds = Math.floor(Date.now() / 1000 - unixTime);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+// Prepare scatter data for client
+const scatterData = JSON.stringify(velocityHrcb.map(v => ({
+  id: v.hn_id,
+  title: v.title.slice(0, 60),
+  domain: v.domain,
+  vel: v.velocity,
+  hrcb: v.hcb_weighted_mean,
+})));
+---
+
+<Base title="Velocity — HN HRCB">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td>
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Velocity Tracking</span>
+        <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
+          Cayce Pollard mode — tracking the fastest-rising content
+        </span>
+      </td>
+    </tr>
+  </table>
+
+  {/* Velocity vs HRCB scatter plot */}
+  {velocityHrcb.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Velocity vs HRCB
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              does high-velocity content lean differently? · {velocityHrcb.length} stories
+            </span>
+          </div>
+          <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">
+            X: points/hour · Y: HRCB score · hover for details
+          </div>
+          <canvas id="vel-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: #0a0a12; border-radius: 4px;"></canvas>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* High velocity stories table */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          Fastest Rising (24h)
+          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            {highVelocity.length} stories with velocity data
+          </span>
+        </div>
+        {highVelocity.length > 0 ? (
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+            <tr style="color: #555;">
+              <td>pts/hr</td><td>Title</td><td style="text-align: right;">HRCB</td><td style="text-align: right;">Points</td><td>Age</td>
+            </tr>
+            {highVelocity.map(s => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td style="color: #ff6600; white-space: nowrap;" class="score-font">
+                  {s.velocity !== null ? s.velocity.toFixed(1) : '—'}
+                </td>
+                <td>
+                  <a href={s.url || `https://news.ycombinator.com/item?id=${s.hn_id}`}
+                     target="_blank" rel="noopener" style="color: #c9c9c9;">
+                    {s.title.slice(0, 80)}{s.title.length > 80 ? '...' : ''}
+                  </a>
+                  {s.domain && <span style="color: #555; margin-left: 4px; font-size: var(--font-xs);">({s.domain})</span>}
+                  {' '}
+                  <a href={`/item/${s.hn_id}`} style="color: #ff6600; font-size: var(--font-xs);">hrcb</a>
+                </td>
+                <td style={`text-align: right; color: ${s.hcb_weighted_mean !== null ? scoreToColor(s.hcb_weighted_mean) : '#555'};`} class="score-font">
+                  {formatScore(s.hcb_weighted_mean)}
+                </td>
+                <td style="text-align: right; color: #aaa;" class="score-font">{s.hn_score ?? '—'}</td>
+                <td style="color: #555; white-space: nowrap;">{timeAgo(s.hn_time)}</td>
+              </tr>
+            ))}
+          </table>
+        ) : (
+          <div style="color: #555; padding: 20px; text-align: center;">
+            No velocity data yet. Snapshots accumulate every 5 minutes for top stories.
+          </div>
+        )}
+      </td>
+    </tr>
+  </table>
+
+  <script define:vars={{ scatterData }}>
+    const data = JSON.parse(scatterData);
+    const canvas = document.getElementById('vel-scatter');
+    if (canvas && data.length > 0) {
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const pad = 40;
+
+      const maxVel = Math.max(...data.map(d => d.vel), 1);
+      const minHrcb = Math.min(...data.map(d => d.hrcb ?? 0), -0.5);
+      const maxHrcb = Math.max(...data.map(d => d.hrcb ?? 0), 0.5);
+
+      function x(vel) { return pad + (vel / maxVel) * (W - pad * 2); }
+      function y(hrcb) { return H - pad - ((hrcb - minHrcb) / (maxHrcb - minHrcb)) * (H - pad * 2); }
+
+      // Axes
+      ctx.strokeStyle = '#222230';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad, pad); ctx.lineTo(pad, H - pad); ctx.lineTo(W - pad, H - pad);
+      ctx.stroke();
+
+      // Zero line
+      const zeroY = y(0);
+      ctx.strokeStyle = '#333';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(pad, zeroY); ctx.lineTo(W - pad, zeroY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Labels
+      ctx.fillStyle = '#555';
+      ctx.font = '10px monospace';
+      ctx.fillText('0', pad - 10, zeroY + 3);
+      ctx.fillText(`${maxVel.toFixed(0)} pts/hr`, W - pad - 50, H - pad + 15);
+      ctx.fillText(formatScore(maxHrcb), 2, pad + 3);
+      ctx.fillText(formatScore(minHrcb), 2, H - pad + 3);
+
+      function formatScore(s) {
+        if (s === null) return 'ND';
+        return (s > 0 ? '+' : '') + s.toFixed(2);
+      }
+
+      function scoreColor(score) {
+        if (score > 0) {
+          const t = Math.min(score, 1);
+          return `rgb(${Math.round(234+(22-234)*t)},${Math.round(179+(163-179)*t)},${Math.round(8+(74-8)*t)})`;
+        } else if (score < 0) {
+          const t = Math.min(Math.abs(score), 1);
+          return `rgb(${Math.round(234+(220-234)*t)},${Math.round(179+(38-179)*t)},${Math.round(8+(38-8)*t)})`;
+        }
+        return '#eab308';
+      }
+
+      // Points
+      for (const d of data) {
+        if (d.hrcb === null) continue;
+        ctx.beginPath();
+        ctx.arc(x(d.vel), y(d.hrcb), 4, 0, 2 * Math.PI);
+        ctx.fillStyle = scoreColor(d.hrcb);
+        ctx.globalAlpha = 0.7;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // Tooltip on hover
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scale = canvas.clientWidth / W;
+        const mx = (e.clientX - rect.left) / scale;
+        const my = (e.clientY - rect.top) / scale;
+        let found = null;
+        for (const d of data) {
+          if (d.hrcb === null) continue;
+          if (Math.hypot(x(d.vel) - mx, y(d.hrcb) - my) < 8) {
+            found = d;
+            break;
+          }
+        }
+        canvas.title = found
+          ? `${found.title} (${found.domain || 'self-post'})\n${found.vel.toFixed(1)} pts/hr | HRCB: ${formatScore(found.hrcb)}`
+          : '';
+      });
+    }
+  </script>
+</Base>

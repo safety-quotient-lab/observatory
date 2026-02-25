@@ -81,7 +81,7 @@ function scoreRowToScore(row: ScoreRow): Score {
   };
 }
 
-export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc';
+export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show' | 'job';
 
@@ -153,6 +153,7 @@ export async function getFilteredStoriesWithScores(
     case 'conf_asc': orderBy = 'CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1) ASC NULLS LAST'; break;
     case 'setl_desc': joinSetl = true; orderBy = 'story_setl DESC NULLS LAST'; break;
     case 'setl_asc': joinSetl = true; orderBy = 'story_setl ASC NULLS LAST'; break;
+    case 'velocity': orderBy = 's.hn_score DESC NULLS LAST'; break; // proxy: highest points = most momentum
   }
 
   // Stories query — excludes hcb_json blob but includes truncated hn_text preview
@@ -1227,6 +1228,78 @@ export async function getStoryScatterData(db: D1Database, limit = 500): Promise<
     .bind(limit)
     .all<StoryScatterPoint>();
   return results;
+}
+
+// --- Velocity tracking (Cayce Pollard mode) ---
+
+export interface VelocityStory extends Story {
+  velocity: number | null; // points per hour
+}
+
+export async function getHighVelocityStories(db: D1Database, limit = 20): Promise<VelocityStory[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT s.*,
+                CASE WHEN COUNT(snap.snapshot_id) >= 2 THEN
+                  CAST(MAX(snap.hn_score) - MIN(snap.hn_score) AS REAL)
+                  / MAX((MAX(snap.recorded_at_unix) - MIN(snap.recorded_at_unix)) / 3600.0, 0.1)
+                ELSE NULL END as velocity
+         FROM stories s
+         JOIN (
+           SELECT hn_id, hn_score, snapshot_id,
+                  CAST(strftime('%s', recorded_at) AS INTEGER) as recorded_at_unix
+           FROM story_snapshots
+           WHERE recorded_at >= datetime('now', '-24 hours')
+         ) snap ON snap.hn_id = s.hn_id
+         WHERE s.hn_time > unixepoch('now', '-48 hours')
+         GROUP BY s.hn_id
+         HAVING COUNT(snap.snapshot_id) >= 2
+         ORDER BY velocity DESC NULLS LAST
+         LIMIT ?`
+      )
+      .bind(limit)
+      .all<VelocityStory>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+export interface VelocityCorrelation {
+  hn_id: number;
+  title: string;
+  domain: string | null;
+  velocity: number;
+  hcb_weighted_mean: number | null;
+  hcb_classification: string | null;
+}
+
+export async function getVelocityVsHrcb(db: D1Database, limit = 100): Promise<VelocityCorrelation[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT s.hn_id, s.title, s.domain, s.hcb_weighted_mean, s.hcb_classification,
+                CAST(MAX(snap.hn_score) - MIN(snap.hn_score) AS REAL)
+                / MAX((MAX(snap.recorded_at_unix) - MIN(snap.recorded_at_unix)) / 3600.0, 0.1) as velocity
+         FROM stories s
+         JOIN (
+           SELECT hn_id, hn_score,
+                  CAST(strftime('%s', recorded_at) AS INTEGER) as recorded_at_unix
+           FROM story_snapshots
+         ) snap ON snap.hn_id = s.hn_id
+         WHERE s.eval_status = 'done' AND s.hcb_weighted_mean IS NOT NULL
+         GROUP BY s.hn_id
+         HAVING COUNT(*) >= 2
+         ORDER BY velocity DESC
+         LIMIT ?`
+      )
+      .bind(limit)
+      .all<VelocityCorrelation>();
+    return results;
+  } catch {
+    return [];
+  }
 }
 
 // --- Seldon Dashboard: rolling averages + per-article daily + per-content-type daily ---
