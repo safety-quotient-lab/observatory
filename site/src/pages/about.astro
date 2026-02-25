@@ -16,8 +16,10 @@ import Base from '../layouts/Base.astro';
         </p>
 
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 15px;">
-          A cron worker crawls HN stories every 5 minutes across 5 lists (top, new, best, ask, show),
-          cleans HTML content, and dispatches evaluations via a Cloudflare Queue. A separate consumer worker
+          A cron worker crawls HN stories every 5 minutes across 6 lists (top, new, best, ask, show, job),
+          tracking all stories but only auto-evaluating those in the top 5 pages (150 stories) of the
+          front page. Stories outside this range are tracked but skipped unless manually triggered.
+          Content is cleaned and dispatched via a Cloudflare Queue. A separate consumer worker
           evaluates each URL against the UDHR methodology (v3.7) using Claude, with DCP caching per domain
           and content snapshots stored in R2. Results are displayed alongside standard HN metadata.
           The evaluator operates as a <b style="color: #ff6600;">Fair Witness</b> — reporting only what is
@@ -280,7 +282,7 @@ import Base from '../layouts/Base.astro';
         <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">How Evaluations Work</p>
 
         <ol style="color: #828282; line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
-          <li>A URL from HN's top stories is fetched as the unit of analysis</li>
+          <li>A URL from HN's top 5 pages is fetched as the unit of analysis (other stories can be manually triggered)</li>
           <li>The page's content type is classified (Editorial, Community, HR, etc.)</li>
           <li>Channel weights are assigned based on content type</li>
           <li>A Domain Context Profile (DCP) is constructed from 8 domain-level elements</li>
@@ -328,7 +330,7 @@ import Base from '../layouts/Base.astro';
             <td style="color: #828282;" class="score-font">Database</td><td style="color: #c9c9c9;" class="score-font">Cloudflare D1</td>
           </tr>
           <tr>
-            <td style="color: #828282;" class="score-font">Cron</td><td style="color: #c9c9c9;" class="score-font">Every 5 min (5 HN lists)</td>
+            <td style="color: #828282;" class="score-font">Cron</td><td style="color: #c9c9c9;" class="score-font">Every 5 min (6 HN lists, top 5 pages)</td>
             <td style="color: #828282;" class="score-font">Cache</td><td style="color: #c9c9c9;" class="score-font">KV (content + DCP)</td>
           </tr>
           <tr>
