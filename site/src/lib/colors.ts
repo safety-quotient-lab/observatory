@@ -158,3 +158,22 @@ export function modifierColor(mod: number | null): string {
   const scaled = Math.max(-1, Math.min(1, mod * 10));
   return scoreToColor(scaled);
 }
+
+/** Fair Witness ratio color: maps 0–1 to purple(0) → green(1) */
+export function fwRatioColor(ratio: number | null): string {
+  if (ratio === null) return '#4b5563';
+  const r = Math.max(0, Math.min(1, ratio));
+  // Low ratio (more inference) = purple, high ratio (more observable) = green
+  const hue = 142 * r; // 0→0° (red-ish), 1→142° (green)
+  // Use purple tint for low values: shift hue toward 280 for low r
+  const adjustedHue = r < 0.5 ? 280 - (280 - 142) * (r / 0.5) : 142;
+  const sat = 0.7;
+  const lit = 0.45;
+  return hslToRgb(adjustedHue, sat, lit);
+}
+
+/** Format Fair Witness ratio for display */
+export function formatFwRatio(ratio: number | null): string {
+  if (ratio === null) return 'ND';
+  return Math.round(ratio * 100) + '%';
+}

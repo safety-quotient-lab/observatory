@@ -152,3 +152,34 @@ function classifyScore(score: number): string {
 function round(n: number): number {
   return Math.round(n * 1000) / 1000;
 }
+
+// --- Fair Witness helpers ---
+
+export function computeWitnessRatio(facts?: string[], inferences?: string[]): number | null {
+  const factCount = facts?.length ?? 0;
+  const inferenceCount = inferences?.length ?? 0;
+  const total = factCount + inferenceCount;
+  if (total === 0) return null;
+  return round(factCount / total);
+}
+
+export interface FairWitnessAggregates {
+  fw_ratio: number | null;
+  fw_observable_count: number;
+  fw_inference_count: number;
+}
+
+export function computeFairWitnessAggregates(scores: EvalScore[]): FairWitnessAggregates {
+  let totalFacts = 0;
+  let totalInferences = 0;
+  for (const s of scores) {
+    if (s.witness_facts) totalFacts += s.witness_facts.length;
+    if (s.witness_inferences) totalInferences += s.witness_inferences.length;
+  }
+  const total = totalFacts + totalInferences;
+  return {
+    fw_ratio: total > 0 ? round(totalFacts / total) : null,
+    fw_observable_count: totalFacts,
+    fw_inference_count: totalInferences,
+  };
+}

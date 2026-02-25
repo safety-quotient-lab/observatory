@@ -28,7 +28,7 @@ import {
   type EvalResult,
 } from '../src/lib/shared-eval';
 
-import { computeAggregates } from '../src/lib/compute-aggregates';
+import { computeAggregates, computeWitnessRatio } from '../src/lib/compute-aggregates';
 import { cleanHtml } from '../src/lib/html-clean';
 
 interface Env {
@@ -178,6 +178,11 @@ export default {
 
         // Parse slim response (no aggregates)
         const slim = parseSlimEvalResponse(data);
+
+        // Compute witness_ratio per score on Worker CPU
+        for (const score of slim.scores) {
+          (score as any).witness_ratio = computeWitnessRatio(score.witness_facts, score.witness_inferences);
+        }
 
         // Compute aggregates on Worker CPU
         const channelWeights = slim.evaluation.channel_weights;

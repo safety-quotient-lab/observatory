@@ -1,5 +1,5 @@
 ---
-import { scoreToColor, formatScore, evidenceColor, directionalityColor, computeSetl, formatSetl, setlToColor } from '../lib/colors';
+import { scoreToColor, formatScore, evidenceColor, directionalityColor, computeSetl, formatSetl, setlToColor, fwRatioColor, formatFwRatio } from '../lib/colors';
 import { ARTICLE_TITLES } from '../lib/udhr';
 import type { Score } from '../lib/types';
 
@@ -16,6 +16,9 @@ const title = ARTICLE_TITLES[score.section] || score.section;
 const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low'};
 const DIRECTION_LABELS: Record<string, string> = {A: 'Advocacy', F: 'Framing', P: 'Practice', C: 'Coverage'};
 const articleSetl = computeSetl(score.structural, score.editorial);
+
+const hasFw = (score.witness_facts && score.witness_facts.length > 0) || (score.witness_inferences && score.witness_inferences.length > 0);
+const fwRatio = score.witness_ratio ?? null;
 ---
 
 <details class="group border-b border-surface-3/50">
@@ -97,6 +100,41 @@ const articleSetl = computeSetl(score.structural, score.editorial);
         </div>
       </div>
     ) : null}
-    <p class="text-sm text-gray-400 leading-relaxed">{score.note}</p>
+    <p class="text-sm text-gray-400 leading-relaxed fw-hide">{score.note}</p>
+
+    {hasFw && (
+      <>
+        <div class="fw-only" style="display:none;">
+          {fwRatio !== null && (
+            <span
+              class="badge text-[10px] mb-2 inline-block"
+              style={`background: ${fwRatioColor(fwRatio)}20; color: ${fwRatioColor(fwRatio)};`}
+            >
+              FW Ratio: {formatFwRatio(fwRatio)}
+            </span>
+          )}
+        </div>
+        {score.witness_facts && score.witness_facts.length > 0 && (
+          <div class="fw-only mt-2" style="display:none;">
+            <div class="text-[10px] text-green-400 uppercase tracking-wider font-bold mb-1">Observable Facts</div>
+            <ul class="text-sm text-gray-300 leading-relaxed list-disc list-inside space-y-0.5">
+              {score.witness_facts.map((fact) => (
+                <li>{fact}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {score.witness_inferences && score.witness_inferences.length > 0 && (
+          <div class="fw-only mt-2" style="display:none;">
+            <div class="text-[10px] text-purple-400 uppercase tracking-wider font-bold mb-1">Inferences</div>
+            <ul class="text-sm text-gray-400 leading-relaxed list-disc list-inside space-y-0.5 italic">
+              {score.witness_inferences.map((inf) => (
+                <li>{inf}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </>
+    )}
   </div>
 </details>

@@ -27,6 +27,9 @@ export interface Story {
   evaluated_at: string | null;
   created_at: string;
   hn_rank: number | null;
+  fw_ratio: number | null;
+  fw_observable_count: number | null;
+  fw_inference_count: number | null;
 }
 
 export interface ScoreRow {
@@ -1523,5 +1526,36 @@ export async function getDomainDcp(db: D1Database, domain: string): Promise<stri
     return row?.dcp_json ?? null;
   } catch {
     return null; // table may not exist
+  }
+}
+
+// --- Fair Witness cross-story stats ---
+
+export interface FairWitnessArticleStat {
+  section: string;
+  observable_count: number;
+  inference_count: number;
+  avg_ratio: number | null;
+  story_count: number;
+}
+
+export async function getFairWitnessArticleStats(db: D1Database): Promise<FairWitnessArticleStat[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT section,
+                SUM(CASE WHEN fact_type = 'observable' THEN 1 ELSE 0 END) as observable_count,
+                SUM(CASE WHEN fact_type = 'inference' THEN 1 ELSE 0 END) as inference_count,
+                CAST(SUM(CASE WHEN fact_type = 'observable' THEN 1 ELSE 0 END) AS REAL)
+                  / MAX(COUNT(*), 1) as avg_ratio,
+                COUNT(DISTINCT hn_id) as story_count
+         FROM fair_witness
+         GROUP BY section
+         ORDER BY section`
+      )
+      .all<FairWitnessArticleStat>();
+    return results;
+  } catch {
+    return [];
   }
 }

@@ -10,6 +10,7 @@ import {
   parseEvalResponse,
   type EvalResult,
 } from './shared-eval';
+import { computeWitnessRatio } from './compute-aggregates';
 
 // Re-export shared primitives for the trigger endpoint
 export { fetchUrlContent, writeEvalResult, EVAL_MODEL } from './shared-eval';
@@ -72,6 +73,12 @@ export async function callClaude(
   };
 
   const parsed = parseEvalResponse(data);
+
+  // Compute witness_ratio per score on CPU
+  for (const score of parsed.scores) {
+    (score as any).witness_ratio = computeWitnessRatio(score.witness_facts, score.witness_inferences);
+  }
+
   const promptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT, userPrompt);
 
   return {
