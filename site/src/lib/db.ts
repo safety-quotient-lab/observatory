@@ -81,7 +81,7 @@ function scoreRowToScore(row: ScoreRow): Score {
   };
 }
 
-export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'setl_desc' | 'setl_asc' | 'hotl_desc' | 'hotl_asc' | 'salient' | 'outliers' | 'controversial';
+export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'hotl_desc' | 'hotl_asc' | 'salient' | 'outliers' | 'controversial';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show';
 
@@ -139,6 +139,8 @@ export async function getFilteredStoriesWithScores(
     case 'score_desc': orderBy = 's.hcb_weighted_mean DESC NULLS LAST'; break;
     case 'score_asc': orderBy = 's.hcb_weighted_mean ASC NULLS LAST'; break;
     case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
+    case 'conf_desc': orderBy = 'CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1) DESC NULLS LAST'; break;
+    case 'conf_asc': orderBy = 'CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1) ASC NULLS LAST'; break;
     case 'setl_desc': joinSetl = true; orderBy = 'story_setl DESC NULLS LAST'; break;
     case 'setl_asc': joinSetl = true; orderBy = 'story_setl ASC NULLS LAST'; break;
     case 'hotl_desc': joinHotl = true; orderBy = 'hotl DESC NULLS LAST'; break;

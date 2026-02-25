@@ -12,7 +12,7 @@ const filter = (url.searchParams.get('filter') || 'all') as FilterOption;
 const type = (url.searchParams.get('type') || 'all') as TypeOption;
 const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
-const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'setl_desc', 'setl_asc', 'hotl_desc', 'hotl_asc', 'salient', 'outliers', 'controversial'];
+const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'setl_desc', 'setl_asc', 'hotl_desc', 'hotl_asc', 'salient', 'outliers', 'controversial'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show'];
 const safeSort = validSorts.includes(sort) ? sort : 'top';
@@ -59,6 +59,8 @@ const SORT_OPTIONS = [
   { value: 'score_desc', label: 'top hrcb' },
   { value: 'score_asc', label: 'bottom hrcb' },
   { value: 'hn_points', label: 'points' },
+  { value: 'conf_desc', label: 'top conf' },
+  { value: 'conf_asc', label: 'bottom conf' },
   { value: 'setl_desc', label: 'top setl' },
   { value: 'setl_asc', label: 'bottom setl' },
   { value: 'hotl_desc', label: 'top hotl' },
