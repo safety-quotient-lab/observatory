@@ -95,6 +95,34 @@ import Base from '../layouts/Base.astro';
           The geometric mean rewards both large gaps AND strong signals, filtering out noise from near-zero scores.
         </p>
 
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Fair Witness Evidence Layer</p>
+
+        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+          Inspired by Heinlein's Fair Witnesses from <i>Stranger in a Strange Land</i>,
+          every evaluation separates its evidence into two categories:
+        </p>
+
+        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
+          <tr>
+            <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
+              <b style="color: #22c55e;">Observable Facts</b><br>
+              <span style="color: #828282;">Directly verifiable statements grounded in page content. Any reader could confirm these by visiting the page.</span>
+            </td>
+            <td width="5px"></td>
+            <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
+              <b style="color: #a855f7;">Inferences</b><br>
+              <span style="color: #828282;">Interpretive conclusions drawn from the observable evidence. These explain <i>why</i> the evidence maps to the score.</span>
+            </td>
+          </tr>
+        </table>
+
+        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 10px;">
+          The <b style="color: #c9c9c9;">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts
+          to total evidence items. A high ratio means the evaluation is well-grounded in verifiable observations;
+          a low ratio means more interpretive weight. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7; font-size: var(--font-xs);">Fair Witness</span>
+          on any item page to switch between the standard view and a stripped-down view showing only the evidence breakdown.
+        </p>
+
         <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
 
         <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
