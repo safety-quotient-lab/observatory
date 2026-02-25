@@ -155,6 +155,8 @@ const jsonLd = udhrSection ? {
         <tr style="color: #828282; font-size: var(--font-sm); cursor: pointer; user-select: none;">
           <td data-col="rank" data-type="num" width="30"># ▼</td>
           <td data-col="hrcb" data-type="num" width="60" align="center">HRCB</td>
+          <td data-col="pts" data-type="num" width="34" align="center" title="HN Points">Pts</td>
+          <td data-col="cmt" data-type="num" width="34" align="center" title="HN Comments">Cmt</td>
           <td data-col="conf" data-type="num" width="34" align="center" title="Confidence: signal coverage">Conf</td>
           <td data-col="story" data-type="str">Story</td>
           <td data-col="editorial" data-type="num" width="60" align="center" title="Editorial — what the content says">Editorial</td>
@@ -175,6 +177,12 @@ const jsonLd = udhrSection ? {
               <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
                 {formatScore(row.final)}
               </span>
+            </td>
+            <td align="center" style="color: #888; font-size: var(--font-sm);" data-val={row.hn_score ?? -999}>
+              {row.hn_score ?? ''}
+            </td>
+            <td align="center" style="color: #666; font-size: var(--font-sm);" data-val={row.hn_comments ?? -999}>
+              {row.hn_comments ?? ''}
             </td>
             <td align="center" class="score-font" style={`color: ${confidenceToColor(rowConf)}; font-size: var(--font-sm);`} data-val={rowConf ?? -999}>
               {formatConfidence(rowConf)}

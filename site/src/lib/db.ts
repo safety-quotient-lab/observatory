@@ -1842,8 +1842,9 @@ export {
   getEventStats,
   getCronRuns,
   getDailyErrorCounts,
+  getEvalsPerCycle,
 } from './events';
-export type { Event, EventStats } from './events';
+export type { Event, EventStats, CycleStats } from './events';
 
 // --- Fair Witness cross-story stats ---
 

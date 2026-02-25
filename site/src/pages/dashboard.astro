@@ -35,6 +35,7 @@ import {
   getCronRuns,
   getDailyErrorCounts,
   getSignalOverview,
+  getEvalsPerCycle,
 } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
@@ -74,12 +75,14 @@ let eventStats: Awaited<ReturnType<typeof getEventStats>> = { total: 0, by_type:
 let recentPipelineEvents: Awaited<ReturnType<typeof getRecentEvents>> = [];
 let cronRuns: Awaited<ReturnType<typeof getCronRuns>> = [];
 let dailyErrors: Awaited<ReturnType<typeof getDailyErrorCounts>> = [];
+let cycleStats: Awaited<ReturnType<typeof getEvalsPerCycle>> = [];
 try {
-  [eventStats, recentPipelineEvents, cronRuns, dailyErrors] = await Promise.all([
+  [eventStats, recentPipelineEvents, cronRuns, dailyErrors, cycleStats] = await Promise.all([
     getEventStats(db, 7),
     getRecentEvents(db, 15),
     getCronRuns(db, 5),
     getDailyErrorCounts(db, 7),
+    getEvalsPerCycle(db, 10),
   ]);
 } catch {
   // events table may not exist yet
@@ -769,7 +772,7 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {topPositive.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="30" title="Confidence: signal coverage">Conf</td><td width="36" title="Structural-Editorial Tension Level">SETL</td><td>Story</td>
+                <td width="16">#</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="24" title="HN Points">Pts</td><td width="24" title="HN Comments">Cmt</td><td width="30" title="Confidence">Conf</td><td width="36" title="SETL">SETL</td><td>Story</td>
               </tr>
               {topPositive.map((s, i) => {
                 const setl = storySetl(s);
@@ -780,6 +783,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px; font-weight: bold;`}>
                     {formatScore(s.hcb_weighted_mean)}
                   </td>
+                  <td style="color: #888; width: 24px; font-size: var(--font-xs);">{s.hn_score ?? ''}</td>
+                  <td style="color: #666; width: 24px; font-size: var(--font-xs);">{s.hn_comments ?? ''}</td>
                   <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
                     {formatConfidence(conf)}
                   </td>
@@ -805,7 +810,7 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {topNegative.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">SETL</td><td>Story</td>
+                <td width="16">#</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="24" title="HN Points">Pts</td><td width="24" title="HN Comments">Cmt</td><td width="30" title="Confidence">Conf</td><td width="36" title="SETL">SETL</td><td>Story</td>
               </tr>
               {topNegative.map((s, i) => {
                 const setl = storySetl(s);
@@ -816,6 +821,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px; font-weight: bold;`}>
                     {formatScore(s.hcb_weighted_mean)}
                   </td>
+                  <td style="color: #888; width: 24px; font-size: var(--font-xs);">{s.hn_score ?? ''}</td>
+                  <td style="color: #666; width: 24px; font-size: var(--font-xs);">{s.hn_comments ?? ''}</td>
                   <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
                     {formatConfidence(conf)}
                   </td>
@@ -847,7 +854,7 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {topSetl.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44">SETL</td><td width="44">HRCB</td><td width="30">Conf</td><td>Story</td>
+                <td width="16">#</td><td width="44" title="Structural-Editorial Tension Level">SETL</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="24" title="HN Points">Pts</td><td width="24" title="HN Comments">Cmt</td><td width="30" title="Confidence">Conf</td><td>Story</td>
               </tr>
               {topSetl.map((s, i) => {
                 const conf = storyConfidence(s);
@@ -860,6 +867,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
                     {formatScore(s.hcb_weighted_mean)}
                   </td>
+                  <td style="color: #888; width: 24px; font-size: var(--font-xs);">{s.hn_score ?? ''}</td>
+                  <td style="color: #666; width: 24px; font-size: var(--font-xs);">{s.hn_comments ?? ''}</td>
                   <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
                     {formatConfidence(conf)}
                   </td>
@@ -882,7 +891,7 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {bottomSetl.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44">SETL</td><td width="44">HRCB</td><td width="30">Conf</td><td>Story</td>
+                <td width="16">#</td><td width="44" title="Structural-Editorial Tension Level">SETL</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="24" title="HN Points">Pts</td><td width="24" title="HN Comments">Cmt</td><td width="30" title="Confidence">Conf</td><td>Story</td>
               </tr>
               {bottomSetl.map((s, i) => {
                 const conf = storyConfidence(s);
@@ -895,6 +904,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
                     {formatScore(s.hcb_weighted_mean)}
                   </td>
+                  <td style="color: #888; width: 24px; font-size: var(--font-xs);">{s.hn_score ?? ''}</td>
+                  <td style="color: #666; width: 24px; font-size: var(--font-xs);">{s.hn_comments ?? ''}</td>
                   <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
                     {formatConfidence(conf)}
                   </td>
@@ -923,7 +934,7 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {topConf.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="34" title="Evidence-weighted confidence">Conf</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="36" title="Structural-Editorial Tension Level">SETL</td><td>Story</td>
+                <td width="16">#</td><td width="34" title="Evidence-weighted confidence">Conf</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="24" title="HN Points">Pts</td><td width="24" title="HN Comments">Cmt</td><td width="36" title="Structural-Editorial Tension Level">SETL</td><td>Story</td>
               </tr>
               {topConf.map((s, i) => {
                 const setl = storySetl(s);
@@ -937,6 +948,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
                     {formatScore(s.hcb_weighted_mean)}
                   </td>
+                  <td style="color: #888; width: 24px; font-size: var(--font-xs);">{s.hn_score ?? ''}</td>
+                  <td style="color: #666; width: 24px; font-size: var(--font-xs);">{s.hn_comments ?? ''}</td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
                   </td>
@@ -959,7 +972,7 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {bottomConf.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="34">Conf</td><td width="44">HRCB</td><td width="36">SETL</td><td>Story</td>
+                <td width="16">#</td><td width="34" title="Evidence-weighted confidence">Conf</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="24" title="HN Points">Pts</td><td width="24" title="HN Comments">Cmt</td><td width="36" title="Structural-Editorial Tension Level">SETL</td><td>Story</td>
               </tr>
               {bottomConf.map((s, i) => {
                 const setl = storySetl(s);
@@ -973,6 +986,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
                     {formatScore(s.hcb_weighted_mean)}
                   </td>
+                  <td style="color: #888; width: 24px; font-size: var(--font-xs);">{s.hn_score ?? ''}</td>
+                  <td style="color: #666; width: 24px; font-size: var(--font-xs);">{s.hn_comments ?? ''}</td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
                   </td>
@@ -1110,6 +1125,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr style="color: #555; font-size: var(--font-xs);">
               <td width="50">HRCB</td>
+              <td width="24">Pts</td>
+              <td width="24">Cmt</td>
               <td width="34">Conf</td>
               <td width="40">SETL</td>
               <td>Story</td>
@@ -1124,6 +1141,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                 <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; font-weight: bold;`}>
                   {formatScore(s.hcb_weighted_mean)}
                 </td>
+                <td style="color: #888; font-size: var(--font-xs);">{s.hn_score ?? ''}</td>
+                <td style="color: #666; font-size: var(--font-xs);">{s.hn_comments ?? ''}</td>
                 <td class="score-font" style={`color: ${confidenceToColor(conf)}; font-size: var(--font-sm);`}>
                   {formatConfidence(conf)}
                 </td>
@@ -1503,24 +1522,62 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
             </div>
           )}
 
-          {/* Cron health */}
-          {cronRuns.length > 0 && (
+          {/* Cycle stats (evals per cycle + cycle time) */}
+          {cycleStats.length > 0 && (
             <div style="margin-bottom: 10px;">
-              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Cron Health</div>
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Cycle Performance</div>
               <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                {cronRuns.map((ev) => {
-                  const d = ev.details;
+                <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
+                  <td width="130">Cycle Start</td>
+                  <td width="50" align="center">Crawl</td>
+                  <td width="40" align="center" title="Stories found by cron">Found</td>
+                  <td width="35" align="center" title="New stories queued">New</td>
+                  <td width="45" align="center" title="Evaluations completed">Evals</td>
+                  <td width="35" align="center" title="Failed evaluations">Fail</td>
+                  <td title="Time until next cycle">Cycle Time</td>
+                </tr>
+                {cycleStats.map((c) => {
+                  const cycleDuration = c.cycle_end
+                    ? Math.round((new Date(c.cycle_end).getTime() - new Date(c.cycle_start).getTime()) / 1000)
+                    : null;
+                  const cycleMins = cycleDuration !== null ? Math.floor(cycleDuration / 60) : null;
+                  const cycleSecs = cycleDuration !== null ? cycleDuration % 60 : null;
                   return (
                     <tr style="border-top: 1px solid #1a1a25;">
-                      <td style="color: #555; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
-                      <td style="color: #888;">{ev.message}</td>
-                      <td style="color: #555; text-align: right; white-space: nowrap;">
-                        {d?.duration_ms ? `${d.duration_ms}ms` : ''}
+                      <td style="color: #555; white-space: nowrap;">{c.cycle_start.slice(0, 16)}</td>
+                      <td align="center" style="color: #555; white-space: nowrap;">
+                        {c.duration_ms !== null ? `${(c.duration_ms / 1000).toFixed(1)}s` : '—'}
+                      </td>
+                      <td align="center" style="color: #888;">{c.stories_found ?? '—'}</td>
+                      <td align="center" style={`color: ${(c.stories_new ?? 0) > 0 ? '#16a34a' : '#555'};`}>{c.stories_new ?? '—'}</td>
+                      <td align="center" style={`color: ${c.evals_completed > 0 ? '#60a5fa' : '#555'}; font-weight: ${c.evals_completed > 0 ? 'bold' : 'normal'};`}>{c.evals_completed}</td>
+                      <td align="center" style={`color: ${c.evals_failed > 0 ? '#dc2626' : '#555'};`}>{c.evals_failed || '—'}</td>
+                      <td style="color: #555;">
+                        {cycleMins !== null ? `${cycleMins}m ${cycleSecs}s` : <span style="color: #333;">current</span>}
                       </td>
                     </tr>
                   );
                 })}
               </table>
+              {cycleStats.length >= 2 && (() => {
+                const withDurations = cycleStats.filter(c => c.cycle_end !== null);
+                if (withDurations.length === 0) return null;
+                const totalEvals = withDurations.reduce((sum, c) => sum + c.evals_completed, 0);
+                const avgEvals = totalEvals / withDurations.length;
+                const cycleDurations = withDurations.map(c =>
+                  (new Date(c.cycle_end!).getTime() - new Date(c.cycle_start).getTime()) / 1000
+                );
+                const avgCycle = cycleDurations.reduce((a, b) => a + b, 0) / cycleDurations.length;
+                const avgCycleMins = Math.floor(avgCycle / 60);
+                const avgCycleSecs = Math.round(avgCycle % 60);
+                return (
+                  <div style="margin-top: 6px; font-size: var(--font-xs); color: #555;">
+                    Avg: <span style="color: #60a5fa;">{avgEvals.toFixed(1)}</span> evals/cycle
+                    <span style="color: #333;"> · </span>
+                    <span style="color: #888;">{avgCycleMins}m {avgCycleSecs}s</span> cycle time
+                  </div>
+                );
+              })()}
             </div>
           )}
 
