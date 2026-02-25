@@ -4,8 +4,8 @@ pages_build_output_dir = "dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "udhr-hrcb"
-database_id = "d49c47bc-8107-4481-8aa1-6a9cf0b534c8"
+database_name = "hrcb-db"
+database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
 
 # Cron trigger lives in a separate Worker (functions/cron.ts)
 # Deploy cron separately: wrangler deploy functions/cron.ts --name hn-hrcb-cron
