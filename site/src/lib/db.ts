@@ -483,6 +483,7 @@ export interface DomainStat {
   count: number;
   avg_score: number;
   avg_setl: number | null;
+  avg_conf: number | null;
 }
 
 export async function getDomainStats(db: D1Database, limit = 10): Promise<DomainStat[]> {
@@ -500,7 +501,11 @@ export async function getDomainStats(db: D1Database, limit = 10): Promise<Domain
                WHERE s2.domain = s.domain
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
                  AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-              ) as avg_setl
+              ) as avg_setl,
+              AVG(
+                CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL)
+                / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1)
+              ) as avg_conf
        FROM stories s WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
        GROUP BY s.domain ORDER BY count DESC LIMIT ?`
     )
@@ -681,7 +686,7 @@ export async function getDomainSetl(db: D1Database, domain: string): Promise<num
   return row?.setl ?? null;
 }
 
-export type DomainSortOption = 'count' | 'score' | 'setl';
+export type DomainSortOption = 'count' | 'score' | 'setl' | 'conf';
 
 export async function getAllDomainStats(
   db: D1Database,
@@ -692,6 +697,7 @@ export async function getAllDomainStats(
   switch (sort) {
     case 'score': orderBy = 'avg_score DESC NULLS LAST'; break;
     case 'setl': orderBy = 'avg_setl DESC NULLS LAST'; break;
+    case 'conf': orderBy = 'avg_conf DESC NULLS LAST'; break;
   }
   const { results } = await db
     .prepare(
@@ -708,7 +714,13 @@ export async function getAllDomainStats(
                WHERE s2.domain = s.domain
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
                  AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-              ) as avg_setl
+              ) as avg_setl,
+              AVG(
+                CASE WHEN s.eval_status = 'done' THEN
+                  CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL)
+                  / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1)
+                END
+              ) as avg_conf
        FROM stories s
        WHERE s.domain IS NOT NULL
        GROUP BY s.domain
@@ -900,6 +912,130 @@ export async function getArticlePairStats(db: D1Database): Promise<ArticlePairDa
   }
 
   return { cooccurrence, correlation, maxCooccurrence: maxCo };
+}
+
+// --- Score distribution histogram ---
+
+export interface HistogramBin {
+  bin: number; // e.g. -10 = [-1.0, -0.9), 0 = [0.0, 0.1), etc.
+  count: number;
+}
+
+export async function getScoreHistogram(db: D1Database): Promise<HistogramBin[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT CAST(FLOOR(hcb_weighted_mean * 10) AS INTEGER) as bin, COUNT(*) as count
+       FROM stories WHERE eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
+       GROUP BY bin ORDER BY bin`
+    )
+    .all<HistogramBin>();
+  return results;
+}
+
+// --- Mean confidence ---
+
+export async function getMeanConfidence(db: D1Database): Promise<number | null> {
+  const row = await db
+    .prepare(
+      `SELECT AVG(
+        CAST((COALESCE(hcb_evidence_h,0)*1.0 + COALESCE(hcb_evidence_m,0)*0.6 + COALESCE(hcb_evidence_l,0)*0.2) AS REAL)
+        / MAX(COALESCE(hcb_evidence_h,0) + COALESCE(hcb_evidence_m,0) + COALESCE(hcb_evidence_l,0) + COALESCE(hcb_nd_count,0), 1)
+       ) as mean_conf
+       FROM stories
+       WHERE eval_status = 'done'
+         AND (hcb_evidence_h IS NOT NULL OR hcb_evidence_m IS NOT NULL OR hcb_evidence_l IS NOT NULL)`
+    )
+    .first<{ mean_conf: number | null }>();
+  return row?.mean_conf ?? null;
+}
+
+// --- HRCB over time (daily averages) ---
+
+export interface DailyHrcb {
+  day: string;
+  avg: number;
+  count: number;
+}
+
+export async function getDailyHrcb(db: D1Database, limit = 60): Promise<DailyHrcb[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT DATE(evaluated_at) as day, AVG(hcb_weighted_mean) as avg, COUNT(*) as count
+       FROM stories
+       WHERE eval_status = 'done' AND evaluated_at IS NOT NULL AND hcb_weighted_mean IS NOT NULL
+       GROUP BY DATE(evaluated_at)
+       ORDER BY day DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<DailyHrcb>();
+  // Reverse to chronological
+  return results.reverse();
+}
+
+// --- Coverage velocity ---
+
+export interface VelocityStats {
+  evalsPerDay: number;
+  daysActive: number;
+  daysToClearing: number | null;
+}
+
+export async function getVelocityStats(db: D1Database, pendingCount: number): Promise<VelocityStats> {
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) as n,
+              MIN(evaluated_at) as first_eval,
+              MAX(evaluated_at) as last_eval
+       FROM stories WHERE eval_status = 'done' AND evaluated_at IS NOT NULL`
+    )
+    .first<{ n: number; first_eval: string | null; last_eval: string | null }>();
+
+  if (!row || !row.first_eval || !row.last_eval || row.n < 2) {
+    return { evalsPerDay: 0, daysActive: 0, daysToClearing: null };
+  }
+
+  const firstMs = new Date(row.first_eval).getTime();
+  const lastMs = new Date(row.last_eval).getTime();
+  const daysActive = Math.max(1, (lastMs - firstMs) / (1000 * 60 * 60 * 24));
+  const evalsPerDay = row.n / daysActive;
+  const daysToClearing = pendingCount > 0 && evalsPerDay > 0
+    ? pendingCount / evalsPerDay
+    : null;
+
+  return { evalsPerDay, daysActive: Math.round(daysActive), daysToClearing };
+}
+
+// --- Top/Bottom Confidence stories ---
+
+export async function getTopConfidenceStories(db: D1Database, limit = 5): Promise<Story[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT *,
+              CAST((COALESCE(hcb_evidence_h,0)*1.0 + COALESCE(hcb_evidence_m,0)*0.6 + COALESCE(hcb_evidence_l,0)*0.2) AS REAL)
+              / MAX(COALESCE(hcb_evidence_h,0) + COALESCE(hcb_evidence_m,0) + COALESCE(hcb_evidence_l,0) + COALESCE(hcb_nd_count,0), 1) as conf
+       FROM stories WHERE eval_status = 'done'
+         AND (hcb_evidence_h IS NOT NULL OR hcb_evidence_m IS NOT NULL OR hcb_evidence_l IS NOT NULL)
+       ORDER BY conf DESC LIMIT ?`
+    )
+    .bind(limit)
+    .all<Story>();
+  return results;
+}
+
+export async function getBottomConfidenceStories(db: D1Database, limit = 5): Promise<Story[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT *,
+              CAST((COALESCE(hcb_evidence_h,0)*1.0 + COALESCE(hcb_evidence_m,0)*0.6 + COALESCE(hcb_evidence_l,0)*0.2) AS REAL)
+              / MAX(COALESCE(hcb_evidence_h,0) + COALESCE(hcb_evidence_m,0) + COALESCE(hcb_evidence_l,0) + COALESCE(hcb_nd_count,0), 1) as conf
+       FROM stories WHERE eval_status = 'done'
+         AND (hcb_evidence_h IS NOT NULL OR hcb_evidence_m IS NOT NULL OR hcb_evidence_l IS NOT NULL)
+       ORDER BY conf ASC LIMIT ?`
+    )
+    .bind(limit)
+    .all<Story>();
+  return results;
 }
 
 // --- Domain DCP cache ---
