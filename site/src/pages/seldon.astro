@@ -1,0 +1,251 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDailyHrcb, getDailyContentTypeHrcb, getFeedDailyHrcb } from '../lib/db';
+import { scoreToColor, formatScore } from '../lib/colors';
+import { CONTENT_TYPE_LABELS } from '../lib/types';
+
+const db = Astro.locals.runtime.env.DB;
+
+const [dailyHrcb, dailyContentType, dailyFeed] = await Promise.all([
+  getDailyHrcb(db, 90),
+  getDailyContentTypeHrcb(db, 90),
+  getFeedDailyHrcb(db, 90),
+]);
+
+// Compute rolling averages (7-day, 30-day)
+function rollingAvg(data: { day: string; avg: number }[], window: number): { day: string; avg: number }[] {
+  const result: { day: string; avg: number }[] = [];
+  for (let i = 0; i < data.length; i++) {
+    const start = Math.max(0, i - window + 1);
+    const slice = data.slice(start, i + 1);
+    const avg = slice.reduce((s, d) => s + d.avg, 0) / slice.length;
+    result.push({ day: data[i].day, avg });
+  }
+  return result;
+}
+
+const rolling7 = rollingAvg(dailyHrcb, 7);
+const rolling30 = rollingAvg(dailyHrcb, 30);
+
+// Regime change detection: find days where 7-day rolling crosses the 30-day rolling
+interface RegimeChange {
+  day: string;
+  direction: 'up' | 'down';
+  rolling7: number;
+  rolling30: number;
+}
+
+const regimeChanges: RegimeChange[] = [];
+for (let i = 1; i < Math.min(rolling7.length, rolling30.length); i++) {
+  const prev7 = rolling7[i - 1].avg, curr7 = rolling7[i].avg;
+  const prev30 = rolling30[i - 1].avg, curr30 = rolling30[i].avg;
+  const prevAbove = prev7 > prev30;
+  const currAbove = curr7 > curr30;
+  if (prevAbove !== currAbove) {
+    regimeChanges.push({
+      day: rolling7[i].day,
+      direction: currAbove ? 'up' : 'down',
+      rolling7: curr7,
+      rolling30: curr30,
+    });
+  }
+}
+
+// Group content type daily data
+const ctDays = new Map<string, Map<string, number>>();
+for (const r of dailyContentType) {
+  let dayMap = ctDays.get(r.content_type);
+  if (!dayMap) { dayMap = new Map(); ctDays.set(r.content_type, dayMap); }
+  dayMap.set(r.day, r.avg_score);
+}
+const ctTypes = [...ctDays.keys()].slice(0, 6);
+const ctColors: Record<string, string> = {
+  ED: '#60a5fa', PO: '#f87171', LP: '#fbbf24', PR: '#34d399', AC: '#a78bfa', MI: '#22d3ee',
+  AD: '#fb923c', HR: '#818cf8', CO: '#c084fc', ME: '#38bdf8', MX: '#6b7280',
+};
+
+// Group feed daily data
+const feedDays = new Map<string, Map<string, number>>();
+for (const r of dailyFeed) {
+  let dayMap = feedDays.get(r.feed);
+  if (!dayMap) { dayMap = new Map(); feedDays.set(r.feed, dayMap); }
+  dayMap.set(r.day, r.avg_score);
+}
+const feeds = [...feedDays.keys()];
+const feedColors: Record<string, string> = {
+  top: '#ff6600', new: '#60a5fa', best: '#34d399', ask: '#fbbf24', show: '#fb923c', job: '#a78bfa',
+};
+
+// Chart helpers
+const allDays = dailyHrcb.map(d => d.day);
+const chartW = Math.max(allDays.length * 12, 300);
+const chartH = 120;
+
+function yPos(score: number): number {
+  return chartH / 2 - (score * chartH * 0.4);
+}
+
+function makeLine(points: { day: string; avg: number }[]): string {
+  return points.map((p, i) => {
+    const x = (allDays.indexOf(p.day) / Math.max(allDays.length - 1, 1)) * chartW;
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${yPos(p.avg).toFixed(1)}`;
+  }).join(' ');
+}
+
+// Serialized data for regime change rendering
+const regimeData = JSON.stringify(regimeChanges);
+---
+
+<Base title="Seldon Dashboard — HN HRCB">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td>
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Seldon Dashboard</span>
+        <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
+          Psychohistory — macro-trend forecasting of collective rights alignment
+        </span>
+      </td>
+    </tr>
+  </table>
+
+  {/* Overall HRCB with rolling averages */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          Overall HRCB Trajectory
+          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">{allDays.length} days</span>
+        </div>
+        <div style="display: flex; gap: 12px; font-size: var(--font-xs); margin-bottom: 4px;">
+          <span style="color: #555;">Daily</span>
+          <span style="color: #60a5fa;">7-day rolling</span>
+          <span style="color: #ff6600;">30-day rolling</span>
+        </div>
+        <div style="overflow-x: auto;">
+          <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} style="min-width: 300px;">
+            <line x1="0" y1={chartH / 2} x2={chartW} y2={chartH / 2} stroke="#222230" stroke-width="0.5" />
+            {/* Daily points */}
+            <polyline fill="none" stroke="#333" stroke-width="1"
+              points={dailyHrcb.map((d, i) => `${(i / Math.max(allDays.length - 1, 1)) * chartW},${yPos(d.avg)}`).join(' ')} />
+            {/* 7-day rolling */}
+            {rolling7.length > 1 && <path d={makeLine(rolling7)} fill="none" stroke="#60a5fa" stroke-width="2" />}
+            {/* 30-day rolling */}
+            {rolling30.length > 1 && <path d={makeLine(rolling30)} fill="none" stroke="#ff6600" stroke-width="2" />}
+            {/* Regime change markers */}
+            {regimeChanges.map(rc => {
+              const x = (allDays.indexOf(rc.day) / Math.max(allDays.length - 1, 1)) * chartW;
+              return (
+                <g>
+                  <line x1={x} y1="0" x2={x} y2={chartH} stroke={rc.direction === 'up' ? '#34d399' : '#f87171'} stroke-width="1" stroke-dasharray="3,3" />
+                  <circle cx={x} cy={yPos(rc.rolling7)} r="3" fill={rc.direction === 'up' ? '#34d399' : '#f87171'} />
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* Regime changes list */}
+  {regimeChanges.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Regime Changes
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              7-day/30-day crossovers · {regimeChanges.length} detected
+            </span>
+          </div>
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+            <tr style="color: #555;"><td>Date</td><td>Direction</td><td style="text-align: right;">7-day</td><td style="text-align: right;">30-day</td></tr>
+            {regimeChanges.map(rc => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td style="color: #aaa;">{rc.day}</td>
+                <td style={`color: ${rc.direction === 'up' ? '#34d399' : '#f87171'};`}>
+                  {rc.direction === 'up' ? 'Bullish' : 'Bearish'}
+                </td>
+                <td style={`text-align: right; color: ${scoreToColor(rc.rolling7)};`} class="score-font">{formatScore(rc.rolling7)}</td>
+                <td style={`text-align: right; color: ${scoreToColor(rc.rolling30)};`} class="score-font">{formatScore(rc.rolling30)}</td>
+              </tr>
+            ))}
+          </table>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Per-feed HRCB */}
+  {feeds.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Per-Feed HRCB
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">does community voting amplify or suppress rights alignment?</span>
+          </div>
+          <div style="display: flex; gap: 12px; font-size: var(--font-xs); margin-bottom: 4px;">
+            {feeds.map(f => (
+              <span style={`color: ${feedColors[f] || '#888'};`}>{f}</span>
+            ))}
+          </div>
+          <div style="overflow-x: auto;">
+            <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} style="min-width: 300px;">
+              <line x1="0" y1={chartH / 2} x2={chartW} y2={chartH / 2} stroke="#222230" stroke-width="0.5" />
+              {feeds.map(feed => {
+                const dayMap = feedDays.get(feed);
+                if (!dayMap) return null;
+                const points = allDays
+                  .map((day, i) => {
+                    const val = dayMap.get(day);
+                    if (val === undefined) return null;
+                    return `${(i / Math.max(allDays.length - 1, 1)) * chartW},${yPos(val)}`;
+                  })
+                  .filter(Boolean);
+                if (points.length < 2) return null;
+                return <polyline fill="none" stroke={feedColors[feed] || '#888'} stroke-width="1.5" points={points.join(' ')} />;
+              })}
+            </svg>
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Per-content-type HRCB */}
+  {ctTypes.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Per-Content-Type HRCB
+          </div>
+          <div style="display: flex; gap: 12px; font-size: var(--font-xs); margin-bottom: 4px; flex-wrap: wrap;">
+            {ctTypes.map(ct => (
+              <span style={`color: ${ctColors[ct] || '#888'};`}>{CONTENT_TYPE_LABELS[ct] || ct}</span>
+            ))}
+          </div>
+          <div style="overflow-x: auto;">
+            <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} style="min-width: 300px;">
+              <line x1="0" y1={chartH / 2} x2={chartW} y2={chartH / 2} stroke="#222230" stroke-width="0.5" />
+              {ctTypes.map(ct => {
+                const dayMap = ctDays.get(ct);
+                if (!dayMap) return null;
+                const points = allDays
+                  .map((day, i) => {
+                    const val = dayMap.get(day);
+                    if (val === undefined) return null;
+                    return `${(i / Math.max(allDays.length - 1, 1)) * chartW},${yPos(val)}`;
+                  })
+                  .filter(Boolean);
+                if (points.length < 2) return null;
+                return <polyline fill="none" stroke={ctColors[ct] || '#888'} stroke-width="1.5" points={points.join(' ')} />;
+              })}
+            </svg>
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+</Base>

@@ -1229,6 +1229,81 @@ export async function getStoryScatterData(db: D1Database, limit = 500): Promise<
   return results;
 }
 
+// --- Seldon Dashboard: rolling averages + per-article daily + per-content-type daily ---
+
+export interface DailyArticleHrcb {
+  day: string;
+  section: string;
+  avg_final: number;
+  count: number;
+}
+
+export async function getDailyArticleHrcb(db: D1Database, limit = 90): Promise<DailyArticleHrcb[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT DATE(s.evaluated_at) as day, sc.section, AVG(sc.final) as avg_final, COUNT(*) as count
+         FROM scores sc
+         JOIN stories s ON s.hn_id = sc.hn_id
+         WHERE s.eval_status = 'done' AND s.evaluated_at IS NOT NULL AND sc.final IS NOT NULL
+         GROUP BY DATE(s.evaluated_at), sc.section
+         ORDER BY day DESC
+         LIMIT ?`
+      )
+      .bind(limit * 31)
+      .all<DailyArticleHrcb>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+export interface DailyContentTypeHrcb {
+  day: string;
+  content_type: string;
+  avg_score: number;
+  count: number;
+}
+
+export async function getDailyContentTypeHrcb(db: D1Database, limit = 90): Promise<DailyContentTypeHrcb[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT DATE(evaluated_at) as day, content_type, AVG(hcb_weighted_mean) as avg_score, COUNT(*) as count
+         FROM stories
+         WHERE eval_status = 'done' AND evaluated_at IS NOT NULL AND hcb_weighted_mean IS NOT NULL
+         GROUP BY DATE(evaluated_at), content_type
+         ORDER BY day DESC
+         LIMIT ?`
+      )
+      .bind(limit * 15)
+      .all<DailyContentTypeHrcb>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+export async function getFeedDailyHrcb(db: D1Database, limit = 90): Promise<{ day: string; feed: string; avg_score: number; count: number }[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT DATE(s.evaluated_at) as day, sf.feed, AVG(s.hcb_weighted_mean) as avg_score, COUNT(*) as count
+         FROM story_feeds sf
+         JOIN stories s ON s.hn_id = sf.hn_id
+         WHERE s.eval_status = 'done' AND s.evaluated_at IS NOT NULL AND s.hcb_weighted_mean IS NOT NULL
+         GROUP BY DATE(s.evaluated_at), sf.feed
+         ORDER BY day DESC
+         LIMIT ?`
+      )
+      .bind(limit * 6)
+      .all<{ day: string; feed: string; avg_score: number; count: number }>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 // --- Domain SETL temporal tracking (Hypocrisy Index) ---
 
 export interface DomainSetlPoint {
