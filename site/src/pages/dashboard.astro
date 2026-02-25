@@ -29,11 +29,13 @@ import {
   getTopConfidenceStories,
   getBottomConfidenceStories,
   getStoryScatterData,
+  getDomainFingerprints,
+  getContentTypeDistribution,
 } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, recent, domains, failed, queue, models, meanSetl, modelComparison, costStats, histogram, meanConfidence, dailyHrcb, topConf, bottomConf, scatterData] = await Promise.all([
+const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, recent, domains, failed, queue, models, meanSetl, modelComparison, costStats, histogram, meanConfidence, dailyHrcb, topConf, bottomConf, scatterData, ctDist] = await Promise.all([
   getStatusCounts(db),
   getScoreStats(db),
   getContentTypeStats(db),
@@ -58,10 +60,14 @@ const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPosi
   getTopConfidenceStories(db, 5),
   getBottomConfidenceStories(db, 5),
   getStoryScatterData(db, 500),
+  getContentTypeDistribution(db),
 ]);
 
 // Velocity needs pending count from status
 const velocity = await getVelocityStats(db, status.pending);
+
+// Domain fingerprints (depends on domains result)
+const domainFingerprints = await getDomainFingerprints(db, domains.map(d => d.domain));
 
 // Format token counts for display
 function formatTokens(n: number): string {
@@ -369,6 +375,72 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
       </td>
     </tr>
   </table>
+
+  {/* Content Type Score Distributions */}
+  {ctDist.size > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+            Score Distribution by Content Type
+          </div>
+          {(() => {
+            const types = [...ctDist.entries()].sort((a, b) => b[1].total - a[1].total);
+            const globalMax = Math.max(...types.map(([, d]) => Math.max(...[...d.bins.values()])));
+            const barW = 200 / 21;
+            const rowH = 32;
+            return (
+              <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+                {types.map(([ct, data]) => {
+                  const bins = Array.from({ length: 21 }, (_, i) => {
+                    const b = i - 10;
+                    return { bin: b, count: data.bins.get(b) || 0 };
+                  });
+                  const localMax = Math.max(...bins.map(b => b.count), 1);
+                  const ctLabel = CONTENT_TYPE_LABELS[ct] || ct;
+                  return (
+                    <tr>
+                      <td style="width: 100px; color: #888; vertical-align: middle; padding-right: 8px;">
+                        <span class="badge" style="background: #1a1a25; color: #888; font-size: var(--font-xs);">{ct}</span>
+                        <div style="font-size: 9px; color: #555; margin-top: 1px;">{data.total} stories</div>
+                      </td>
+                      <td style="vertical-align: middle;">
+                        <svg width="220" height={rowH} viewBox={`0 0 220 ${rowH}`} style="display: block;">
+                          {/* Zero line */}
+                          <line x1={10 + 10 * barW} y1="0" x2={10 + 10 * barW} y2={rowH} stroke="#2a2a35" stroke-width="0.5" />
+                          {bins.map((h, i) => {
+                            const barH = localMax > 0 ? (h.count / localMax) * (rowH - 4) : 0;
+                            const x = 10 + i * barW;
+                            const score = h.bin / 10;
+                            return barH > 0 ? (
+                              <rect x={x} y={rowH - 2 - barH} width={Math.max(barW - 1, 1)} height={barH}
+                                    fill={scoreToColor(score)} opacity="0.75" rx="0.5">
+                                <title>{ct} [{score.toFixed(1)} to {(score + 0.1).toFixed(1)}]: {h.count}</title>
+                              </rect>
+                            ) : null;
+                          })}
+                        </svg>
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr>
+                  <td></td>
+                  <td>
+                    <svg width="220" height="12" viewBox="0 0 220 12" style="display: block;">
+                      <text x="10" y="10" fill="#444" font-size="7" font-family="monospace">-1.0</text>
+                      <text x={10 + 10 * barW} y="10" fill="#555" font-size="7" font-family="monospace" text-anchor="middle">0</text>
+                      <text x={10 + 20 * barW} y="10" fill="#444" font-size="7" font-family="monospace" text-anchor="end">+1.0</text>
+                    </svg>
+                  </td>
+                </tr>
+              </table>
+            );
+          })()}
+        </td>
+      </tr>
+    </table>
+  )}
 
   {/* E vs S Scatter + Score vs Confidence Scatter */}
   {scatterData.length > 2 && (
@@ -1137,8 +1209,10 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
               <td width="60" align="center">Avg HRCB</td>
               <td width="40" align="center" title="Evidence-weighted confidence">Conf</td>
               <td width="50" align="center" title="Structural-Editorial Tension Level">SETL</td>
+              <td width="100" align="center" title="Per-article score fingerprint (P, 1–30)">Fingerprint</td>
             </tr>
             {domains.map((d) => {
+              const fp = domainFingerprints.get(d.domain);
               return (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td style="color: #c9c9c9;">
@@ -1153,6 +1227,20 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                 </td>
                 <td align="center" class="score-font" style={`color: ${setlToColor(d.avg_setl)};`}>
                   {formatSetl(d.avg_setl)}
+                </td>
+                <td align="center">
+                  {fp ? (
+                    <svg width="93" height="10" viewBox="0 0 93 10">
+                      {fp.map((score, i) => (
+                        <rect x={i * 3} y="0" width="2.5" height="10" rx="0.5"
+                              fill={scoreToColor(score)}>
+                          <title>{i === 0 ? 'Preamble' : `Article ${i}`}: {score !== null ? formatScore(score) : 'ND'}</title>
+                        </rect>
+                      ))}
+                    </svg>
+                  ) : (
+                    <span style="color: #333;">—</span>
+                  )}
                 </td>
               </tr>
               );

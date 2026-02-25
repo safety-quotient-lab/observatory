@@ -1038,6 +1038,72 @@ export async function getBottomConfidenceStories(db: D1Database, limit = 5): Pro
   return results;
 }
 
+// --- Domain fingerprints (per-domain, per-article score profiles) ---
+
+export interface DomainArticleScore {
+  domain: string;
+  sort_order: number;
+  avg_final: number | null;
+}
+
+export async function getDomainFingerprints(db: D1Database, domains: string[]): Promise<Map<string, (number | null)[]>> {
+  if (domains.length === 0) return new Map();
+  const { results } = await db
+    .prepare(
+      `SELECT s.domain, sc.sort_order, AVG(sc.final) as avg_final
+       FROM scores sc JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE s.eval_status = 'done' AND s.domain IN (${domains.map(() => '?').join(',')})
+       GROUP BY s.domain, sc.sort_order
+       ORDER BY s.domain, sc.sort_order`
+    )
+    .bind(...domains)
+    .all<DomainArticleScore>();
+
+  const profiles = new Map<string, (number | null)[]>();
+  for (const r of results) {
+    let arr = profiles.get(r.domain);
+    if (!arr) {
+      arr = new Array(31).fill(null);
+      profiles.set(r.domain, arr);
+    }
+    if (r.sort_order >= 0 && r.sort_order < 31) {
+      arr[r.sort_order] = r.avg_final;
+    }
+  }
+  return profiles;
+}
+
+// --- Content type score distributions ---
+
+export interface ContentTypeDistBin {
+  content_type: string;
+  bin: number;
+  count: number;
+}
+
+export async function getContentTypeDistribution(db: D1Database): Promise<Map<string, { bins: Map<number, number>; total: number }>> {
+  const { results } = await db
+    .prepare(
+      `SELECT content_type, CAST(FLOOR(hcb_weighted_mean * 10) AS INTEGER) as bin, COUNT(*) as count
+       FROM stories WHERE eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
+       GROUP BY content_type, bin
+       ORDER BY content_type, bin`
+    )
+    .all<ContentTypeDistBin>();
+
+  const dist = new Map<string, { bins: Map<number, number>; total: number }>();
+  for (const r of results) {
+    let entry = dist.get(r.content_type);
+    if (!entry) {
+      entry = { bins: new Map(), total: 0 };
+      dist.set(r.content_type, entry);
+    }
+    entry.bins.set(r.bin, r.count);
+    entry.total += r.count;
+  }
+  return dist;
+}
+
 // --- Scatter plot data (E vs S + Score vs Confidence combined) ---
 
 export interface StoryScatterPoint {
