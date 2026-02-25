@@ -150,56 +150,60 @@ const jsonLd = udhrSection ? {
   </table>
 
   {displayRankings.length > 0 ? (
-    <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
-      <tr style="color: #828282; font-size: var(--font-sm);">
-        <td width="30">#</td>
-        <td width="60" align="center">HRCB</td>
-        <td width="34" align="center" title="Confidence: signal coverage" style="cursor: help;">Conf</td>
-        <td>Story</td>
-        <td width="60" align="center" title="Editorial — what the content says" style="cursor: help;">Editorial</td>
-        <td width="60" align="center" title="Structural — what the site does" style="cursor: help;">Structural</td>
-        <td width="50" align="center" title="Structural-Editorial Tension Level" style="cursor: help;">SETL</td>
-        <td width="60" align="center" title="Evidence strength (High, Medium, Low)" style="cursor: help;">Evidence</td>
-        <td width="60" align="center">Overall</td>
-      </tr>
-      {displayRankings.map((row, i) => {
-        const rowSetl = computeSetl(row.structural, row.editorial);
-        const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
-        return (
-        <tr style="border-top: 1px solid #222230;">
-          <td style="color: #828282;" class="score-font">{offset + i + 1}.</td>
-          <td align="center">
-            <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
-              {formatScore(row.final)}
-            </span>
-          </td>
-          <td align="center" class="score-font" style={`color: ${confidenceToColor(rowConf)}; font-size: var(--font-sm);`}>
-            {formatConfidence(rowConf)}
-          </td>
-          <td>
-            <a href={`/item/${row.hn_id}`}>{row.title}</a>
-            {row.domain && (
-              <span style="color: #828282; font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
-            )}
-          </td>
-          <td align="center" class="score-font" style={`color: ${scoreToColor(row.editorial)}; font-size: var(--font-sm);`}>
-            {formatScore(row.editorial)}
-          </td>
-          <td align="center" class="score-font" style={`color: ${scoreToColor(row.structural)}; font-size: var(--font-sm);`}>
-            {formatScore(row.structural)}
-          </td>
-          <td align="center" class="score-font" style={`color: ${setlToColor(rowSetl)}; font-size: var(--font-sm);`}>
-            {formatSetl(rowSetl)}
-          </td>
-          <td align="center" style="color: #828282; font-size: var(--font-sm);">
-            {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
-          </td>
-          <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_weighted_mean)}; font-size: var(--font-sm);`}>
-            {formatScore(row.hcb_weighted_mean)}
-          </td>
+    <table id="article-table" cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
+      <thead>
+        <tr style="color: #828282; font-size: var(--font-sm); cursor: pointer; user-select: none;">
+          <td data-col="rank" data-type="num" width="30"># ▼</td>
+          <td data-col="hrcb" data-type="num" width="60" align="center">HRCB</td>
+          <td data-col="conf" data-type="num" width="34" align="center" title="Confidence: signal coverage">Conf</td>
+          <td data-col="story" data-type="str">Story</td>
+          <td data-col="editorial" data-type="num" width="60" align="center" title="Editorial — what the content says">Editorial</td>
+          <td data-col="structural" data-type="num" width="60" align="center" title="Structural — what the site does">Structural</td>
+          <td data-col="setl" data-type="num" width="50" align="center" title="Structural-Editorial Tension Level">SETL</td>
+          <td data-col="evidence" data-type="evidence" width="60" align="center" title="Evidence strength (High, Medium, Low)">Evidence</td>
+          <td data-col="overall" data-type="num" width="60" align="center">Overall</td>
         </tr>
-        );
-      })}
+      </thead>
+      <tbody id="article-body">
+        {displayRankings.map((row, i) => {
+          const rowSetl = computeSetl(row.structural, row.editorial);
+          const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
+          return (
+          <tr style="border-top: 1px solid #222230;">
+            <td style="color: #828282;" class="score-font" data-val={offset + i + 1}>{offset + i + 1}.</td>
+            <td align="center" data-val={row.final ?? -999}>
+              <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
+                {formatScore(row.final)}
+              </span>
+            </td>
+            <td align="center" class="score-font" style={`color: ${confidenceToColor(rowConf)}; font-size: var(--font-sm);`} data-val={rowConf ?? -999}>
+              {formatConfidence(rowConf)}
+            </td>
+            <td data-val={row.title}>
+              <a href={`/item/${row.hn_id}`}>{row.title}</a>
+              {row.domain && (
+                <span style="color: #828282; font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
+              )}
+            </td>
+            <td align="center" class="score-font" style={`color: ${scoreToColor(row.editorial)}; font-size: var(--font-sm);`} data-val={row.editorial ?? -999}>
+              {formatScore(row.editorial)}
+            </td>
+            <td align="center" class="score-font" style={`color: ${scoreToColor(row.structural)}; font-size: var(--font-sm);`} data-val={row.structural ?? -999}>
+              {formatScore(row.structural)}
+            </td>
+            <td align="center" class="score-font" style={`color: ${setlToColor(rowSetl)}; font-size: var(--font-sm);`} data-val={rowSetl ?? -999}>
+              {formatSetl(rowSetl)}
+            </td>
+            <td align="center" style="color: #828282; font-size: var(--font-sm);" data-val={row.evidence === 'H' ? 3 : row.evidence === 'M' ? 2 : row.evidence === 'L' ? 1 : 0}>
+              {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
+            </td>
+            <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_weighted_mean)}; font-size: var(--font-sm);`} data-val={row.hcb_weighted_mean ?? -999}>
+              {formatScore(row.hcb_weighted_mean)}
+            </td>
+          </tr>
+          );
+        })}
+      </tbody>
     </table>
   ) : (() => {
     const articlesWithScores = coverage.filter(c => c.signal_count > 0);
@@ -263,4 +267,64 @@ const jsonLd = udhrSection ? {
       </tr>
     </table>
   )}
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const table = document.getElementById('article-table');
+      if (!table) return;
+      const thead = table.querySelector('thead');
+      const tbody = document.getElementById('article-body');
+      if (!thead || !tbody) return;
+
+      const headers = thead.querySelectorAll('td[data-col]');
+      let currentSort = 'rank';
+      let ascending = true;
+
+      function sortTable(col, type) {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const colIdx = Array.from(headers).findIndex(h => h.dataset.col === col);
+        if (colIdx < 0) return;
+
+        if (currentSort === col) {
+          ascending = !ascending;
+        } else {
+          currentSort = col;
+          ascending = type === 'str';
+        }
+
+        rows.sort((a, b) => {
+          const cellA = a.children[colIdx];
+          const cellB = b.children[colIdx];
+          let va, vb;
+          if (type === 'str') {
+            va = (cellA.dataset.val ?? cellA.textContent ?? '').trim().toLowerCase();
+            vb = (cellB.dataset.val ?? cellB.textContent ?? '').trim().toLowerCase();
+          } else {
+            va = parseFloat(cellA.dataset.val ?? cellA.textContent ?? '0');
+            vb = parseFloat(cellB.dataset.val ?? cellB.textContent ?? '0');
+            if (isNaN(va)) va = -9999;
+            if (isNaN(vb)) vb = -9999;
+          }
+          let cmp = va < vb ? -1 : va > vb ? 1 : 0;
+          return ascending ? cmp : -cmp;
+        });
+
+        rows.forEach((row, i) => {
+          row.children[0].textContent = (i + 1) + '.';
+          tbody.appendChild(row);
+        });
+
+        headers.forEach(h => {
+          const base = h.textContent.replace(/ [▲▼]/g, '').trim();
+          h.textContent = h.dataset.col === col ? base + (ascending ? ' ▲' : ' ▼') : base;
+        });
+      }
+
+      headers.forEach(h => {
+        h.addEventListener('click', () => {
+          sortTable(h.dataset.col, h.dataset.type);
+        });
+      });
+    });
+  </script>
 </Base>

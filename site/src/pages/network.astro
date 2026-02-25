@@ -153,6 +153,14 @@ const powerData = JSON.stringify(powerRankings);
     </tr>
   </table>
 
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 5px 0;">
+    <tr>
+      <td style="color: #828282; font-size: var(--font-sm); line-height: 1.6; padding: 4px 0;">
+        How do UDHR rights move together across Hacker News stories? This page maps the statistical relationships between all 31 provisions. The graph below uses a minimum spanning tree to show the single strongest path connecting every article — green edges link rights that rise and fall together, red edges link rights that pull in opposite directions, and blue edges mark near-zero correlation. Below the graph, the tension and harmony tables list the most aligned and most opposed pairs across all evaluated content, the editorial/structural chart shows whether each right is driven more by what sites say versus what they do, and the power rankings table lets you sort articles by score, volatility, or signal count.
+      </td>
+    </tr>
+  </table>
+
   {/* === Section 1: MST Backbone Graph === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
@@ -378,6 +386,7 @@ const powerData = JSON.stringify(powerRankings);
     const ALPHA_MIN = 0.001;
 
     let dragging = null;
+    let dragMoved = false;
     let mx = 0, my = 0;
     let hoveredNode = null;
     let hoveredEdge = null;
@@ -394,6 +403,7 @@ const powerData = JSON.stringify(powerRankings);
       for (const n of nodes) {
         if (Math.hypot(n.x - mx, n.y - my) < 18) {
           dragging = n;
+          dragMoved = false;
           alpha = Math.max(alpha, 0.3);
           canvas.style.cursor = 'grabbing';
           break;
@@ -407,6 +417,7 @@ const powerData = JSON.stringify(powerRankings);
       mx = (e.clientX - rect.left) / scale;
       my = (e.clientY - rect.top) / scale;
       if (dragging) {
+        dragMoved = true;
         dragging.x = mx;
         dragging.y = my;
         dragging.vx = 0;
@@ -438,6 +449,11 @@ const powerData = JSON.stringify(powerRankings);
     });
 
     canvas.addEventListener('mouseup', () => {
+      if (dragging && !dragMoved) {
+        // Click without drag — navigate to article page
+        const num = dragging.id === 'Preamble' ? 0 : parseInt(dragging.label, 10);
+        window.location.href = '/article/' + num;
+      }
       dragging = null;
       canvas.style.cursor = 'grab';
     });
