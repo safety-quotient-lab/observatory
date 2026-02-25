@@ -119,12 +119,29 @@ Rules:
 4. Inferences must be clearly interpretive — they explain WHY the evidence maps to the score.
 5. Aim for 1–3 facts and 1–2 inferences per section. Do not pad with trivial observations.
 
+## 9 — STORY-LEVEL LABELS
+
+After scoring all 31 sections, generate three story-level labels:
+
+1. **theme_tag**: A concise phrase (2-4 words) naming the dominant human rights theme.
+   Examples: "Privacy & Surveillance", "Free Expression", "Labor Rights", "Digital Access",
+   "Discrimination & Equality", "Health & Welfare", "Education Access", "Due Process".
+   You may coin a phrase if none fit, but keep it concise.
+
+2. **sentiment_tag**: Your overall assessment of the content's disposition toward human rights.
+   Choose exactly one of: "Champions", "Advocates", "Acknowledges", "Neutral",
+   "Neglects", "Undermines", "Hostile".
+
+3. **executive_summary**: A 2-3 sentence narrative summary in Fair Witness style.
+   Describe what the content is about, which human rights themes are most engaged,
+   and the overall direction of the evaluation. Be factual and precise.
+
 ## OUTPUT FORMAT
 
 You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include "combined", "context_modifier", or "final" in scores — these are computed externally. If a cached DCP was provided in the user message, output "domain_context_profile": "cached" instead of the full object. The JSON must follow this exact schema:
 
 {
-  "schema_version": "3.5",
+  "schema_version": "3.6",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
@@ -132,7 +149,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "channel_weights": { "editorial": <w_E>, "structural": <w_S> },
     "eval_depth": "STANDARD",
     "date": "<YYYY-MM-DD>",
-    "methodology": "v3.5",
+    "methodology": "v3.6",
     "off_domain": false,
     "external_evidence": false,
     "operator": "claude-haiku-4-5-20251001"
@@ -165,6 +182,9 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     }
     // ... 31 total rows (Preamble + Article 1-30)
   ],
+  "theme_tag": "<concise theme label>",
+  "sentiment_tag": "<Champions|Advocates|Acknowledges|Neutral|Neglects|Undermines|Hostile>",
+  "executive_summary": "<2-3 sentence summary>",
   "aggregates": {
     "weighted_mean": <number>,
     "unweighted_mean": <number>,
@@ -273,12 +293,29 @@ Rules:
 4. Inferences must be clearly interpretive — they explain WHY the evidence maps to the score.
 5. Aim for 1–3 facts and 1–2 inferences per section. Do not pad with trivial observations.
 
+## 9 — STORY-LEVEL LABELS
+
+After scoring all 31 sections, generate three story-level labels:
+
+1. **theme_tag**: A concise phrase (2-4 words) naming the dominant human rights theme.
+   Examples: "Privacy & Surveillance", "Free Expression", "Labor Rights", "Digital Access",
+   "Discrimination & Equality", "Health & Welfare", "Education Access", "Due Process".
+   You may coin a phrase if none fit, but keep it concise.
+
+2. **sentiment_tag**: Your overall assessment of the content's disposition toward human rights.
+   Choose exactly one of: "Champions", "Advocates", "Acknowledges", "Neutral",
+   "Neglects", "Undermines", "Hostile".
+
+3. **executive_summary**: A 2-3 sentence narrative summary in Fair Witness style.
+   Describe what the content is about, which human rights themes are most engaged,
+   and the overall direction of the evaluation. Be factual and precise.
+
 ## OUTPUT FORMAT
 
 You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include an "aggregates" field — aggregates are computed externally. Do NOT include "combined", "context_modifier", or "final" in scores — these are computed externally. If a cached DCP was provided in the user message, output "domain_context_profile": "cached" instead of the full object. The JSON must follow this exact schema:
 
 {
-  "schema_version": "3.5",
+  "schema_version": "3.6",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
@@ -286,7 +323,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "channel_weights": { "editorial": <w_E>, "structural": <w_S> },
     "eval_depth": "STANDARD",
     "date": "<YYYY-MM-DD>",
-    "methodology": "v3.5",
+    "methodology": "v3.6",
     "off_domain": false,
     "external_evidence": false,
     "operator": "claude-haiku-4-5-20251001"
@@ -318,7 +355,10 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
       "witness_inferences": ["<interpretive statement>", ...]
     }
     // ... 31 total rows (Preamble + Article 1-30)
-  ]
+  ],
+  "theme_tag": "<concise theme label>",
+  "sentiment_tag": "<Champions|Advocates|Acknowledges|Neutral|Neglects|Undermines|Hostile>",
+  "executive_summary": "<2-3 sentence summary>"
 }`;
 
 // --- Interfaces ---
@@ -372,6 +412,9 @@ export interface EvalResult {
     elements: Record<string, unknown>;
   };
   scores: EvalScore[];
+  theme_tag?: string;
+  sentiment_tag?: string;
+  executive_summary?: string;
   aggregates: {
     weighted_mean: number;
     unweighted_mean: number;
@@ -410,6 +453,9 @@ export interface SlimEvalResponse {
     elements: Record<string, unknown>;
   } | string;
   scores: EvalScore[];
+  theme_tag?: string;
+  sentiment_tag?: string;
+  executive_summary?: string;
   l2_scores?: unknown[];
   adversarial_gap?: unknown;
 }
@@ -603,6 +649,9 @@ export async function writeEvalResult(
         hcb_setl = ?,
         hcb_confidence = ?,
         schema_version = ?,
+        hcb_theme_tag = ?,
+        hcb_sentiment_tag = ?,
+        hcb_executive_summary = ?,
         eval_status = 'done',
         eval_error = NULL,
         evaluated_at = datetime('now')
@@ -628,6 +677,9 @@ export async function writeEvalResult(
       hcbSetl,
       hcbConfidence,
       result.schema_version || null,
+      result.theme_tag || null,
+      result.sentiment_tag || null,
+      result.executive_summary || null,
       hnId
     )
     .run();

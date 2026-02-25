@@ -16,7 +16,7 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'setl_desc', 'setl_asc', 'velocity'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
-const validVersions: VersionOption[] = ['all', '3.4', '3.5'];
+const validVersions: VersionOption[] = ['all', '3.4', '3.5', '3.6'];
 const safeSort = validSorts.includes(sort) ? sort : 'top';
 const safeFilter = validFilters.includes(filter) ? filter : 'all';
 const safeType = validTypes.includes(type) ? type : 'all';
@@ -86,6 +86,7 @@ const VERSION_OPTIONS = [
   { value: 'all', label: 'all' },
   { value: '3.4', label: 'v3.4' },
   { value: '3.5', label: 'v3.5' },
+  { value: '3.6', label: 'v3.6' },
 ] as const;
 ---
 

@@ -114,6 +114,11 @@ const aggSetl = setlValues.length > 0
 // Confidence (evidence-weighted)
 const confidence = computeConfidence(storyData.hcb_evidence_h, storyData.hcb_evidence_m, storyData.hcb_evidence_l, storyData.hcb_nd_count);
 
+// Story-level labels (v3.6+)
+const themeTag = evalData?.theme_tag || storyData.hcb_theme_tag || null;
+const sentimentTag = evalData?.sentiment_tag || storyData.hcb_sentiment_tag || null;
+const executiveSummary = evalData?.executive_summary || storyData.hcb_executive_summary || null;
+
 let comments: Awaited<ReturnType<typeof getStoryComments>> = [];
 try {
   comments = await getStoryComments(db, hnId);
@@ -150,7 +155,7 @@ const jsonLd = isDone && aggregates && evaluation ? {
     worstRating: -1.0,
     ratingExplanation: `HRCB ${aggregates.classification} — evaluated against ${aggregates.signal_sections} of 31 UDHR provisions using methodology v${evaluation.methodology}`,
   },
-  reviewBody: `Content type: ${CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}. ${aggregates.signal_sections} sections scored, ${aggregates.nd_count} with no data. Volatility: ${aggregates.volatility.label} (${aggregates.volatility.value.toFixed(2)}).`,
+  reviewBody: executiveSummary || `Content type: ${CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}. ${aggregates.signal_sections} sections scored, ${aggregates.nd_count} with no data. Volatility: ${aggregates.volatility.label} (${aggregates.volatility.value.toFixed(2)}).`,
   about: {
     '@type': 'Legislation',
     name: 'Universal Declaration of Human Rights',
@@ -180,7 +185,7 @@ function timeAgo(unixTime: number): string {
 <Base
   title={`${storyData.title} — ${isFailed ? 'Failed' : isPending ? 'Pending' : 'HRCB'}`}
   ogTitle={isDone && aggregates ? `${formatScore(aggregates.weighted_mean)} ${storyData.title}` : storyData.title}
-  ogDescription={isDone && aggregates ? `HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}` : isPending ? `Evaluation pending for ${storyData.title}` : `Evaluation failed for ${storyData.title}`}
+  ogDescription={isDone && aggregates ? (executiveSummary || `HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}`) : isPending ? `Evaluation pending for ${storyData.title}` : `Evaluation failed for ${storyData.title}`}
   ogUrl={`${siteUrl}/item/${storyData.hn_id}`}
   canonicalUrl={`${siteUrl}/item/${storyData.hn_id}`}
 >
@@ -354,6 +359,34 @@ function timeAgo(unixTime: number): string {
   </table>
 
   <div style="height: 10px;"></div>
+
+  {/* Summary card (v3.6+ story-level labels) */}
+  {(executiveSummary || themeTag || sentimentTag) && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <span style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Summary</span>
+            {themeTag && (
+              <span class="badge" style="background: rgba(99,102,241,0.15); color: #818cf8; font-size: var(--font-xs);">
+                {themeTag}
+              </span>
+            )}
+            {sentimentTag && (
+              <span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee; font-size: var(--font-xs);">
+                {sentimentTag}
+              </span>
+            )}
+          </div>
+          {executiveSummary && (
+            <div style="color: #c9c9c9; font-size: var(--font-sm); line-height: 1.6;">
+              {executiveSummary}
+            </div>
+          )}
+        </td>
+      </tr>
+    </table>
+  )}
 
   {/* Heatmap */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">

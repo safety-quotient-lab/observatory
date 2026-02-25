@@ -128,6 +128,9 @@ export interface Evaluation {
     elements: Record<string, DcpElement>;
   };
   scores: Score[];
+  theme_tag?: string;
+  sentiment_tag?: string;
+  executive_summary?: string;
   aggregates: {
     weighted_mean: number;
     unweighted_mean: number;

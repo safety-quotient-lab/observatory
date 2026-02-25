@@ -31,6 +31,9 @@ export interface Story {
   fw_observable_count: number | null;
   fw_inference_count: number | null;
   schema_version: string | null;
+  hcb_theme_tag: string | null;
+  hcb_sentiment_tag: string | null;
+  hcb_executive_summary: string | null;
 }
 
 export interface ScoreRow {
@@ -94,7 +97,7 @@ function scoreRowToScore(row: ScoreRow): Score {
 export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show' | 'job';
-export type VersionOption = 'all' | '3.4' | '3.5';
+export type VersionOption = 'all' | '3.4' | '3.5' | '3.6';
 
 // --- Feed page: single JOIN query replaces N+1 ---
 
@@ -195,6 +198,7 @@ export async function getFilteredStoriesWithScores(
               hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
               eval_model, eval_prompt_hash,
               eval_status, eval_error, evaluated_at, created_at, schema_version,
+              hcb_theme_tag,
               SUBSTR(hn_text, 1, 100) as hn_text_preview${setlSelect}
        FROM stories s WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
@@ -636,6 +640,7 @@ export async function getStoriesByDomain(
               hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
               eval_model, eval_prompt_hash,
               eval_status, eval_error, evaluated_at, created_at, schema_version,
+              hcb_theme_tag,
               SUBSTR(hn_text, 1, 100) as hn_text_preview
        FROM stories WHERE domain = ? ORDER BY hn_time DESC LIMIT ? OFFSET ?`
     )
@@ -1551,6 +1556,7 @@ export async function getStoriesByUser(
               hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
               eval_model, eval_prompt_hash,
               eval_status, eval_error, evaluated_at, created_at, schema_version,
+              hcb_theme_tag,
               SUBSTR(hn_text, 1, 100) as hn_text_preview
        FROM stories WHERE hn_by = ? ORDER BY hn_time DESC LIMIT ? OFFSET ?`
     )
