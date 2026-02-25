@@ -602,6 +602,7 @@ export async function writeEvalResult(
         hcb_structural_mean = ?,
         hcb_setl = ?,
         hcb_confidence = ?,
+        schema_version = ?,
         eval_status = 'done',
         eval_error = NULL,
         evaluated_at = datetime('now')
@@ -626,6 +627,7 @@ export async function writeEvalResult(
       hcbStructuralMean,
       hcbSetl,
       hcbConfidence,
+      result.schema_version || null,
       hnId
     )
     .run();

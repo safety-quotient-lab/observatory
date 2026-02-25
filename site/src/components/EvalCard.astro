@@ -143,6 +143,12 @@ function timeAgo(unixTime: number): string {
       <>
         <span> | </span>
         <a href={`/item/${story.hn_id}`} style="color: #ff6600;">hrcb</a>
+        {story.schema_version && (
+          <span style="color: #555; font-size: var(--font-xs); margin-left: 4px;"
+                title={`Schema version ${story.schema_version}`}>
+            v{story.schema_version}
+          </span>
+        )}
       </>
     ) : story.eval_status === 'evaluating' ? (
       <span> | <span style="color: #60a5fa; font-size: var(--font-sm);">evaluating</span></span>

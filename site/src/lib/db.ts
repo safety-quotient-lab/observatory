@@ -30,6 +30,7 @@ export interface Story {
   fw_ratio: number | null;
   fw_observable_count: number | null;
   fw_inference_count: number | null;
+  schema_version: string | null;
 }
 
 export interface ScoreRow {
@@ -93,6 +94,7 @@ function scoreRowToScore(row: ScoreRow): Score {
 export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show' | 'job';
+export type VersionOption = 'all' | '3.4' | '3.5';
 
 // --- Feed page: single JOIN query replaces N+1 ---
 
@@ -122,7 +124,8 @@ export async function getFilteredStoriesWithScores(
   type: TypeOption = 'all',
   limit = 30,
   offset = 0,
-  day?: string
+  day?: string,
+  version: VersionOption = 'all'
 ): Promise<StoryWithMiniScores[]> {
   const conditions: string[] = ['1=1'];
   switch (filter) {
@@ -138,6 +141,13 @@ export async function getFilteredStoriesWithScores(
     case 'ask': conditions.push("s.hn_type = 'ask'"); break;
     case 'show': conditions.push("s.hn_type = 'show'"); break;
     case 'job': conditions.push("s.hn_type = 'job'"); break;
+  }
+
+  const bindParams: (string | number)[] = [];
+
+  if (version !== 'all') {
+    conditions.push(`s.schema_version = ?`);
+    bindParams.push(version);
   }
 
   // Day filter: show stories from a specific date
@@ -184,11 +194,11 @@ export async function getFilteredStoriesWithScores(
               hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
               hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
               eval_model, eval_prompt_hash,
-              eval_status, eval_error, evaluated_at, created_at,
+              eval_status, eval_error, evaluated_at, created_at, schema_version,
               SUBSTR(hn_text, 1, 100) as hn_text_preview${setlSelect}
        FROM stories s WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
-    .bind(limit, offset)
+    .bind(...bindParams, limit, offset)
     .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>();
 
   // Fetch mini scores (final only) for evaluated stories
@@ -625,7 +635,7 @@ export async function getStoriesByDomain(
               hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
               hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
               eval_model, eval_prompt_hash,
-              eval_status, eval_error, evaluated_at, created_at,
+              eval_status, eval_error, evaluated_at, created_at, schema_version,
               SUBSTR(hn_text, 1, 100) as hn_text_preview
        FROM stories WHERE domain = ? ORDER BY hn_time DESC LIMIT ? OFFSET ?`
     )
@@ -1540,7 +1550,7 @@ export async function getStoriesByUser(
               hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
               hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
               eval_model, eval_prompt_hash,
-              eval_status, eval_error, evaluated_at, created_at,
+              eval_status, eval_error, evaluated_at, created_at, schema_version,
               SUBSTR(hn_text, 1, 100) as hn_text_preview
        FROM stories WHERE hn_by = ? ORDER BY hn_time DESC LIMIT ? OFFSET ?`
     )

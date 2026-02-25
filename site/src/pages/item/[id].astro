@@ -338,7 +338,7 @@ function timeAgo(unixTime: number): string {
           <span title={`Content type: ${CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}`} style="cursor: help;">
             {CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}
           </span>
-          · v{evaluation.methodology} · {evaluation.date}
+          · {storyData.schema_version ? `v${storyData.schema_version}` : evaluation.methodology} · {evaluation.date}
         </span>
         {hasFairWitness && (
           <button
