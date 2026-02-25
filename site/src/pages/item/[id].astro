@@ -555,6 +555,16 @@ function timeAgo(unixTime: number): string {
     <script is:inline>
     document.querySelectorAll('.trigger-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
+        // Gate: require donation
+        if (!localStorage.getItem('hrcb_donated')) {
+          var modal = document.getElementById('donate-modal');
+          if (modal) {
+            window.__pendingRetryBtn = btn;
+            modal.style.display = 'flex';
+          }
+          return;
+        }
+
         var hnId = this.getAttribute('data-hn-id');
         this.disabled = true;
         this.textContent = 'Submitting...';

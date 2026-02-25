@@ -66,6 +66,25 @@ const triggerSecret = Astro.locals.runtime?.env?.TRIGGER_SECRET || '';
         </tr>
       </table>
     </center>
+    {/* Donate modal */}
+    <div id="donate-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
+      <div style="background:#12121a; border:1px solid #222230; border-radius:8px; padding:24px; max-width:400px; width:90%; text-align:center;">
+        <div style="color:#c9c9c9; font-size:14pt; margin-bottom:12px;">Support HN HRCB</div>
+        <div style="color:#888; font-size:10pt; line-height:1.6; margin-bottom:20px;">
+          Evaluations use Claude API credits. Please consider donating to keep the service running.
+        </div>
+        <form action="https://www.paypal.com/donate" method="post" target="_blank" id="donate-form">
+          <input type="hidden" name="hosted_button_id" value="56GCFHDZHB7AJ" />
+          <button type="submit" style="background:rgba(234,179,8,0.2); border:1px solid rgba(234,179,8,0.4); color:#eab308; cursor:pointer; padding:10px 28px; font-size:11pt; border-radius:6px; font-weight:bold;">
+            Donate via PayPal
+          </button>
+        </form>
+        <div style="margin-top:16px;">
+          <a href="#" id="already-donated" style="color:#555; font-size:9pt; text-decoration:underline;">I've already donated</a>
+        </div>
+      </div>
+    </div>
+
     <script>
       function scoreColor(score: number): string {
         if (score > 0) {
@@ -88,12 +107,79 @@ const triggerSecret = Astro.locals.runtime?.env?.TRIGGER_SECRET || '';
         return btn;
       }
 
+      // Donate modal logic
+      const donateModal = document.getElementById('donate-modal')!;
+      const donateForm = document.getElementById('donate-form')!;
+      const alreadyDonated = document.getElementById('already-donated')!;
+      let pendingTriggerBtn: HTMLElement | null = null;
+
+      function showDonateModal(btn: HTMLElement) {
+        pendingTriggerBtn = btn;
+        donateModal.style.display = 'flex';
+      }
+
+      function hideDonateModal() {
+        donateModal.style.display = 'none';
+      }
+
+      function markDonated() {
+        localStorage.setItem('hrcb_donated', new Date().toISOString());
+      }
+
+      function hasDonated(): boolean {
+        return !!localStorage.getItem('hrcb_donated');
+      }
+
+      function onDonationConfirmed() {
+        markDonated();
+        hideDonateModal();
+        if (pendingTriggerBtn) {
+          pendingTriggerBtn.click();
+          pendingTriggerBtn = null;
+        }
+        // Handle batch eval button (set by [username].astro)
+        if ((window as any).__pendingEvalAll) {
+          delete (window as any).__pendingEvalAll;
+          const evalBtn = document.getElementById('eval-all-btn') as HTMLButtonElement | null;
+          if (evalBtn) evalBtn.click();
+        }
+        // Handle retry button (set by [id].astro)
+        if ((window as any).__pendingRetryBtn) {
+          const retryBtn = (window as any).__pendingRetryBtn;
+          delete (window as any).__pendingRetryBtn;
+          retryBtn.click();
+        }
+      }
+
+      donateForm.addEventListener('submit', () => {
+        onDonationConfirmed();
+      });
+
+      alreadyDonated.addEventListener('click', (e) => {
+        e.preventDefault();
+        onDonationConfirmed();
+      });
+
+      // Close modal on overlay click
+      donateModal.addEventListener('click', (e) => {
+        if (e.target === donateModal) {
+          hideDonateModal();
+          pendingTriggerBtn = null;
+        }
+      });
+
       document.addEventListener('click', async (e) => {
         const btn = (e.target as HTMLElement).closest('.trigger-btn') as HTMLButtonElement | null;
         if (!btn) return;
 
         const hnId = btn.dataset.hnId;
         if (!hnId) return;
+
+        // Gate: require donation
+        if (!hasDonated()) {
+          showDonateModal(btn);
+          return;
+        }
 
         // Replace button with spinning gear
         const spinner = document.createElement('span');
