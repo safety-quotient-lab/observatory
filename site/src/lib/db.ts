@@ -16,6 +16,9 @@ export interface Story {
   hcb_classification: string | null;
   hcb_signal_sections: number | null;
   hcb_nd_count: number | null;
+  hcb_evidence_h: number | null;
+  hcb_evidence_m: number | null;
+  hcb_evidence_l: number | null;
   hcb_json: string | null;
   eval_model: string | null;
   eval_prompt_hash: string | null;
@@ -53,6 +56,9 @@ export interface ArticleRankingRow {
   hcb_classification: string | null;
   hcb_signal_sections: number | null;
   hcb_nd_count: number | null;
+  hcb_evidence_h: number | null;
+  hcb_evidence_m: number | null;
+  hcb_evidence_l: number | null;
   section: string;
   final: number | null;
   editorial: number | null;
@@ -165,7 +171,8 @@ export async function getFilteredStoriesWithScores(
     .prepare(
       `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
               hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
-              hcb_signal_sections, hcb_nd_count, eval_model, eval_prompt_hash,
+              hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
+              eval_model, eval_prompt_hash,
               eval_status, eval_error, evaluated_at, created_at,
               SUBSTR(hn_text, 1, 100) as hn_text_preview${setlSelect}${hotlSelect}
        FROM stories s WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
@@ -252,6 +259,7 @@ export async function getArticleRanking(
       `SELECT s.hn_id, s.title, s.domain, s.url, s.hn_score, s.hn_comments,
               s.hcb_weighted_mean, s.hcb_classification,
               s.hcb_signal_sections, s.hcb_nd_count,
+              s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l,
               sc.section, sc.final, sc.editorial, sc.structural,
               sc.evidence, sc.note
        FROM scores sc
@@ -608,7 +616,8 @@ export async function getStoriesByDomain(
     .prepare(
       `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
               hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
-              hcb_signal_sections, hcb_nd_count, eval_model, eval_prompt_hash,
+              hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
+              eval_model, eval_prompt_hash,
               eval_status, eval_error, evaluated_at, created_at,
               SUBSTR(hn_text, 1, 100) as hn_text_preview
        FROM stories WHERE domain = ? ORDER BY hn_time DESC LIMIT ? OFFSET ?`

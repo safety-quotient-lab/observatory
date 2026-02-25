@@ -28,8 +28,8 @@ const aggSetl = setlValues.length > 0
 // Compute HOTL from HN points/comments
 const hotl = computeHotl(story.hn_score, story.hn_comments);
 
-// Compute confidence proxy
-const confidence = computeConfidence(story.hcb_signal_sections, story.hcb_nd_count);
+// Compute evidence-weighted confidence
+const confidence = computeConfidence(story.hcb_evidence_h, story.hcb_evidence_m, story.hcb_evidence_l, story.hcb_nd_count);
 
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);

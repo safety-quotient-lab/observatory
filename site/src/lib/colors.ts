@@ -134,12 +134,14 @@ export function hotlToColor(hotl: number | null): string {
   return scoreToColor(-hotl);
 }
 
-/** Compute confidence proxy from signal sections and ND count */
-export function computeConfidence(signalSections: number | null, ndCount: number | null): number | null {
-  if (signalSections === null || ndCount === null) return null;
-  const total = signalSections + ndCount;
+/** Compute evidence-weighted confidence: (H*1.0 + M*0.6 + L*0.2) / (H + M + L + ND) */
+export function computeConfidence(
+  evidenceH: number | null, evidenceM: number | null, evidenceL: number | null, ndCount: number | null
+): number | null {
+  if (evidenceH === null || evidenceM === null || evidenceL === null || ndCount === null) return null;
+  const total = evidenceH + evidenceM + evidenceL + ndCount;
   if (total === 0) return null;
-  return signalSections / total;
+  return (evidenceH * 1.0 + evidenceM * 0.6 + evidenceL * 0.2) / total;
 }
 
 /** Map confidence (0–1) to a color: red (0) → amber (0.5) → green (1.0) */

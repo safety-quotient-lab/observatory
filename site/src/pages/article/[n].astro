@@ -132,7 +132,7 @@ const jsonLd = udhrSection ? {
       {rankings.map((row, i) => {
         const rowSetl = computeSetl(row.structural, row.editorial);
         const rowHotl = computeHotl(row.hn_score, row.hn_comments);
-        const rowConf = computeConfidence(row.hcb_signal_sections, row.hcb_nd_count);
+        const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
         return (
         <tr style="border-top: 1px solid #222230;">
           <td style="color: #828282;" class="score-font">{i + 1}.</td>

@@ -67,8 +67,8 @@ const aggSetl = setlValues.length > 0
 
 const hotl = computeHotl(storyData.hn_score, storyData.hn_comments);
 
-// Confidence
-const confidence = computeConfidence(storyData.hcb_signal_sections, storyData.hcb_nd_count);
+// Confidence (evidence-weighted)
+const confidence = computeConfidence(storyData.hcb_evidence_h, storyData.hcb_evidence_m, storyData.hcb_evidence_l, storyData.hcb_nd_count);
 
 let comments: Awaited<ReturnType<typeof getStoryComments>> = [];
 try {

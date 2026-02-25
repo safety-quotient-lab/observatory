@@ -89,9 +89,9 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
 const maxSignal = Math.max(...articleStats.map(a => a.signal_count), 1);
 const totalEvaluated = status.done;
 
-// Helper: confidence proxy for dashboard story rows
-function storyConfidence(s: { hcb_signal_sections: number | null; hcb_nd_count: number | null }): number | null {
-  return computeConfidence(s.hcb_signal_sections, s.hcb_nd_count);
+// Helper: evidence-weighted confidence for dashboard story rows
+function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: number | null; hcb_evidence_l: number | null; hcb_nd_count: number | null }): number | null {
+  return computeConfidence(s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l, s.hcb_nd_count);
 }
 ---
 
