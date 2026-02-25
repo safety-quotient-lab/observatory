@@ -48,7 +48,7 @@ const edges: { source: string; target: string; r: number; n: number }[] = [];
 for (const [key, r] of pairStats.correlation) {
   const [a, b] = key.split('|');
   if (a === b) continue; // skip self-correlation
-  if (Math.abs(r) < 0.15) continue; // threshold
+  if (Math.abs(r) < 0.4) continue; // threshold
   const n = pairStats.cooccurrence.get(key) || 0;
   edges.push({ source: a, target: b, r, n });
 }
@@ -140,8 +140,11 @@ const graphData = JSON.stringify({ nodes, edges });
     const REPULSION = 8000;
     const SPRING_LENGTH = 120;
     const SPRING_K = 0.03;
-    const DAMPING = 0.85;
+    const DAMPING = 0.9;
     const CENTER_PULL = 0.005;
+    let alpha = 1.0;
+    const ALPHA_DECAY = 0.998;
+    const ALPHA_MIN = 0.001;
 
     let dragging = null;
     let mx = 0, my = 0;
@@ -158,6 +161,7 @@ const graphData = JSON.stringify({ nodes, edges });
       for (const n of nodes) {
         if (Math.hypot(n.x - mx, n.y - my) < 18) {
           dragging = n;
+          alpha = Math.max(alpha, 0.3); // reheat on drag
           canvas.style.cursor = 'grabbing';
           break;
         }
@@ -183,13 +187,15 @@ const graphData = JSON.stringify({ nodes, edges });
     });
 
     function simulate() {
+      if (alpha < ALPHA_MIN && !dragging) return;
+
       // Repulsion between all pairs
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const a = nodes[i], b = nodes[j];
           const dx = b.x - a.x, dy = b.y - a.y;
           const dist = Math.max(Math.hypot(dx, dy), 1);
-          const force = REPULSION / (dist * dist);
+          const force = REPULSION * alpha / (dist * dist);
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
           a.vx -= fx; a.vy -= fy;
@@ -207,7 +213,7 @@ const graphData = JSON.stringify({ nodes, edges });
         // Correlated articles attract, anti-correlated repel
         const targetLen = SPRING_LENGTH * (1 - Math.abs(e.r) * 0.5);
         const displacement = dist - targetLen;
-        const force = SPRING_K * displacement * (e.r > 0 ? 1 : -0.3);
+        const force = SPRING_K * alpha * displacement * (e.r > 0 ? 1 : -0.3);
         const fx = (dx / dist) * force;
         const fy = (dy / dist) * force;
         a.vx += fx; a.vy += fy;
@@ -231,6 +237,8 @@ const graphData = JSON.stringify({ nodes, edges });
         n.x = Math.max(20, Math.min(W - 20, n.x));
         n.y = Math.max(20, Math.min(H - 20, n.y));
       }
+
+      if (!dragging) alpha *= ALPHA_DECAY;
     }
 
     function draw() {
