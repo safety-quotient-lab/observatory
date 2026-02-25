@@ -1226,6 +1226,65 @@ export async function getStoryScatterData(db: D1Database, limit = 500): Promise<
   return results;
 }
 
+// --- User profiles ---
+
+export interface HnUser {
+  username: string;
+  karma: number | null;
+  created: number | null;
+  about: string | null;
+  cached_at: string;
+}
+
+export async function getHnUser(db: D1Database, username: string): Promise<HnUser | null> {
+  try {
+    return await db
+      .prepare(`SELECT * FROM hn_users WHERE username = ?`)
+      .bind(username)
+      .first<HnUser>();
+  } catch {
+    return null;
+  }
+}
+
+export interface PosterStats {
+  username: string;
+  karma: number | null;
+  account_age_days: number | null;
+  story_count: number;
+  avg_hrcb: number | null;
+  avg_hn_score: number | null;
+}
+
+export async function getTopPosters(db: D1Database, limit = 20): Promise<PosterStats[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT s.hn_by as username, u.karma, u.created,
+                COUNT(*) as story_count,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_hrcb,
+                AVG(s.hn_score) as avg_hn_score
+         FROM stories s
+         LEFT JOIN hn_users u ON u.username = s.hn_by
+         WHERE s.hn_by IS NOT NULL
+         GROUP BY s.hn_by
+         HAVING COUNT(*) >= 2
+         ORDER BY story_count DESC
+         LIMIT ?`
+      )
+      .bind(limit)
+      .all<{ username: string; karma: number | null; created: number | null; story_count: number; avg_hrcb: number | null; avg_hn_score: number | null }>();
+
+    const now = Math.floor(Date.now() / 1000);
+    return results.map(r => ({
+      ...r,
+      account_age_days: r.created ? Math.floor((now - r.created) / 86400) : null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // --- Domain DCP cache ---
 
 export async function getDomainDcp(db: D1Database, domain: string): Promise<string | null> {

@@ -240,6 +240,64 @@ async function crawlComments(db: D1Database): Promise<number> {
   return totalCrawled;
 }
 
+// --- User profile crawling ---
+
+async function crawlUserProfiles(db: D1Database): Promise<number> {
+  // Find story submitters whose profiles we haven't cached (or cached >7 days ago)
+  const { results: users } = await db
+    .prepare(
+      `SELECT DISTINCT s.hn_by FROM stories s
+       WHERE s.hn_by IS NOT NULL
+         AND s.hn_by NOT IN (
+           SELECT username FROM hn_users WHERE cached_at >= datetime('now', '-7 days')
+         )
+       ORDER BY s.hn_time DESC
+       LIMIT 20`
+    )
+    .all<{ hn_by: string }>();
+
+  if (users.length === 0) return 0;
+
+  const profiles = await Promise.all(
+    users.map(async (u): Promise<{ username: string; karma: number | null; created: number | null; about: string | null } | null> => {
+      try {
+        const data = await fetchJson<{ id: string; karma?: number; created?: number; about?: string }>(
+          `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(u.hn_by)}.json`
+        );
+        if (!data) return null;
+        return {
+          username: data.id,
+          karma: data.karma ?? null,
+          created: data.created ?? null,
+          about: data.about?.slice(0, 2000) ?? null,
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  const stmts = profiles
+    .filter((p): p is NonNullable<typeof p> => p !== null)
+    .map(p =>
+      db
+        .prepare(
+          `INSERT INTO hn_users (username, karma, created, about, cached_at)
+           VALUES (?, ?, ?, ?, datetime('now'))
+           ON CONFLICT(username) DO UPDATE SET karma = ?, created = ?, about = ?, cached_at = datetime('now')`
+        )
+        .bind(p.username, p.karma, p.created, p.about, p.karma, p.created, p.about)
+    );
+
+  if (stmts.length > 0) {
+    for (let i = 0; i < stmts.length; i += 100) {
+      await db.batch(stmts.slice(i, i + 100));
+    }
+  }
+
+  return stmts.length;
+}
+
 // --- Queue dispatch ---
 
 async function enqueueForEvaluation(
@@ -603,6 +661,20 @@ export default {
       }
     } catch (err) {
       console.error('Comment crawling failed (non-fatal):', err);
+    }
+
+    // ─── STEP 4.7: Crawl user profiles for poster analysis ───
+
+    try {
+      const minute = new Date(event.scheduledTime).getMinutes();
+      if (minute % 15 === 0) { // Run on 0, 15, 30, 45 marks
+        const userCount = await crawlUserProfiles(db);
+        if (userCount > 0) {
+          console.log(`[users] Cached ${userCount} user profiles`);
+        }
+      }
+    } catch (err) {
+      console.error('User profile crawling failed (non-fatal):', err);
     }
 
     // ─── STEP 5: Enqueue pending stories for evaluation ───
