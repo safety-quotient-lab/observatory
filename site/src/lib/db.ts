@@ -1241,20 +1241,20 @@ export async function getHighVelocityStories(db: D1Database, limit = 20): Promis
     const { results } = await db
       .prepare(
         `SELECT s.*,
-                CASE WHEN COUNT(snap.snapshot_id) >= 2 THEN
+                CASE WHEN COUNT(snap.id) >= 2 THEN
                   CAST(MAX(snap.hn_score) - MIN(snap.hn_score) AS REAL)
-                  / MAX((MAX(snap.recorded_at_unix) - MIN(snap.recorded_at_unix)) / 3600.0, 0.1)
+                  / MAX((MAX(snap.snapshot_unix) - MIN(snap.snapshot_unix)) / 3600.0, 0.1)
                 ELSE NULL END as velocity
          FROM stories s
          JOIN (
-           SELECT hn_id, hn_score, snapshot_id,
-                  CAST(strftime('%s', recorded_at) AS INTEGER) as recorded_at_unix
+           SELECT hn_id, hn_score, id,
+                  CAST(strftime('%s', snapshot_at) AS INTEGER) as snapshot_unix
            FROM story_snapshots
-           WHERE recorded_at >= datetime('now', '-24 hours')
+           WHERE snapshot_at >= datetime('now', '-24 hours')
          ) snap ON snap.hn_id = s.hn_id
          WHERE s.hn_time > unixepoch('now', '-48 hours')
          GROUP BY s.hn_id
-         HAVING COUNT(snap.snapshot_id) >= 2
+         HAVING COUNT(snap.id) >= 2
          ORDER BY velocity DESC NULLS LAST
          LIMIT ?`
       )
@@ -1281,11 +1281,11 @@ export async function getVelocityVsHrcb(db: D1Database, limit = 100): Promise<Ve
       .prepare(
         `SELECT s.hn_id, s.title, s.domain, s.hcb_weighted_mean, s.hcb_classification,
                 CAST(MAX(snap.hn_score) - MIN(snap.hn_score) AS REAL)
-                / MAX((MAX(snap.recorded_at_unix) - MIN(snap.recorded_at_unix)) / 3600.0, 0.1) as velocity
+                / MAX((MAX(snap.snapshot_unix) - MIN(snap.snapshot_unix)) / 3600.0, 0.1) as velocity
          FROM stories s
          JOIN (
            SELECT hn_id, hn_score,
-                  CAST(strftime('%s', recorded_at) AS INTEGER) as recorded_at_unix
+                  CAST(strftime('%s', snapshot_at) AS INTEGER) as snapshot_unix
            FROM story_snapshots
          ) snap ON snap.hn_id = s.hn_id
          WHERE s.eval_status = 'done' AND s.hcb_weighted_mean IS NOT NULL
