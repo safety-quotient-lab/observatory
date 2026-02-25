@@ -27,6 +27,10 @@ const currentType = Astro.url.searchParams.get('type') || '';
           <a href="/articles" style={`color: black;${currentPath === '/articles' || currentPath.startsWith('/article/') ? ' font-weight: bold;' : ''}`}>articles</a> |
           <a href="/domains" style={`color: black;${currentPath === '/domains' || currentPath.startsWith('/domain/') ? ' font-weight: bold;' : ''}`}>domains</a> |
           <a href="/dashboard" style={`color: black;${currentPath === '/dashboard' ? ' font-weight: bold;' : ''}`}>dashboard</a> |
+          <a href="/seldon" style={`color: black;${currentPath === '/seldon' ? ' font-weight: bold;' : ''}`}>seldon</a> |
+          <a href="/network" style={`color: black;${currentPath === '/network' ? ' font-weight: bold;' : ''}`}>network</a> |
+          <a href="/factions" style={`color: black;${currentPath === '/factions' ? ' font-weight: bold;' : ''}`}>factions</a> |
+          <a href="/velocity" style={`color: black;${currentPath === '/velocity' ? ' font-weight: bold;' : ''}`}>velocity</a> |
           <a href="/about" style={`color: black;${currentPath === '/about' ? ' font-weight: bold;' : ''}`}>about hrcb</a>
         </span>
       </span>

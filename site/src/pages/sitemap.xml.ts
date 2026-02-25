@@ -10,6 +10,13 @@ export const GET: APIRoute = async ({ locals }) => {
     { loc: '/about', priority: '0.5', changefreq: 'monthly' },
     { loc: '/dashboard', priority: '0.7', changefreq: 'hourly' },
     { loc: '/domains', priority: '0.7', changefreq: 'daily' },
+    { loc: '/articles', priority: '0.7', changefreq: 'daily' },
+    { loc: '/front', priority: '0.6', changefreq: 'daily' },
+    { loc: '/feed.xml', priority: '0.3', changefreq: 'hourly' },
+    { loc: '/seldon', priority: '0.6', changefreq: 'daily' },
+    { loc: '/network', priority: '0.6', changefreq: 'daily' },
+    { loc: '/factions', priority: '0.6', changefreq: 'daily' },
+    { loc: '/velocity', priority: '0.6', changefreq: 'hourly' },
   ];
 
   // Article pages (0-30)
