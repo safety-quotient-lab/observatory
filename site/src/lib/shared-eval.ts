@@ -203,7 +203,7 @@ Aligned with UDHR's rights-holder/duty-bearer framework:
 You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include "combined", "context_modifier", or "final" in scores — these are computed externally. If a cached DCP was provided in the user message, output "domain_context_profile": "cached" instead of the full object. The JSON must follow this exact schema:
 
 {
-  "schema_version": "3.6",
+  "schema_version": "3.7",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
@@ -211,7 +211,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "channel_weights": { "editorial": <w_E>, "structural": <w_S> },
     "eval_depth": "STANDARD",
     "date": "<YYYY-MM-DD>",
-    "methodology": "v3.6",
+    "methodology": "v3.7",
     "off_domain": false,
     "external_evidence": false,
     "operator": "claude-haiku-4-5-20251001"
@@ -487,7 +487,7 @@ Aligned with UDHR's rights-holder/duty-bearer framework:
 You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include an "aggregates" field — aggregates are computed externally. Do NOT include "combined", "context_modifier", or "final" in scores — these are computed externally. If a cached DCP was provided in the user message, output "domain_context_profile": "cached" instead of the full object. The JSON must follow this exact schema:
 
 {
-  "schema_version": "3.6",
+  "schema_version": "3.7",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
@@ -495,7 +495,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "channel_weights": { "editorial": <w_E>, "structural": <w_S> },
     "eval_depth": "STANDARD",
     "date": "<YYYY-MM-DD>",
-    "methodology": "v3.6",
+    "methodology": "v3.7",
     "off_domain": false,
     "external_evidence": false,
     "operator": "claude-haiku-4-5-20251001"
