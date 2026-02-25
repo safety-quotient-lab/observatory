@@ -34,6 +34,38 @@ export interface Story {
   hcb_theme_tag: string | null;
   hcb_sentiment_tag: string | null;
   hcb_executive_summary: string | null;
+  // Supplementary signals
+  eq_score: number | null;
+  eq_source_quality: number | null;
+  eq_evidence_reasoning: number | null;
+  eq_uncertainty_handling: number | null;
+  eq_purpose_transparency: number | null;
+  eq_claim_density: string | null;
+  pt_flag_count: number | null;
+  pt_flags_json: string | null;
+  so_score: number | null;
+  so_framing: string | null;
+  so_reader_agency: number | null;
+  et_primary_tone: string | null;
+  et_valence: number | null;
+  et_arousal: number | null;
+  et_dominance: number | null;
+  sr_score: number | null;
+  sr_perspective_count: number | null;
+  sr_voice_balance: number | null;
+  sr_who_speaks: string | null;
+  sr_who_spoken_about: string | null;
+  tf_primary_focus: string | null;
+  tf_time_horizon: string | null;
+  gs_scope: string | null;
+  gs_regions_json: string | null;
+  cl_reading_level: string | null;
+  cl_jargon_density: string | null;
+  cl_assumed_knowledge: string | null;
+  td_score: number | null;
+  td_author_identified: number | null;
+  td_conflicts_disclosed: number | null;
+  td_funding_disclosed: number | null;
 }
 
 export interface ScoreRow {
@@ -1791,6 +1823,17 @@ export async function getDomainDcp(db: D1Database, domain: string): Promise<stri
   }
 }
 
+// --- Event log queries (re-exported from events.ts for convenience) ---
+
+export {
+  getEventsForStory,
+  getRecentEvents,
+  getEventStats,
+  getCronRuns,
+  getDailyErrorCounts,
+} from './events';
+export type { Event, EventStats } from './events';
+
 // --- Fair Witness cross-story stats ---
 
 export interface FairWitnessArticleStat {
@@ -1819,5 +1862,127 @@ export async function getFairWitnessArticleStats(db: D1Database): Promise<FairWi
     return results;
   } catch {
     return [];
+  }
+}
+
+// --- Signal Quality Overview ---
+
+export interface SignalOverview {
+  total_with_signals: number;
+  avg_eq: number | null;
+  avg_so: number | null;
+  avg_sr: number | null;
+  avg_td: number | null;
+  avg_pt_count: number | null;
+  top_pt_technique: string | null;
+  tone_distribution: Record<string, number>;
+  scope_distribution: Record<string, number>;
+  reading_level_distribution: Record<string, number>;
+}
+
+export async function getSignalOverview(db: D1Database): Promise<SignalOverview> {
+  try {
+    const agg = await db
+      .prepare(
+        `SELECT
+          COUNT(*) as total_with_signals,
+          AVG(eq_score) as avg_eq,
+          AVG(so_score) as avg_so,
+          AVG(sr_score) as avg_sr,
+          AVG(td_score) as avg_td,
+          AVG(pt_flag_count) as avg_pt_count
+        FROM stories
+        WHERE eval_status = 'done' AND eq_score IS NOT NULL`
+      )
+      .first<{ total_with_signals: number; avg_eq: number | null; avg_so: number | null; avg_sr: number | null; avg_td: number | null; avg_pt_count: number | null }>();
+
+    // Tone distribution
+    const tones = await db
+      .prepare(
+        `SELECT et_primary_tone as tone, COUNT(*) as cnt
+         FROM stories
+         WHERE eval_status = 'done' AND et_primary_tone IS NOT NULL
+         GROUP BY et_primary_tone
+         ORDER BY cnt DESC`
+      )
+      .all<{ tone: string; cnt: number }>();
+    const toneDistribution: Record<string, number> = {};
+    for (const r of tones.results) {
+      toneDistribution[r.tone] = r.cnt;
+    }
+
+    // Geographic scope distribution
+    const scopes = await db
+      .prepare(
+        `SELECT gs_scope as scope, COUNT(*) as cnt
+         FROM stories
+         WHERE eval_status = 'done' AND gs_scope IS NOT NULL
+         GROUP BY gs_scope
+         ORDER BY cnt DESC`
+      )
+      .all<{ scope: string; cnt: number }>();
+    const scopeDistribution: Record<string, number> = {};
+    for (const r of scopes.results) {
+      scopeDistribution[r.scope] = r.cnt;
+    }
+
+    // Reading level distribution
+    const levels = await db
+      .prepare(
+        `SELECT cl_reading_level as level, COUNT(*) as cnt
+         FROM stories
+         WHERE eval_status = 'done' AND cl_reading_level IS NOT NULL
+         GROUP BY cl_reading_level
+         ORDER BY cnt DESC`
+      )
+      .all<{ level: string; cnt: number }>();
+    const readingLevelDistribution: Record<string, number> = {};
+    for (const r of levels.results) {
+      readingLevelDistribution[r.level] = r.cnt;
+    }
+
+    // Most common propaganda technique
+    let topPtTechnique: string | null = null;
+    try {
+      const ptRows = await db
+        .prepare(
+          `SELECT pt_flags_json FROM stories
+           WHERE eval_status = 'done' AND pt_flags_json IS NOT NULL AND pt_flag_count > 0`
+        )
+        .all<{ pt_flags_json: string }>();
+      const techCounts: Record<string, number> = {};
+      for (const row of ptRows.results) {
+        try {
+          const flags = JSON.parse(row.pt_flags_json) as Array<{ technique: string }>;
+          for (const f of flags) {
+            techCounts[f.technique] = (techCounts[f.technique] || 0) + 1;
+          }
+        } catch { /* skip malformed */ }
+      }
+      let maxCount = 0;
+      for (const [tech, cnt] of Object.entries(techCounts)) {
+        if (cnt > maxCount) { maxCount = cnt; topPtTechnique = tech; }
+      }
+    } catch { /* ignore */ }
+
+    return {
+      total_with_signals: agg?.total_with_signals ?? 0,
+      avg_eq: agg?.avg_eq ?? null,
+      avg_so: agg?.avg_so ?? null,
+      avg_sr: agg?.avg_sr ?? null,
+      avg_td: agg?.avg_td ?? null,
+      avg_pt_count: agg?.avg_pt_count ?? null,
+      top_pt_technique: topPtTechnique,
+      tone_distribution: toneDistribution,
+      scope_distribution: scopeDistribution,
+      reading_level_distribution: readingLevelDistribution,
+    };
+  } catch {
+    return {
+      total_with_signals: 0,
+      avg_eq: null, avg_so: null, avg_sr: null, avg_td: null,
+      avg_pt_count: null, top_pt_technique: null,
+      tone_distribution: {}, scope_distribution: {}, reading_level_distribution: {},
+    };
   }
 }

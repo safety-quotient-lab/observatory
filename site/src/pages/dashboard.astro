@@ -30,6 +30,11 @@ import {
   getStoryScatterData,
   getDomainFingerprints,
   getContentTypeDistribution,
+  getEventStats,
+  getRecentEvents,
+  getCronRuns,
+  getDailyErrorCounts,
+  getSignalOverview,
 } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
@@ -64,6 +69,34 @@ const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPosi
 // Velocity needs pending count from status
 const velocity = await getVelocityStats(db, status.pending);
 
+// Event log data (graceful fallback if table doesn't exist yet)
+let eventStats: Awaited<ReturnType<typeof getEventStats>> = { total: 0, by_type: {}, by_severity: {}, last_24h: 0, last_7d: 0, error_count_7d: 0 };
+let recentPipelineEvents: Awaited<ReturnType<typeof getRecentEvents>> = [];
+let cronRuns: Awaited<ReturnType<typeof getCronRuns>> = [];
+let dailyErrors: Awaited<ReturnType<typeof getDailyErrorCounts>> = [];
+try {
+  [eventStats, recentPipelineEvents, cronRuns, dailyErrors] = await Promise.all([
+    getEventStats(db, 7),
+    getRecentEvents(db, 15),
+    getCronRuns(db, 5),
+    getDailyErrorCounts(db, 7),
+  ]);
+} catch {
+  // events table may not exist yet
+}
+
+// Signal overview (graceful fallback if columns don't exist yet)
+let signalOverview: Awaited<ReturnType<typeof getSignalOverview>> = {
+  total_with_signals: 0, avg_eq: null, avg_so: null, avg_sr: null, avg_td: null,
+  avg_pt_count: null, top_pt_technique: null,
+  tone_distribution: {}, scope_distribution: {}, reading_level_distribution: {},
+};
+try {
+  signalOverview = await getSignalOverview(db);
+} catch {
+  // signal columns may not exist yet
+}
+
 // Domain fingerprints (depends on domains result)
 const domainFingerprints = await getDomainFingerprints(db, domains.map(d => d.domain));
 
@@ -88,6 +121,14 @@ function storySetl(s: { hcb_json: string | null }): number | null {
     return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
   } catch { return null; }
 }
+
+// Event type color map for Pipeline Events panel
+const EVENT_TYPE_COLORS: Record<string, string> = {
+  eval_failure: '#dc2626', eval_retry: '#f97316', eval_skip: '#6b7280',
+  eval_success: '#16a34a', rate_limit: '#eab308', fetch_error: '#dc2626',
+  parse_error: '#dc2626', cron_run: '#60a5fa', cron_error: '#f97316',
+  crawl_error: '#f97316', r2_error: '#f97316', dlq: '#dc2626', trigger: '#a78bfa',
+};
 
 // Most contested articles (highest stddev)
 const contestedArticles = [...articleStats]
@@ -1111,6 +1152,124 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
     </tr>
   </table>
 
+  {/* Signal Quality Overview */}
+  {signalOverview.total_with_signals > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; border-top: 3px solid #f59e0b;">
+          <div style="color: #f59e0b; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+            Signal Quality Overview
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px; font-weight: normal;">{signalOverview.total_with_signals} stories with signals</span>
+          </div>
+
+          {/* Score averages */}
+          <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+            <tr>
+              <td style="text-align: center; width: 20%;">
+                <div class="score-font" style={`font-size: var(--font-lg); color: ${(signalOverview.avg_eq ?? 0) >= 0.7 ? '#16a34a' : (signalOverview.avg_eq ?? 0) >= 0.4 ? '#eab308' : '#dc2626'}; font-weight: bold;`}>{signalOverview.avg_eq !== null ? signalOverview.avg_eq.toFixed(2) : '—'}</div>
+                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Avg EQ</div>
+              </td>
+              <td style="text-align: center; width: 20%;">
+                <div class="score-font" style={`font-size: var(--font-lg); color: ${(signalOverview.avg_so ?? 0) >= 0.7 ? '#16a34a' : (signalOverview.avg_so ?? 0) >= 0.4 ? '#eab308' : '#dc2626'}; font-weight: bold;`}>{signalOverview.avg_so !== null ? signalOverview.avg_so.toFixed(2) : '—'}</div>
+                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Avg SO</div>
+              </td>
+              <td style="text-align: center; width: 20%;">
+                <div class="score-font" style={`font-size: var(--font-lg); color: ${(signalOverview.avg_sr ?? 0) >= 0.7 ? '#16a34a' : (signalOverview.avg_sr ?? 0) >= 0.4 ? '#eab308' : '#dc2626'}; font-weight: bold;`}>{signalOverview.avg_sr !== null ? signalOverview.avg_sr.toFixed(2) : '—'}</div>
+                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Avg SR</div>
+              </td>
+              <td style="text-align: center; width: 20%;">
+                <div class="score-font" style={`font-size: var(--font-lg); color: ${(signalOverview.avg_td ?? 0) >= 0.7 ? '#16a34a' : (signalOverview.avg_td ?? 0) >= 0.4 ? '#eab308' : '#dc2626'}; font-weight: bold;`}>{signalOverview.avg_td !== null ? signalOverview.avg_td.toFixed(2) : '—'}</div>
+                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Avg TD</div>
+              </td>
+              <td style="text-align: center; width: 20%;">
+                <div class="score-font" style={`font-size: var(--font-lg); color: ${(signalOverview.avg_pt_count ?? 0) === 0 ? '#16a34a' : (signalOverview.avg_pt_count ?? 0) <= 1 ? '#eab308' : '#dc2626'}; font-weight: bold;`}>{signalOverview.avg_pt_count !== null ? signalOverview.avg_pt_count.toFixed(1) : '—'}</div>
+                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Avg PT flags</div>
+              </td>
+            </tr>
+          </table>
+
+          {signalOverview.top_pt_technique && (
+            <div style="font-size: var(--font-xs); color: #555; margin-bottom: 8px;">
+              Most common technique: <span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308; font-size: var(--font-xs);">{signalOverview.top_pt_technique.replace(/_/g, ' ')}</span>
+            </div>
+          )}
+
+          {/* Distribution rows */}
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              {/* Emotional Tone distribution */}
+              <td width="33%" valign="top" style="padding-right: 5px;">
+                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;">Tone Distribution</div>
+                {Object.entries(signalOverview.tone_distribution).length > 0 ? (
+                  <div style="font-size: var(--font-xs);">
+                    {Object.entries(signalOverview.tone_distribution).map(([tone, count]) => {
+                      const total = Object.values(signalOverview.tone_distribution).reduce((a, b) => a + b, 0);
+                      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                      return (
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                          <span style="color: #888; width: 80px; text-align: right;">{tone}</span>
+                          <div style="flex: 1; height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;">
+                            <div style={`width: ${pct}%; height: 100%; background: #a855f7;`}></div>
+                          </div>
+                          <span style="color: #555; width: 25px; text-align: right;">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : <span style="color: #444;">No data</span>}
+              </td>
+
+              {/* Geographic scope distribution */}
+              <td width="33%" valign="top" style="padding: 0 5px;">
+                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;">Geographic Scope</div>
+                {Object.entries(signalOverview.scope_distribution).length > 0 ? (
+                  <div style="font-size: var(--font-xs);">
+                    {Object.entries(signalOverview.scope_distribution).map(([scope, count]) => {
+                      const total = Object.values(signalOverview.scope_distribution).reduce((a, b) => a + b, 0);
+                      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                      return (
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                          <span style="color: #888; width: 80px; text-align: right;">{scope}</span>
+                          <div style="flex: 1; height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;">
+                            <div style={`width: ${pct}%; height: 100%; background: #60a5fa;`}></div>
+                          </div>
+                          <span style="color: #555; width: 25px; text-align: right;">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : <span style="color: #444;">No data</span>}
+              </td>
+
+              {/* Reading level distribution */}
+              <td width="33%" valign="top" style="padding-left: 5px;">
+                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px;">Reading Level</div>
+                {Object.entries(signalOverview.reading_level_distribution).length > 0 ? (
+                  <div style="font-size: var(--font-xs);">
+                    {Object.entries(signalOverview.reading_level_distribution).map(([level, count]) => {
+                      const total = Object.values(signalOverview.reading_level_distribution).reduce((a, b) => a + b, 0);
+                      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                      const levelColor = level === 'accessible' ? '#16a34a' : level === 'moderate' ? '#60a5fa' : level === 'technical' ? '#eab308' : '#dc2626';
+                      return (
+                        <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                          <span style="color: #888; width: 80px; text-align: right;">{level}</span>
+                          <div style="flex: 1; height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;">
+                            <div style={`width: ${pct}%; height: 100%; background: ${levelColor};`}></div>
+                          </div>
+                          <span style="color: #555; width: 25px; text-align: right;">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : <span style="color: #444;">No data</span>}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  )}
+
   {/* Enhanced Signal Coverage by Article */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
@@ -1131,7 +1290,8 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
               </tr>
               {articleStats.map((a) => {
                 const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
-                const ePct = maxSignal > 0 ? Math.round((a.signal_count / maxSignal) * 100) : 0;
+                const ePct = a.avg_editorial !== null ? Math.round(Math.abs(a.avg_editorial) * 100) : 0;
+                const sPct = a.avg_structural !== null ? Math.round(Math.abs(a.avg_structural) * 100) : 0;
                 const total = totalEvaluated || (a.signal_count + a.nd_count);
                 const covPct = total > 0 ? Math.round((a.signal_count / total) * 100) : 0;
                 const ndPct = total > 0 ? Math.round((a.nd_count / total) * 100) : 0;
@@ -1163,7 +1323,7 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                     <td>
                       <div style="display: flex; flex-direction: column; gap: 1px;">
                         <div style={`height: 6px; width: ${Math.max(ePct, 2)}%; background: ${scoreToColor(a.signal_count > 0 ? a.avg_editorial : null)}; border-radius: 2px 2px 0 0;`} title={`Editorial: ${a.avg_editorial !== null ? formatScore(a.avg_editorial) : 'ND'}`}></div>
-                        <div style={`height: 6px; width: ${Math.max(ePct, 2)}%; background: ${scoreToColor(a.signal_count > 0 ? a.avg_structural : null)}; border-radius: 0 0 2px 2px; opacity: 0.7;`} title={`Structural: ${a.avg_structural !== null ? formatScore(a.avg_structural) : 'ND'}`}></div>
+                        <div style={`height: 6px; width: ${Math.max(sPct, 2)}%; background: ${scoreToColor(a.signal_count > 0 ? a.avg_structural : null)}; border-radius: 0 0 2px 2px; opacity: 0.7;`} title={`Structural: ${a.avg_structural !== null ? formatScore(a.avg_structural) : 'ND'}`}></div>
                       </div>
                     </td>
                     <td style="width: 75px; text-align: right; color: #888;" class="score-font">
@@ -1293,6 +1453,106 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
               ))
             }
           </table>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Pipeline Events */}
+  {(eventStats.total > 0 || recentPipelineEvents.length > 0) && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+            Pipeline Events
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              {eventStats.last_24h} last 24h · {eventStats.last_7d} last 7d · {eventStats.error_count_7d > 0 ? `${eventStats.error_count_7d} errors` : 'no errors'}
+            </span>
+          </div>
+
+          {/* Error sparkline (last 7 days) */}
+          {dailyErrors.length > 0 && (
+            <div style="margin-bottom: 10px;">
+              <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Errors/warnings (7d)</div>
+              <div style="display: flex; align-items: flex-end; gap: 2px; height: 24px;">
+                {dailyErrors.map((d) => {
+                  const maxCount = Math.max(...dailyErrors.map(x => x.count), 1);
+                  const h = Math.max(2, Math.round((d.count / maxCount) * 24));
+                  return (
+                    <div
+                      title={`${d.day}: ${d.count}`}
+                      style={`width: ${Math.floor(100 / Math.max(dailyErrors.length, 1))}%; height: ${h}px; background: ${d.count > 5 ? '#dc2626' : d.count > 0 ? '#eab308' : '#222'}; border-radius: 1px;`}
+                    ></div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Event type breakdown */}
+          {Object.keys(eventStats.by_type).length > 0 && (
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+              {Object.entries(eventStats.by_type).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
+                const color = EVENT_TYPE_COLORS[type] || '#888';
+                return (
+                  <span class="badge" style={`background: ${color}20; color: ${color}; font-size: var(--font-xs);`}>
+                    {type}: {count}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Cron health */}
+          {cronRuns.length > 0 && (
+            <div style="margin-bottom: 10px;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Cron Health</div>
+              <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                {cronRuns.map((ev) => {
+                  const d = ev.details;
+                  return (
+                    <tr style="border-top: 1px solid #1a1a25;">
+                      <td style="color: #555; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
+                      <td style="color: #888;">{ev.message}</td>
+                      <td style="color: #555; text-align: right; white-space: nowrap;">
+                        {d?.duration_ms ? `${d.duration_ms}ms` : ''}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </table>
+            </div>
+          )}
+
+          {/* Recent events table */}
+          {recentPipelineEvents.length > 0 && (
+            <div>
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Recent Events</div>
+              <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                {recentPipelineEvents.map((ev) => {
+                  const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#555';
+                  const typeColor = EVENT_TYPE_COLORS[ev.event_type] || '#888';
+                  return (
+                    <tr style="border-top: 1px solid #1a1a25;">
+                      <td style="color: #555; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
+                      <td style="width: 90px;">
+                        <span class="badge" style={`background: ${typeColor}20; color: ${typeColor}; font-size: var(--font-xs);`}>
+                          {ev.event_type}
+                        </span>
+                      </td>
+                      <td style={`color: ${sevColor};`}>
+                        {ev.hn_id ? (
+                          <a href={`/item/${ev.hn_id}`} style={`color: ${sevColor};`}>{ev.message}</a>
+                        ) : (
+                          ev.message
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </table>
+            </div>
+          )}
         </td>
       </tr>
     </table>

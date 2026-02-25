@@ -5,7 +5,7 @@ import RadarChart from '../../components/RadarChart.astro';
 import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
-import { getStory, getStoryComments, getDomainDcp } from '../../lib/db';
+import { getStory, getStoryComments, getDomainDcp, getEventsForStory } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
 
@@ -119,11 +119,32 @@ const themeTag = evalData?.theme_tag || storyData.hcb_theme_tag || null;
 const sentimentTag = evalData?.sentiment_tag || storyData.hcb_sentiment_tag || null;
 const executiveSummary = evalData?.executive_summary || storyData.hcb_executive_summary || null;
 
+// Supplementary signals (from evalData JSON with fallback to materialized columns)
+const eqData = evalData?.epistemic_quality ?? null;
+const eqScore = eqData?.eq_score ?? storyData.eq_score ?? null;
+const ptFlags = evalData?.propaganda_flags ?? (storyData.pt_flags_json ? JSON.parse(storyData.pt_flags_json) : null);
+const ptFlagCount = ptFlags?.length ?? storyData.pt_flag_count ?? 0;
+const soData = evalData?.solution_orientation ?? null;
+const etData = evalData?.emotional_tone ?? null;
+const srData = evalData?.stakeholder_representation ?? null;
+const tfData = evalData?.temporal_framing ?? null;
+const gsData = evalData?.geographic_scope ?? null;
+const clData = evalData?.complexity_level ?? null;
+const tdData = evalData?.transparency_disclosure ?? null;
+const hasSignals = eqScore !== null || ptFlagCount > 0 || soData !== null || etData !== null || srData !== null || tfData !== null || gsData !== null || clData !== null || tdData !== null;
+
 let comments: Awaited<ReturnType<typeof getStoryComments>> = [];
 try {
   comments = await getStoryComments(db, hnId);
 } catch {
   // story_comments table may not exist yet — graceful fallback
+}
+
+let storyEvents: Awaited<ReturnType<typeof getEventsForStory>> = [];
+try {
+  storyEvents = await getEventsForStory(db, hnId, 20);
+} catch {
+  // events table may not exist yet — graceful fallback
 }
 
 const siteUrl = Astro.url.origin;
@@ -169,6 +190,12 @@ const jsonLd = isDone && aggregates && evaluation ? {
 } : null;
 
 const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low', ND: 'No Data'};
+
+const EVENT_TYPE_COLORS: Record<string, string> = {
+  eval_failure: '#dc2626', eval_retry: '#f97316', eval_skip: '#6b7280',
+  eval_success: '#16a34a', rate_limit: '#eab308', fetch_error: '#dc2626',
+  parse_error: '#dc2626', trigger: '#60a5fa', r2_error: '#f97316',
+};
 
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
@@ -533,7 +560,7 @@ function timeAgo(unixTime: number): string {
   </table>
 
   {/* Structural Channel */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; border-top: 3px solid #22d3ee;">
         <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
@@ -552,6 +579,220 @@ function timeAgo(unixTime: number): string {
       </td>
     </tr>
   </table>
+
+  {/* Supplementary Signals */}
+  {hasSignals && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; border-top: 3px solid #f59e0b;">
+          <div style="color: #f59e0b; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 12px;">Supplementary Signals</div>
+
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr>
+              {/* Epistemic Quality */}
+              <td width="33%" valign="top" style="padding: 0 5px 10px 0;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Epistemic Quality</div>
+                  {eqData ? (
+                    <>
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                        <span class="score-font" style={`color: ${eqData.eq_score >= 0.7 ? '#16a34a' : eqData.eq_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{eqData.eq_score.toFixed(2)}</span>
+                        <span class="badge" style={`background: ${eqData.claim_density === 'low' ? 'rgba(22,163,106,0.15)' : eqData.claim_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${eqData.claim_density === 'low' ? '#16a34a' : eqData.claim_density === 'medium' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{eqData.claim_density} claims</span>
+                      </div>
+                      <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                        <tr><td style="color: #555; width: 55%;">Sources</td><td><div style={`height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.source_quality * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right; width: 30px;">{eqData.source_quality.toFixed(1)}</td></tr>
+                        <tr><td style="color: #555;">Evidence</td><td><div style={`height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.evidence_reasoning * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right;">{eqData.evidence_reasoning.toFixed(1)}</td></tr>
+                        <tr><td style="color: #555;">Uncertainty</td><td><div style={`height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.uncertainty_handling * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right;">{eqData.uncertainty_handling.toFixed(1)}</td></tr>
+                        <tr><td style="color: #555;">Purpose</td><td><div style={`height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.purpose_transparency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right;">{eqData.purpose_transparency.toFixed(1)}</td></tr>
+                      </table>
+                    </>
+                  ) : eqScore !== null ? (
+                    <span class="score-font" style={`color: ${eqScore >= 0.7 ? '#16a34a' : eqScore >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{eqScore.toFixed(2)}</span>
+                  ) : (
+                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                  )}
+                </div>
+              </td>
+
+              {/* Propaganda Flags */}
+              <td width="33%" valign="top" style="padding: 0 5px 10px 5px;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Propaganda Flags</div>
+                  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                    <span class="badge" style={`background: ${ptFlagCount === 0 ? 'rgba(22,163,106,0.15)' : ptFlagCount <= 2 ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${ptFlagCount === 0 ? '#16a34a' : ptFlagCount <= 2 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm);`}>{ptFlagCount}</span>
+                    <span style="color: #555; font-size: var(--font-xs);">techniques detected</span>
+                  </div>
+                  {ptFlags && ptFlags.length > 0 && (
+                    <div style="font-size: var(--font-xs);">
+                      {ptFlags.map((f: any) => (
+                        <div style="padding: 3px 0; border-top: 1px solid #1a1a25;">
+                          <span class="badge" style={`background: ${f.severity === 'high' ? 'rgba(220,38,38,0.15)' : f.severity === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(107,114,128,0.15)'}; color: ${f.severity === 'high' ? '#dc2626' : f.severity === 'medium' ? '#eab308' : '#6b7280'}; font-size: var(--font-xs);`}>{f.technique.replace(/_/g, ' ')}</span>
+                          <div style="color: #555; font-size: var(--font-xs); margin-top: 2px; font-style: italic;">{f.evidence}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </td>
+
+              {/* Solution Orientation */}
+              <td width="33%" valign="top" style="padding: 0 0 10px 5px;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Solution Orientation</div>
+                  {soData ? (
+                    <>
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                        <span class="score-font" style={`color: ${soData.so_score >= 0.7 ? '#16a34a' : soData.so_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{soData.so_score.toFixed(2)}</span>
+                        <span class="badge" style={`background: ${soData.framing === 'solution_oriented' ? 'rgba(22,163,106,0.15)' : soData.framing === 'mixed' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${soData.framing === 'solution_oriented' ? '#16a34a' : soData.framing === 'mixed' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{soData.framing.replace(/_/g, ' ')}</span>
+                      </div>
+                      <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                        <tr><td style="color: #555;">Reader Agency</td><td><div style="height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;"><div style={`width: ${soData.reader_agency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right; width: 30px;">{soData.reader_agency.toFixed(1)}</td></tr>
+                      </table>
+                    </>
+                  ) : (
+                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                  )}
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              {/* Emotional Tone */}
+              <td width="33%" valign="top" style="padding: 0 5px 10px 0;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Emotional Tone</div>
+                  {etData ? (
+                    <>
+                      <div style="margin-bottom: 6px;">
+                        <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7; font-size: var(--font-sm);">{etData.primary_tone}</span>
+                      </div>
+                      <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                        <tr><td style="color: #555; width: 55%;">Valence</td><td><div style="height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden; position: relative;"><div style={`position: absolute; left: 50%; width: ${Math.abs(etData.valence) * 50}%; height: 100%; background: ${etData.valence >= 0 ? '#16a34a' : '#dc2626'}; ${etData.valence >= 0 ? '' : 'transform: translateX(-100%);'}`}></div></div></td><td style="color: #888; text-align: right; width: 35px;">{etData.valence > 0 ? '+' : ''}{etData.valence.toFixed(1)}</td></tr>
+                        <tr><td style="color: #555;">Arousal</td><td><div style="height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.arousal * 100}%; height: 100%; background: #f59e0b;`}></div></div></td><td style="color: #888; text-align: right;">{etData.arousal.toFixed(1)}</td></tr>
+                        <tr><td style="color: #555;">Dominance</td><td><div style="height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.dominance * 100}%; height: 100%; background: #22d3ee;`}></div></div></td><td style="color: #888; text-align: right;">{etData.dominance.toFixed(1)}</td></tr>
+                      </table>
+                    </>
+                  ) : (
+                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                  )}
+                </div>
+              </td>
+
+              {/* Stakeholder Representation */}
+              <td width="33%" valign="top" style="padding: 0 5px 10px 5px;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Stakeholder Voice</div>
+                  {srData ? (
+                    <>
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                        <span class="score-font" style={`color: ${srData.sr_score >= 0.7 ? '#16a34a' : srData.sr_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{srData.sr_score.toFixed(2)}</span>
+                        <span style="color: #555; font-size: var(--font-xs);">{srData.perspective_count} perspective{srData.perspective_count !== 1 ? 's' : ''}</span>
+                      </div>
+                      {srData.who_speaks && srData.who_speaks.length > 0 && (
+                        <div style="font-size: var(--font-xs); margin-bottom: 3px;">
+                          <span style="color: #555;">Speaks: </span>
+                          {srData.who_speaks.map((s: string) => (
+                            <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
+                          ))}
+                        </div>
+                      )}
+                      {srData.who_is_spoken_about && srData.who_is_spoken_about.length > 0 && (
+                        <div style="font-size: var(--font-xs);">
+                          <span style="color: #555;">About: </span>
+                          {srData.who_is_spoken_about.map((s: string) => (
+                            <span class="badge" style="background: rgba(107,114,128,0.15); color: #6b7280; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                  )}
+                </div>
+              </td>
+
+              {/* Temporal Framing */}
+              <td width="33%" valign="top" style="padding: 0 0 10px 5px;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Temporal Framing</div>
+                  {tfData ? (
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                      <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs);">{tfData.primary_focus}</span>
+                      <span class="badge" style="background: rgba(107,114,128,0.15); color: #888; font-size: var(--font-xs);">{tfData.time_horizon.replace(/_/g, ' ')}</span>
+                    </div>
+                  ) : (
+                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                  )}
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              {/* Geographic Scope */}
+              <td width="33%" valign="top" style="padding: 0 5px 0 0;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Geographic Scope</div>
+                  {gsData ? (
+                    <>
+                      <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs); margin-bottom: 4px;">{gsData.scope}</span>
+                      {gsData.regions_mentioned && gsData.regions_mentioned.length > 0 && (
+                        <div style="font-size: var(--font-xs); color: #555; margin-top: 4px;">
+                          {gsData.regions_mentioned.join(', ')}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                  )}
+                </div>
+              </td>
+
+              {/* Complexity Level */}
+              <td width="33%" valign="top" style="padding: 0 5px 0 5px;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Complexity</div>
+                  {clData ? (
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                      <span class="badge" style={`background: ${clData.reading_level === 'accessible' ? 'rgba(22,163,106,0.15)' : clData.reading_level === 'moderate' ? 'rgba(96,165,250,0.15)' : clData.reading_level === 'technical' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.reading_level === 'accessible' ? '#16a34a' : clData.reading_level === 'moderate' ? '#60a5fa' : clData.reading_level === 'technical' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.reading_level}</span>
+                      <span class="badge" style={`background: ${clData.jargon_density === 'low' ? 'rgba(22,163,106,0.15)' : clData.jargon_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.jargon_density === 'low' ? '#16a34a' : clData.jargon_density === 'medium' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.jargon_density} jargon</span>
+                      <span class="badge" style="background: rgba(107,114,128,0.15); color: #888; font-size: var(--font-xs);">{clData.assumed_knowledge.replace(/_/g, ' ')}</span>
+                    </div>
+                  ) : (
+                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                  )}
+                </div>
+              </td>
+
+              {/* Transparency & Disclosure */}
+              <td width="33%" valign="top" style="padding: 0 0 0 5px;">
+                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Transparency</div>
+                  {tdData ? (
+                    <>
+                      <div style="margin-bottom: 6px;">
+                        <span class="score-font" style={`color: ${tdData.td_score >= 0.7 ? '#16a34a' : tdData.td_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{tdData.td_score.toFixed(2)}</span>
+                      </div>
+                      <div style="font-size: var(--font-xs); display: flex; flex-wrap: wrap; gap: 4px;">
+                        <span style={`color: ${tdData.author_identified ? '#16a34a' : '#dc2626'};`}>{tdData.author_identified ? '\u2713' : '\u2717'} Author</span>
+                        {tdData.conflicts_disclosed !== null && (
+                          <span style={`color: ${tdData.conflicts_disclosed ? '#16a34a' : '#dc2626'};`}>{tdData.conflicts_disclosed ? '\u2713' : '\u2717'} Conflicts</span>
+                        )}
+                        {tdData.funding_disclosed !== null && (
+                          <span style={`color: ${tdData.funding_disclosed ? '#16a34a' : '#dc2626'};`}>{tdData.funding_disclosed ? '\u2713' : '\u2717'} Funding</span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                  )}
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  )}
     </>
   ) : isPending ? (
     <>
@@ -613,6 +854,37 @@ function timeAgo(unixTime: number): string {
       </table>
     </>
   ) : null}
+
+  {/* Event Timeline — shown for all statuses when events exist */}
+  {storyEvents.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Event Timeline
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">{storyEvents.length} events</span>
+          </div>
+          <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+            {storyEvents.map((ev) => {
+              const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#555';
+              const typeColor = EVENT_TYPE_COLORS[ev.event_type] || '#888';
+              return (
+                <tr style={`border-top: 1px solid #1a1a25;`}>
+                  <td style="color: #555; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
+                  <td style="width: 90px;">
+                    <span class="badge" style={`background: ${typeColor}20; color: ${typeColor}; font-size: var(--font-xs);`}>
+                      {ev.event_type}
+                    </span>
+                  </td>
+                  <td style={`color: ${sevColor};`}>{ev.message}</td>
+                </tr>
+              );
+            })}
+          </table>
+        </td>
+      </tr>
+    </table>
+  )}
 
   {isFailed && (
     <script is:inline>

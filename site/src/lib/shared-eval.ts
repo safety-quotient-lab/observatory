@@ -136,6 +136,68 @@ After scoring all 31 sections, generate three story-level labels:
    Describe what the content is about, which human rights themes are most engaged,
    and the overall direction of the evaluation. Be factual and precise.
 
+## 10 — SUPPLEMENTARY SIGNALS
+
+After completing the HRCB evaluation, assess nine supplementary signals. These are independent of HRCB scores and capture how content communicates rather than what it says about human rights.
+
+### 10.1 Epistemic Quality (CRAAP-adapted)
+Based on the CRAAP Test framework from library science. Assess:
+- **source_quality** (0.0–1.0): Are claims attributed to identifiable sources? Are they primary (direct evidence), secondary (reporting on primary), or unsourced? Score 0.0 for wholly unsourced claims, 1.0 for all claims traced to primary sources.
+- **evidence_reasoning** (0.0–1.0): Is reasoning explicit and logical? Are causal claims supported with evidence? Score 0.0 for pure assertion, 1.0 for rigorous evidence-based reasoning.
+- **uncertainty_handling** (0.0–1.0): Are limits of knowledge acknowledged? Are hedging and qualifiers used appropriately? Score 0.0 for false certainty, 1.0 for consistent intellectual humility.
+- **purpose_transparency** (0.0–1.0): Is the content's purpose clear? Can the reader distinguish news from opinion, analysis from advocacy, information from advertisement? Score 0.0 for undisclosed purpose, 1.0 for fully transparent intent.
+- **claim_density**: "low" (mostly factual reporting with few interpretive claims), "medium" (moderate claims relative to evidence), "high" (dense with unsupported claims or opinions).
+- **eq_score**: Weighted composite: 0.30*source_quality + 0.25*evidence_reasoning + 0.20*uncertainty_handling + 0.15*purpose_transparency + 0.10*claim_density_numeric (low=1.0, medium=0.5, high=0.0).
+
+### 10.2 Propaganda Technique Flags (PTC-18)
+Based on Da San Martino et al. (2019) Propaganda Techniques Corpus. Identify techniques ONLY when you observe clear evidence. Return an empty array if none are detected.
+
+Techniques: loaded_language, name_calling, repetition, exaggeration, doubt, appeal_to_fear, flag_waving, causal_oversimplification, false_dilemma, strawman, red_herring, whataboutism, thought_terminating_cliche, bandwagon, appeal_to_authority, slogans, reductio_ad_hitlerum, obfuscation.
+
+For each flagged technique provide:
+- **technique**: One of the 18 technique names above.
+- **evidence**: A direct quote or brief description of the observable instance.
+- **severity**: "low" (subtle/single instance), "medium" (clear/repeated), "high" (dominant rhetorical strategy).
+
+### 10.3 Solution Orientation
+- **framing**: "problem_only" (identifies problems without constructive framing), "mixed" (some solutions alongside problems), "solution_oriented" (primarily focuses on solutions, progress, or constructive approaches).
+- **reader_agency** (0.0–1.0): Does the content empower readers with actionable information? 0.0 = reader is passive/helpless observer, 1.0 = reader is given specific, actionable steps.
+- **so_score**: 0.4*framing_numeric (problem_only=0.0, mixed=0.5, solution_oriented=1.0) + 0.6*reader_agency.
+
+### 10.4 Emotional Tone (Russell's Circumplex + Discrete)
+Based on Russell's Circumplex Model of Affect with Valence-Arousal-Dominance dimensions:
+- **primary_tone**: The dominant emotional register. Choose one: "measured", "urgent", "alarmist", "hopeful", "cynical", "detached", "empathetic", "confrontational", "celebratory", "solemn".
+- **valence** (-1.0 to +1.0): Negative to positive emotional valence. -1.0 = deeply negative/distressing, +1.0 = deeply positive/uplifting.
+- **arousal** (0.0–1.0): Emotional intensity. 0.0 = calm/neutral, 1.0 = highly activated/intense.
+- **dominance** (0.0–1.0): Power/authority dimension. 0.0 = submissive/requesting/vulnerable, 1.0 = authoritative/commanding/assertive.
+
+### 10.5 Stakeholder Representation (Power-Axis)
+Aligned with UDHR's rights-holder/duty-bearer framework:
+- **perspective_count**: Number of distinct stakeholder perspectives represented (1–N).
+- **voice_balance** (0.0–1.0): 0.0 = single viewpoint monopolizes, 1.0 = perspectives are equally represented.
+- **who_speaks**: Array of stakeholder categories that have direct voice (quoted or paraphrased). Categories: government, corporation, institution, military_security, individuals, workers, marginalized, children, community.
+- **who_is_spoken_about**: Array of categories discussed but without direct voice.
+- **sr_score** (0.0–1.0): Composite diversity score. Consider perspective_count, voice_balance, and whether marginalized groups speak vs are spoken about.
+
+### 10.6 Temporal Framing
+- **primary_focus**: "retrospective" (historical analysis), "present" (current reporting), "prospective" (predictions/aspirations/future-oriented), "mixed".
+- **time_horizon**: "immediate" (hours/days), "short_term" (weeks/months), "medium_term" (1-5 years), "long_term" (5+ years), "historical" (past events), "unspecified".
+
+### 10.7 Geographic Scope
+- **scope**: "local" (city/community), "national" (single country), "regional" (multi-country region), "global" (worldwide/universal), "unspecified".
+- **regions_mentioned**: Array of geographic regions/countries mentioned (use common names, not ISO codes). Empty array if none.
+
+### 10.8 Complexity Level
+- **reading_level**: "accessible" (general public, no prior knowledge needed), "moderate" (educated general audience), "technical" (domain familiarity expected), "expert" (specialist knowledge required).
+- **jargon_density**: "low" (plain language), "medium" (some specialized terms), "high" (heavily jargon-laden).
+- **assumed_knowledge**: "none" (fully self-contained), "general" (assumes general education), "domain_specific" (assumes domain familiarity), "expert" (assumes specialist training).
+
+### 10.9 Transparency & Disclosure
+- **author_identified** (boolean): Is the author clearly identified by name?
+- **conflicts_disclosed** (boolean|null): Are potential conflicts of interest disclosed? null if not applicable.
+- **funding_disclosed** (boolean|null): Is funding/sponsorship disclosed? null if not applicable.
+- **td_score** (0.0–1.0): Composite transparency. Each applicable true dimension adds equally. Higher = more transparent.
+
 ## OUTPUT FORMAT
 
 You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include "combined", "context_modifier", or "final" in scores — these are computed externally. If a cached DCP was provided in the user message, output "domain_context_profile": "cached" instead of the full object. The JSON must follow this exact schema:
@@ -185,6 +247,54 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
   "theme_tag": "<concise theme label>",
   "sentiment_tag": "<Champions|Advocates|Acknowledges|Neutral|Neglects|Undermines|Hostile>",
   "executive_summary": "<2-3 sentence summary>",
+  "epistemic_quality": {
+    "source_quality": <0.0-1.0>,
+    "evidence_reasoning": <0.0-1.0>,
+    "uncertainty_handling": <0.0-1.0>,
+    "purpose_transparency": <0.0-1.0>,
+    "claim_density": "<low|medium|high>",
+    "eq_score": <0.0-1.0>
+  },
+  "propaganda_flags": [
+    { "technique": "<ptc18_name>", "evidence": "<text>", "severity": "<low|medium|high>" }
+  ],
+  "solution_orientation": {
+    "framing": "<problem_only|mixed|solution_oriented>",
+    "reader_agency": <0.0-1.0>,
+    "so_score": <0.0-1.0>
+  },
+  "emotional_tone": {
+    "primary_tone": "<measured|urgent|alarmist|hopeful|cynical|detached|empathetic|confrontational|celebratory|solemn>",
+    "valence": <-1.0 to +1.0>,
+    "arousal": <0.0-1.0>,
+    "dominance": <0.0-1.0>
+  },
+  "stakeholder_representation": {
+    "perspective_count": <integer>,
+    "voice_balance": <0.0-1.0>,
+    "who_speaks": ["<category>", ...],
+    "who_is_spoken_about": ["<category>", ...],
+    "sr_score": <0.0-1.0>
+  },
+  "temporal_framing": {
+    "primary_focus": "<retrospective|present|prospective|mixed>",
+    "time_horizon": "<immediate|short_term|medium_term|long_term|historical|unspecified>"
+  },
+  "geographic_scope": {
+    "scope": "<local|national|regional|global|unspecified>",
+    "regions_mentioned": ["<region>", ...]
+  },
+  "complexity_level": {
+    "reading_level": "<accessible|moderate|technical|expert>",
+    "jargon_density": "<low|medium|high>",
+    "assumed_knowledge": "<none|general|domain_specific|expert>"
+  },
+  "transparency_disclosure": {
+    "author_identified": <boolean>,
+    "conflicts_disclosed": <boolean|null>,
+    "funding_disclosed": <boolean|null>,
+    "td_score": <0.0-1.0>
+  },
   "aggregates": {
     "weighted_mean": <number>,
     "unweighted_mean": <number>,
@@ -310,6 +420,68 @@ After scoring all 31 sections, generate three story-level labels:
    Describe what the content is about, which human rights themes are most engaged,
    and the overall direction of the evaluation. Be factual and precise.
 
+## 10 — SUPPLEMENTARY SIGNALS
+
+After completing the HRCB evaluation, assess nine supplementary signals. These are independent of HRCB scores and capture how content communicates rather than what it says about human rights.
+
+### 10.1 Epistemic Quality (CRAAP-adapted)
+Based on the CRAAP Test framework from library science. Assess:
+- **source_quality** (0.0–1.0): Are claims attributed to identifiable sources? Are they primary (direct evidence), secondary (reporting on primary), or unsourced? Score 0.0 for wholly unsourced claims, 1.0 for all claims traced to primary sources.
+- **evidence_reasoning** (0.0–1.0): Is reasoning explicit and logical? Are causal claims supported with evidence? Score 0.0 for pure assertion, 1.0 for rigorous evidence-based reasoning.
+- **uncertainty_handling** (0.0–1.0): Are limits of knowledge acknowledged? Are hedging and qualifiers used appropriately? Score 0.0 for false certainty, 1.0 for consistent intellectual humility.
+- **purpose_transparency** (0.0–1.0): Is the content's purpose clear? Can the reader distinguish news from opinion, analysis from advocacy, information from advertisement? Score 0.0 for undisclosed purpose, 1.0 for fully transparent intent.
+- **claim_density**: "low" (mostly factual reporting with few interpretive claims), "medium" (moderate claims relative to evidence), "high" (dense with unsupported claims or opinions).
+- **eq_score**: Weighted composite: 0.30*source_quality + 0.25*evidence_reasoning + 0.20*uncertainty_handling + 0.15*purpose_transparency + 0.10*claim_density_numeric (low=1.0, medium=0.5, high=0.0).
+
+### 10.2 Propaganda Technique Flags (PTC-18)
+Based on Da San Martino et al. (2019) Propaganda Techniques Corpus. Identify techniques ONLY when you observe clear evidence. Return an empty array if none are detected.
+
+Techniques: loaded_language, name_calling, repetition, exaggeration, doubt, appeal_to_fear, flag_waving, causal_oversimplification, false_dilemma, strawman, red_herring, whataboutism, thought_terminating_cliche, bandwagon, appeal_to_authority, slogans, reductio_ad_hitlerum, obfuscation.
+
+For each flagged technique provide:
+- **technique**: One of the 18 technique names above.
+- **evidence**: A direct quote or brief description of the observable instance.
+- **severity**: "low" (subtle/single instance), "medium" (clear/repeated), "high" (dominant rhetorical strategy).
+
+### 10.3 Solution Orientation
+- **framing**: "problem_only" (identifies problems without constructive framing), "mixed" (some solutions alongside problems), "solution_oriented" (primarily focuses on solutions, progress, or constructive approaches).
+- **reader_agency** (0.0–1.0): Does the content empower readers with actionable information? 0.0 = reader is passive/helpless observer, 1.0 = reader is given specific, actionable steps.
+- **so_score**: 0.4*framing_numeric (problem_only=0.0, mixed=0.5, solution_oriented=1.0) + 0.6*reader_agency.
+
+### 10.4 Emotional Tone (Russell's Circumplex + Discrete)
+Based on Russell's Circumplex Model of Affect with Valence-Arousal-Dominance dimensions:
+- **primary_tone**: The dominant emotional register. Choose one: "measured", "urgent", "alarmist", "hopeful", "cynical", "detached", "empathetic", "confrontational", "celebratory", "solemn".
+- **valence** (-1.0 to +1.0): Negative to positive emotional valence. -1.0 = deeply negative/distressing, +1.0 = deeply positive/uplifting.
+- **arousal** (0.0–1.0): Emotional intensity. 0.0 = calm/neutral, 1.0 = highly activated/intense.
+- **dominance** (0.0–1.0): Power/authority dimension. 0.0 = submissive/requesting/vulnerable, 1.0 = authoritative/commanding/assertive.
+
+### 10.5 Stakeholder Representation (Power-Axis)
+Aligned with UDHR's rights-holder/duty-bearer framework:
+- **perspective_count**: Number of distinct stakeholder perspectives represented (1–N).
+- **voice_balance** (0.0–1.0): 0.0 = single viewpoint monopolizes, 1.0 = perspectives are equally represented.
+- **who_speaks**: Array of stakeholder categories that have direct voice (quoted or paraphrased). Categories: government, corporation, institution, military_security, individuals, workers, marginalized, children, community.
+- **who_is_spoken_about**: Array of categories discussed but without direct voice.
+- **sr_score** (0.0–1.0): Composite diversity score. Consider perspective_count, voice_balance, and whether marginalized groups speak vs are spoken about.
+
+### 10.6 Temporal Framing
+- **primary_focus**: "retrospective" (historical analysis), "present" (current reporting), "prospective" (predictions/aspirations/future-oriented), "mixed".
+- **time_horizon**: "immediate" (hours/days), "short_term" (weeks/months), "medium_term" (1-5 years), "long_term" (5+ years), "historical" (past events), "unspecified".
+
+### 10.7 Geographic Scope
+- **scope**: "local" (city/community), "national" (single country), "regional" (multi-country region), "global" (worldwide/universal), "unspecified".
+- **regions_mentioned**: Array of geographic regions/countries mentioned (use common names, not ISO codes). Empty array if none.
+
+### 10.8 Complexity Level
+- **reading_level**: "accessible" (general public, no prior knowledge needed), "moderate" (educated general audience), "technical" (domain familiarity expected), "expert" (specialist knowledge required).
+- **jargon_density**: "low" (plain language), "medium" (some specialized terms), "high" (heavily jargon-laden).
+- **assumed_knowledge**: "none" (fully self-contained), "general" (assumes general education), "domain_specific" (assumes domain familiarity), "expert" (assumes specialist training).
+
+### 10.9 Transparency & Disclosure
+- **author_identified** (boolean): Is the author clearly identified by name?
+- **conflicts_disclosed** (boolean|null): Are potential conflicts of interest disclosed? null if not applicable.
+- **funding_disclosed** (boolean|null): Is funding/sponsorship disclosed? null if not applicable.
+- **td_score** (0.0–1.0): Composite transparency. Each applicable true dimension adds equally. Higher = more transparent.
+
 ## OUTPUT FORMAT
 
 You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include an "aggregates" field — aggregates are computed externally. Do NOT include "combined", "context_modifier", or "final" in scores — these are computed externally. If a cached DCP was provided in the user message, output "domain_context_profile": "cached" instead of the full object. The JSON must follow this exact schema:
@@ -358,8 +530,117 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
   ],
   "theme_tag": "<concise theme label>",
   "sentiment_tag": "<Champions|Advocates|Acknowledges|Neutral|Neglects|Undermines|Hostile>",
-  "executive_summary": "<2-3 sentence summary>"
+  "executive_summary": "<2-3 sentence summary>",
+  "epistemic_quality": {
+    "source_quality": <0.0-1.0>,
+    "evidence_reasoning": <0.0-1.0>,
+    "uncertainty_handling": <0.0-1.0>,
+    "purpose_transparency": <0.0-1.0>,
+    "claim_density": "<low|medium|high>",
+    "eq_score": <0.0-1.0>
+  },
+  "propaganda_flags": [
+    { "technique": "<ptc18_name>", "evidence": "<text>", "severity": "<low|medium|high>" }
+  ],
+  "solution_orientation": {
+    "framing": "<problem_only|mixed|solution_oriented>",
+    "reader_agency": <0.0-1.0>,
+    "so_score": <0.0-1.0>
+  },
+  "emotional_tone": {
+    "primary_tone": "<measured|urgent|alarmist|hopeful|cynical|detached|empathetic|confrontational|celebratory|solemn>",
+    "valence": <-1.0 to +1.0>,
+    "arousal": <0.0-1.0>,
+    "dominance": <0.0-1.0>
+  },
+  "stakeholder_representation": {
+    "perspective_count": <integer>,
+    "voice_balance": <0.0-1.0>,
+    "who_speaks": ["<category>", ...],
+    "who_is_spoken_about": ["<category>", ...],
+    "sr_score": <0.0-1.0>
+  },
+  "temporal_framing": {
+    "primary_focus": "<retrospective|present|prospective|mixed>",
+    "time_horizon": "<immediate|short_term|medium_term|long_term|historical|unspecified>"
+  },
+  "geographic_scope": {
+    "scope": "<local|national|regional|global|unspecified>",
+    "regions_mentioned": ["<region>", ...]
+  },
+  "complexity_level": {
+    "reading_level": "<accessible|moderate|technical|expert>",
+    "jargon_density": "<low|medium|high>",
+    "assumed_knowledge": "<none|general|domain_specific|expert>"
+  },
+  "transparency_disclosure": {
+    "author_identified": <boolean>,
+    "conflicts_disclosed": <boolean|null>,
+    "funding_disclosed": <boolean|null>,
+    "td_score": <0.0-1.0>
+  }
 }`;
+
+// --- Supplementary Signal Interfaces ---
+
+export interface EpistemicQuality {
+  source_quality: number;
+  evidence_reasoning: number;
+  uncertainty_handling: number;
+  purpose_transparency: number;
+  claim_density: 'low' | 'medium' | 'high';
+  eq_score: number;
+}
+
+export interface PropagandaFlag {
+  technique: string;
+  evidence: string;
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface SolutionOrientation {
+  framing: 'problem_only' | 'mixed' | 'solution_oriented';
+  reader_agency: number;
+  so_score: number;
+}
+
+export interface EmotionalTone {
+  primary_tone: string;
+  valence: number;
+  arousal: number;
+  dominance: number;
+}
+
+export interface StakeholderRepresentation {
+  perspective_count: number;
+  voice_balance: number;
+  who_speaks: string[];
+  who_is_spoken_about: string[];
+  sr_score: number;
+}
+
+export interface TemporalFraming {
+  primary_focus: 'retrospective' | 'present' | 'prospective' | 'mixed';
+  time_horizon: string;
+}
+
+export interface GeographicScope {
+  scope: 'local' | 'national' | 'regional' | 'global' | 'unspecified';
+  regions_mentioned: string[];
+}
+
+export interface ComplexityLevel {
+  reading_level: 'accessible' | 'moderate' | 'technical' | 'expert';
+  jargon_density: 'low' | 'medium' | 'high';
+  assumed_knowledge: 'none' | 'general' | 'domain_specific' | 'expert';
+}
+
+export interface TransparencyDisclosure {
+  author_identified: boolean;
+  conflicts_disclosed: boolean | null;
+  funding_disclosed: boolean | null;
+  td_score: number;
+}
 
 // --- Interfaces ---
 
@@ -415,6 +696,15 @@ export interface EvalResult {
   theme_tag?: string;
   sentiment_tag?: string;
   executive_summary?: string;
+  epistemic_quality?: EpistemicQuality;
+  propaganda_flags?: PropagandaFlag[];
+  solution_orientation?: SolutionOrientation;
+  emotional_tone?: EmotionalTone;
+  stakeholder_representation?: StakeholderRepresentation;
+  temporal_framing?: TemporalFraming;
+  geographic_scope?: GeographicScope;
+  complexity_level?: ComplexityLevel;
+  transparency_disclosure?: TransparencyDisclosure;
   aggregates: {
     weighted_mean: number;
     unweighted_mean: number;
@@ -456,6 +746,15 @@ export interface SlimEvalResponse {
   theme_tag?: string;
   sentiment_tag?: string;
   executive_summary?: string;
+  epistemic_quality?: EpistemicQuality;
+  propaganda_flags?: PropagandaFlag[];
+  solution_orientation?: SolutionOrientation;
+  emotional_tone?: EmotionalTone;
+  stakeholder_representation?: StakeholderRepresentation;
+  temporal_framing?: TemporalFraming;
+  geographic_scope?: GeographicScope;
+  complexity_level?: ComplexityLevel;
+  transparency_disclosure?: TransparencyDisclosure;
   l2_scores?: unknown[];
   adversarial_gap?: unknown;
 }
@@ -627,6 +926,17 @@ export async function writeEvalResult(
   }
   const hcbConfidence = totalSections > 0 ? confWeightedSum / totalSections : null;
 
+  // Extract supplementary signals with null fallbacks
+  const eq = result.epistemic_quality;
+  const pt = result.propaganda_flags;
+  const so = result.solution_orientation;
+  const et = result.emotional_tone;
+  const sr = result.stakeholder_representation;
+  const tf = result.temporal_framing;
+  const gs = result.geographic_scope;
+  const cl = result.complexity_level;
+  const td = result.transparency_disclosure;
+
   await db
     .prepare(
       `UPDATE stories SET
@@ -652,6 +962,37 @@ export async function writeEvalResult(
         hcb_theme_tag = ?,
         hcb_sentiment_tag = ?,
         hcb_executive_summary = ?,
+        eq_score = ?,
+        eq_source_quality = ?,
+        eq_evidence_reasoning = ?,
+        eq_uncertainty_handling = ?,
+        eq_purpose_transparency = ?,
+        eq_claim_density = ?,
+        pt_flag_count = ?,
+        pt_flags_json = ?,
+        so_score = ?,
+        so_framing = ?,
+        so_reader_agency = ?,
+        et_primary_tone = ?,
+        et_valence = ?,
+        et_arousal = ?,
+        et_dominance = ?,
+        sr_score = ?,
+        sr_perspective_count = ?,
+        sr_voice_balance = ?,
+        sr_who_speaks = ?,
+        sr_who_spoken_about = ?,
+        tf_primary_focus = ?,
+        tf_time_horizon = ?,
+        gs_scope = ?,
+        gs_regions_json = ?,
+        cl_reading_level = ?,
+        cl_jargon_density = ?,
+        cl_assumed_knowledge = ?,
+        td_score = ?,
+        td_author_identified = ?,
+        td_conflicts_disclosed = ?,
+        td_funding_disclosed = ?,
         eval_status = 'done',
         eval_error = NULL,
         evaluated_at = datetime('now')
@@ -680,6 +1021,46 @@ export async function writeEvalResult(
       result.theme_tag || null,
       result.sentiment_tag || null,
       result.executive_summary || null,
+      // Epistemic Quality
+      eq?.eq_score ?? null,
+      eq?.source_quality ?? null,
+      eq?.evidence_reasoning ?? null,
+      eq?.uncertainty_handling ?? null,
+      eq?.purpose_transparency ?? null,
+      eq?.claim_density ?? null,
+      // Propaganda Flags
+      pt ? pt.length : 0,
+      pt && pt.length > 0 ? JSON.stringify(pt) : null,
+      // Solution Orientation
+      so?.so_score ?? null,
+      so?.framing ?? null,
+      so?.reader_agency ?? null,
+      // Emotional Tone
+      et?.primary_tone ?? null,
+      et?.valence ?? null,
+      et?.arousal ?? null,
+      et?.dominance ?? null,
+      // Stakeholder Representation
+      sr?.sr_score ?? null,
+      sr?.perspective_count ?? null,
+      sr?.voice_balance ?? null,
+      sr?.who_speaks ? JSON.stringify(sr.who_speaks) : null,
+      sr?.who_is_spoken_about ? JSON.stringify(sr.who_is_spoken_about) : null,
+      // Temporal Framing
+      tf?.primary_focus ?? null,
+      tf?.time_horizon ?? null,
+      // Geographic Scope
+      gs?.scope ?? null,
+      gs?.regions_mentioned ? JSON.stringify(gs.regions_mentioned) : null,
+      // Complexity Level
+      cl?.reading_level ?? null,
+      cl?.jargon_density ?? null,
+      cl?.assumed_knowledge ?? null,
+      // Transparency & Disclosure
+      td?.td_score ?? null,
+      td?.author_identified != null ? (td.author_identified ? 1 : 0) : null,
+      td?.conflicts_disclosed != null ? (td.conflicts_disclosed ? 1 : 0) : null,
+      td?.funding_disclosed != null ? (td.funding_disclosed ? 1 : 0) : null,
       hnId
     )
     .run();
