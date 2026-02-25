@@ -59,19 +59,37 @@ const fwScores = evalData?.scores ?? [];
 const hasFairWitness = fwScores.some(s =>
   (s.witness_facts && s.witness_facts.length > 0) || (s.witness_inferences && s.witness_inferences.length > 0)
 );
-// Merge FW data from evalData into display scores
+// Merge FW data + split notes from evalData into display scores
 const displayScores = isDone ? scores.map(s => {
   const fwMatch = fwScores.find(fs => fs.section === s.section);
+  const merged: typeof s = { ...s };
   if (fwMatch) {
-    return {
-      ...s,
-      witness_facts: fwMatch.witness_facts,
-      witness_inferences: fwMatch.witness_inferences,
-      witness_ratio: fwMatch.witness_ratio,
-    };
+    merged.witness_facts = fwMatch.witness_facts;
+    merged.witness_inferences = fwMatch.witness_inferences;
+    merged.witness_ratio = fwMatch.witness_ratio;
+    // Merge split notes from evalData JSON if not already in DB row
+    if (!merged.editorial_note && (fwMatch as any).editorial_note) {
+      merged.editorial_note = (fwMatch as any).editorial_note;
+    }
+    if (!merged.structural_note && (fwMatch as any).structural_note) {
+      merged.structural_note = (fwMatch as any).structural_note;
+    }
   }
-  return s;
+  return merged;
 }) : [];
+// Power-ranked: sort by channel score descending, ND articles last
+const editorialRanked = [...displayScores].sort((a, b) => {
+  if (a.editorial === null && b.editorial === null) return 0;
+  if (a.editorial === null) return 1;
+  if (b.editorial === null) return -1;
+  return b.editorial - a.editorial;
+});
+const structuralRanked = [...displayScores].sort((a, b) => {
+  if (a.structural === null && b.structural === null) return 0;
+  if (a.structural === null) return 1;
+  if (b.structural === null) return -1;
+  return b.structural - a.structural;
+});
 // FW aggregate metrics
 const fwRatio = storyData.fw_ratio ?? (hasFairWitness ? (() => {
   let facts = 0, inferences = 0;
@@ -109,7 +127,7 @@ const jsonLd = isDone && aggregates && evaluation ? {
   '@context': 'https://schema.org',
   '@type': 'Review',
   name: `HRCB Evaluation: ${storyData.title}`,
-  description: `Human Rights Compatibility Bias evaluation of "${storyData.title}" against the UN Universal Declaration of Human Rights. Classification: ${aggregates.classification}. Score: ${formatScore(aggregates.weighted_mean)}.`,
+  description: `Human Rights Compatibility Bias evaluation of "${storyData.title}" against the UN Universal Declaration of Human Rights. Classification: ${aggregates.classification}. HRCB: ${formatScore(aggregates.weighted_mean)}.`,
   url: `${siteUrl}/item/${storyData.hn_id}`,
   datePublished: storyData.evaluated_at || undefined,
   author: {
@@ -433,18 +451,6 @@ function timeAgo(unixTime: number): string {
     </tr>
   </table>
 
-  {/* DCP */}
-  {domain_context_profile && (
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
-    <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Domain Context Profile</div>
-        <DcpTable elements={domain_context_profile.elements} />
-      </td>
-    </tr>
-  </table>
-  )}
-
   {/* HN Comments */}
   {comments.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
@@ -478,13 +484,37 @@ function timeAgo(unixTime: number): string {
     </table>
   )}
 
-  {/* Score breakdown */}
+  {/* Editorial Channel */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; border-top: 3px solid #a78bfa;">
+        <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
+          <div style="color: #a78bfa; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Editorial Channel</div>
+          <div style="color: #555; font-size: var(--font-xs);">What the content says</div>
+        </div>
+        {editorialRanked.map((score, i) => (
+          <ArticleDetail score={score} index={i} channel="editorial" />
+        ))}
+      </td>
+    </tr>
+  </table>
+
+  {/* Structural Channel */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Score Breakdown</div>
-        {displayScores.map((score, i) => (
-          <ArticleDetail score={score} index={i} />
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; border-top: 3px solid #22d3ee;">
+        <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
+          <div style="color: #22d3ee; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Structural Channel</div>
+          <div style="color: #555; font-size: var(--font-xs);">What the site does</div>
+        </div>
+        {domain_context_profile && (
+          <div style="margin-bottom: 12px; padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px;">
+            <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Domain Context Profile</div>
+            <DcpTable elements={domain_context_profile.elements} />
+          </div>
+        )}
+        {structuralRanked.map((score, i) => (
+          <ArticleDetail score={score} index={i} channel="structural" />
         ))}
       </td>
     </tr>

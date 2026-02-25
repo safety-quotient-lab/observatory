@@ -4,7 +4,7 @@
  */
 
 import { CLASSIFICATIONS } from './types';
-import type { EvalScore } from './shared-eval';
+import type { EvalScore, SlimEvalScore } from './shared-eval';
 
 const EVIDENCE_WEIGHTS: Record<string, number> = {
   H: 1.0,
@@ -167,6 +167,131 @@ export interface FairWitnessAggregates {
   fw_ratio: number | null;
   fw_observable_count: number;
   fw_inference_count: number;
+}
+
+// --- Derived score field computation ---
+// Computes combined, context_modifier, final from raw E/S scores + DCP elements.
+// Also maps editorial_note/structural_note to backwards-compat note field.
+
+export interface DcpElement {
+  modifier: number | null;
+  affects: string[];
+  note: string;
+}
+
+export function computeDerivedScoreFields(
+  scores: (SlimEvalScore | EvalScore)[],
+  channelWeights: { editorial: number; structural: number },
+  dcpElements: Record<string, DcpElement> | null,
+): EvalScore[] {
+  return scores.map(s => {
+    const eScore = s.editorial;
+    const sScore = s.structural;
+
+    // Combined = weighted average of E and S channels
+    let combined: number | null = null;
+    if (eScore !== null && sScore !== null) {
+      combined = round(channelWeights.editorial * eScore + channelWeights.structural * sScore);
+    } else if (eScore !== null) {
+      combined = eScore;
+    } else if (sScore !== null) {
+      combined = sScore;
+    }
+
+    // Context modifier = sum of matching DCP element modifiers for this section
+    let contextModifier: number | null = null;
+    if (dcpElements && combined !== null) {
+      let modSum = 0;
+      for (const el of Object.values(dcpElements)) {
+        if (el.modifier !== null && el.affects?.includes(s.section)) {
+          modSum += el.modifier;
+        }
+      }
+      // Cap at +/- 0.30
+      contextModifier = round(Math.max(-0.30, Math.min(0.30, modSum)));
+    }
+
+    // Final = combined + context_modifier, clamped [-1.0, +1.0]
+    let final_: number | null = null;
+    if (combined !== null) {
+      const mod = contextModifier ?? 0;
+      final_ = round(Math.max(-1.0, Math.min(1.0, combined + mod)));
+    }
+
+    // Note fallback for backwards compat
+    const editorialNote = (s as SlimEvalScore).editorial_note || '';
+    const structuralNote = (s as SlimEvalScore).structural_note || '';
+    const note = (s as EvalScore).note || editorialNote || structuralNote || '';
+
+    return {
+      section: s.section,
+      editorial: eScore,
+      structural: sScore,
+      combined,
+      context_modifier: contextModifier,
+      final: final_,
+      directionality: s.directionality || [],
+      evidence: s.evidence,
+      note,
+      editorial_note: editorialNote,
+      structural_note: structuralNote,
+      witness_facts: s.witness_facts,
+      witness_inferences: s.witness_inferences,
+    };
+  });
+}
+
+// --- Story-level aggregate helpers ---
+
+export interface StoryLevelAggregates {
+  hcb_editorial_mean: number | null;
+  hcb_structural_mean: number | null;
+  hcb_setl: number | null;
+  hcb_confidence: number | null;
+}
+
+export function computeStoryLevelAggregates(scores: EvalScore[]): StoryLevelAggregates {
+  const editorials = scores.filter(s => s.editorial !== null).map(s => s.editorial!);
+  const structurals = scores.filter(s => s.structural !== null).map(s => s.structural!);
+
+  const hcb_editorial_mean = editorials.length > 0
+    ? round(editorials.reduce((a, b) => a + b, 0) / editorials.length)
+    : null;
+  const hcb_structural_mean = structurals.length > 0
+    ? round(structurals.reduce((a, b) => a + b, 0) / structurals.length)
+    : null;
+
+  // SETL: mean of per-article SETL values
+  const setlValues: number[] = [];
+  for (const s of scores) {
+    if (s.editorial !== null && s.structural !== null && (Math.abs(s.editorial) > 0 || Math.abs(s.structural) > 0)) {
+      const diff = Math.abs(s.editorial - s.structural);
+      const maxAbs = Math.max(Math.abs(s.editorial), Math.abs(s.structural));
+      const mag = Math.sqrt(diff * maxAbs);
+      setlValues.push(s.editorial >= s.structural ? mag : -mag);
+    }
+  }
+  const hcb_setl = setlValues.length > 0
+    ? round(setlValues.reduce((a, b) => a + b, 0) / setlValues.length)
+    : null;
+
+  // Confidence: evidence-weighted coverage
+  const scored = scores.filter(s => s.final !== null);
+  const total = scores.length;
+  let hcb_confidence: number | null = null;
+  if (total > 0) {
+    let weightedSum = 0;
+    for (const s of scores) {
+      const ev = s.evidence?.toUpperCase();
+      if (ev === 'H') weightedSum += 1.0;
+      else if (ev === 'M') weightedSum += 0.6;
+      else if (ev === 'L') weightedSum += 0.2;
+      // ND contributes 0
+    }
+    hcb_confidence = round(weightedSum / total);
+  }
+
+  return { hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence };
 }
 
 export function computeFairWitnessAggregates(scores: EvalScore[]): FairWitnessAggregates {

@@ -121,10 +121,10 @@ Rules:
 
 ## OUTPUT FORMAT
 
-You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." The JSON must follow this exact schema:
+You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include "combined", "context_modifier", or "final" in scores — these are computed externally. If a cached DCP was provided in the user message, output "domain_context_profile": "cached" instead of the full object. The JSON must follow this exact schema:
 
 {
-  "schema_version": "3.4",
+  "schema_version": "3.5",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
@@ -132,7 +132,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "channel_weights": { "editorial": <w_E>, "structural": <w_S> },
     "eval_depth": "STANDARD",
     "date": "<YYYY-MM-DD>",
-    "methodology": "v3.4",
+    "methodology": "v3.5",
     "off_domain": false,
     "external_evidence": false,
     "operator": "claude-haiku-4-5-20251001"
@@ -156,12 +156,10 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
       "section": "Preamble",
       "editorial": <number|null>,
       "structural": <number|null>,
-      "combined": <number|null>,
-      "context_modifier": <number|null>,
-      "final": <number|null>,
       "directionality": [...],
       "evidence": "<H|M|L|null>",
-      "note": "<text>",
+      "editorial_note": "<what the content says re: this provision>",
+      "structural_note": "<what the site does re: this provision>",
       "witness_facts": ["<observable statement>", ...],
       "witness_inferences": ["<interpretive statement>", ...]
     }
@@ -180,9 +178,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "directionality_profile": { "A": <n>, "P": <n>, "F": <n>, "C": <n> },
     "volatility": { "value": <number>, "label": "<Low|Medium|High>" },
     "classification": "<classification>"
-  },
-  "l2_scores": [],
-  "adversarial_gap": { "per_article": [], "mean_ag": null, "ag_coverage": 0, "ag_classification": null }
+  }
 }`;
 
 /**
@@ -279,10 +275,10 @@ Rules:
 
 ## OUTPUT FORMAT
 
-You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include an "aggregates" field — aggregates are computed externally. The JSON must follow this exact schema:
+You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." Do NOT include an "aggregates" field — aggregates are computed externally. Do NOT include "combined", "context_modifier", or "final" in scores — these are computed externally. If a cached DCP was provided in the user message, output "domain_context_profile": "cached" instead of the full object. The JSON must follow this exact schema:
 
 {
-  "schema_version": "3.4",
+  "schema_version": "3.5",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
@@ -290,7 +286,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "channel_weights": { "editorial": <w_E>, "structural": <w_S> },
     "eval_depth": "STANDARD",
     "date": "<YYYY-MM-DD>",
-    "methodology": "v3.4",
+    "methodology": "v3.5",
     "off_domain": false,
     "external_evidence": false,
     "operator": "claude-haiku-4-5-20251001"
@@ -314,19 +310,15 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
       "section": "Preamble",
       "editorial": <number|null>,
       "structural": <number|null>,
-      "combined": <number|null>,
-      "context_modifier": <number|null>,
-      "final": <number|null>,
       "directionality": [...],
       "evidence": "<H|M|L|null>",
-      "note": "<text>",
+      "editorial_note": "<what the content says re: this provision>",
+      "structural_note": "<what the site does re: this provision>",
       "witness_facts": ["<observable statement>", ...],
       "witness_inferences": ["<interpretive statement>", ...]
     }
     // ... 31 total rows (Preamble + Article 1-30)
-  ],
-  "l2_scores": [],
-  "adversarial_gap": { "per_article": [], "mean_ag": null, "ag_coverage": 0, "ag_classification": null }
+  ]
 }`;
 
 // --- Interfaces ---
@@ -341,6 +333,21 @@ export interface EvalScore {
   directionality: string[];
   evidence: string | null;
   note: string;
+  editorial_note?: string;
+  structural_note?: string;
+  witness_facts?: string[];
+  witness_inferences?: string[];
+}
+
+export interface SlimEvalScore {
+  section: string;
+  editorial: number | null;
+  structural: number | null;
+  directionality: string[];
+  evidence: string | null;
+  editorial_note: string;
+  structural_note: string;
+  note?: string; // backwards compat
   witness_facts?: string[];
   witness_inferences?: string[];
 }
@@ -379,8 +386,8 @@ export interface EvalResult {
     volatility: { value: number; label: string };
     classification: string;
   };
-  l2_scores: unknown[];
-  adversarial_gap: unknown;
+  l2_scores?: unknown[];
+  adversarial_gap?: unknown;
 }
 
 export interface SlimEvalResponse {
@@ -401,10 +408,10 @@ export interface SlimEvalResponse {
     domain: string;
     eval_date: string;
     elements: Record<string, unknown>;
-  };
+  } | string;
   scores: EvalScore[];
-  l2_scores: unknown[];
-  adversarial_gap: unknown;
+  l2_scores?: unknown[];
+  adversarial_gap?: unknown;
 }
 
 // --- Helpers ---
@@ -447,7 +454,7 @@ export function buildUserMessageWithDcp(
 
   let dcpBlock = '';
   if (cachedDcp) {
-    dcpBlock = `\n\nThe Domain Context Profile for this domain has been pre-evaluated. Use this DCP directly (do not re-evaluate domain-level signals):\n\n${JSON.stringify(cachedDcp, null, 2)}\n`;
+    dcpBlock = `\n\nThe Domain Context Profile for this domain has been pre-evaluated. Use this DCP directly (do not re-evaluate domain-level signals). In your output, set "domain_context_profile": "cached" instead of repeating the full DCP object.\n\n${JSON.stringify(cachedDcp, null, 2)}\n`;
   }
 
   return `Evaluate this URL: ${url}
@@ -545,6 +552,35 @@ export async function writeEvalResult(
   const fwTotal = fwObservableCount + fwInferenceCount;
   const fwRatio = fwTotal > 0 ? fwObservableCount / fwTotal : null;
 
+  // Compute story-level channel means for materialized columns
+  const editorials = result.scores.filter(s => s.editorial !== null).map(s => s.editorial!);
+  const structurals = result.scores.filter(s => s.structural !== null).map(s => s.structural!);
+  const hcbEditorialMean = editorials.length > 0 ? editorials.reduce((a, b) => a + b, 0) / editorials.length : null;
+  const hcbStructuralMean = structurals.length > 0 ? structurals.reduce((a, b) => a + b, 0) / structurals.length : null;
+
+  // SETL
+  const setlValues: number[] = [];
+  for (const s of result.scores) {
+    if (s.editorial !== null && s.structural !== null && (Math.abs(s.editorial) > 0 || Math.abs(s.structural) > 0)) {
+      const diff = Math.abs(s.editorial - s.structural);
+      const maxAbs = Math.max(Math.abs(s.editorial), Math.abs(s.structural));
+      const mag = Math.sqrt(diff * maxAbs);
+      setlValues.push(s.editorial >= s.structural ? mag : -mag);
+    }
+  }
+  const hcbSetl = setlValues.length > 0 ? setlValues.reduce((a, b) => a + b, 0) / setlValues.length : null;
+
+  // Confidence
+  let confWeightedSum = 0;
+  const totalSections = result.scores.length;
+  for (const s of result.scores) {
+    const ev = s.evidence?.toUpperCase();
+    if (ev === 'H') confWeightedSum += 1.0;
+    else if (ev === 'M') confWeightedSum += 0.6;
+    else if (ev === 'L') confWeightedSum += 0.2;
+  }
+  const hcbConfidence = totalSections > 0 ? confWeightedSum / totalSections : null;
+
   await db
     .prepare(
       `UPDATE stories SET
@@ -562,6 +598,10 @@ export async function writeEvalResult(
         fw_ratio = ?,
         fw_observable_count = ?,
         fw_inference_count = ?,
+        hcb_editorial_mean = ?,
+        hcb_structural_mean = ?,
+        hcb_setl = ?,
+        hcb_confidence = ?,
         eval_status = 'done',
         eval_error = NULL,
         evaluated_at = datetime('now')
@@ -582,16 +622,23 @@ export async function writeEvalResult(
       fwRatio,
       fwObservableCount,
       fwInferenceCount,
+      hcbEditorialMean,
+      hcbStructuralMean,
+      hcbSetl,
+      hcbConfidence,
       hnId
     )
     .run();
 
   const stmts = result.scores.map((score) => {
     const sortOrder = ALL_SECTIONS.indexOf(score.section);
+    const editorialNote = score.editorial_note || '';
+    const structuralNote = score.structural_note || '';
+    const note = score.note || editorialNote || structuralNote || '';
     return db
       .prepare(
-        `INSERT OR REPLACE INTO scores (hn_id, section, sort_order, final, editorial, structural, evidence, directionality, note)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT OR REPLACE INTO scores (hn_id, section, sort_order, final, editorial, structural, evidence, directionality, note, editorial_note, structural_note, combined, context_modifier)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         hnId,
@@ -602,7 +649,11 @@ export async function writeEvalResult(
         score.structural,
         score.evidence,
         JSON.stringify(score.directionality || []),
-        score.note || ''
+        note,
+        editorialNote,
+        structuralNote,
+        score.combined ?? null,
+        score.context_modifier ?? null
       );
   });
 

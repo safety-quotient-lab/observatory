@@ -95,6 +95,8 @@ export interface Score {
   directionality: string[];
   evidence: string | null;
   note: string;
+  editorial_note?: string;
+  structural_note?: string;
   witness_facts?: string[];
   witness_inferences?: string[];
   witness_ratio?: number;

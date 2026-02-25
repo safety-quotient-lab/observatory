@@ -6,11 +6,17 @@ import type { Score } from '../lib/types';
 interface Props {
   score: Score;
   index: number;
+  channel?: 'editorial' | 'structural';
 }
 
-const { score, index } = Astro.props;
-const isND = score.final === null;
-const color = scoreToColor(score.final);
+const { score, index, channel } = Astro.props;
+
+// Pick the display value based on channel
+const displayValue = channel === 'editorial' ? score.editorial
+  : channel === 'structural' ? score.structural
+  : score.final;
+const isND = displayValue === null;
+const color = scoreToColor(displayValue);
 const title = ARTICLE_TITLES[score.section] || score.section;
 
 const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low'};
@@ -28,7 +34,7 @@ const fwRatio = score.witness_ratio ?? null;
       class="w-10 h-10 rounded flex items-center justify-center score-font text-xs font-bold shrink-0"
       style={`background: ${isND ? '#6b728020' : color + '30'}; color: ${isND ? '#6b7280' : color}; border: 1px solid ${isND ? '#6b7280' : color}40`}
     >
-      {formatScore(score.final)}
+      {formatScore(displayValue)}
     </div>
 
     <!-- Section info -->
@@ -67,42 +73,84 @@ const fwRatio = score.witness_ratio ?? null;
 
   <div class="px-4 pb-4 pt-1 ml-[52px]">
     {!isND ? (
-      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
-        <div class="bg-surface-2 rounded px-3 py-2">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Editorial</div>
-          <div class="score-font text-sm" style={`color: ${scoreToColor(score.editorial)}`}>
-            {formatScore(score.editorial)}
+      channel === 'editorial' ? (
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div class="bg-surface-2 rounded px-3 py-2">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Editorial</div>
+            <div class="score-font text-sm" style={`color: ${scoreToColor(score.editorial)}`}>
+              {formatScore(score.editorial)}
+            </div>
+          </div>
+          <div class="bg-surface-2 rounded px-3 py-2" title="Structural-Editorial Tension Level">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">SETL</div>
+            <div class="score-font text-sm" style={`color: ${setlToColor(articleSetl)}`}>
+              {formatSetl(articleSetl)}
+            </div>
           </div>
         </div>
-        <div class="bg-surface-2 rounded px-3 py-2">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Structural</div>
-          <div class="score-font text-sm" style={`color: ${scoreToColor(score.structural)}`}>
-            {formatScore(score.structural)}
+      ) : channel === 'structural' ? (
+        <div class="grid grid-cols-3 gap-3 mb-3">
+          <div class="bg-surface-2 rounded px-3 py-2">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Structural</div>
+            <div class="score-font text-sm" style={`color: ${scoreToColor(score.structural)}`}>
+              {formatScore(score.structural)}
+            </div>
+          </div>
+          <div class="bg-surface-2 rounded px-3 py-2">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Context Modifier</div>
+            <div class="score-font text-sm" style={`color: ${scoreToColor(score.context_modifier)}`}>
+              {formatScore(score.context_modifier)}
+            </div>
+          </div>
+          <div class="bg-surface-2 rounded px-3 py-2" title="Structural-Editorial Tension Level">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">SETL</div>
+            <div class="score-font text-sm" style={`color: ${setlToColor(articleSetl)}`}>
+              {formatSetl(articleSetl)}
+            </div>
           </div>
         </div>
-        <div class="bg-surface-2 rounded px-3 py-2" title="Structural-Editorial Tension Level">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider">SETL</div>
-          <div class="score-font text-sm" style={`color: ${setlToColor(articleSetl)}`}>
-            {formatSetl(articleSetl)}
+      ) : (
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
+          <div class="bg-surface-2 rounded px-3 py-2">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Editorial</div>
+            <div class="score-font text-sm" style={`color: ${scoreToColor(score.editorial)}`}>
+              {formatScore(score.editorial)}
+            </div>
+          </div>
+          <div class="bg-surface-2 rounded px-3 py-2">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Structural</div>
+            <div class="score-font text-sm" style={`color: ${scoreToColor(score.structural)}`}>
+              {formatScore(score.structural)}
+            </div>
+          </div>
+          <div class="bg-surface-2 rounded px-3 py-2" title="Structural-Editorial Tension Level">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">SETL</div>
+            <div class="score-font text-sm" style={`color: ${setlToColor(articleSetl)}`}>
+              {formatSetl(articleSetl)}
+            </div>
+          </div>
+          <div class="bg-surface-2 rounded px-3 py-2">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Combined</div>
+            <div class="score-font text-sm" style={`color: ${scoreToColor(score.combined)}`}>
+              {formatScore(score.combined)}
+            </div>
+          </div>
+          <div class="bg-surface-2 rounded px-3 py-2">
+            <div class="text-[10px] text-gray-500 uppercase tracking-wider">Context Modifier</div>
+            <div class="score-font text-sm" style={`color: ${scoreToColor(score.context_modifier)}`}>
+              {formatScore(score.context_modifier)}
+            </div>
           </div>
         </div>
-        <div class="bg-surface-2 rounded px-3 py-2">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Combined</div>
-          <div class="score-font text-sm" style={`color: ${scoreToColor(score.combined)}`}>
-            {formatScore(score.combined)}
-          </div>
-        </div>
-        <div class="bg-surface-2 rounded px-3 py-2">
-          <div class="text-[10px] text-gray-500 uppercase tracking-wider">Context Modifier</div>
-          <div class="score-font text-sm" style={`color: ${scoreToColor(score.context_modifier)}`}>
-            {formatScore(score.context_modifier)}
-          </div>
-        </div>
-      </div>
+      )
     ) : null}
-    <p class="text-sm text-gray-400 leading-relaxed fw-hide">{score.note}</p>
+    <p class="text-sm text-gray-400 leading-relaxed fw-hide">{
+      channel === 'editorial' ? (score.editorial_note || score.note)
+        : channel === 'structural' ? (score.structural_note || score.note)
+        : score.note
+    }</p>
 
-    {hasFw && (
+    {hasFw && channel !== 'structural' && (
       <>
         <div class="fw-only" style="display:none;">
           {fwRatio !== null && (

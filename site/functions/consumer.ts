@@ -28,7 +28,7 @@ import {
   type EvalResult,
 } from '../src/lib/shared-eval';
 
-import { computeAggregates, computeWitnessRatio } from '../src/lib/compute-aggregates';
+import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
 import { cleanHtml } from '../src/lib/html-clean';
 
 interface Env {
@@ -179,18 +179,46 @@ export default {
         // Parse slim response (no aggregates)
         const slim = parseSlimEvalResponse(data);
 
+        // Handle DCP "cached" string — substitute from cached DCP
+        let dcpForCompute: Record<string, DcpElement> | null = null;
+        if (typeof slim.domain_context_profile === 'string') {
+          // LLM output "cached" — restore from cached DCP
+          if (cachedDcp) {
+            const elements = (cachedDcp as any).elements || cachedDcp;
+            slim.domain_context_profile = {
+              domain: domain || '',
+              eval_date: new Date().toISOString().slice(0, 10),
+              elements,
+            };
+            dcpForCompute = elements as Record<string, DcpElement>;
+          } else {
+            slim.domain_context_profile = {
+              domain: domain || '',
+              eval_date: new Date().toISOString().slice(0, 10),
+              elements: {},
+            };
+          }
+        } else if (slim.domain_context_profile?.elements) {
+          dcpForCompute = slim.domain_context_profile.elements as Record<string, DcpElement>;
+        }
+
+        // Compute derived fields (combined, context_modifier, final) on Worker CPU
+        const channelWeights = slim.evaluation.channel_weights;
+        const derivedScores = computeDerivedScoreFields(slim.scores, channelWeights, dcpForCompute);
+
         // Compute witness_ratio per score on Worker CPU
-        for (const score of slim.scores) {
+        for (const score of derivedScores) {
           (score as any).witness_ratio = computeWitnessRatio(score.witness_facts, score.witness_inferences);
         }
 
         // Compute aggregates on Worker CPU
-        const channelWeights = slim.evaluation.channel_weights;
-        const aggregates = computeAggregates(slim.scores, channelWeights);
+        const aggregates = computeAggregates(derivedScores, channelWeights);
 
         // Assemble full EvalResult
         const fullResult: EvalResult = {
           ...slim,
+          domain_context_profile: slim.domain_context_profile as { domain: string; eval_date: string; elements: Record<string, unknown> },
+          scores: derivedScores,
           aggregates,
         };
 
@@ -233,8 +261,9 @@ export default {
         }
 
         // Cache DCP if we got a new one (not from cache)
-        if (!cachedDcp && domain && slim.domain_context_profile?.elements) {
-          const dcpElements = slim.domain_context_profile.elements as Record<string, unknown>;
+        const dcpObj = slim.domain_context_profile as { elements?: Record<string, unknown> };
+        if (!cachedDcp && domain && typeof slim.domain_context_profile !== 'string' && dcpObj?.elements) {
+          const dcpElements = dcpObj.elements;
           await cacheDcp(db, domain, dcpElements);
           // Also cache in KV with 7-day TTL
           await env.CONTENT_CACHE.put(`dcp:${domain}`, JSON.stringify(dcpElements), {

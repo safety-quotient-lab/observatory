@@ -42,6 +42,10 @@ export interface ScoreRow {
   evidence: string | null;
   directionality: string;
   note: string;
+  editorial_note: string;
+  structural_note: string;
+  combined: number | null;
+  context_modifier: number | null;
 }
 
 export interface StoryWithScores extends Story {
@@ -75,12 +79,14 @@ function scoreRowToScore(row: ScoreRow): Score {
     section: row.section,
     editorial: row.editorial,
     structural: row.structural,
-    combined: null,
-    context_modifier: null,
+    combined: row.combined ?? null,
+    context_modifier: row.context_modifier ?? null,
     final: row.final,
     directionality: JSON.parse(row.directionality || '[]'),
     evidence: row.evidence,
     note: row.note,
+    editorial_note: row.editorial_note || undefined,
+    structural_note: row.structural_note || undefined,
   };
 }
 
@@ -270,7 +276,7 @@ export async function getArticleRanking(
               sc.evidence, sc.note
        FROM scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE sc.section = ? AND sc.final IS NOT NULL
+       WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'
        ORDER BY sc.final DESC
        LIMIT ? OFFSET ?`
     )
