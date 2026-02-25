@@ -156,6 +156,20 @@ Use standard HRCB rubrics for structural/editorial positives and negatives.
 - Negative scores are normal.
 - When in doubt, regress toward zero.
 
+## 8 — FAIR WITNESS EVIDENCE
+
+For each scored section (non-ND), you MUST provide two arrays separating observable facts from interpretive inferences:
+
+- **witness_facts**: Directly observable statements grounded in page content. These are verifiable claims that any reader could confirm by visiting the page. Example: "Page contains a cookie consent banner." Keep each fact to one sentence.
+- **witness_inferences**: Interpretive conclusions you drew from the observable evidence. These go beyond what is literally visible and involve judgment. Example: "The cookie consent banner suggests awareness of privacy rights." Keep each inference to one sentence.
+
+Rules:
+1. Every non-ND section MUST have at least one entry in witness_facts.
+2. ND sections MAY omit both arrays or provide empty arrays.
+3. Facts must be strictly observable — no hedging, speculation, or interpretation.
+4. Inferences must be clearly interpretive — they explain WHY the evidence maps to the score.
+5. Aim for 1–3 facts and 1–2 inferences per section. Do not pad with trivial observations.
+
 ## OUTPUT FORMAT
 
 You MUST output a single JSON object (no markdown fences, no explanation before or after). Section names in the scores array MUST use the full word "Article" (e.g. "Article 1", "Article 19"), NOT abbreviated "Art." The JSON must follow this exact schema:
@@ -198,7 +212,9 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
       "final": <number|null>,
       "directionality": [...],
       "evidence": "<H|M|L|null>",
-      "note": "<text>"
+      "note": "<text>",
+      "witness_facts": ["<observable statement>", ...],
+      "witness_inferences": ["<interpretive statement>", ...]
     }
     // ... 31 total rows (Preamble + Article 1-30)
   ],
@@ -299,7 +315,7 @@ Output ONLY the JSON evaluation object, no other text.`;
     },
     body: JSON.stringify({
       model: EVAL_MODEL,
-      max_tokens: 8192,
+      max_tokens: 10240,
       system: METHODOLOGY_SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
     }),

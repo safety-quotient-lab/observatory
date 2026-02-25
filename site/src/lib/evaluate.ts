@@ -51,7 +51,7 @@ export async function callClaude(
     },
     body: JSON.stringify({
       model: EVAL_MODEL,
-      max_tokens: 8192,
+      max_tokens: 10240,
       system: [
         {
           type: 'text',
