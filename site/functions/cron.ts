@@ -567,6 +567,30 @@ export default {
     }
     console.log(`Inserted ${insertedCount} new stories`);
 
+    // ─── STEP 3.1: Record feed source memberships ───
+
+    try {
+      const feedStmts: D1PreparedStatement[] = [];
+      for (const [id, feeds] of feedMap) {
+        for (const feed of feeds) {
+          feedStmts.push(
+            db
+              .prepare(
+                `INSERT OR IGNORE INTO story_feeds (hn_id, feed) VALUES (?, ?)`
+              )
+              .bind(id, feed)
+          );
+        }
+      }
+      // Batch in chunks of 100
+      for (let i = 0; i < feedStmts.length; i += 100) {
+        await db.batch(feedStmts.slice(i, i + 100));
+      }
+      console.log(`[feeds] Recorded feed memberships for ${feedMap.size} stories`);
+    } catch (err) {
+      console.error('Feed tracking failed (non-fatal):', err);
+    }
+
     // ─── STEP 3.5: Update hn_rank on stories table ───
     // Clear all existing ranks, then set current rank for top stories
     try {

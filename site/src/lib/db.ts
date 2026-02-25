@@ -1226,6 +1226,39 @@ export async function getStoryScatterData(db: D1Database, limit = 500): Promise<
   return results;
 }
 
+// --- Feed source analytics ---
+
+export interface FeedStat {
+  feed: string;
+  story_count: number;
+  avg_hrcb: number | null;
+  positive_pct: number;
+  negative_pct: number;
+}
+
+export async function getFeedStats(db: D1Database): Promise<FeedStat[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT sf.feed,
+                COUNT(DISTINCT sf.hn_id) as story_count,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_hrcb,
+                CAST(SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean > 0.05 THEN 1 ELSE 0 END) AS REAL)
+                  / MAX(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 1) as positive_pct,
+                CAST(SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean < -0.05 THEN 1 ELSE 0 END) AS REAL)
+                  / MAX(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 1) as negative_pct
+         FROM story_feeds sf
+         JOIN stories s ON s.hn_id = sf.hn_id
+         GROUP BY sf.feed
+         ORDER BY story_count DESC`
+      )
+      .all<FeedStat>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
 // --- User profiles ---
 
 export interface HnUser {
