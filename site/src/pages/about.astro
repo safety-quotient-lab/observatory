@@ -18,7 +18,7 @@ import Base from '../layouts/Base.astro';
         <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 15px;">
           A cron worker crawls HN stories every 5 minutes across 5 lists (top, new, best, ask, show),
           cleans HTML content, and dispatches evaluations via a Cloudflare Queue. A separate consumer worker
-          evaluates each URL against the UDHR methodology (v3.4) using Claude, with DCP caching per domain
+          evaluates each URL against the UDHR methodology (v3.7) using Claude, with DCP caching per domain
           and content snapshots stored in R2. Results are displayed alongside standard HN metadata.
           The evaluator operates as a <b style="color: #ff6600;">Fair Witness</b> — reporting only what is
           directly observable, with no inference beyond the evidence.
@@ -123,6 +123,82 @@ import Base from '../layouts/Base.astro';
           on any item page to switch between the standard view and a stripped-down view showing only the evidence breakdown.
         </p>
 
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Story-Level Labels</p>
+
+        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+          Each evaluation generates three story-level labels that provide a quick overview:
+        </p>
+
+        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
+          <tr>
+            <td><span class="badge" style="background: rgba(99,102,241,0.15); color: #818cf8;">Theme Tag</span></td>
+            <td style="color: #828282; padding-left: 6px;">Dominant human rights theme (e.g., "Privacy & Surveillance", "Free Expression")</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee;">Sentiment</span></td>
+            <td style="color: #828282; padding-left: 6px;">Overall disposition: Champions, Advocates, Acknowledges, Neutral, Neglects, Undermines, Hostile</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(107,114,128,0.15); color: #888;">Summary</span></td>
+            <td style="color: #828282; padding-left: 6px;">2-3 sentence narrative summary in Fair Witness style</td>
+          </tr>
+        </table>
+
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Supplementary Signals</p>
+
+        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+          Nine supplementary signals capture <i>how</i> content communicates, orthogonal to HRCB which measures
+          <i>directional lean</i>. These are grounded in established psychometric and information quality frameworks.
+        </p>
+
+        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;" width="100%">
+          <tr>
+            <td><span class="badge" style="background: rgba(245,158,11,0.15); color: #f59e0b;">EQ</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px; width: 140px;">Epistemic Quality</td>
+            <td style="color: #828282; padding-left: 6px;">Source quality, evidence reasoning, uncertainty handling, purpose transparency. Based on the CRAAP Test framework from library science.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(220,38,38,0.15); color: #dc2626;">PT</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Propaganda Flags</td>
+            <td style="color: #828282; padding-left: 6px;">Detects 18 propaganda techniques (loaded language, strawman, whataboutism, etc.). Based on Da San Martino et al. (2019) PTC-18 corpus.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">SO</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Solution Orientation</td>
+            <td style="color: #828282; padding-left: 6px;">Problem-only vs solution-oriented framing, reader agency score.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7;">ET</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Emotional Tone</td>
+            <td style="color: #828282; padding-left: 6px;">Primary tone label + valence/arousal/dominance dimensions. Based on Russell's Circumplex Model of Affect.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">SR</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Stakeholder Voice</td>
+            <td style="color: #828282; padding-left: 6px;">Who speaks vs who is spoken about, perspective count, voice balance. Power-axis taxonomy aligned with UDHR rights-holder/duty-bearer framework.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">TF</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Temporal Framing</td>
+            <td style="color: #828282; padding-left: 6px;">Retrospective, present, or prospective focus; time horizon from immediate to long-term.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">GS</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Geographic Scope</td>
+            <td style="color: #828282; padding-left: 6px;">Local, national, regional, or global scope with specific regions mentioned.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308;">CL</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Complexity Level</td>
+            <td style="color: #828282; padding-left: 6px;">Reading level, jargon density, and assumed knowledge requirements.</td>
+          </tr>
+          <tr>
+            <td><span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">TD</span></td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Transparency</td>
+            <td style="color: #828282; padding-left: 6px;">Author identified, conflicts disclosed, funding disclosed.</td>
+          </tr>
+        </table>
+
         <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
 
         <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
@@ -158,22 +234,27 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Evidence Strength</p>
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Evidence Strength & Confidence</p>
 
-        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
+        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 10px;">
           <tr>
             <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">High</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Direct, explicit content with strong sourcing</td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Direct, explicit content with strong sourcing (max score 1.0)</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(234,179,8,0.2); color: #eab308;">Medium</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Clear signal but may be secondary</td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Clear signal but may be secondary (max score 0.7)</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(107,114,128,0.2); color: #6b7280;">Low</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Tangential, indirect, or weakly sourced</td>
+            <td style="color: #c9c9c9; padding-left: 6px;">Tangential, indirect, or weakly sourced (max score 0.4)</td>
           </tr>
         </table>
+
+        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
+          <b style="color: #c9c9c9;">Confidence</b> is an evidence-weighted aggregate across all 31 provisions:
+          H=1.0, M=0.6, L=0.2, ND=0.0. Higher confidence means more provisions had strong evidence.
+        </p>
 
         <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Directionality Markers</p>
 
@@ -204,8 +285,10 @@ import Base from '../layouts/Base.astro';
           <li>Channel weights are assigned based on content type</li>
           <li>A Domain Context Profile (DCP) is constructed from 8 domain-level elements</li>
           <li>Each of 31 UDHR provisions is scored for editorial and structural signals</li>
-          <li>Context modifiers from the DCP are applied to relevant articles</li>
-          <li>Aggregate statistics are computed (weighted mean, evidence profile, etc.)</li>
+          <li>Fair Witness evidence (observable facts + inferences) is recorded per provision</li>
+          <li>Story-level labels are generated (theme tag, sentiment, executive summary)</li>
+          <li>Nine supplementary signals are assessed (EQ, PT, SO, ET, SR, TF, GS, CL, TD)</li>
+          <li>Aggregate statistics are computed (weighted mean, evidence profile, confidence, SETL, etc.)</li>
           <li>A final classification is assigned (Strong positive to Strong negative)</li>
         </ol>
 
@@ -217,11 +300,14 @@ import Base from '../layouts/Base.astro';
             { v: 'v2', desc: 'On-domain-only, ND vs 0.0 distinction, evidence strength' },
             { v: 'v3', desc: 'URL-level HRCB with Editorial/Structural channels, content types, rubrics' },
             { v: 'v3.3', desc: 'Consolidation + roadmap' },
-            { v: 'v3.4', desc: 'Current — Batch protocol, adversarial robustness, JSON output' },
+            { v: 'v3.4', desc: 'Batch protocol, adversarial robustness, JSON output' },
+            { v: 'v3.5', desc: 'Fair Witness evidence layer, SETL, confidence metric' },
+            { v: 'v3.6', desc: 'Story-level labels (theme tag, sentiment, executive summary)' },
+            { v: 'v3.7', desc: 'Current — Nine supplementary signals (EQ, PT, SO, ET, SR, TF, GS, CL, TD)' },
           ].map(({ v, desc }) => (
             <tr>
               <td>
-                <span class="badge" style={v === 'v3.4' ? 'background: rgba(255,102,0,0.2); color: #ff6600;' : 'background: #1a1a25; color: #828282;'}>
+                <span class="badge" style={v === 'v3.7' ? 'background: rgba(255,102,0,0.2); color: #ff6600;' : 'background: #1a1a25; color: #828282;'}>
                   {v}
                 </span>
               </td>
@@ -234,7 +320,7 @@ import Base from '../layouts/Base.astro';
 
         <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); background: #12121a; border: 1px solid #222230; border-radius: 4px; margin-bottom: 15px;" width="100%">
           <tr>
-            <td style="color: #828282;" class="score-font">Schema</td><td style="color: #c9c9c9;" class="score-font">3.4</td>
+            <td style="color: #828282;" class="score-font">Schema</td><td style="color: #c9c9c9;" class="score-font">3.7</td>
             <td style="color: #828282;" class="score-font">Framework</td><td style="color: #c9c9c9;" class="score-font">Astro + CF Pages</td>
           </tr>
           <tr>
