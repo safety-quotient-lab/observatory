@@ -16,10 +16,17 @@ const articleTitle = ARTICLE_TITLES[section] || section;
 const udhrSection = getSection(articleNum);
 
 const db = Astro.locals.runtime.env.DB;
+const url = new URL(Astro.request.url);
+const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
+const PER_PAGE = 30;
+const offset = (page - 1) * PER_PAGE;
+
 const [rankings, coverage] = await Promise.all([
-  getArticleRanking(db, articleNum),
+  getArticleRanking(db, articleNum, PER_PAGE + 1, offset),
   getArticleCoverage(db),
 ]);
+const hasMore = rankings.length > PER_PAGE;
+const displayRankings = hasMore ? rankings.slice(0, PER_PAGE) : rankings;
 
 // Build a map of section -> { signal_count, avg_final } for the article selector
 const coverageMap = new Map(coverage.map(c => [c.section, c]));
@@ -49,6 +56,14 @@ const jsonLd = udhrSection ? {
 
 <Base title={`${section}: ${articleTitle} — Rankings`}>
   {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
+  {/* Breadcrumb */}
+  <div style="padding: 4px 0; font-size: var(--font-xs); color: #555;">
+    <a href="/" style="color: #555;">home</a>
+    <span style="color: #333;"> / </span>
+    <a href="/articles" style="color: #555;">articles</a>
+    <span style="color: #333;"> / </span>
+    <span style="color: #888;">{section}</span>
+  </div>
   {/* Header */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
@@ -60,6 +75,7 @@ const jsonLd = udhrSection ? {
     <tr>
       <td class="subtext" style="padding: 4px 0 8px 0;">
         Stories ranked by their score on this UDHR provision.
+        {page > 1 && <span style="color: #555;"> · page {page}</span>}
         {prevNum !== null && (
           <>
             <span> | </span>
@@ -133,7 +149,7 @@ const jsonLd = udhrSection ? {
     </tr>
   </table>
 
-  {rankings.length > 0 ? (
+  {displayRankings.length > 0 ? (
     <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
       <tr style="color: #828282; font-size: var(--font-sm);">
         <td width="30">#</td>
@@ -146,12 +162,12 @@ const jsonLd = udhrSection ? {
         <td width="60" align="center" title="Evidence strength (High, Medium, Low)" style="cursor: help;">Evidence</td>
         <td width="60" align="center">Overall</td>
       </tr>
-      {rankings.map((row, i) => {
+      {displayRankings.map((row, i) => {
         const rowSetl = computeSetl(row.structural, row.editorial);
         const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
         return (
         <tr style="border-top: 1px solid #222230;">
-          <td style="color: #828282;" class="score-font">{i + 1}.</td>
+          <td style="color: #828282;" class="score-font">{offset + i + 1}.</td>
           <td align="center">
             <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
               {formatScore(row.final)}
@@ -236,4 +252,15 @@ const jsonLd = udhrSection ? {
     );
   })()}
 
+  {hasMore && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
+      <tr>
+        <td style="padding-left: 40px;">
+          <a href={`/article/${articleNum}?p=${page + 1}`} class="morelink" style="color: #828282; font-size: var(--font-base);">
+            More
+          </a>
+        </td>
+      </tr>
+    </table>
+  )}
 </Base>

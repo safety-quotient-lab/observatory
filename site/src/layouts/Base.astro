@@ -35,6 +35,7 @@ const triggerSecret = Astro.locals.runtime?.env?.TRIGGER_SECRET || '';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <link rel="alternate" type="application/atom+xml" title="HN HRCB Feed" href="/feed.xml" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="HN HRCB" />
     <meta property="og:title" content={ogTitle || title} />

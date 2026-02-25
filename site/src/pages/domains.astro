@@ -11,7 +11,34 @@ const sort = (url.searchParams.get('sort') || 'count') as DomainSortOption;
 const validDomainSorts: DomainSortOption[] = ['count', 'score', 'setl', 'conf'];
 const safeSort = validDomainSorts.includes(sort) ? sort : 'count';
 
-const domains = await getAllDomainStats(db, safeSort, 100);
+const classify = url.searchParams.get('class') || 'all';
+const validClassify = ['all', 'positive', 'negative', 'neutral', 'contested'];
+const safeClassify = validClassify.includes(classify) ? classify : 'all';
+
+// Fetch more to allow filtering
+const allDomains = await getAllDomainStats(db, safeSort, 500);
+
+// Filter by classification
+const domains = safeClassify === 'all' ? allDomains.slice(0, 100) : allDomains.filter(d => {
+  if (d.avg_score === null) return false;
+  switch (safeClassify) {
+    case 'positive': return d.avg_score > 0.05;
+    case 'negative': return d.avg_score < -0.05;
+    case 'neutral': return d.avg_score >= -0.05 && d.avg_score <= 0.05;
+    case 'contested': return d.count >= 3 && d.avg_score !== null && Math.abs(d.avg_score) < 0.15;
+    default: return true;
+  }
+}).slice(0, 100);
+
+function buildDomainUrl(params: Record<string, string>): string {
+  const p = new URLSearchParams();
+  const s = params.sort ?? safeSort;
+  const c = params.class ?? safeClassify;
+  if (s !== 'count') p.set('sort', s);
+  if (c !== 'all') p.set('class', c);
+  const qs = p.toString();
+  return qs ? `/domains?${qs}` : '/domains';
+}
 ---
 
 <Base title="Domains — HN HRCB">
@@ -20,10 +47,9 @@ const domains = await getAllDomainStats(db, safeSort, 100);
       <td>
         <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Domains</span>
         <span style="color: #828282; margin-left: 8px; font-size: var(--font-base);">
-          {domains.length} domains
+          {domains.length} domains{safeClassify !== 'all' ? ` (${safeClassify})` : ''}
         </span>
-        <span style="color: #444; margin: 0 6px;">·</span>
-        <span class="subtext" style="font-size: var(--font-sm);">
+        <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
           <span style="color: #666;">sort:</span>
           {(['count', 'score', 'setl', 'conf'] as const).map((opt, i) => {
             const labels = { count: 'stories', score: 'hrcb', setl: 'setl', conf: 'confidence' } as any;
@@ -32,12 +58,23 @@ const domains = await getAllDomainStats(db, safeSort, 100);
                 {i > 0 && <span style="color: #444;"> | </span>}
                 {safeSort === opt
                   ? <span style="color: #ff6600; font-weight: bold;">{labels[opt]}</span>
-                  : <a href={`/domains?sort=${opt}`}>{labels[opt]}</a>
+                  : <a href={buildDomainUrl({ sort: opt })}>{labels[opt]}</a>
                 }
               </>
             );
           })}
-        </span>
+          <br />
+          <span style="color: #666;">show:</span>
+          {(['all', 'positive', 'negative', 'neutral', 'contested'] as const).map((opt, i) => (
+            <>
+              {i > 0 && <span style="color: #444;"> | </span>}
+              {safeClassify === opt
+                ? <span style="color: #ff6600; font-weight: bold;">{opt}</span>
+                : <a href={buildDomainUrl({ class: opt })}>{opt}</a>
+              }
+            </>
+          ))}
+        </div>
       </td>
     </tr>
   </table>
@@ -75,7 +112,12 @@ const domains = await getAllDomainStats(db, safeSort, 100);
             ))}
           </table>
         ) : (
-          <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No domain data yet.</div>
+          <div style="color: #555; font-size: var(--font-sm); padding: 10px;">
+            {safeClassify !== 'all' ? `No ${safeClassify} domains found.` : 'No domain data yet.'}
+            {safeClassify !== 'all' && (
+              <a href="/domains" style="color: #ff6600; margin-left: 6px;">show all</a>
+            )}
+          </div>
         )}
       </td>
     </tr>

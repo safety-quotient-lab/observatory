@@ -1,0 +1,96 @@
+---
+import Base from '../layouts/Base.astro';
+import EvalCard from '../components/EvalCard.astro';
+import { getFilteredStoriesWithScores } from '../lib/db';
+
+const db = Astro.locals.runtime.env.DB;
+const url = new URL(Astro.request.url);
+
+// Default to yesterday
+const today = new Date();
+const yesterday = new Date(today);
+yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+const defaultDay = yesterday.toISOString().slice(0, 10);
+
+const day = url.searchParams.get('day') || defaultDay;
+// Validate format
+const validDay = /^\d{4}-\d{2}-\d{2}$/.test(day) && !isNaN(new Date(day + 'T00:00:00Z').getTime());
+const safeDay = validDay ? day : defaultDay;
+
+const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
+const PER_PAGE = 30;
+const offset = (page - 1) * PER_PAGE;
+
+const stories = await getFilteredStoriesWithScores(db, 'hn_points', 'all', 'all', PER_PAGE + 1, offset, safeDay);
+const hasMore = stories.length > PER_PAGE;
+const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
+
+// Navigation: prev/next day
+const dayDate = new Date(safeDay + 'T00:00:00Z');
+const prevDate = new Date(dayDate);
+prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+const nextDate = new Date(dayDate);
+nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+const prevDay = prevDate.toISOString().slice(0, 10);
+const nextDay = nextDate.toISOString().slice(0, 10);
+const isToday = safeDay === today.toISOString().slice(0, 10);
+const isFuture = dayDate >= today;
+
+// Format date for display
+const displayDate = dayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+---
+
+<Base title={`${displayDate} — HN HRCB`}>
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 4px 0;">
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">{displayDate}</span>
+        <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
+          <a href={`/front?day=${prevDay}`}>&larr; {prevDay}</a>
+          {!isFuture && !isToday && (
+            <>
+              <span style="color: #444;"> | </span>
+              <a href={`/front?day=${nextDay}`}>{nextDay} &rarr;</a>
+            </>
+          )}
+          <span style="color: #444;"> | </span>
+          <a href="/front">yesterday</a>
+          <span style="color: #444;"> | </span>
+          <span style="color: #555;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
+          {page > 1 && <span style="color: #555;"> · page {page}</span>}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
+    {displayStories.map((story, i) => (
+      <EvalCard
+        story={story}
+        rank={offset + i + 1}
+      />
+    ))}
+  </table>
+
+  {displayStories.length === 0 && (
+    <table width="100%">
+      <tr>
+        <td style="padding: 40px 20px; text-align: center; color: #828282;">
+          No stories from {safeDay}.
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {hasMore && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
+      <tr>
+        <td style="padding-left: 40px;">
+          <a href={`/front?day=${safeDay}&p=${page + 1}`} class="morelink" style="color: #828282; font-size: var(--font-base);">
+            More
+          </a>
+        </td>
+      </tr>
+    </table>
+  )}
+</Base>

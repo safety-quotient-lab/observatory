@@ -1,8 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
-import { getStoriesByDomain, getDomainSetl } from '../../lib/db';
-import { scoreToColor, formatScore, formatSetl, setlToColor } from '../../lib/colors';
+import DcpTable from '../../components/DcpTable.astro';
+import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp } from '../../lib/db';
+import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
 
 const { domain } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
@@ -16,18 +17,38 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
-const [{ stories, total, avgScore }, domainSetl] = await Promise.all([
+const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson] = await Promise.all([
   getStoriesByDomain(db, domain, PER_PAGE + 1, offset),
   getDomainSetl(db, domain),
+  getDomainDetailStats(db, domain),
+  getDomainFingerprints(db, [domain]),
+  getDomainDcp(db, domain),
 ]);
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
-const evaluatedCount = stories.filter(s => s.eval_status === 'done').length;
+const fp = fingerprints.get(domain);
+let dcpElements: any[] | null = null;
+if (dcpJson) {
+  try {
+    const parsed = JSON.parse(dcpJson);
+    dcpElements = parsed.elements || parsed;
+  } catch { /* ignore */ }
+}
 ---
 
 <Base title={`${domain} — HN HRCB`} canonicalUrl={`${url.origin}/domain/${domain}`}>
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
+  {/* Breadcrumb */}
+  <div style="padding: 4px 0; font-size: var(--font-xs); color: #555;">
+    <a href="/" style="color: #555;">home</a>
+    <span style="color: #333;"> / </span>
+    <a href="/domains" style="color: #555;">domains</a>
+    <span style="color: #333;"> / </span>
+    <span style="color: #888;">{domain}</span>
+  </div>
+
+  {/* Domain header card */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
@@ -35,24 +56,89 @@ const evaluatedCount = stories.filter(s => s.eval_status === 'done').length;
             <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">{domain}</span>
             <a href={`https://${domain}`} target="_blank" rel="noopener" style="color: #ff6600; font-size: var(--font-sm);">visit &rarr;</a>
           </div>
-          <div style="margin-top: 6px; font-size: var(--font-sm); color: #888; display: flex; gap: 16px;">
-            <span>{total} stories</span>
-            {avgScore !== null && (
-              <span>
-                avg HRCB: <span class="score-font" style={`color: ${scoreToColor(avgScore)}; font-weight: bold;`}>{formatScore(avgScore)}</span>
-              </span>
+
+          {/* Stats row */}
+          <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-top: 8px;">
+            <tr>
+              <td style="color: #666; width: 85px;">Stories</td>
+              <td class="score-font" style="color: #888;">{total} <span style="color: #555;">({detail.evaluatedCount} evaluated)</span></td>
+              <td style="color: #666; width: 85px;">Avg HRCB</td>
+              <td class="score-font" style={`color: ${scoreToColor(avgScore)};`}>{formatScore(avgScore)}</td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Avg SETL</td>
+              <td class="score-font" style={`color: ${setlToColor(domainSetl)};`}>{formatSetl(domainSetl)}</td>
+              <td style="color: #666;">Avg Conf</td>
+              <td class="score-font" style={`color: ${confidenceToColor(detail.avgConf)};`}>{formatConfidence(detail.avgConf)}</td>
+            </tr>
+            {detail.avgEditorial !== null && (
+              <tr>
+                <td style="color: #666;">Avg Editorial</td>
+                <td class="score-font" style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</td>
+                <td style="color: #666;">Avg Structural</td>
+                <td class="score-font" style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</td>
+              </tr>
             )}
-            {domainSetl !== null && (
-              <span>
-                avg SETL: <span class="score-font" style={`color: ${setlToColor(domainSetl)}; font-weight: bold;`}>{formatSetl(domainSetl)}</span>
-              </span>
-            )}
-            {page > 1 && <span>page {page}</span>}
-          </div>
+          </table>
+
+          {/* Fingerprint */}
+          {fp && (
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25;">
+              <span style="color: #555; font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
+              <svg width="186" height="14" viewBox="0 0 186 14" style="vertical-align: middle;">
+                {fp.map((score, i) => (
+                  <rect x={i * 6} y="0" width="5" height="14" rx="1"
+                        fill={scoreToColor(score)}>
+                    <title>{i === 0 ? 'Preamble' : `Article ${i}`}: {score !== null ? formatScore(score) : 'ND'}</title>
+                  </rect>
+                ))}
+              </svg>
+            </div>
+          )}
+
+          {/* Top/bottom stories */}
+          {detail.topStory && detail.bottomStory && detail.topStory.hn_id !== detail.bottomStory.hn_id && (
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25; font-size: var(--font-sm);">
+              <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                <span>
+                  <span style="color: #555;">best:</span>
+                  <span class="score-font" style={`color: ${scoreToColor(detail.topStory.hcb_weighted_mean)};`}>{formatScore(detail.topStory.hcb_weighted_mean)}</span>
+                  <a href={`/item/${detail.topStory.hn_id}`} style="color: #888; margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
+                </span>
+                <span>
+                  <span style="color: #555;">worst:</span>
+                  <span class="score-font" style={`color: ${scoreToColor(detail.bottomStory.hcb_weighted_mean)};`}>{formatScore(detail.bottomStory.hcb_weighted_mean)}</span>
+                  <a href={`/item/${detail.bottomStory.hn_id}`} style="color: #888; margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </td>
     </tr>
   </table>
+
+  {/* Cached DCP */}
+  {dcpElements && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Domain Context Profile
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">cached from evaluation</span>
+          </div>
+          <DcpTable elements={dcpElements} />
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Story list header */}
+  {total > 0 && (
+    <div style="padding: 4px 0; font-size: var(--font-sm); color: #555;">
+      {total} stories {page > 1 ? `· page ${page}` : ''}
+    </div>
+  )}
 
   <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
     {displayStories.map((story, i) => (

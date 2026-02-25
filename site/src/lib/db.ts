@@ -112,7 +112,8 @@ export async function getFilteredStoriesWithScores(
   filter: FilterOption = 'all',
   type: TypeOption = 'all',
   limit = 30,
-  offset = 0
+  offset = 0,
+  day?: string
 ): Promise<StoryWithMiniScores[]> {
   const conditions: string[] = ['1=1'];
   switch (filter) {
@@ -127,6 +128,15 @@ export async function getFilteredStoriesWithScores(
   switch (type) {
     case 'ask': conditions.push("s.hn_type = 'ask'"); break;
     case 'show': conditions.push("s.hn_type = 'show'"); break;
+  }
+
+  // Day filter: show stories from a specific date
+  if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
+    const dayStart = Math.floor(new Date(day + 'T00:00:00Z').getTime() / 1000);
+    const dayEnd = dayStart + 86400;
+    if (!isNaN(dayStart)) {
+      conditions.push(`s.hn_time >= ${dayStart} AND s.hn_time < ${dayEnd}`);
+    }
   }
 
   const where = conditions.join(' AND ');
@@ -241,7 +251,8 @@ export async function getStoryScores(db: D1Database, hnId: number): Promise<Scor
 export async function getArticleRanking(
   db: D1Database,
   articleNum: number,
-  limit = 200
+  limit = 30,
+  offset = 0
 ): Promise<ArticleRankingRow[]> {
   const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
   const { results } = await db
@@ -256,9 +267,9 @@ export async function getArticleRanking(
        JOIN stories s ON s.hn_id = sc.hn_id
        WHERE sc.section = ? AND sc.final IS NOT NULL
        ORDER BY sc.final DESC
-       LIMIT ?`
+       LIMIT ? OFFSET ?`
     )
-    .bind(section, limit)
+    .bind(section, limit, offset)
     .all<ArticleRankingRow>();
   return results;
 }
@@ -705,6 +716,64 @@ export async function getDomainSetl(db: D1Database, domain: string): Promise<num
     .bind(domain)
     .first<{ setl: number | null }>();
   return row?.setl ?? null;
+}
+
+export interface DomainDetailStats {
+  avgConf: number | null;
+  avgEditorial: number | null;
+  avgStructural: number | null;
+  evaluatedCount: number;
+  topStory: { hn_id: number; title: string; hcb_weighted_mean: number | null } | null;
+  bottomStory: { hn_id: number; title: string; hcb_weighted_mean: number | null } | null;
+}
+
+export async function getDomainDetailStats(db: D1Database, domain: string): Promise<DomainDetailStats> {
+  const stats = await db
+    .prepare(
+      `SELECT
+        AVG(CAST((COALESCE(hcb_evidence_h,0)*1.0 + COALESCE(hcb_evidence_m,0)*0.6 + COALESCE(hcb_evidence_l,0)*0.2) AS REAL)
+            / MAX(COALESCE(hcb_evidence_h,0) + COALESCE(hcb_evidence_m,0) + COALESCE(hcb_evidence_l,0) + COALESCE(hcb_nd_count,0), 1)) as avg_conf,
+        SUM(CASE WHEN eval_status = 'done' THEN 1 ELSE 0 END) as evaluated_count
+       FROM stories WHERE domain = ? AND eval_status = 'done'`
+    )
+    .bind(domain)
+    .first<{ avg_conf: number | null; evaluated_count: number }>();
+
+  const editStructRow = await db
+    .prepare(
+      `SELECT AVG(sc.editorial) as avg_ed, AVG(sc.structural) as avg_st
+       FROM scores sc JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE s.domain = ? AND sc.final IS NOT NULL`
+    )
+    .bind(domain)
+    .first<{ avg_ed: number | null; avg_st: number | null }>();
+
+  const top = await db
+    .prepare(
+      `SELECT hn_id, title, hcb_weighted_mean FROM stories
+       WHERE domain = ? AND eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
+       ORDER BY hcb_weighted_mean DESC LIMIT 1`
+    )
+    .bind(domain)
+    .first<{ hn_id: number; title: string; hcb_weighted_mean: number | null }>();
+
+  const bottom = await db
+    .prepare(
+      `SELECT hn_id, title, hcb_weighted_mean FROM stories
+       WHERE domain = ? AND eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
+       ORDER BY hcb_weighted_mean ASC LIMIT 1`
+    )
+    .bind(domain)
+    .first<{ hn_id: number; title: string; hcb_weighted_mean: number | null }>();
+
+  return {
+    avgConf: stats?.avg_conf ?? null,
+    avgEditorial: editStructRow?.avg_ed ?? null,
+    avgStructural: editStructRow?.avg_st ?? null,
+    evaluatedCount: stats?.evaluated_count ?? 0,
+    topStory: top ?? null,
+    bottomStory: bottom ?? null,
+  };
 }
 
 export type DomainSortOption = 'count' | 'score' | 'setl' | 'conf';

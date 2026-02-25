@@ -19,11 +19,11 @@ const currentType = Astro.url.searchParams.get('type') || '';
         </b>
         <span style="margin-left: 10px; font-size: var(--font-base);">
           <a href="/" style={`color: black;${currentPath === '/' && !currentType ? ' font-weight: bold;' : ''}`}>new</a> |
-          <a href="https://news.ycombinator.com/past" style="color: black;">past</a> |
+          <a href="/front" style={`color: black;${currentPath === '/front' ? ' font-weight: bold;' : ''}`}>past</a> |
           <a href="https://news.ycombinator.com/newcomments" style="color: black;">comments</a> |
           <a href="/?type=ask" style={`color: black;${currentType === 'ask' ? ' font-weight: bold;' : ''}`}>ask</a> |
           <a href="/?type=show" style={`color: black;${currentType === 'show' ? ' font-weight: bold;' : ''}`}>show</a> |
-          <a href="/article/0" style={`color: black;${currentPath.startsWith('/article') ? ' font-weight: bold;' : ''}`}>by right</a> |
+          <a href="/articles" style={`color: black;${currentPath === '/articles' || currentPath.startsWith('/article/') ? ' font-weight: bold;' : ''}`}>articles</a> |
           <a href="/domains" style={`color: black;${currentPath === '/domains' || currentPath.startsWith('/domain/') ? ' font-weight: bold;' : ''}`}>domains</a> |
           <a href="/dashboard" style={`color: black;${currentPath === '/dashboard' ? ' font-weight: bold;' : ''}`}>dashboard</a> |
           <a href="/about" style={`color: black;${currentPath === '/about' ? ' font-weight: bold;' : ''}`}>about hrcb</a>
