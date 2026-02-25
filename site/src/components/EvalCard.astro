@@ -131,7 +131,7 @@ function timeAgo(unixTime: number): string {
   <td colspan="2"></td>
   <td class="subtext">
     {story.hn_score !== null && <span>{story.hn_score} points</span>}
-    {story.hn_by && <span> by <a href={`https://news.ycombinator.com/user?id=${story.hn_by}`}>{story.hn_by}</a></span>}
+    {story.hn_by && <span> by <a href={`/user/${story.hn_by}`}>{story.hn_by}</a></span>}
     <span> {timeAgo(story.hn_time)}</span>
     <span> | </span>
     {story.hn_comments !== null && (

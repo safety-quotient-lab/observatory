@@ -1,0 +1,401 @@
+---
+import Base from '../../layouts/Base.astro';
+import EvalCard from '../../components/EvalCard.astro';
+import { getStoriesByUser, getUserSetl, getUserDetailStats, getHnUser, getUserFingerprint, getUserSetlHistory } from '../../lib/db';
+import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
+
+const { username } = Astro.params;
+const db = Astro.locals.runtime.env.DB;
+
+if (!username || !/^[a-zA-Z0-9_-]+$/.test(username)) {
+  return Astro.redirect('/');
+}
+
+const url = new URL(Astro.request.url);
+const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
+const PER_PAGE = 30;
+const offset = (page - 1) * PER_PAGE;
+
+const [{ stories, total, avgScore }, userSetl, detail, hnUser, fingerprint, setlHistory] = await Promise.all([
+  getStoriesByUser(db, username, PER_PAGE + 1, offset),
+  getUserSetl(db, username),
+  getUserDetailStats(db, username),
+  getHnUser(db, username),
+  getUserFingerprint(db, username),
+  getUserSetlHistory(db, username),
+]);
+const hasMore = stories.length > PER_PAGE;
+const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
+
+// Get all pending story IDs for "evaluate all" button
+const pendingCount = total - detail.evaluatedCount;
+const pendingRow = await db
+  .prepare(`SELECT hn_id FROM stories WHERE hn_by = ? AND eval_status IN ('pending', 'failed') ORDER BY hn_time DESC LIMIT 200`)
+  .bind(username)
+  .all<{ hn_id: number }>();
+const pendingIds = pendingRow.results.map(r => r.hn_id);
+
+const accountAgeDays = hnUser?.created
+  ? Math.floor((Date.now() / 1000 - hnUser.created) / 86400)
+  : null;
+---
+
+<Base title={`${username} — HN HRCB`} canonicalUrl={`${url.origin}/user/${username}`}>
+  {/* Breadcrumb */}
+  <div style="padding: 4px 0; font-size: var(--font-xs); color: #555;">
+    <a href="/" style="color: #555;">home</a>
+    <span style="color: #333;"> / </span>
+    <span style="color: #555;">user</span>
+    <span style="color: #333;"> / </span>
+    <span style="color: #888;">{username}</span>
+  </div>
+
+  {/* User header card */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
+    <tr>
+      <td>
+        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">{username}</span>
+            {hnUser?.karma !== null && hnUser?.karma !== undefined && (
+              <span class="badge" style="background: rgba(255,102,0,0.15); color: #ff6600; font-size: var(--font-xs);">
+                {hnUser.karma.toLocaleString()} karma
+              </span>
+            )}
+            {accountAgeDays !== null && (
+              <span style="color: #555; font-size: var(--font-sm);">
+                {accountAgeDays >= 365
+                  ? `${Math.floor(accountAgeDays / 365)}y ${Math.floor((accountAgeDays % 365) / 30)}m`
+                  : `${accountAgeDays}d`} on HN
+              </span>
+            )}
+            <a href={`https://news.ycombinator.com/user?id=${username}`} target="_blank" rel="noopener" style="color: #ff6600; font-size: var(--font-sm);">HN profile &rarr;</a>
+            {pendingIds.length > 0 && (
+              <button
+                id="eval-all-btn"
+                data-ids={JSON.stringify(pendingIds)}
+                style="background: rgba(234,179,8,0.15); border: 1px solid rgba(234,179,8,0.3); cursor: pointer; padding: 3px 10px; font-size: var(--font-sm); color: #eab308; border-radius: 4px;"
+                title={`Evaluate ${pendingIds.length} pending stories sequentially`}
+              >
+                &#9654; Evaluate All ({pendingIds.length})
+              </button>
+            )}
+          </div>
+
+          {/* About text */}
+          {hnUser?.about && (
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25; color: #888; font-size: var(--font-sm); line-height: 1.5;" set:html={hnUser.about} />
+          )}
+
+          {/* Stats row */}
+          <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-top: 8px;">
+            <tr>
+              <td style="color: #666; width: 85px;">Stories</td>
+              <td class="score-font" style="color: #888;">{total} <span style="color: #555;">({detail.evaluatedCount} evaluated)</span></td>
+              <td style="color: #666; width: 85px;">Avg HRCB</td>
+              <td class="score-font" style={`color: ${scoreToColor(avgScore)};`}>{formatScore(avgScore)}</td>
+            </tr>
+            <tr>
+              <td style="color: #666;">Avg SETL</td>
+              <td class="score-font" style={`color: ${setlToColor(userSetl)};`}>{formatSetl(userSetl)}</td>
+              <td style="color: #666;">Avg Conf</td>
+              <td class="score-font" style={`color: ${confidenceToColor(detail.avgConf)};`}>{formatConfidence(detail.avgConf)}</td>
+            </tr>
+            {detail.avgEditorial !== null && (
+              <tr>
+                <td style="color: #666;">Avg Editorial</td>
+                <td class="score-font" style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</td>
+                <td style="color: #666;">Avg Structural</td>
+                <td class="score-font" style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</td>
+              </tr>
+            )}
+          </table>
+
+          {/* UDHR Fingerprint */}
+          {fingerprint.some((s: number | null) => s !== null) && (
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25;">
+              <span style="color: #555; font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
+              <svg width="186" height="14" viewBox="0 0 186 14" style="vertical-align: middle;">
+                {fingerprint.map((score: number | null, i: number) => (
+                  <rect x={i * 6} y="0" width="5" height="14" rx="1"
+                        fill={scoreToColor(score)}>
+                    <title>{i === 0 ? 'Preamble' : `Article ${i}`}: {score !== null ? formatScore(score) : 'ND'}</title>
+                  </rect>
+                ))}
+              </svg>
+            </div>
+          )}
+
+          {/* Top/bottom stories */}
+          {detail.topStory && detail.bottomStory && detail.topStory.hn_id !== detail.bottomStory.hn_id && (
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25; font-size: var(--font-sm);">
+              <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                <span>
+                  <span style="color: #555;">best:</span>
+                  <span class="score-font" style={`color: ${scoreToColor(detail.topStory.hcb_weighted_mean)};`}>{formatScore(detail.topStory.hcb_weighted_mean)}</span>
+                  <a href={`/item/${detail.topStory.hn_id}`} style="color: #888; margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
+                </span>
+                <span>
+                  <span style="color: #555;">worst:</span>
+                  <span class="score-font" style={`color: ${scoreToColor(detail.bottomStory.hcb_weighted_mean)};`}>{formatScore(detail.bottomStory.hcb_weighted_mean)}</span>
+                  <a href={`/item/${detail.bottomStory.hn_id}`} style="color: #888; margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* SETL History */}
+  {setlHistory.length > 1 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            SETL History
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              structural-editorial tension over time · {setlHistory.length} days
+            </span>
+          </div>
+          <div style="display: flex; gap: 8px; font-size: var(--font-xs); margin-bottom: 4px;">
+            <span style="color: #a78bfa;">Editorial</span>
+            <span style="color: #22d3ee;">Structural</span>
+            <span style="color: #fbbf24;">SETL</span>
+          </div>
+          <svg width="100%" viewBox={`0 0 ${Math.max(setlHistory.length * 20, 200)} 80`} style="max-height: 100px;">
+            {/* Zero line */}
+            <line x1="0" y1="40" x2={setlHistory.length * 20} y2="40" stroke="#222230" stroke-width="0.5" />
+            {/* Editorial line */}
+            <polyline
+              fill="none"
+              stroke="#a78bfa"
+              stroke-width="1.5"
+              points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_editorial * 35}`).join(' ')}
+            />
+            {/* Structural line */}
+            <polyline
+              fill="none"
+              stroke="#22d3ee"
+              stroke-width="1.5"
+              points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_structural * 35}`).join(' ')}
+            />
+            {/* SETL line */}
+            <polyline
+              fill="none"
+              stroke="#fbbf24"
+              stroke-width="2"
+              points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_setl * 35}`).join(' ')}
+            />
+          </svg>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Story list header */}
+  {total > 0 && (
+    <div style="padding: 4px 0; font-size: var(--font-sm); color: #555;">
+      {total} stories {page > 1 ? `· page ${page}` : ''}
+    </div>
+  )}
+
+  <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
+    {displayStories.map((story, i) => (
+      <EvalCard
+        story={story}
+        rank={offset + i + 1}
+      />
+    ))}
+  </table>
+
+  {displayStories.length === 0 && (
+    <table width="100%">
+      <tr>
+        <td style="padding: 40px 20px; text-align: center; color: #828282;">
+          No stories from this user.
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {hasMore && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
+      <tr>
+        <td style="padding-left: 40px;">
+          <a href={`/user/${username}?p=${page + 1}`} class="morelink" style="color: #828282; font-size: var(--font-base);">
+            More
+          </a>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Batch eval progress bar */}
+  <div id="eval-all-progress" style="display: none; padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; margin-bottom: 10px; position: sticky; bottom: 8px; z-index: 10;">
+    <div style="display: flex; align-items: center; gap: 10px; font-size: var(--font-sm);">
+      <span class="eval-spinner" style="color: #60a5fa; display: inline-block;">&#9881;</span>
+      <span id="eval-all-status" style="color: #888;">Starting...</span>
+      <span id="eval-all-counter" class="score-font" style="color: #555; margin-left: auto;"></span>
+      <button id="eval-all-stop" style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 2px 8px; font-size: var(--font-xs); color: #dc2626; border-radius: 4px;">Stop</button>
+    </div>
+    <div style="margin-top: 6px; background: #222230; border-radius: 3px; height: 4px; overflow: hidden;">
+      <div id="eval-all-bar" style="height: 100%; background: #eab308; width: 0%; transition: width 0.3s;"></div>
+    </div>
+    <div id="eval-all-log" style="margin-top: 6px; max-height: 120px; overflow-y: auto; font-size: var(--font-xs); color: #555;"></div>
+  </div>
+
+  <script is:inline>
+  (function() {
+    var btn = document.getElementById('eval-all-btn');
+    if (!btn) return;
+
+    var ids = JSON.parse(btn.getAttribute('data-ids'));
+    var stopped = false;
+    var DELAY_MS = 3000; // 3s between evaluations
+
+    btn.addEventListener('click', function() {
+      if (btn.disabled) return;
+
+      // Gate: require donation
+      if (!localStorage.getItem('hrcb_donated')) {
+        var modal = document.getElementById('donate-modal');
+        if (modal) {
+          // Store reference so modal can re-trigger
+          window.__pendingEvalAll = true;
+          modal.style.display = 'flex';
+        }
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Running...';
+      btn.style.color = '#60a5fa';
+      btn.style.borderColor = 'rgba(96,165,250,0.3)';
+      btn.style.background = 'rgba(96,165,250,0.15)';
+
+      var progress = document.getElementById('eval-all-progress');
+      var status = document.getElementById('eval-all-status');
+      var counter = document.getElementById('eval-all-counter');
+      var bar = document.getElementById('eval-all-bar');
+      var log = document.getElementById('eval-all-log');
+      var stopBtn = document.getElementById('eval-all-stop');
+
+      progress.style.display = 'block';
+      stopped = false;
+
+      stopBtn.addEventListener('click', function() {
+        stopped = true;
+        status.textContent = 'Stopped by user';
+        stopBtn.disabled = true;
+      });
+
+      var total = ids.length;
+      var done = 0;
+      var succeeded = 0;
+      var failed = 0;
+
+      function addLog(msg, color) {
+        var line = document.createElement('div');
+        line.style.color = color || '#555';
+        line.textContent = msg;
+        log.appendChild(line);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      function updateCounter() {
+        counter.textContent = done + '/' + total + ' (' + succeeded + ' ok, ' + failed + ' err)';
+        bar.style.width = (done / total * 100) + '%';
+      }
+
+      var ts = document.body.dataset.ts;
+
+      async function evalOne(hnId) {
+        status.textContent = 'Evaluating #' + hnId + '...';
+        var headers = {};
+        if (ts) headers['Authorization'] = 'Bearer ' + ts;
+
+        try {
+          var res = await fetch('/api/trigger/' + hnId, { method: 'POST', headers: headers });
+          var ct = res.headers.get('content-type') || '';
+
+          if (ct.indexOf('text/event-stream') !== -1) {
+            var reader = res.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+
+            while (true) {
+              var chunk = await reader.read();
+              if (chunk.done) break;
+              buffer += decoder.decode(chunk.value, { stream: true });
+
+              var parts = buffer.split('\n\n');
+              buffer = parts.pop() || '';
+
+              for (var p = 0; p < parts.length; p++) {
+                var lines = parts[p].split('\n');
+                var evType = '', evData = '';
+                for (var l = 0; l < lines.length; l++) {
+                  if (lines[l].indexOf('event: ') === 0) evType = lines[l].slice(7);
+                  if (lines[l].indexOf('data: ') === 0) evData = lines[l].slice(6);
+                }
+                if (!evType || !evData) continue;
+                try {
+                  var d = JSON.parse(evData);
+                  if (evType === 'status') {
+                    status.textContent = '#' + hnId + ': ' + d.message;
+                  } else if (evType === 'done') {
+                    succeeded++;
+                    var score = typeof d.score === 'number' ? d.score.toFixed(2) : '?';
+                    addLog('#' + hnId + ': ' + score + ' (' + d.classification + ')', d.score > 0 ? '#16a34a' : d.score < 0 ? '#dc2626' : '#eab308');
+                  } else if (evType === 'error') {
+                    failed++;
+                    addLog('#' + hnId + ': ' + (d.error || 'error'), '#dc2626');
+                  }
+                } catch(e) {}
+              }
+            }
+          } else {
+            var json = await res.json();
+            if (res.status === 409) {
+              addLog('#' + hnId + ': ' + (json.error || 'skipped'), '#555');
+              succeeded++;
+            } else {
+              failed++;
+              addLog('#' + hnId + ': ' + (json.error || 'error'), '#dc2626');
+            }
+          }
+        } catch(e) {
+          failed++;
+          addLog('#' + hnId + ': network error', '#dc2626');
+        }
+        done++;
+        updateCounter();
+      }
+
+      async function run() {
+        for (var i = 0; i < ids.length; i++) {
+          if (stopped) break;
+          await evalOne(ids[i]);
+          if (stopped) break;
+          // Rate limit: wait between evaluations
+          if (i < ids.length - 1) {
+            status.textContent = 'Waiting ' + (DELAY_MS / 1000) + 's before next...';
+            await new Promise(function(r) { setTimeout(r, DELAY_MS); });
+          }
+        }
+        bar.style.background = stopped ? '#dc2626' : '#16a34a';
+        status.textContent = stopped ? 'Stopped — ' + done + ' processed' : 'Complete — ' + succeeded + ' evaluated, ' + failed + ' failed';
+        btn.textContent = 'Done';
+        btn.style.color = '#16a34a';
+        btn.style.borderColor = 'rgba(22,163,106,0.3)';
+        btn.style.background = 'rgba(22,163,106,0.15)';
+        stopBtn.style.display = 'none';
+      }
+
+      run();
+    });
+  })();
+  </script>
+</Base>

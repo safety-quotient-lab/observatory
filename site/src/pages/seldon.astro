@@ -1,15 +1,16 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getDailyHrcb, getDailyContentTypeHrcb, getFeedDailyHrcb } from '../lib/db';
+import { getDailyHrcb, getDailyContentTypeHrcb, getFeedDailyHrcb, getGlobalSetlHistory } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 import { CONTENT_TYPE_LABELS } from '../lib/types';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [dailyHrcb, dailyContentType, dailyFeed] = await Promise.all([
+const [dailyHrcb, dailyContentType, dailyFeed, globalSetl] = await Promise.all([
   getDailyHrcb(db, 90),
   getDailyContentTypeHrcb(db, 90),
   getFeedDailyHrcb(db, 90),
+  getGlobalSetlHistory(db, 90),
 ]);
 
 // Compute rolling averages (7-day, 30-day)
@@ -212,6 +213,73 @@ const regimeData = JSON.stringify(regimeChanges);
       </tr>
     </table>
   )}
+
+  {/* Global SETL Trend (Chapel Perilous) */}
+  {globalSetl.length > 1 && (() => {
+    const setlW = Math.max(globalSetl.length * 12, 300);
+    const setlH = 120;
+    function setlY(v: number): number { return setlH / 2 - (v * setlH * 0.4); }
+    // Compute 7-day rolling SETL
+    const rollingSetl7: { day: string; avg: number }[] = [];
+    for (let i = 0; i < globalSetl.length; i++) {
+      const start = Math.max(0, i - 6);
+      const slice = globalSetl.slice(start, i + 1);
+      rollingSetl7.push({ day: globalSetl[i].day, avg: slice.reduce((s, d) => s + d.avg_setl, 0) / slice.length });
+    }
+    return (
+      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+        <tr>
+          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+              Global SETL Trend
+              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                structural-editorial tension across all content · {globalSetl.length} days
+              </span>
+            </div>
+            <div style="display: flex; gap: 12px; font-size: var(--font-xs); margin-bottom: 4px;">
+              <span style="color: #a78bfa;">Editorial</span>
+              <span style="color: #22d3ee;">Structural</span>
+              <span style="color: #555;">SETL (daily)</span>
+              <span style="color: #fbbf24;">SETL (7-day rolling)</span>
+            </div>
+            <div style="overflow-x: auto;">
+              <svg width={setlW} height={setlH} viewBox={`0 0 ${setlW} ${setlH}`} style="min-width: 300px;">
+                <line x1="0" y1={setlH / 2} x2={setlW} y2={setlH / 2} stroke="#222230" stroke-width="0.5" />
+                {/* Editorial line */}
+                <polyline
+                  fill="none"
+                  stroke="#a78bfa"
+                  stroke-width="1.5"
+                  points={globalSetl.map((p, i) => `${(i / Math.max(globalSetl.length - 1, 1)) * setlW},${setlY(p.avg_editorial)}`).join(' ')}
+                />
+                {/* Structural line */}
+                <polyline
+                  fill="none"
+                  stroke="#22d3ee"
+                  stroke-width="1.5"
+                  points={globalSetl.map((p, i) => `${(i / Math.max(globalSetl.length - 1, 1)) * setlW},${setlY(p.avg_structural)}`).join(' ')}
+                />
+                {/* Daily SETL */}
+                <polyline
+                  fill="none"
+                  stroke="#333"
+                  stroke-width="1"
+                  points={globalSetl.map((p, i) => `${(i / Math.max(globalSetl.length - 1, 1)) * setlW},${setlY(p.avg_setl)}`).join(' ')}
+                />
+                {/* 7-day rolling SETL */}
+                <polyline
+                  fill="none"
+                  stroke="#fbbf24"
+                  stroke-width="2"
+                  points={rollingSetl7.map((p, i) => `${(i / Math.max(rollingSetl7.length - 1, 1)) * setlW},${setlY(p.avg)}`).join(' ')}
+                />
+              </svg>
+            </div>
+          </td>
+        </tr>
+      </table>
+    );
+  })()}
 
   {/* Per-content-type HRCB */}
   {ctTypes.length > 0 && (

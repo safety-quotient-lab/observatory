@@ -10,7 +10,7 @@
 - [x] Migration 0008: hn_users table
 - [x] Cron crawls user profiles every 15 minutes
 - [x] DB queries for poster stats
-- [ ] User profile page at /user/[username]
+- [x] User profile page at /user/[username] (with fingerprint + SETL history)
 - [ ] Karma vs HRCB correlation analysis on dashboard
 
 ### Feed Source Tracking (Seldon Index)
@@ -43,7 +43,7 @@
 ### SETL Temporal Tracking (Chapel Perilous)
 - [x] getDomainSetlHistory query
 - [x] E/S/SETL line chart on domain detail pages
-- [ ] Global SETL trend on dashboard
+- [x] Global SETL trend on Seldon dashboard (with 7-day rolling average)
 - [ ] Alert system for sudden SETL spikes
 
 ### Seldon Dashboard (Psychohistory)

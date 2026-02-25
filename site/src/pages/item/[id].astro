@@ -208,7 +208,7 @@ function timeAgo(unixTime: number): string {
           <td></td>
           <td class="subtext" style="padding-bottom: 8px;">
             {storyData.hn_score !== null && <span>{storyData.hn_score} points</span>}
-            {storyData.hn_by && <span> by <a href={`https://news.ycombinator.com/user?id=${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
+            {storyData.hn_by && <span> by <a href={`/user/${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
             <span> {timeAgo(storyData.hn_time)}</span>
             <span> | </span>
             <a href={`https://news.ycombinator.com/item?id=${storyData.hn_id}`} target="_blank" rel="noopener">
@@ -303,7 +303,7 @@ function timeAgo(unixTime: number): string {
       <td></td>
       <td class="subtext" style="padding-bottom: 8px;">
         {storyData.hn_score !== null && <span>{storyData.hn_score} points</span>}
-        {storyData.hn_by && <span> by <a href={`https://news.ycombinator.com/user?id=${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
+        {storyData.hn_by && <span> by <a href={`/user/${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
         <span> {timeAgo(storyData.hn_time)}</span>
         <span> | </span>
         <a href={`https://news.ycombinator.com/item?id=${storyData.hn_id}`} target="_blank" rel="noopener">
@@ -459,8 +459,7 @@ function timeAgo(unixTime: number): string {
           {comments.map((c) => (
             <div style={`border-top: 1px solid #1a1a25; padding: 8px 0; margin-left: ${c.depth * 20}px;`}>
               <div style="font-size: var(--font-xs); color: #555; margin-bottom: 4px;">
-                <a href={`https://news.ycombinator.com/user?id=${c.author}`}
-                   target="_blank" rel="noopener"
+                <a href={`/user/${c.author}`}
                    style="color: #888;">{c.author}</a>
                 {c.time && (
                   <span style="margin-left: 6px;">
@@ -522,7 +521,7 @@ function timeAgo(unixTime: number): string {
           <td></td>
           <td class="subtext" style="padding-bottom: 8px;">
             {storyData.hn_score !== null && <span>{storyData.hn_score} points</span>}
-            {storyData.hn_by && <span> by <a href={`https://news.ycombinator.com/user?id=${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
+            {storyData.hn_by && <span> by <a href={`/user/${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
             <span> {timeAgo(storyData.hn_time)}</span>
             <span> | </span>
             <a href={`https://news.ycombinator.com/item?id=${storyData.hn_id}`} target="_blank" rel="noopener">
