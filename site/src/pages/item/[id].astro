@@ -22,13 +22,10 @@ if (!storyData) {
   return Astro.redirect('/');
 }
 
-// Handle failed/non-done status
+// Handle statuses
 const isFailed = storyData.eval_status === 'failed';
 const isDone = storyData.eval_status === 'done' && !!storyData.hcb_json;
-
-if (!isDone && !isFailed) {
-  return Astro.redirect('/');
-}
+const isPending = storyData.eval_status === 'pending' || storyData.eval_status === 'evaluating';
 
 let evalData: Evaluation | null = null;
 let cachedDcp: string | null = null;
@@ -132,9 +129,9 @@ function timeAgo(unixTime: number): string {
 ---
 
 <Base
-  title={`${storyData.title} — ${isFailed ? 'Failed' : 'HRCB'}`}
+  title={`${storyData.title} — ${isFailed ? 'Failed' : isPending ? 'Pending' : 'HRCB'}`}
   ogTitle={isDone && aggregates ? `${formatScore(aggregates.weighted_mean)} ${storyData.title}` : storyData.title}
-  ogDescription={isDone && aggregates ? `HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}` : `Evaluation failed for ${storyData.title}`}
+  ogDescription={isDone && aggregates ? `HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}` : isPending ? `Evaluation pending for ${storyData.title}` : `Evaluation failed for ${storyData.title}`}
   ogUrl={`${siteUrl}/item/${storyData.hn_id}`}
   canonicalUrl={`${siteUrl}/item/${storyData.hn_id}`}
 >
@@ -431,6 +428,65 @@ function timeAgo(unixTime: number): string {
       </td>
     </tr>
   </table>
+    </>
+  ) : isPending ? (
+    <>
+      {/* Pending/evaluating page */}
+      <table cellpadding="0" cellspacing="0" width="100%">
+        <tr class="athing">
+          <td valign="top" style="padding: 5px var(--space-lg) 0 0; text-align: center; width: 44px;">
+            {storyData.eval_status === 'evaluating' ? (
+              <span class="eval-spinner" style="display: inline-block; color: #60a5fa; font-size: var(--font-lg);">&#9696;</span>
+            ) : (
+              <span style="color: #eab308; font-size: var(--font-lg);">&#9679;</span>
+            )}
+          </td>
+          <td>
+            <span class="titleline" style="font-size: var(--font-md);">
+              <a href={storyData.url || `https://news.ycombinator.com/item?id=${storyData.hn_id}`}
+                 target="_blank" rel="noopener"
+              >
+                {storyData.title}
+              </a>
+            </span>
+            {storyData.domain && (
+              <span class="sitebit" style="font-size: var(--font-sm); margin-left: 5px;">
+                (<a href={`/domain/${storyData.domain}`}>{storyData.domain}</a>)
+              </span>
+            )}
+          </td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="subtext" style="padding-bottom: 8px;">
+            {storyData.hn_score !== null && <span>{storyData.hn_score} points</span>}
+            {storyData.hn_by && <span> by <a href={`https://news.ycombinator.com/user?id=${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
+            <span> {timeAgo(storyData.hn_time)}</span>
+            <span> | </span>
+            <a href={`https://news.ycombinator.com/item?id=${storyData.hn_id}`} target="_blank" rel="noopener">
+              {storyData.hn_comments ?? 0} comments on HN
+            </a>
+          </td>
+        </tr>
+      </table>
+
+      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
+        <tr>
+          <td style="padding: 15px; background: #12121a; border: 1px solid #222230; border-radius: 6px; text-align: center;">
+            <div style={`color: ${storyData.eval_status === 'evaluating' ? '#60a5fa' : '#eab308'}; font-size: var(--font-md); margin-bottom: 6px;`}>
+              {storyData.eval_status === 'evaluating' ? 'Evaluating...' : 'Pending Evaluation'}
+            </div>
+            <div style="color: #555; font-size: var(--font-sm);">
+              {storyData.eval_status === 'evaluating'
+                ? 'This story is currently being evaluated against the UDHR. Results will appear shortly.'
+                : 'This story is queued for evaluation. It will be processed in an upcoming batch.'}
+            </div>
+            <div style="color: #444; font-size: var(--font-xs); margin-top: 8px;">
+              Queued: {storyData.created_at}
+            </div>
+          </td>
+        </tr>
+      </table>
     </>
   ) : null}
 

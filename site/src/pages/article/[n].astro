@@ -2,7 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
-import { getArticleRanking } from '../../lib/db';
+import { getArticleRanking, getArticleCoverage } from '../../lib/db';
 
 const { n } = Astro.params;
 const articleNum = parseInt(n!, 10);
@@ -16,7 +16,13 @@ const articleTitle = ARTICLE_TITLES[section] || section;
 const udhrSection = getSection(articleNum);
 
 const db = Astro.locals.runtime.env.DB;
-const rankings = await getArticleRanking(db, articleNum);
+const [rankings, coverage] = await Promise.all([
+  getArticleRanking(db, articleNum),
+  getArticleCoverage(db),
+]);
+
+// Build a map of section -> { signal_count, avg_final } for the article selector
+const coverageMap = new Map(coverage.map(c => [c.section, c]));
 
 const prevNum = articleNum > 0 ? articleNum - 1 : null;
 const nextNum = articleNum < 30 ? articleNum + 1 : null;
@@ -91,20 +97,32 @@ const jsonLd = udhrSection ? {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 10px 0;">
     <tr>
       <td>
-        <div style="color: #828282; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">All Articles</div>
+        <div style="color: #828282; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+          All Articles
+          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            {coverage.filter(c => c.signal_count > 0).length}/{ALL_SECTIONS.length} with scores
+          </span>
+        </div>
         <div style="display: flex; flex-wrap: wrap; gap: 3px;">
           {ALL_SECTIONS.map((sec, i) => {
             const num = sec === 'Preamble' ? 0 : i;
             const isActive = num === articleNum;
+            const cov = coverageMap.get(sec);
+            const hasScores = cov && cov.signal_count > 0;
+            let style: string;
+            if (isActive) {
+              style = 'background: rgba(255,102,0,0.2); color: #ff6600; border: 1px solid rgba(255,102,0,0.4);';
+            } else if (hasScores) {
+              style = `background: ${scoreToColor(cov.avg_final)}20; color: ${scoreToColor(cov.avg_final)}; border: 1px solid ${scoreToColor(cov.avg_final)}40;`;
+            } else {
+              style = 'background: #1a1a25; color: #444; border: 1px solid #1a1a25;';
+            }
             return (
               <a
                 href={`/article/${num}`}
-                style={`display: inline-block; padding: 2px 6px; font-size: var(--font-sm); border-radius: 3px; ${
-                  isActive
-                    ? 'background: rgba(255,102,0,0.2); color: #ff6600; border: 1px solid rgba(255,102,0,0.4);'
-                    : 'background: #1a1a25; color: #828282; border: 1px solid #222230;'
-                }`}
+                style={`display: inline-block; padding: 2px 6px; font-size: var(--font-sm); border-radius: 3px; ${style}`}
                 class="score-font"
+                title={`${sec}: ${ARTICLE_TITLES[sec]}${hasScores ? ` — ${cov.signal_count} stories, avg ${formatScore(cov.avg_final)}` : ' — no scores yet'}`}
               >
                 {sec === 'Preamble' ? 'P' : i}
               </a>
@@ -167,18 +185,55 @@ const jsonLd = udhrSection ? {
         );
       })}
     </table>
-  ) : (
-    <table width="100%">
+  ) : (() => {
+    const articlesWithScores = coverage.filter(c => c.signal_count > 0);
+    const nearbyWithScores = articlesWithScores
+      .map(c => ({ ...c, dist: Math.abs(c.sort_order - articleNum) }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 5);
+    return (
+    <table cellpadding="0" cellspacing="0" width="100%">
       <tr>
-        <td style="padding: 20px; text-align: center; color: #828282;">
-          <div style="margin-bottom: 8px;">No stories have scored on this provision yet.</div>
-          <div style="font-size: var(--font-sm); color: #555;">
-            When stories are evaluated, those with signal on <strong style="color: #888;">{section}</strong> will be ranked here.
-            Browse other articles above to see existing rankings.
+        <td style="padding: 15px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="text-align: center; margin-bottom: 12px;">
+            <span style="color: #555; font-size: var(--font-lg);">&#9675;</span>
+            <div style="color: #888; margin-top: 6px;">No stories have scored on <strong style="color: #c9c9c9;">{section}</strong> yet.</div>
+            <div style="font-size: var(--font-sm); color: #555; margin-top: 4px;">
+              When stories are evaluated, those with signal on this provision will be ranked here.
+            </div>
           </div>
+
+          {nearbyWithScores.length > 0 && (
+            <div style="border-top: 1px solid #1a1a25; padding-top: 10px;">
+              <div style="color: #666; font-size: var(--font-sm); margin-bottom: 6px;">Nearby articles with rankings:</div>
+              <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+                {nearbyWithScores.map(c => (
+                  <tr>
+                    <td style="width: 20px;" class="score-font">
+                      <a href={`/article/${c.sort_order}`} style={`color: ${scoreToColor(c.avg_final)};`}>
+                        {c.section === 'Preamble' ? 'P' : c.section.replace('Article ', '')}
+                      </a>
+                    </td>
+                    <td>
+                      <a href={`/article/${c.sort_order}`} style="color: #888;">
+                        {ARTICLE_TITLES[c.section]}
+                      </a>
+                    </td>
+                    <td style="width: 50px; text-align: right;" class="score-font">
+                      <span style={`color: ${scoreToColor(c.avg_final)};`}>{formatScore(c.avg_final)}</span>
+                    </td>
+                    <td style="width: 60px; text-align: right; color: #555; font-size: var(--font-xs);">
+                      {c.signal_count} stories
+                    </td>
+                  </tr>
+                ))}
+              </table>
+            </div>
+          )}
         </td>
       </tr>
     </table>
-  )}
+    );
+  })()}
 
 </Base>

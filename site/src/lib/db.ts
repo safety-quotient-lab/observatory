@@ -263,6 +263,27 @@ export async function getArticleRanking(
   return results;
 }
 
+export interface ArticleCoverageRow {
+  section: string;
+  sort_order: number;
+  signal_count: number;
+  avg_final: number | null;
+}
+
+export async function getArticleCoverage(db: D1Database): Promise<ArticleCoverageRow[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT section, sort_order,
+              SUM(CASE WHEN final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
+              AVG(final) as avg_final
+       FROM scores
+       GROUP BY section
+       ORDER BY sort_order`
+    )
+    .all<ArticleCoverageRow>();
+  return results;
+}
+
 // --- Cron helpers ---
 
 export async function getPendingStories(db: D1Database, limit = 5): Promise<Story[]> {
