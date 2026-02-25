@@ -80,7 +80,7 @@ const graphData = JSON.stringify({ nodes, edges });
         <div style="color: #555; font-size: var(--font-xs); margin-bottom: 8px;">
           Green edges = positive correlation · Red edges = negative correlation · Thickness = strength · Drag nodes to explore
         </div>
-        <canvas id="network-canvas" width="900" height="600" style="width: 100%; max-width: 900px; height: auto; aspect-ratio: 3/2; background: #0a0a12; border-radius: 4px; cursor: grab;"></canvas>
+        <canvas id="network-canvas" width="1200" height="900" style="width: 100%; max-width: 1200px; height: auto; aspect-ratio: 4/3; background: #0a0a12; border-radius: 4px; cursor: grab;"></canvas>
       </td>
     </tr>
   </table>
@@ -137,11 +137,11 @@ const graphData = JSON.stringify({ nodes, edges });
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
     // Force simulation parameters
-    const REPULSION = 8000;
-    const SPRING_LENGTH = 120;
-    const SPRING_K = 0.03;
+    const REPULSION = 25000;
+    const SPRING_LENGTH = 200;
+    const SPRING_K = 0.02;
     const DAMPING = 0.9;
-    const CENTER_PULL = 0.005;
+    const CENTER_PULL = 0.008;
     let alpha = 1.0;
     const ALPHA_DECAY = 0.998;
     const ALPHA_MIN = 0.001;
@@ -168,6 +168,8 @@ const graphData = JSON.stringify({ nodes, edges });
       }
     });
 
+    let hoveredNode = null;
+
     canvas.addEventListener('mousemove', (e) => {
       const rect = canvas.getBoundingClientRect();
       const scale = getScale();
@@ -179,6 +181,15 @@ const graphData = JSON.stringify({ nodes, edges });
         dragging.vx = 0;
         dragging.vy = 0;
       }
+      // Hover detection
+      hoveredNode = null;
+      for (const n of nodes) {
+        if (Math.hypot(n.x - mx, n.y - my) < 20) {
+          hoveredNode = n;
+          break;
+        }
+      }
+      canvas.style.cursor = dragging ? 'grabbing' : hoveredNode ? 'pointer' : 'grab';
     });
 
     canvas.addEventListener('mouseup', () => {
@@ -234,8 +245,8 @@ const graphData = JSON.stringify({ nodes, edges });
         n.x += n.vx;
         n.y += n.vy;
         // Bounds
-        n.x = Math.max(20, Math.min(W - 20, n.x));
-        n.y = Math.max(20, Math.min(H - 20, n.y));
+        n.x = Math.max(30, Math.min(W - 30, n.x));
+        n.y = Math.max(30, Math.min(H - 30, n.y));
       }
 
       if (!dragging) alpha *= ALPHA_DECAY;
@@ -262,26 +273,49 @@ const graphData = JSON.stringify({ nodes, edges });
 
       // Draw nodes
       for (const n of nodes) {
-        const radius = Math.max(10, 6 + n.signalCount * 0.1);
+        const isHovered = n === hoveredNode;
+        const radius = Math.max(12, 8 + n.signalCount * 0.08);
         ctx.beginPath();
         ctx.arc(n.x, n.y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = n.color;
+        ctx.fillStyle = isHovered ? '#fff' : n.color;
         ctx.fill();
-        ctx.strokeStyle = '#0d0d14';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = isHovered ? n.color : '#0d0d14';
+        ctx.lineWidth = isHovered ? 3 : 2;
         ctx.stroke();
 
-        // Label
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 9px monospace';
+        // Label inside node
+        ctx.fillStyle = isHovered ? '#000' : '#fff';
+        ctx.font = 'bold 11px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(n.label, n.x, n.y);
+      }
 
-        // Title below
-        ctx.fillStyle = '#666';
-        ctx.font = '8px sans-serif';
-        ctx.fillText(n.title, n.x, n.y + radius + 10);
+      // Draw tooltip for hovered node on top
+      if (hoveredNode) {
+        const n = hoveredNode;
+        const radius = Math.max(12, 8 + n.signalCount * 0.08);
+        const label = n.id + ': ' + n.title;
+        ctx.font = 'bold 12px sans-serif';
+        const tw = ctx.measureText(label).width;
+        const px = 8, py = 4;
+        let tx = n.x - tw / 2 - px;
+        let ty = n.y - radius - 28;
+        // Keep tooltip in bounds
+        if (tx < 4) tx = 4;
+        if (tx + tw + px * 2 > W - 4) tx = W - 4 - tw - px * 2;
+        if (ty < 4) ty = n.y + radius + 8;
+        ctx.fillStyle = 'rgba(18, 18, 26, 0.95)';
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(tx, ty, tw + px * 2, 20 + py * 2, 4);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#eee';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, tx + px, ty + 10 + py);
       }
     }
 
