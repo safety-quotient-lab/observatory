@@ -84,16 +84,21 @@ function timeAgo(unixTime: number): string {
       </a>
     ) : story.eval_status === 'evaluating' ? (
       <span class="eval-spinner" style="color: #60a5fa; font-size: var(--font-sm); display: inline-block;" title="Evaluating...">&#9881;</span>
+    ) : story.eval_status === 'failed' ? (
+      <a href={`/item/${story.hn_id}`}
+         title={`Failed: ${story.eval_error || 'unknown error'} — click for details`}
+         style="text-decoration: none; padding: var(--space-xs) var(--space-sm); font-size: var(--font-base); color: #dc2626;"
+      >
+        &#10007;
+      </a>
     ) : (
       <button
         class="trigger-btn"
         data-hn-id={story.hn_id}
-        title={story.eval_status === 'failed'
-          ? `Failed: ${story.eval_error || 'unknown error'} — click to evaluate now`
-          : story.eval_status === 'skipped'
+        title={story.eval_status === 'skipped'
             ? `Skipped: ${story.eval_error || ''} — click to evaluate now`
             : 'Evaluate now'}
-        style={`background: none; border: none; cursor: pointer; padding: var(--space-xs) var(--space-sm); font-size: var(--font-base); color: ${story.eval_status === 'failed' ? '#dc2626' : story.eval_status === 'pending' ? '#eab308' : '#555'}; transition: color 0.15s;`}
+        style={`background: none; border: none; cursor: pointer; padding: var(--space-xs) var(--space-sm); font-size: var(--font-base); color: ${story.eval_status === 'pending' ? '#eab308' : '#555'}; transition: color 0.15s;`}
       >
         &#9654;
       </button>
@@ -161,7 +166,7 @@ function timeAgo(unixTime: number): string {
     ) : story.eval_status === 'pending' ? (
       <span> | <span style="color: #eab308; font-size: var(--font-sm);">queued</span></span>
     ) : story.eval_status === 'failed' ? (
-      <span> | <span style="color: #dc2626; font-size: var(--font-sm);">failed</span></span>
+      <span> | <a href={`/item/${story.hn_id}`} style="color: #dc2626; font-size: var(--font-sm);">failed</a></span>
     ) : story.eval_status === 'skipped' ? (
       <span> | <span style="color: #555; font-size: var(--font-sm);">skipped</span></span>
     ) : null}
