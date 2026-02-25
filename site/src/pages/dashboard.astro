@@ -24,7 +24,6 @@ import {
   getBottomSetlStories,
   getScoreHistogram,
   getMeanConfidence,
-  getDailyHrcb,
   getVelocityStats,
   getTopConfidenceStories,
   getBottomConfidenceStories,
@@ -35,7 +34,7 @@ import {
 
 const db = Astro.locals.runtime.env.DB;
 
-const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, recent, domains, failed, queue, models, meanSetl, modelComparison, costStats, histogram, meanConfidence, dailyHrcb, topConf, bottomConf, scatterData, ctDist] = await Promise.all([
+const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, recent, domains, failed, queue, models, meanSetl, modelComparison, costStats, histogram, meanConfidence, topConf, bottomConf, scatterData, ctDist] = await Promise.all([
   getStatusCounts(db),
   getScoreStats(db),
   getContentTypeStats(db),
@@ -56,7 +55,6 @@ const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPosi
   getCostStats(db),
   getScoreHistogram(db),
   getMeanConfidence(db),
-  getDailyHrcb(db, 60),
   getTopConfidenceStories(db, 5),
   getBottomConfidenceStories(db, 5),
   getStoryScatterData(db, 500),
@@ -90,41 +88,6 @@ function storySetl(s: { hcb_json: string | null }): number | null {
     return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
   } catch { return null; }
 }
-
-// Calendar heatmap data (computed in frontmatter to avoid template expression issues)
-const calendarCells = (() => {
-  if (dailyHrcb.length < 2) return null;
-  const dayMap = new Map(dailyHrcb.map(d => [d.day, d]));
-  const maxN = Math.max(...dailyHrcb.map(d => d.count));
-  const firstDate = new Date(dailyHrcb[0].day + 'T00:00:00Z');
-  const lastDate = new Date(dailyHrcb[dailyHrcb.length - 1].day + 'T00:00:00Z');
-  const totalDays = Math.round((lastDate.getTime() - firstDate.getTime()) / 86400000) + 1;
-  const firstDow = firstDate.getUTCDay();
-  const cellSize = 11, gap = 2, labelW = 14;
-  const cells = Array.from({ length: totalDays }, (_, i) => {
-    const dt = new Date(firstDate.getTime() + i * 86400000);
-    const dayStr = dt.toISOString().slice(0, 10);
-    const data = dayMap.get(dayStr) || null;
-    const dow = dt.getUTCDay();
-    const weekIdx = Math.floor((i + firstDow) / 7);
-    return { day: dayStr, dow, weekIdx, avg: data?.avg ?? null, count: data?.count ?? 0, hasData: data !== null };
-  });
-  const numWeeks = cells.length > 0 ? cells[cells.length - 1].weekIdx + 1 : 0;
-  const svgW = labelW + numWeeks * (cellSize + gap) + 4;
-  const svgH = 7 * (cellSize + gap) + 16;
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const monthStarts: { label: string; x: number }[] = [];
-  let lastMonth = -1;
-  cells.forEach(c => {
-    const dt = new Date(c.day + 'T00:00:00Z');
-    const m = dt.getUTCMonth();
-    if (m !== lastMonth && c.dow === 0) {
-      monthStarts.push({ label: months[m], x: labelW + c.weekIdx * (cellSize + gap) });
-      lastMonth = m;
-    }
-  });
-  return { cells, svgW, svgH, cellSize, gap, labelW, maxN, monthStarts };
-})();
 
 // Most contested articles (highest stddev)
 const contestedArticles = [...articleStats]
@@ -347,48 +310,97 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
       </td>
       <td width="50%" valign="top" style="padding-left: 5px;">
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">HRCB Calendar</div>
-          {calendarCells ? (() => {
-            const { cells, svgW, svgH, cellSize, gap, labelW, maxN, monthStarts } = calendarCells;
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Distribution by Content Type</div>
+          {ctDist.size > 0 ? (() => {
+            const types = [...ctDist.entries()].sort((a, b) => b[1].total - a[1].total);
+            const barW = 200 / 21;
+            const rowH = 28;
             return (
-              <>
-                <svg viewBox={`0 0 ${svgW} ${svgH}`} width="100%" style="display: block;">
-                  {[1, 3, 5].map(dow => (
-                    <text x={labelW - 3} y={dow * (cellSize + gap) + cellSize - 2} fill="#444" font-size="7" font-family="monospace" text-anchor="end">{['S','M','T','W','T','F','S'][dow]}</text>
-                  ))}
-                  {cells.map(c => {
-                    const x = labelW + c.weekIdx * (cellSize + gap);
-                    const y = c.dow * (cellSize + gap);
-                    const fill = c.hasData ? scoreToColor(c.avg) : '#0e0e16';
-                    const opacity = c.hasData ? Math.max(0.3, Math.min(1, c.count / Math.max(maxN * 0.5, 1))) : 0.15;
-                    return (
-                      <rect x={x} y={y} width={cellSize} height={cellSize} rx="2"
-                            fill={fill} opacity={opacity} stroke={c.hasData ? 'none' : '#1a1a25'} stroke-width="0.5">
-                        <title>{c.hasData ? `${c.day}: ${c.count} evals, avg ${(c.avg as number).toFixed(3)}` : `${c.day}: no evals`}</title>
-                      </rect>
-                    );
-                  })}
-                  {monthStarts.map(ml => (
-                    <text x={ml.x} y={svgH - 2} fill="#444" font-size="7" font-family="monospace">{ml.label}</text>
-                  ))}
-                </svg>
-                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 9px; color: #444;">
-                  <span>less</span>
-                  <svg width="52" height="8" viewBox="0 0 52 8">
-                    <rect x="0" y="0" width="10" height="8" rx="1" fill={scoreToColor(-0.5)} opacity="0.6" />
-                    <rect x="14" y="0" width="10" height="8" rx="1" fill={scoreToColor(0)} opacity="0.7" />
-                    <rect x="28" y="0" width="10" height="8" rx="1" fill={scoreToColor(0.3)} opacity="0.85" />
-                    <rect x="42" y="0" width="10" height="8" rx="1" fill={scoreToColor(0.7)} />
-                  </svg>
-                  <span>more</span>
-                  <span style="margin-left: 4px;">· {dailyHrcb.length} days · color = avg HRCB · brightness = volume</span>
-                </div>
-              </>
+              <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+                {types.map(([ct, data]) => {
+                  const bins = Array.from({ length: 21 }, (_, i) => {
+                    const b = i - 10;
+                    return { bin: b, count: data.bins.get(b) || 0 };
+                  });
+                  const localMax = Math.max(...bins.map(b => b.count), 1);
+                  return (
+                    <tr>
+                      <td style="width: 85px; color: #888; vertical-align: middle; padding-right: 6px;">
+                        <span class="badge" style="background: #1a1a25; color: #888; font-size: var(--font-xs);">{ct}</span>
+                        <div style="font-size: 9px; color: #555; margin-top: 1px;">{data.total}</div>
+                      </td>
+                      <td style="vertical-align: middle;">
+                        <svg width="220" height={rowH} viewBox={`0 0 220 ${rowH}`} style="display: block;">
+                          <line x1={10 + 10 * barW} y1="0" x2={10 + 10 * barW} y2={rowH} stroke="#2a2a35" stroke-width="0.5" />
+                          {bins.map((h, i) => {
+                            const barH = localMax > 0 ? (h.count / localMax) * (rowH - 4) : 0;
+                            const x = 10 + i * barW;
+                            const score = h.bin / 10;
+                            return barH > 0 ? (
+                              <rect x={x} y={rowH - 2 - barH} width={Math.max(barW - 1, 1)} height={barH}
+                                    fill={scoreToColor(score)} opacity="0.75" rx="0.5">
+                                <title>{ct} [{score.toFixed(1)} to {(score + 0.1).toFixed(1)}]: {h.count}</title>
+                              </rect>
+                            ) : null;
+                          })}
+                        </svg>
+                      </td>
+                    </tr>
+                  );
+                })}
+                <tr>
+                  <td></td>
+                  <td>
+                    <svg width="220" height="12" viewBox="0 0 220 12" style="display: block;">
+                      <text x="10" y="10" fill="#444" font-size="7" font-family="monospace">-1.0</text>
+                      <text x={10 + 10 * barW} y="10" fill="#555" font-size="7" font-family="monospace" text-anchor="middle">0</text>
+                      <text x={10 + 20 * barW} y="10" fill="#444" font-size="7" font-family="monospace" text-anchor="end">+1.0</text>
+                    </svg>
+                  </td>
+                </tr>
+              </table>
             );
           })() : (
-            <div style="color: #555; font-size: var(--font-sm); padding: 10px;">Need more data.</div>
+            <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No data yet.</div>
           )}
         </div>
+      </td>
+    </tr>
+  </table>
+
+
+  {/* UDHR Article Heatmap — aggregate across all stories */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Average Score by UDHR Article</div>
+        {articleStats.length > 0 ? (
+          <>
+            <table cellpadding="0" cellspacing="2" width="100%" style="font-size: var(--font-xs);">
+              <tr>
+                {articleStats.map((a) => {
+                  const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                  return (
+                    <td style="text-align: center; vertical-align: bottom; width: 3.2%;">
+                      <a href={`/article/${a.sort_order}`} title={`${a.section}: ${ARTICLE_TITLES[a.section]}`} style="text-decoration: none;">
+                        <div style={`width: 100%; height: 24px; background: ${scoreToColor(a.signal_count > 0 ? a.avg_final : null)}; border-radius: 2px; margin-bottom: 2px;`}></div>
+                        <div style="color: #555;">{label}</div>
+                      </a>
+                    </td>
+                  );
+                })}
+              </tr>
+            </table>
+            <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs); color: #555;">
+              <span><span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 2px;"></span> Negative</span>
+              <span><span style="display: inline-block; width: 8px; height: 8px; background: #eab308; border-radius: 2px;"></span> Neutral</span>
+              <span><span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 2px;"></span> Positive</span>
+              <span title="Insufficient evidence to score"><span style="display: inline-block; width: 8px; height: 8px; background: #6b7280; border-radius: 2px;"></span> No Data</span>
+            </div>
+          </>
+        ) : (
+          <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
+        )}
       </td>
     </tr>
   </table>
@@ -485,6 +497,98 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           })()}
           <div style="text-align: center; font-size: 9px; color: #444; margin-top: 4px;">
             center = -1.0 · dashed ring = 0.0 (neutral) · outer edge = +1.0 · <span style="color: #ff6600;">polygon</span> = rights profile shape
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Article Correlation Matrix */}
+  {articleStats.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+            Article Correlation Matrix
+          </div>
+          <div style="margin-bottom: 8px; font-size: var(--font-xs);">
+            <span id="tab-cooccurrence" style="color: #ff6600; cursor: pointer; font-weight: bold; margin-right: 12px;" data-tab="cooccurrence">Co-occurrence</span>
+            <span id="tab-correlation" style="color: #555; cursor: pointer; margin-right: 12px;" data-tab="correlation">Score Correlation</span>
+          </div>
+          {/* Co-occurrence matrix */}
+          <div id="matrix-cooccurrence">
+            <svg width={22 + articleStats.length * 14} height={22 + articleStats.length * 14} viewBox={`0 0 ${22 + articleStats.length * 14} ${22 + articleStats.length * 14}`}>
+              {/* Column labels */}
+              {articleStats.map((a, i) => {
+                const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                return <text x={22 + i * 14 + 7} y={12} text-anchor="middle" fill="#555" font-size="8" font-family="monospace">{label}</text>;
+              })}
+              {/* Row labels + cells */}
+              {articleStats.map((a, i) => {
+                const labelA = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                return (
+                  <>
+                    <text x={18} y={22 + i * 14 + 10} text-anchor="end" fill="#555" font-size="8" font-family="monospace">{labelA}</text>
+                    {articleStats.map((b, j) => {
+                      const keyFwd = `${a.section}|${b.section}`;
+                      const keyRev = `${b.section}|${a.section}`;
+                      const co = pairStats.cooccurrence.get(keyFwd) ?? pairStats.cooccurrence.get(keyRev) ?? 0;
+                      const maxCo = pairStats.maxCooccurrence || 1;
+                      const intensity = co / maxCo;
+                      const r = Math.round(26 + intensity * (99 - 26));
+                      const g = Math.round(26 + intensity * (102 - 26));
+                      const bl = Math.round(37 + intensity * (241 - 37));
+                      return (
+                        <rect x={22 + j * 14} y={22 + i * 14} width="13" height="13" rx="1"
+                              fill={`rgb(${r},${g},${bl})`}>
+                          <title>{a.section} × {b.section}: {co} co-occurrences</title>
+                        </rect>
+                      );
+                    })}
+                  </>
+                );
+              })}
+            </svg>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 9px; color: #444;">
+              <span>0</span>
+              <div style="width: 60px; height: 8px; background: linear-gradient(to right, #1a1a25, #6366f1); border-radius: 2px;"></div>
+              <span>{pairStats.maxCooccurrence}</span>
+            </div>
+          </div>
+          {/* Score correlation matrix */}
+          <div id="matrix-correlation" style="display: none;">
+            <svg width={22 + articleStats.length * 14} height={22 + articleStats.length * 14} viewBox={`0 0 ${22 + articleStats.length * 14} ${22 + articleStats.length * 14}`}>
+              {/* Column labels */}
+              {articleStats.map((a, i) => {
+                const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                return <text x={22 + i * 14 + 7} y={12} text-anchor="middle" fill="#555" font-size="8" font-family="monospace">{label}</text>;
+              })}
+              {/* Row labels + cells */}
+              {articleStats.map((a, i) => {
+                const labelA = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
+                return (
+                  <>
+                    <text x={18} y={22 + i * 14 + 10} text-anchor="end" fill="#555" font-size="8" font-family="monospace">{labelA}</text>
+                    {articleStats.map((b, j) => {
+                      const keyFwd = `${a.section}|${b.section}`;
+                      const keyRev = `${b.section}|${a.section}`;
+                      const corr = pairStats.correlation.get(keyFwd) ?? pairStats.correlation.get(keyRev) ?? (i === j ? 1 : null);
+                      return (
+                        <rect x={22 + j * 14} y={22 + i * 14} width="13" height="13" rx="1"
+                              fill={corr !== null ? scoreToColor(corr) : '#1a1a25'}>
+                          <title>{a.section} × {b.section}: {corr !== null ? `r = ${corr.toFixed(3)}` : 'N/A'}</title>
+                        </rect>
+                      );
+                    })}
+                  </>
+                );
+              })}
+            </svg>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 9px; color: #444;">
+              <span>-1</span>
+              <div style="width: 60px; height: 8px; background: linear-gradient(to right, #dc2626, #eab308, #16a34a); border-radius: 2px;"></div>
+              <span>+1</span>
+            </div>
           </div>
         </td>
       </tr>
@@ -609,199 +713,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                 </>
               );
             })()}
-          </div>
-        </td>
-      </tr>
-    </table>
-  )}
-  {/* Content Type Score Distributions */}
-  {ctDist.size > 0 && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-      <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
-            Score Distribution by Content Type
-          </div>
-          {(() => {
-            const types = [...ctDist.entries()].sort((a, b) => b[1].total - a[1].total);
-            const globalMax = Math.max(...types.map(([, d]) => Math.max(...[...d.bins.values()])));
-            const barW = 200 / 21;
-            const rowH = 32;
-            return (
-              <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-                {types.map(([ct, data]) => {
-                  const bins = Array.from({ length: 21 }, (_, i) => {
-                    const b = i - 10;
-                    return { bin: b, count: data.bins.get(b) || 0 };
-                  });
-                  const localMax = Math.max(...bins.map(b => b.count), 1);
-                  const ctLabel = CONTENT_TYPE_LABELS[ct] || ct;
-                  return (
-                    <tr>
-                      <td style="width: 100px; color: #888; vertical-align: middle; padding-right: 8px;">
-                        <span class="badge" style="background: #1a1a25; color: #888; font-size: var(--font-xs);">{ct}</span>
-                        <div style="font-size: 9px; color: #555; margin-top: 1px;">{data.total} stories</div>
-                      </td>
-                      <td style="vertical-align: middle;">
-                        <svg width="220" height={rowH} viewBox={`0 0 220 ${rowH}`} style="display: block;">
-                          {/* Zero line */}
-                          <line x1={10 + 10 * barW} y1="0" x2={10 + 10 * barW} y2={rowH} stroke="#2a2a35" stroke-width="0.5" />
-                          {bins.map((h, i) => {
-                            const barH = localMax > 0 ? (h.count / localMax) * (rowH - 4) : 0;
-                            const x = 10 + i * barW;
-                            const score = h.bin / 10;
-                            return barH > 0 ? (
-                              <rect x={x} y={rowH - 2 - barH} width={Math.max(barW - 1, 1)} height={barH}
-                                    fill={scoreToColor(score)} opacity="0.75" rx="0.5">
-                                <title>{ct} [{score.toFixed(1)} to {(score + 0.1).toFixed(1)}]: {h.count}</title>
-                              </rect>
-                            ) : null;
-                          })}
-                        </svg>
-                      </td>
-                    </tr>
-                  );
-                })}
-                <tr>
-                  <td></td>
-                  <td>
-                    <svg width="220" height="12" viewBox="0 0 220 12" style="display: block;">
-                      <text x="10" y="10" fill="#444" font-size="7" font-family="monospace">-1.0</text>
-                      <text x={10 + 10 * barW} y="10" fill="#555" font-size="7" font-family="monospace" text-anchor="middle">0</text>
-                      <text x={10 + 20 * barW} y="10" fill="#444" font-size="7" font-family="monospace" text-anchor="end">+1.0</text>
-                    </svg>
-                  </td>
-                </tr>
-              </table>
-            );
-          })()}
-        </td>
-      </tr>
-    </table>
-  )}
-
-  {/* UDHR Article Heatmap — aggregate across all stories */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-    <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Average Score by UDHR Article</div>
-        {articleStats.length > 0 ? (
-          <>
-            <table cellpadding="0" cellspacing="2" width="100%" style="font-size: var(--font-xs);">
-              <tr>
-                {articleStats.map((a) => {
-                  const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
-                  return (
-                    <td style="text-align: center; vertical-align: bottom; width: 3.2%;">
-                      <a href={`/article/${a.sort_order}`} title={`${a.section}: ${ARTICLE_TITLES[a.section]}`} style="text-decoration: none;">
-                        <div style={`width: 100%; height: 24px; background: ${scoreToColor(a.signal_count > 0 ? a.avg_final : null)}; border-radius: 2px; margin-bottom: 2px;`}></div>
-                        <div style="color: #555;">{label}</div>
-                      </a>
-                    </td>
-                  );
-                })}
-              </tr>
-            </table>
-            <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs); color: #555;">
-              <span><span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 2px;"></span> Negative</span>
-              <span><span style="display: inline-block; width: 8px; height: 8px; background: #eab308; border-radius: 2px;"></span> Neutral</span>
-              <span><span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 2px;"></span> Positive</span>
-              <span title="Insufficient evidence to score"><span style="display: inline-block; width: 8px; height: 8px; background: #6b7280; border-radius: 2px;"></span> No Data</span>
-            </div>
-          </>
-        ) : (
-          <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
-        )}
-      </td>
-    </tr>
-  </table>
-
-  {/* Article Correlation Matrix */}
-  {articleStats.length > 0 && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-      <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
-            Article Correlation Matrix
-          </div>
-          <div style="margin-bottom: 8px; font-size: var(--font-xs);">
-            <span id="tab-cooccurrence" style="color: #ff6600; cursor: pointer; font-weight: bold; margin-right: 12px;" data-tab="cooccurrence">Co-occurrence</span>
-            <span id="tab-correlation" style="color: #555; cursor: pointer; margin-right: 12px;" data-tab="correlation">Score Correlation</span>
-          </div>
-          {/* Co-occurrence matrix */}
-          <div id="matrix-cooccurrence">
-            <svg width={22 + articleStats.length * 14} height={22 + articleStats.length * 14} viewBox={`0 0 ${22 + articleStats.length * 14} ${22 + articleStats.length * 14}`}>
-              {/* Column labels */}
-              {articleStats.map((a, i) => {
-                const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
-                return <text x={22 + i * 14 + 7} y={12} text-anchor="middle" fill="#555" font-size="8" font-family="monospace">{label}</text>;
-              })}
-              {/* Row labels + cells */}
-              {articleStats.map((a, i) => {
-                const labelA = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
-                return (
-                  <>
-                    <text x={18} y={22 + i * 14 + 10} text-anchor="end" fill="#555" font-size="8" font-family="monospace">{labelA}</text>
-                    {articleStats.map((b, j) => {
-                      const keyFwd = `${a.section}|${b.section}`;
-                      const keyRev = `${b.section}|${a.section}`;
-                      const co = pairStats.cooccurrence.get(keyFwd) ?? pairStats.cooccurrence.get(keyRev) ?? 0;
-                      const maxCo = pairStats.maxCooccurrence || 1;
-                      const intensity = co / maxCo;
-                      const r = Math.round(26 + intensity * (99 - 26));
-                      const g = Math.round(26 + intensity * (102 - 26));
-                      const bl = Math.round(37 + intensity * (241 - 37));
-                      return (
-                        <rect x={22 + j * 14} y={22 + i * 14} width="13" height="13" rx="1"
-                              fill={`rgb(${r},${g},${bl})`}>
-                          <title>{a.section} × {b.section}: {co} co-occurrences</title>
-                        </rect>
-                      );
-                    })}
-                  </>
-                );
-              })}
-            </svg>
-            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 9px; color: #444;">
-              <span>0</span>
-              <div style="width: 60px; height: 8px; background: linear-gradient(to right, #1a1a25, #6366f1); border-radius: 2px;"></div>
-              <span>{pairStats.maxCooccurrence}</span>
-            </div>
-          </div>
-          {/* Score correlation matrix */}
-          <div id="matrix-correlation" style="display: none;">
-            <svg width={22 + articleStats.length * 14} height={22 + articleStats.length * 14} viewBox={`0 0 ${22 + articleStats.length * 14} ${22 + articleStats.length * 14}`}>
-              {/* Column labels */}
-              {articleStats.map((a, i) => {
-                const label = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
-                return <text x={22 + i * 14 + 7} y={12} text-anchor="middle" fill="#555" font-size="8" font-family="monospace">{label}</text>;
-              })}
-              {/* Row labels + cells */}
-              {articleStats.map((a, i) => {
-                const labelA = a.section === 'Preamble' ? 'P' : a.section.replace('Article ', '');
-                return (
-                  <>
-                    <text x={18} y={22 + i * 14 + 10} text-anchor="end" fill="#555" font-size="8" font-family="monospace">{labelA}</text>
-                    {articleStats.map((b, j) => {
-                      const keyFwd = `${a.section}|${b.section}`;
-                      const keyRev = `${b.section}|${a.section}`;
-                      const corr = pairStats.correlation.get(keyFwd) ?? pairStats.correlation.get(keyRev) ?? (i === j ? 1 : null);
-                      return (
-                        <rect x={22 + j * 14} y={22 + i * 14} width="13" height="13" rx="1"
-                              fill={corr !== null ? scoreToColor(corr) : '#1a1a25'}>
-                          <title>{a.section} × {b.section}: {corr !== null ? `r = ${corr.toFixed(3)}` : 'N/A'}</title>
-                        </rect>
-                      );
-                    })}
-                  </>
-                );
-              })}
-            </svg>
-            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 9px; color: #444;">
-              <span>-1</span>
-              <div style="width: 60px; height: 8px; background: linear-gradient(to right, #dc2626, #eab308, #16a34a); border-radius: 2px;"></div>
-              <span>+1</span>
-            </div>
           </div>
         </td>
       </tr>
