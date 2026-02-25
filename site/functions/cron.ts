@@ -24,6 +24,7 @@ import {
   fetchUrlContent,
 } from '../src/lib/shared-eval';
 import { cleanHtml } from '../src/lib/html-clean';
+import { logEvent, pruneEvents } from '../src/lib/events';
 
 interface Env {
   DB: D1Database;
@@ -483,6 +484,7 @@ async function enqueueForEvaluation(
 export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     const db = env.DB;
+    const cronStartTime = Date.now();
 
     // ─── STEP 1: Fetch story ID lists from HN API (5 calls) ───
 
@@ -504,6 +506,7 @@ export default {
       ]);
     } catch (err) {
       console.error('Failed to fetch HN story lists:', err);
+      await logEvent(db, { event_type: 'cron_error', severity: 'error', message: `HN fetch failed: ${err}`, details: { phase: 'hn_fetch', error: String(err) } });
       return;
     }
 
@@ -531,6 +534,11 @@ export default {
     tagFeed(askIds, 'ask');
     tagFeed(showIds, 'show');
     tagFeed(jobIds, 'job');
+
+    // Top 5 pages (~150 items) are auto-evaluated; rest are tracked but skipped
+    const TOP_PAGES = 5;
+    const ITEMS_PER_PAGE = 30;
+    const autoEvalIds = new Set(topIds.slice(0, TOP_PAGES * ITEMS_PER_PAGE));
 
     const allIds = [...new Set([
       ...topIds.slice(0, 200),
@@ -576,15 +584,18 @@ export default {
         })
       );
 
-      const stmts = items
-        .filter((item): item is HNItem => item !== null && item.type === 'story' && !!item.title)
-        .map((item) => {
+      const validItems = items
+        .filter((item): item is HNItem => item !== null && item.type === 'story' && !!item.title);
+
+      const stmts = validItems.map((item) => {
           const domain = item.url ? extractDomain(item.url) : null;
           const hnType = typeMap.get(item.id) || 'story';
+          // Only auto-evaluate stories in top 5 pages of topstories
+          const status = autoEvalIds.has(item.id) ? 'pending' : 'skipped';
           return db
             .prepare(
-              `INSERT OR IGNORE INTO stories (hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, hn_type, hn_text, eval_status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
+              `INSERT OR IGNORE INTO stories (hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, hn_type, hn_text, eval_status, eval_error)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
             )
             .bind(
               item.id,
@@ -596,7 +607,9 @@ export default {
               item.by || null,
               item.time || Math.floor(Date.now() / 1000),
               hnType,
-              item.text || null
+              item.text || null,
+              status,
+              status === 'skipped' ? 'Not in top 5 pages' : null
             );
         });
 
@@ -604,14 +617,19 @@ export default {
         await db.batch(stmts);
         insertedCount += stmts.length;
       }
+      // Track inserted IDs so feed tracking can filter to valid FK refs
+      for (const item of validItems) existingIds.add(item.id);
     }
     console.log(`Inserted ${insertedCount} new stories`);
 
     // ─── STEP 3.1: Record feed source memberships ───
+    // Only insert feeds for IDs that actually exist in stories table
+    // (existingIds has pre-existing ones, newIds that passed insert are also in DB now)
 
     try {
       const feedStmts: D1PreparedStatement[] = [];
       for (const [id, feeds] of feedMap) {
+        if (!existingIds.has(id)) continue; // skip IDs not in stories table
         for (const feed of feeds) {
           feedStmts.push(
             db
@@ -629,6 +647,7 @@ export default {
       console.log(`[feeds] Recorded feed memberships for ${feedMap.size} stories`);
     } catch (err) {
       console.error('Feed tracking failed (non-fatal):', err);
+      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Feed tracking failed`, details: { phase: 'feeds', error: String(err) } });
     }
 
     // ─── STEP 3.5: Update hn_rank on stories table ───
@@ -644,8 +663,26 @@ export default {
         await db.batch(rankStmts.slice(i, i + 100));
       }
       console.log(`[rank] Updated hn_rank for ${topToRank.length} top stories`);
+
+      // Promote skipped stories that have risen into top 5 pages
+      const autoEvalList = [...autoEvalIds];
+      let promoted = 0;
+      for (let i = 0; i < autoEvalList.length; i += 100) {
+        const chunk = autoEvalList.slice(i, i + 100);
+        const { meta } = await db
+          .prepare(
+            `UPDATE stories SET eval_status = 'pending', eval_error = NULL
+             WHERE eval_status = 'skipped'
+               AND hn_id IN (${chunk.map(() => '?').join(',')})`
+          )
+          .bind(...chunk)
+          .run();
+        promoted += meta?.changes ?? 0;
+      }
+      if (promoted > 0) console.log(`[rank] Promoted ${promoted} stories to pending (entered top 5 pages)`);
     } catch (err) {
       console.error('Rank update failed (non-fatal):', err);
+      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Rank update failed`, details: { phase: 'rank', error: String(err) } });
     }
 
     // ─── STEP 3.6: Record rank snapshots for tracked stories ───
@@ -694,6 +731,7 @@ export default {
       }
     } catch (err) {
       console.error('Snapshot recording failed (non-fatal):', err);
+      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Snapshot recording failed`, details: { phase: 'snapshots', error: String(err) } });
     }
 
     // ─── STEP 4: Refresh scores/comments ───
@@ -711,6 +749,7 @@ export default {
       }
     } catch (err) {
       console.error('Score refresh failed (non-fatal):', err);
+      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Score refresh failed`, details: { phase: 'score_refresh', error: String(err) } });
     }
 
     // ─── STEP 4.5: Crawl comments for evaluated stories ───
@@ -725,6 +764,7 @@ export default {
       }
     } catch (err) {
       console.error('Comment crawling failed (non-fatal):', err);
+      await logEvent(db, { event_type: 'crawl_error', severity: 'warn', message: `Comment crawling failed`, details: { phase: 'comments', error: String(err) } });
     }
 
     // ─── STEP 4.7: Crawl user profiles for poster analysis ───
@@ -739,6 +779,7 @@ export default {
       }
     } catch (err) {
       console.error('User profile crawling failed (non-fatal):', err);
+      await logEvent(db, { event_type: 'crawl_error', severity: 'warn', message: `User profile crawling failed`, details: { phase: 'users', error: String(err) } });
     }
 
     // ─── STEP 5: Enqueue pending stories for evaluation ───
@@ -762,6 +803,28 @@ export default {
          WHERE eval_status = 'pending' AND url IS NULL AND (hn_text IS NULL OR LENGTH(hn_text) < 50)`
       )
       .run();
+
+    // ─── STEP 6: Event pruning (90-day retention, once per hour) ───
+
+    const minute = new Date(event.scheduledTime).getMinutes();
+    if (minute === 0) {
+      const pruned = await pruneEvents(db, 90);
+      if (pruned > 0) console.log(`[events] Pruned ${pruned} events older than 90 days`);
+    }
+
+    // ─── Log cron run event ───
+
+    await logEvent(db, {
+      event_type: 'cron_run',
+      severity: 'info',
+      message: `Cron: ${insertedCount} new, ${allIds.length} unique stories`,
+      details: {
+        stories_found: allIds.length,
+        stories_new: insertedCount,
+        feeds: { top: topIds.length, new: newIds_hn.length, best: bestIds.length, ask: askIds.length, show: showIds.length, job: jobIds.length },
+        duration_ms: Date.now() - cronStartTime,
+      },
+    });
 
     console.log('Cron cycle complete');
   },
