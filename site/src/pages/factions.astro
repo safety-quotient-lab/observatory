@@ -1,0 +1,211 @@
+---
+import Base from '../layouts/Base.astro';
+import { getAllDomainStats, getDomainFingerprints } from '../lib/db';
+import { scoreToColor, formatScore } from '../lib/colors';
+
+const db = Astro.locals.runtime.env.DB;
+
+// Get domains with enough data
+const domains = await getAllDomainStats(db, 'count', 50);
+const evaluatedDomains = domains.filter(d => d.avg_score !== null && d.count >= 3);
+const domainNames = evaluatedDomains.map(d => d.domain);
+
+// Get fingerprints (31-dim vectors)
+const fingerprints = await getDomainFingerprints(db, domainNames);
+
+// Compute cosine similarity between all pairs
+interface FactionPair {
+  a: string;
+  b: string;
+  similarity: number;
+}
+
+function cosineSim(va: (number | null)[], vb: (number | null)[]): number | null {
+  let dot = 0, magA = 0, magB = 0;
+  let valid = 0;
+  for (let i = 0; i < va.length; i++) {
+    const a = va[i], b = vb[i];
+    if (a === null || b === null) continue;
+    dot += a * b;
+    magA += a * a;
+    magB += b * b;
+    valid++;
+  }
+  if (valid < 5 || magA === 0 || magB === 0) return null;
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+
+const pairs: FactionPair[] = [];
+const domainList = [...fingerprints.keys()];
+for (let i = 0; i < domainList.length; i++) {
+  for (let j = i + 1; j < domainList.length; j++) {
+    const a = domainList[i], b = domainList[j];
+    const va = fingerprints.get(a), vb = fingerprints.get(b);
+    if (!va || !vb) continue;
+    const sim = cosineSim(va, vb);
+    if (sim !== null) {
+      pairs.push({ a, b, similarity: sim });
+    }
+  }
+}
+
+// Sort by similarity descending
+const alliances = pairs.sort((a, b) => b.similarity - a.similarity).slice(0, 30);
+const rivals = pairs.sort((a, b) => a.similarity - b.similarity).slice(0, 20);
+
+// Build clusters via simple greedy grouping
+interface Cluster {
+  members: string[];
+  avgScore: number | null;
+}
+
+const clusters: Cluster[] = [];
+const assigned = new Set<string>();
+const threshold = 0.7;
+
+for (const pair of pairs.sort((a, b) => b.similarity - a.similarity)) {
+  if (pair.similarity < threshold) break;
+  const aCluster = clusters.find(c => c.members.includes(pair.a));
+  const bCluster = clusters.find(c => c.members.includes(pair.b));
+  if (aCluster && bCluster && aCluster !== bCluster) {
+    // Merge
+    aCluster.members.push(...bCluster.members);
+    clusters.splice(clusters.indexOf(bCluster), 1);
+  } else if (aCluster) {
+    if (!aCluster.members.includes(pair.b)) aCluster.members.push(pair.b);
+  } else if (bCluster) {
+    if (!bCluster.members.includes(pair.a)) bCluster.members.push(pair.a);
+  } else {
+    clusters.push({ members: [pair.a, pair.b], avgScore: null });
+  }
+  assigned.add(pair.a);
+  assigned.add(pair.b);
+}
+
+// Add lone wolves
+for (const d of domainList) {
+  if (!assigned.has(d)) {
+    clusters.push({ members: [d], avgScore: null });
+  }
+}
+
+// Compute avg scores per cluster
+const domainScoreMap = new Map(evaluatedDomains.map(d => [d.domain, d.avg_score]));
+for (const c of clusters) {
+  const scores = c.members.map(m => domainScoreMap.get(m)).filter((s): s is number => s !== null);
+  c.avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+}
+
+clusters.sort((a, b) => b.members.length - a.members.length);
+
+const factionNames = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa', 'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron'];
+const factionColors = ['#a78bfa', '#60a5fa', '#34d399', '#fbbf24', '#fb923c', '#f87171', '#22d3ee', '#818cf8', '#c084fc', '#38bdf8', '#4ade80', '#facc15', '#f97316', '#ef4444', '#06b6d4'];
+---
+
+<Base title="Domain Factions — HN HRCB">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td>
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Domain Factions</span>
+        <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
+          Stackpole faction analysis — cosine similarity on 31-dim UDHR fingerprints
+        </span>
+      </td>
+    </tr>
+  </table>
+
+  {/* Faction clusters */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          Faction Clusters
+          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            similarity threshold &ge; {threshold} · {clusters.length} factions · {domainList.length} domains
+          </span>
+        </div>
+        {clusters.slice(0, 15).map((c, i) => (
+          <div style="border-top: 1px solid #1a1a25; padding: 8px 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span style={`color: ${factionColors[i % factionColors.length]}; font-weight: bold; font-size: var(--font-sm);`}>
+                Faction {factionNames[i] || i}
+              </span>
+              <span style="color: #555; font-size: var(--font-xs);">
+                {c.members.length} domain{c.members.length !== 1 ? 's' : ''}
+              </span>
+              {c.avgScore !== null && (
+                <span class="score-font" style={`color: ${scoreToColor(c.avgScore)}; font-size: var(--font-sm);`}>
+                  avg {formatScore(c.avgScore)}
+                </span>
+              )}
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              {c.members.map(m => {
+                const score = domainScoreMap.get(m);
+                return (
+                  <a href={`/domain/${m}`}
+                     style={`color: ${score !== undefined && score !== null ? scoreToColor(score) : '#888'}; font-size: var(--font-sm); padding: 2px 6px; background: #0d0d14; border: 1px solid #222230; border-radius: 3px; text-decoration: none;`}>
+                    {m}
+                    {score !== null && score !== undefined && (
+                      <span class="score-font" style="margin-left: 4px; font-size: var(--font-xs);">{formatScore(score)}</span>
+                    )}
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </td>
+    </tr>
+  </table>
+
+  {/* Alliance table */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          Strongest Alliances
+          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            highest cosine similarity
+          </span>
+        </div>
+        <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+          <tr style="color: #555;"><td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td></tr>
+          {alliances.map(p => (
+            <tr style="border-top: 1px solid #1a1a25;">
+              <td><a href={`/domain/${p.a}`} style="color: #aaa;">{p.a}</a></td>
+              <td><a href={`/domain/${p.b}`} style="color: #aaa;">{p.b}</a></td>
+              <td style="text-align: right; color: #34d399;" class="score-font">{p.similarity.toFixed(3)}</td>
+            </tr>
+          ))}
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {/* Rivals table */}
+  {rivals.length > 0 && rivals[0].similarity < 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Strongest Rivals
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              lowest cosine similarity (opposing rights profiles)
+            </span>
+          </div>
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+            <tr style="color: #555;"><td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td></tr>
+            {rivals.filter(p => p.similarity < 0.3).map(p => (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td><a href={`/domain/${p.a}`} style="color: #aaa;">{p.a}</a></td>
+                <td><a href={`/domain/${p.b}`} style="color: #aaa;">{p.b}</a></td>
+                <td style="text-align: right; color: #f87171;" class="score-font">{p.similarity.toFixed(3)}</td>
+              </tr>
+            ))}
+          </table>
+        </td>
+      </tr>
+    </table>
+  )}
+</Base>
