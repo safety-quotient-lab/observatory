@@ -1229,6 +1229,49 @@ export async function getStoryScatterData(db: D1Database, limit = 500): Promise<
   return results;
 }
 
+// --- Domain SETL temporal tracking (Hypocrisy Index) ---
+
+export interface DomainSetlPoint {
+  day: string;
+  avg_setl: number;
+  avg_editorial: number;
+  avg_structural: number;
+  count: number;
+}
+
+export async function getDomainSetlHistory(db: D1Database, domain: string, limit = 60): Promise<DomainSetlPoint[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT DATE(s.evaluated_at) as day,
+                AVG(
+                  CASE WHEN sc.editorial >= sc.structural
+                    THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                    ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                  END
+                ) as avg_setl,
+                AVG(sc.editorial) as avg_editorial,
+                AVG(sc.structural) as avg_structural,
+                COUNT(DISTINCT s.hn_id) as count
+         FROM scores sc
+         JOIN stories s ON s.hn_id = sc.hn_id
+         WHERE s.domain = ?
+           AND s.eval_status = 'done'
+           AND s.evaluated_at IS NOT NULL
+           AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+           AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
+         GROUP BY DATE(s.evaluated_at)
+         ORDER BY day DESC
+         LIMIT ?`
+      )
+      .bind(domain, limit)
+      .all<DomainSetlPoint>();
+    return results.reverse();
+  } catch {
+    return [];
+  }
+}
+
 // --- Feed source analytics ---
 
 export interface FeedStat {
