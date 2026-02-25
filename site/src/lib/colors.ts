@@ -115,26 +115,6 @@ export function setlToColor(setl: number | null): string {
   return scoreToColor(setl);
 }
 
-/** Compute HOTL (Higher Order Tension Level) from HN points and comments */
-export function computeHotl(points: number | null, comments: number | null): number | null {
-  if (points === null || comments === null) return null;
-  const denom = points + comments;
-  if (denom === 0) return null;
-  return (comments - points) / denom;
-}
-
-/** Format HOTL value for display */
-export function formatHotl(hotl: number | null): string {
-  if (hotl === null) return 'ND';
-  const sign = hotl > 0 ? '+' : '';
-  return `${sign}${hotl.toFixed(2)}`;
-}
-
-/** Map HOTL [-1, +1] to a color: green for negative (low tension = consensus), red for positive (high tension = contentious) */
-export function hotlToColor(hotl: number | null): string {
-  if (hotl === null) return '#6b7280';
-  return scoreToColor(-hotl);
-}
 
 /** Compute evidence-weighted confidence: (H*1.0 + M*0.6 + L*0.2) / (H + M + L + ND) */
 export function computeConfidence(

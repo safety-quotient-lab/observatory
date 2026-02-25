@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../lib/colors';
+import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS } from '../lib/udhr';
 import { CONTENT_TYPE_LABELS } from '../lib/types';
 import {
@@ -18,18 +18,15 @@ import {
   getQueueStories,
   getModelStats,
   getMeanSetl,
-  getMeanHotl,
   getModelComparisonStats,
   getCostStats,
   getTopSetlStories,
   getBottomSetlStories,
-  getTopHotlStories,
-  getBottomHotlStories,
 } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, topHotl, bottomHotl, recent, domains, failed, queue, models, meanSetl, meanHotl, modelComparison, costStats] = await Promise.all([
+const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPositive, topNegative, topSetl, bottomSetl, recent, domains, failed, queue, models, meanSetl, modelComparison, costStats] = await Promise.all([
   getStatusCounts(db),
   getScoreStats(db),
   getContentTypeStats(db),
@@ -40,15 +37,12 @@ const [status, stats, contentTypes, articleStats, sparklines, pairStats, topPosi
   getTopNegativeStories(db, 5),
   getTopSetlStories(db, 5),
   getBottomSetlStories(db, 5),
-  getTopHotlStories(db, 5),
-  getBottomHotlStories(db, 5),
   getRecentEvaluations(db, 10),
   getDomainStats(db, 10),
   getFailedStories(db, 5),
   getQueueStories(db),
   getModelStats(db),
   getMeanSetl(db),
-  getMeanHotl(db),
   getModelComparisonStats(db),
   getCostStats(db),
 ]);
@@ -58,11 +52,6 @@ function formatTokens(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
   if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
   return String(n);
-}
-
-// Helper to compute HOTL from a Story
-function storyHotl(s: { hn_score: number | null; hn_comments: number | null }): number | null {
-  return computeHotl(s.hn_score, s.hn_comments);
 }
 
 // Helper to compute aggregate SETL from a Story's hcb_json
@@ -167,13 +156,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
               <td class="score-font" style={`color: ${setlToColor(meanSetl)}; font-size: var(--font-base);`}>
                 {formatSetl(meanSetl)}
                 <span style="color: #555; font-size: var(--font-xs); margin-left: var(--space-sm);">{meanSetl !== null ? (meanSetl > 0 ? 'E-dominant' : meanSetl < 0 ? 'S-dominant' : 'Balanced') : ''}</span>
-              </td>
-            </tr>
-            <tr>
-              <td style="color: #666;" title="Higher Order Tension Level — comments vs points">Mean HOTL</td>
-              <td class="score-font" style={`color: ${hotlToColor(meanHotl)}; font-size: var(--font-base);`}>
-                {formatHotl(meanHotl)}
-                <span style="color: #555; font-size: var(--font-xs); margin-left: var(--space-sm);">{meanHotl !== null ? (meanHotl > 0 ? 'Contentious' : meanHotl < 0 ? 'Consensus' : 'Balanced') : ''}</span>
               </td>
             </tr>
             <tr>
@@ -486,11 +468,10 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {topPositive.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="30" title="Confidence: signal coverage">Conf</td><td width="36" title="Structural-Editorial Tension Level">SETL</td><td width="36" title="Higher Order Tension Level">HOTL</td><td>Story</td>
+                <td width="16">#</td><td width="44" title="Human Rights Compatibility Bias">HRCB</td><td width="30" title="Confidence: signal coverage">Conf</td><td width="36" title="Structural-Editorial Tension Level">SETL</td><td>Story</td>
               </tr>
               {topPositive.map((s, i) => {
                 const setl = storySetl(s);
-                const hotl = storyHotl(s);
                 const conf = storyConfidence(s);
                 return (
                 <tr>
@@ -503,9 +484,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   </td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
-                  </td>
-                  <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
-                    {formatHotl(hotl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
@@ -526,11 +504,10 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {topNegative.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">SETL</td><td width="36">HOTL</td><td>Story</td>
+                <td width="16">#</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">SETL</td><td>Story</td>
               </tr>
               {topNegative.map((s, i) => {
                 const setl = storySetl(s);
-                const hotl = storyHotl(s);
                 const conf = storyConfidence(s);
                 return (
                 <tr>
@@ -543,9 +520,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   </td>
                   <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
                     {formatSetl(setl)}
-                  </td>
-                  <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
-                    {formatHotl(hotl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
@@ -572,10 +546,9 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {topSetl.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44">SETL</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">HOTL</td><td>Story</td>
+                <td width="16">#</td><td width="44">SETL</td><td width="44">HRCB</td><td width="30">Conf</td><td>Story</td>
               </tr>
               {topSetl.map((s, i) => {
-                const hotl = storyHotl(s);
                 const conf = storyConfidence(s);
                 return (
                 <tr>
@@ -588,9 +561,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   </td>
                   <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
                     {formatConfidence(conf)}
-                  </td>
-                  <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
-                    {formatHotl(hotl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
@@ -611,10 +581,9 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
           {bottomSetl.length > 0 ? (
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
               <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44">SETL</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">HOTL</td><td>Story</td>
+                <td width="16">#</td><td width="44">SETL</td><td width="44">HRCB</td><td width="30">Conf</td><td>Story</td>
               </tr>
               {bottomSetl.map((s, i) => {
-                const hotl = storyHotl(s);
                 const conf = storyConfidence(s);
                 return (
                 <tr>
@@ -627,93 +596,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                   </td>
                   <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
                     {formatConfidence(conf)}
-                  </td>
-                  <td class="score-font" style={`color: ${hotlToColor(hotl)}; width: 36px;`}>
-                    {formatHotl(hotl)}
-                  </td>
-                  <td>
-                    <a href={`/item/${s.hn_id}`}>{s.title}</a>
-                    {s.domain && <span style="color: #555; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
-                  </td>
-                </tr>
-                );
-              })}
-            </table>
-          ) : (
-            <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
-          )}
-        </div>
-      </td>
-    </tr>
-  </table>
-
-  {/* Most/Least HOTL */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-    <tr>
-      <td width="50%" valign="top" style="padding-right: 5px;">
-        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most HOTL <span style="text-transform: none; color: #555; letter-spacing: 0;">(contentious)</span></div>
-          {topHotl.length > 0 ? (
-            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-              <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44">HOTL</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">SETL</td><td>Story</td>
-              </tr>
-              {topHotl.map((s, i) => {
-                const setl = storySetl(s);
-                const conf = storyConfidence(s);
-                return (
-                <tr>
-                  <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
-                  <td class="score-font" style={`color: ${hotlToColor(s.story_hotl)}; width: 44px; font-weight: bold;`}>
-                    {formatHotl(s.story_hotl)}
-                  </td>
-                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
-                    {formatScore(s.hcb_weighted_mean)}
-                  </td>
-                  <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
-                    {formatConfidence(conf)}
-                  </td>
-                  <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
-                    {formatSetl(setl)}
-                  </td>
-                  <td>
-                    <a href={`/item/${s.hn_id}`}>{s.title}</a>
-                    {s.domain && <span style="color: #555; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
-                  </td>
-                </tr>
-                );
-              })}
-            </table>
-          ) : (
-            <div style="color: #555; font-size: var(--font-sm); padding: 10px;">No evaluations yet.</div>
-          )}
-        </div>
-      </td>
-      <td width="50%" valign="top" style="padding-left: 5px;">
-        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Least HOTL <span style="text-transform: none; color: #555; letter-spacing: 0;">(consensus)</span></div>
-          {bottomHotl.length > 0 ? (
-            <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-              <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
-                <td width="16">#</td><td width="44">HOTL</td><td width="44">HRCB</td><td width="30">Conf</td><td width="36">SETL</td><td>Story</td>
-              </tr>
-              {bottomHotl.map((s, i) => {
-                const setl = storySetl(s);
-                const conf = storyConfidence(s);
-                return (
-                <tr>
-                  <td style="color: #555; width: 16px;" class="score-font">{i + 1}.</td>
-                  <td class="score-font" style={`color: ${hotlToColor(s.story_hotl)}; width: 44px; font-weight: bold;`}>
-                    {formatHotl(s.story_hotl)}
-                  </td>
-                  <td class="score-font" style={`color: ${scoreToColor(s.hcb_weighted_mean)}; width: 44px;`}>
-                    {formatScore(s.hcb_weighted_mean)}
-                  </td>
-                  <td class="score-font" style={`color: ${confidenceToColor(conf)}; width: 30px;`}>
-                    {formatConfidence(conf)}
-                  </td>
-                  <td class="score-font" style={`color: ${setlToColor(setl)}; width: 36px;`}>
-                    {formatSetl(setl)}
                   </td>
                   <td>
                     <a href={`/item/${s.hn_id}`}>{s.title}</a>
@@ -743,7 +625,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
               <td width="60" align="center">Stories</td>
               <td width="60" align="center">Avg HRCB</td>
               <td width="50" align="center" title="Structural-Editorial Tension Level">SETL</td>
-              <td width="50" align="center" title="Higher Order Tension Level">HOTL</td>
             </tr>
             {domains.map((d) => {
               return (
@@ -757,9 +638,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                 </td>
                 <td align="center" class="score-font" style={`color: ${setlToColor(d.avg_setl)};`}>
                   {formatSetl(d.avg_setl)}
-                </td>
-                <td align="center" class="score-font" style={`color: ${hotlToColor(d.avg_hotl)};`}>
-                  {formatHotl(d.avg_hotl)}
                 </td>
               </tr>
               );
@@ -783,14 +661,12 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
               <td width="50">HRCB</td>
               <td width="34">Conf</td>
               <td width="40">SETL</td>
-              <td width="40">HOTL</td>
               <td>Story</td>
               <td width="60">Type</td>
               <td width="120">Evaluated</td>
             </tr>
             {recent.map((s) => {
               const setl = storySetl(s);
-              const hotl = storyHotl(s);
               const conf = storyConfidence(s);
               return (
               <tr style="border-top: 1px solid #1a1a25;">
@@ -802,9 +678,6 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                 </td>
                 <td class="score-font" style={`color: ${setlToColor(setl)}; font-size: var(--font-sm);`}>
                   {formatSetl(setl)}
-                </td>
-                <td class="score-font" style={`color: ${hotlToColor(hotl)}; font-size: var(--font-sm);`}>
-                  {formatHotl(hotl)}
                 </td>
                 <td>
                   <a href={`/item/${s.hn_id}`}>{s.title}</a>

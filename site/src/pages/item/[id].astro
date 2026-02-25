@@ -4,7 +4,7 @@ import HeatMap from '../../components/HeatMap.astro';
 import RadarChart from '../../components/RadarChart.astro';
 import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
-import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { getStory, getStoryComments, getDomainDcp } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
@@ -64,8 +64,6 @@ const setlValues = scores
 const aggSetl = setlValues.length > 0
   ? setlValues.reduce((a, b) => a + b, 0) / setlValues.length
   : null;
-
-const hotl = computeHotl(storyData.hn_score, storyData.hn_comments);
 
 // Confidence (evidence-weighted)
 const confidence = computeConfidence(storyData.hcb_evidence_h, storyData.hcb_evidence_m, storyData.hcb_evidence_l, storyData.hcb_nd_count);
@@ -349,11 +347,6 @@ function timeAgo(unixTime: number): string {
               <td style="color: #666;" title="Structural-Editorial Tension Level: normalized difference between S and E channels">SETL</td>
               <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
               <td style="color: #555; font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
-            </tr>
-            <tr>
-              <td style="color: #666;" title="Higher Order Tension Level: (comments - points) / (comments + points)">HOTL</td>
-              <td class="score-font" style={`color: ${hotlToColor(hotl)};`}>{formatHotl(hotl)}</td>
-              <td style="color: #555; font-size: var(--font-xs);" colspan="2">{hotl !== null ? (hotl > 0 ? 'Contentious' : hotl < 0 ? 'Consensus' : 'Balanced') : ''}</td>
             </tr>
           </table>
           <div style="margin-top: 6px;">

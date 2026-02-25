@@ -90,34 +90,9 @@ import Base from '../layouts/Base.astro';
         </table>
 
         <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
-          Formula: <span class="score-font">(E - S) / max(|S|, |E|, |E - S|)</span>.
+          Formula: <span class="score-font">sign(E-S) &times; &radic;(|E-S| &times; max(|E|, |S|))</span>.
           A high absolute SETL means the site's content and infrastructure are misaligned on human rights.
-        </p>
-
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">HOTL — Higher Order Tension Level</p>
-
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
-          HOTL measures audience contention from HN metadata — the ratio of discussion (comments)
-          to approval (points). Negative values indicate consensus; positive values indicate controversy.
-        </p>
-
-        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
-          <tr style="color: #828282;">
-            <td class="score-font" style="color: #16a34a;">-1.0</td>
-            <td>&larr;</td>
-            <td>Consensus (points &gt;&gt; comments)</td>
-            <td>|</td>
-            <td>Balanced</td>
-            <td>|</td>
-            <td>Contentious (comments &gt;&gt; points)</td>
-            <td>&rarr;</td>
-            <td class="score-font" style="color: #dc2626;">+1.0</td>
-          </tr>
-        </table>
-
-        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
-          Formula: <span class="score-font">(comments - points) / (comments + points)</span>.
-          HOTL is independent of the evaluation model — it's derived purely from HN engagement data.
+          The geometric mean rewards both large gaps AND strong signals, filtering out noise from near-zero scores.
         </p>
 
         <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>

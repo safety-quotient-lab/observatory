@@ -9,7 +9,7 @@
     /* Golden ratio type scale (φ = 1.618, base = 10pt) */
     --phi: 1.618;
     --font-xs: 6.18pt;    /* base / φ / φ — micro labels, timestamps */
-    --font-sm: 7.64pt;    /* base / φ^(3/4) — subtext, secondary scores (SETL/HOTL) */
+    --font-sm: 7.64pt;    /* base / φ^(3/4) — subtext, secondary scores (SETL, Conf) */
     --font-base: 10pt;    /* φ^0 — body text */
     --font-md: 12.36pt;   /* base × φ^(1/2) — primary scores (HRCB in feed) */
     --font-lg: 16.18pt;   /* base × φ — section headers, big scores */

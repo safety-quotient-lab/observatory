@@ -1,6 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeHotl, formatHotl, hotlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
+import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
 import { getArticleRanking } from '../../lib/db';
 
@@ -125,13 +125,11 @@ const jsonLd = udhrSection ? {
         <td width="60" align="center" title="Editorial — what the content says" style="cursor: help;">Editorial</td>
         <td width="60" align="center" title="Structural — what the site does" style="cursor: help;">Structural</td>
         <td width="50" align="center" title="Structural-Editorial Tension Level" style="cursor: help;">SETL</td>
-        <td width="50" align="center" title="Higher Order Tension Level" style="cursor: help;">HOTL</td>
         <td width="60" align="center" title="Evidence strength (High, Medium, Low)" style="cursor: help;">Evidence</td>
         <td width="60" align="center">Overall</td>
       </tr>
       {rankings.map((row, i) => {
         const rowSetl = computeSetl(row.structural, row.editorial);
-        const rowHotl = computeHotl(row.hn_score, row.hn_comments);
         const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
         return (
         <tr style="border-top: 1px solid #222230;">
@@ -158,9 +156,6 @@ const jsonLd = udhrSection ? {
           </td>
           <td align="center" class="score-font" style={`color: ${setlToColor(rowSetl)}; font-size: var(--font-sm);`}>
             {formatSetl(rowSetl)}
-          </td>
-          <td align="center" class="score-font" style={`color: ${hotlToColor(rowHotl)}; font-size: var(--font-sm);`}>
-            {formatHotl(rowHotl)}
           </td>
           <td align="center" style="color: #828282; font-size: var(--font-sm);">
             {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}

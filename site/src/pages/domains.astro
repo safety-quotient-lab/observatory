@@ -2,13 +2,13 @@
 import Base from '../layouts/Base.astro';
 import { getAllDomainStats } from '../lib/db';
 import type { DomainSortOption } from '../lib/db';
-import { scoreToColor, formatScore, formatSetl, setlToColor, formatHotl, hotlToColor } from '../lib/colors';
+import { scoreToColor, formatScore, formatSetl, setlToColor } from '../lib/colors';
 
 const db = Astro.locals.runtime.env.DB;
 
 const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'count') as DomainSortOption;
-const validDomainSorts: DomainSortOption[] = ['count', 'score', 'setl', 'hotl'];
+const validDomainSorts: DomainSortOption[] = ['count', 'score', 'setl'];
 const safeSort = validDomainSorts.includes(sort) ? sort : 'count';
 
 const domains = await getAllDomainStats(db, safeSort, 100);
@@ -25,8 +25,8 @@ const domains = await getAllDomainStats(db, safeSort, 100);
         <span style="color: #444; margin: 0 6px;">·</span>
         <span class="subtext" style="font-size: var(--font-sm);">
           <span style="color: #666;">sort:</span>
-          {(['count', 'score', 'setl', 'hotl'] as const).map((opt, i) => {
-            const labels = { count: 'stories', score: 'hrcb', setl: 'setl', hotl: 'hotl' };
+          {(['count', 'score', 'setl'] as const).map((opt, i) => {
+            const labels = { count: 'stories', score: 'hrcb', setl: 'setl' } as any;
             return (
               <>
                 {i > 0 && <span style="color: #444;"> | </span>}
@@ -53,7 +53,6 @@ const domains = await getAllDomainStats(db, safeSort, 100);
               <td width="70" align="center">Stories</td>
               <td width="80" align="center">Avg HRCB</td>
               <td width="70" align="center" title="Structural-Editorial Tension Level">Avg SETL</td>
-              <td width="70" align="center" title="Higher Order Tension Level">Avg HOTL</td>
             </tr>
             {domains.map((d, i) => (
               <tr style="border-top: 1px solid #1a1a25;">
@@ -67,9 +66,6 @@ const domains = await getAllDomainStats(db, safeSort, 100);
                 </td>
                 <td align="center" class="score-font" style={`color: ${setlToColor(d.avg_setl)};`}>
                   {d.avg_setl !== null ? formatSetl(d.avg_setl) : <span style="color: #555;">—</span>}
-                </td>
-                <td align="center" class="score-font" style={`color: ${hotlToColor(d.avg_hotl)};`}>
-                  {d.avg_hotl !== null ? formatHotl(d.avg_hotl) : <span style="color: #555;">—</span>}
                 </td>
               </tr>
             ))}

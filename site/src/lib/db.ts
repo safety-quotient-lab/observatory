@@ -81,7 +81,7 @@ function scoreRowToScore(row: ScoreRow): Score {
   };
 }
 
-export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'hotl_desc' | 'hotl_asc' | 'salient' | 'outliers' | 'controversial';
+export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show';
 
@@ -133,7 +133,6 @@ export async function getFilteredStoriesWithScores(
 
   let orderBy = 's.hn_time DESC';
   let joinSetl = false;
-  let joinHotl = false;
   switch (sort) {
     case 'top': orderBy = 's.hn_rank ASC NULLS LAST, s.hn_time DESC'; break;
     case 'score_desc': orderBy = 's.hcb_weighted_mean DESC NULLS LAST'; break;
@@ -143,14 +142,6 @@ export async function getFilteredStoriesWithScores(
     case 'conf_asc': orderBy = 'CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1) ASC NULLS LAST'; break;
     case 'setl_desc': joinSetl = true; orderBy = 'story_setl DESC NULLS LAST'; break;
     case 'setl_asc': joinSetl = true; orderBy = 'story_setl ASC NULLS LAST'; break;
-    case 'hotl_desc': joinHotl = true; orderBy = 'hotl DESC NULLS LAST'; break;
-    case 'hotl_asc': joinHotl = true; orderBy = 'hotl ASC NULLS LAST'; break;
-    // salient: high positive SETL + low (negative) HOTL → score = SETL - HOTL
-    case 'salient': joinSetl = true; joinHotl = true; orderBy = '(story_setl - hotl) DESC NULLS LAST'; break;
-    // outliers: high positive SETL + high positive HOTL → score = SETL + HOTL
-    case 'outliers': joinSetl = true; joinHotl = true; orderBy = '(story_setl + hotl) DESC NULLS LAST'; break;
-    // controversial: high negative SETL + high positive HOTL → score = HOTL - SETL
-    case 'controversial': joinSetl = true; joinHotl = true; orderBy = '(hotl - story_setl) DESC NULLS LAST'; break;
   }
 
   // Stories query — excludes hcb_json blob but includes truncated hn_text preview
@@ -166,11 +157,6 @@ export async function getFilteredStoriesWithScores(
                  AND sc2.editorial IS NOT NULL AND sc2.structural IS NOT NULL
                  AND (ABS(sc2.editorial) > 0 OR ABS(sc2.structural) > 0)
               ) as story_setl` : '';
-  const hotlSelect = joinHotl ? `,
-              CASE WHEN s.hn_score IS NOT NULL AND s.hn_comments IS NOT NULL AND (s.hn_score + s.hn_comments) > 0
-                   THEN CAST((s.hn_comments - s.hn_score) AS REAL) / (s.hn_comments + s.hn_score)
-                   ELSE NULL END as hotl` : '';
-
   const { results: storyRows } = await db
     .prepare(
       `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
@@ -178,7 +164,7 @@ export async function getFilteredStoriesWithScores(
               hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
               eval_model, eval_prompt_hash,
               eval_status, eval_error, evaluated_at, created_at,
-              SUBSTR(hn_text, 1, 100) as hn_text_preview${setlSelect}${hotlSelect}
+              SUBSTR(hn_text, 1, 100) as hn_text_preview${setlSelect}
        FROM stories s WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
     .bind(limit, offset)
@@ -480,39 +466,6 @@ export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<S
   return results;
 }
 
-export interface HotlStory extends Story {
-  story_hotl: number | null;
-}
-
-export async function getTopHotlStories(db: D1Database, limit = 5): Promise<HotlStory[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT *,
-              CASE WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
-                   THEN CAST((hn_comments - hn_score) AS REAL) / (hn_comments + hn_score)
-                   ELSE NULL END as story_hotl
-       FROM stories WHERE eval_status = 'done'
-       ORDER BY story_hotl DESC NULLS LAST LIMIT ?`
-    )
-    .bind(limit)
-    .all<HotlStory>();
-  return results;
-}
-
-export async function getBottomHotlStories(db: D1Database, limit = 5): Promise<HotlStory[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT *,
-              CASE WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
-                   THEN CAST((hn_comments - hn_score) AS REAL) / (hn_comments + hn_score)
-                   ELSE NULL END as story_hotl
-       FROM stories WHERE eval_status = 'done'
-       ORDER BY story_hotl ASC NULLS LAST LIMIT ?`
-    )
-    .bind(limit)
-    .all<HotlStory>();
-  return results;
-}
 
 export async function getRecentEvaluations(db: D1Database, limit = 10): Promise<Story[]> {
   const { results } = await db
@@ -530,7 +483,6 @@ export interface DomainStat {
   count: number;
   avg_score: number;
   avg_setl: number | null;
-  avg_hotl: number | null;
 }
 
 export async function getDomainStats(db: D1Database, limit = 10): Promise<DomainStat[]> {
@@ -548,10 +500,7 @@ export async function getDomainStats(db: D1Database, limit = 10): Promise<Domain
                WHERE s2.domain = s.domain
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
                  AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-              ) as avg_setl,
-              AVG(CASE WHEN s.hn_score IS NOT NULL AND s.hn_comments IS NOT NULL AND (s.hn_score + s.hn_comments) > 0
-                       THEN CAST((s.hn_comments - s.hn_score) AS REAL) / (s.hn_comments + s.hn_score)
-                       ELSE NULL END) as avg_hotl
+              ) as avg_setl
        FROM stories s WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
        GROUP BY s.domain ORDER BY count DESC LIMIT ?`
     )
@@ -732,38 +681,7 @@ export async function getDomainSetl(db: D1Database, domain: string): Promise<num
   return row?.setl ?? null;
 }
 
-export type DomainSortOption = 'count' | 'score' | 'setl' | 'hotl';
-
-export async function getMeanHotl(db: D1Database): Promise<number | null> {
-  const row = await db
-    .prepare(
-      `SELECT AVG(
-        CASE WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
-             THEN CAST((hn_comments - hn_score) AS REAL) / (hn_comments + hn_score)
-             ELSE NULL END
-       ) as mean_hotl
-       FROM stories
-       WHERE eval_status = 'done'`
-    )
-    .first<{ mean_hotl: number | null }>();
-  return row?.mean_hotl ?? null;
-}
-
-export async function getDomainHotl(db: D1Database, domain: string): Promise<number | null> {
-  const row = await db
-    .prepare(
-      `SELECT AVG(
-        CASE WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
-             THEN CAST((hn_comments - hn_score) AS REAL) / (hn_comments + hn_score)
-             ELSE NULL END
-       ) as hotl
-       FROM stories
-       WHERE domain = ?`
-    )
-    .bind(domain)
-    .first<{ hotl: number | null }>();
-  return row?.hotl ?? null;
-}
+export type DomainSortOption = 'count' | 'score' | 'setl';
 
 export async function getAllDomainStats(
   db: D1Database,
@@ -774,7 +692,6 @@ export async function getAllDomainStats(
   switch (sort) {
     case 'score': orderBy = 'avg_score DESC NULLS LAST'; break;
     case 'setl': orderBy = 'avg_setl DESC NULLS LAST'; break;
-    case 'hotl': orderBy = 'avg_hotl DESC NULLS LAST'; break;
   }
   const { results } = await db
     .prepare(
@@ -791,10 +708,7 @@ export async function getAllDomainStats(
                WHERE s2.domain = s.domain
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
                  AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-              ) as avg_setl,
-              AVG(CASE WHEN s.hn_score IS NOT NULL AND s.hn_comments IS NOT NULL AND (s.hn_score + s.hn_comments) > 0
-                       THEN CAST((s.hn_comments - s.hn_score) AS REAL) / (s.hn_comments + s.hn_score)
-                       ELSE NULL END) as avg_hotl
+              ) as avg_setl
        FROM stories s
        WHERE s.domain IS NOT NULL
        GROUP BY s.domain
