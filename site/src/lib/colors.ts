@@ -142,11 +142,23 @@ export function computeConfidence(signalSections: number | null, ndCount: number
   return signalSections / total;
 }
 
-/** Map confidence (0–1) to a color: dim gray at low, bright at high */
+/** Map confidence (0–1) to a color: red (0) → amber (0.5) → green (1.0) */
 export function confidenceToColor(confidence: number | null): string {
   if (confidence === null) return '#4b5563';
-  const l = Math.round(40 + confidence * 50); // 40% to 90% lightness
-  return `hsl(220, 5%, ${l}%)`;
+  const c = Math.max(0, Math.min(1, confidence));
+
+  // Piecewise hue: 0→0° (red), 0.5→40° (amber), 1.0→142° (green)
+  let hue: number;
+  if (c < 0.5) {
+    hue = 40 * (c / 0.5); // 0→0°, 0.5→40°
+  } else {
+    hue = 40 + 102 * ((c - 0.5) / 0.5); // 0.5→40°, 1.0→142°
+  }
+
+  const sat = 0.75 + 0.15 * Math.abs(c * 2 - 1);
+  const lit = 0.42 + 0.08 * Math.abs(c * 2 - 1);
+
+  return hslToRgb(hue, sat, lit);
 }
 
 /** Format confidence for display */
