@@ -91,13 +91,15 @@ export function directionalityColor(d: string): string {
   }
 }
 
-/** Compute SETL (Structural-Editorial Tension Level) from S and E channel scores */
+/** Compute SETL (Structural-Editorial Tension Level) via geometric mean of gap and signal strength.
+ *  sign(E-S) * sqrt(|E-S| * max(|E|, |S|)) — rewards both large gaps AND strong signals. */
 export function computeSetl(structural: number | null, editorial: number | null): number | null {
   if (structural === null || editorial === null) return null;
   const diff = editorial - structural;
-  const denom = Math.max(Math.abs(structural), Math.abs(editorial), Math.abs(diff));
-  if (denom === 0) return null;
-  return diff / denom;
+  const strength = Math.max(Math.abs(editorial), Math.abs(structural));
+  if (strength === 0 && diff === 0) return null;
+  const magnitude = Math.sqrt(Math.abs(diff) * strength);
+  return diff >= 0 ? magnitude : -magnitude;
 }
 
 /** Format SETL value for display */

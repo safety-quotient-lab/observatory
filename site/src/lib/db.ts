@@ -156,8 +156,10 @@ export async function getFilteredStoriesWithScores(
   // Stories query — excludes hcb_json blob but includes truncated hn_text preview
   const setlSelect = joinSetl ? `,
               (SELECT AVG(
-                CAST((sc2.editorial - sc2.structural) AS REAL) /
-                MAX(ABS(sc2.structural), ABS(sc2.editorial), ABS(sc2.editorial - sc2.structural))
+                CASE WHEN sc2.editorial >= sc2.structural
+                  THEN  SQRT(ABS(sc2.editorial - sc2.structural) * MAX(ABS(sc2.editorial), ABS(sc2.structural)))
+                  ELSE -SQRT(ABS(sc2.editorial - sc2.structural) * MAX(ABS(sc2.editorial), ABS(sc2.structural)))
+                END
                )
                FROM scores sc2
                WHERE sc2.hn_id = s.hn_id
@@ -437,8 +439,10 @@ export async function getTopSetlStories(db: D1Database, limit = 5): Promise<Setl
     .prepare(
       `SELECT s.*,
               (SELECT AVG(
-                CAST((sc.editorial - sc.structural) AS REAL) /
-                MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+                CASE WHEN sc.editorial >= sc.structural
+                  THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                  ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                END
                )
                FROM scores sc
                WHERE sc.hn_id = s.hn_id
@@ -458,8 +462,10 @@ export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<S
     .prepare(
       `SELECT s.*,
               (SELECT AVG(
-                CAST((sc.editorial - sc.structural) AS REAL) /
-                MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+                CASE WHEN sc.editorial >= sc.structural
+                  THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                  ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                END
                )
                FROM scores sc
                WHERE sc.hn_id = s.hn_id
@@ -532,8 +538,10 @@ export async function getDomainStats(db: D1Database, limit = 10): Promise<Domain
     .prepare(
       `SELECT s.domain, COUNT(*) as count, AVG(s.hcb_weighted_mean) as avg_score,
               (SELECT AVG(
-                CAST((sc.editorial - sc.structural) AS REAL) /
-                MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+                CASE WHEN sc.editorial >= sc.structural
+                  THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                  ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                END
                )
                FROM scores sc
                JOIN stories s2 ON s2.hn_id = sc.hn_id
@@ -672,8 +680,10 @@ export async function getMeanSetl(db: D1Database): Promise<number | null> {
   const row = await db
     .prepare(
       `SELECT AVG(
-        CAST((sc.editorial - sc.structural) AS REAL) /
-        MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+        CASE WHEN sc.editorial >= sc.structural
+          THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+          ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+        END
        ) as mean_setl
        FROM scores sc
        WHERE sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
@@ -687,8 +697,10 @@ export async function getStorySetl(db: D1Database, hnId: number): Promise<number
   const row = await db
     .prepare(
       `SELECT AVG(
-        CAST((sc.editorial - sc.structural) AS REAL) /
-        MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+        CASE WHEN sc.editorial >= sc.structural
+          THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+          ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+        END
        ) as setl
        FROM scores sc
        WHERE sc.hn_id = ?
@@ -704,8 +716,10 @@ export async function getDomainSetl(db: D1Database, domain: string): Promise<num
   const row = await db
     .prepare(
       `SELECT AVG(
-        CAST((sc.editorial - sc.structural) AS REAL) /
-        MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+        CASE WHEN sc.editorial >= sc.structural
+          THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+          ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+        END
        ) as setl
        FROM scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
@@ -767,8 +781,10 @@ export async function getAllDomainStats(
       `SELECT s.domain, COUNT(*) as count,
               AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
               (SELECT AVG(
-                CAST((sc.editorial - sc.structural) AS REAL) /
-                MAX(ABS(sc.structural), ABS(sc.editorial), ABS(sc.editorial - sc.structural))
+                CASE WHEN sc.editorial >= sc.structural
+                  THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                  ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+                END
                )
                FROM scores sc
                JOIN stories s2 ON s2.hn_id = sc.hn_id
