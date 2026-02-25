@@ -91,6 +91,41 @@ function storySetl(s: { hcb_json: string | null }): number | null {
   } catch { return null; }
 }
 
+// Calendar heatmap data (computed in frontmatter to avoid template expression issues)
+const calendarCells = (() => {
+  if (dailyHrcb.length < 2) return null;
+  const dayMap = new Map(dailyHrcb.map(d => [d.day, d]));
+  const maxN = Math.max(...dailyHrcb.map(d => d.count));
+  const firstDate = new Date(dailyHrcb[0].day + 'T00:00:00Z');
+  const lastDate = new Date(dailyHrcb[dailyHrcb.length - 1].day + 'T00:00:00Z');
+  const totalDays = Math.round((lastDate.getTime() - firstDate.getTime()) / 86400000) + 1;
+  const firstDow = firstDate.getUTCDay();
+  const cellSize = 11, gap = 2, labelW = 14;
+  const cells = Array.from({ length: totalDays }, (_, i) => {
+    const dt = new Date(firstDate.getTime() + i * 86400000);
+    const dayStr = dt.toISOString().slice(0, 10);
+    const data = dayMap.get(dayStr) || null;
+    const dow = dt.getUTCDay();
+    const weekIdx = Math.floor((i + firstDow) / 7);
+    return { day: dayStr, dow, weekIdx, avg: data?.avg ?? null, count: data?.count ?? 0, hasData: data !== null };
+  });
+  const numWeeks = cells.length > 0 ? cells[cells.length - 1].weekIdx + 1 : 0;
+  const svgW = labelW + numWeeks * (cellSize + gap) + 4;
+  const svgH = 7 * (cellSize + gap) + 16;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthStarts: { label: string; x: number }[] = [];
+  let lastMonth = -1;
+  cells.forEach(c => {
+    const dt = new Date(c.day + 'T00:00:00Z');
+    const m = dt.getUTCMonth();
+    if (m !== lastMonth && c.dow === 0) {
+      monthStarts.push({ label: months[m], x: labelW + c.weekIdx * (cellSize + gap) });
+      lastMonth = m;
+    }
+  });
+  return { cells, svgW, svgH, cellSize, gap, labelW, maxN, monthStarts };
+})();
+
 // Most contested articles (highest stddev)
 const contestedArticles = [...articleStats]
   .filter(a => a.signal_count >= 3)
@@ -315,56 +350,41 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
       </td>
       <td width="50%" valign="top" style="padding-left: 5px;">
         <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">HRCB Over Time</div>
-          {dailyHrcb.length > 1 ? (() => {
-            const chartW = 220, chartH = 60;
-            const margin = 10;
-            const plotW = chartW - margin * 2;
-            const plotH = chartH;
-            const maxN = Math.max(...dailyHrcb.map(d => d.count));
-            // Score path
-            const step = plotW / (dailyHrcb.length - 1);
-            const scorePath = dailyHrcb.map((d, i) => {
-              const x = margin + i * step;
-              const y = plotH / 2 - (d.avg * plotH / 2);
-              return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
-            }).join(' ');
-            // Volume bars (faded background)
+          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">HRCB Calendar</div>
+          {calendarCells ? (() => {
+            const { cells, svgW, svgH, cellSize, gap, labelW, maxN, monthStarts } = calendarCells;
             return (
               <>
-                <svg width={chartW} height={chartH + 18} viewBox={`0 0 ${chartW} ${chartH + 18}`} style="display: block; margin: 0 auto;">
-                  {/* Zero line */}
-                  <line x1={margin} y1={plotH / 2} x2={chartW - margin} y2={plotH / 2} stroke="#1a1a25" stroke-width="1" />
-                  {/* Volume bars */}
-                  {dailyHrcb.map((d, i) => {
-                    const x = margin + i * step;
-                    const barH = maxN > 0 ? (d.count / maxN) * (plotH * 0.3) : 0;
+                <svg viewBox={`0 0 ${svgW} ${svgH}`} width="100%" style="display: block;">
+                  {[1, 3, 5].map(dow => (
+                    <text x={labelW - 3} y={dow * (cellSize + gap) + cellSize - 2} fill="#444" font-size="7" font-family="monospace" text-anchor="end">{['S','M','T','W','T','F','S'][dow]}</text>
+                  ))}
+                  {cells.map(c => {
+                    const x = labelW + c.weekIdx * (cellSize + gap);
+                    const y = c.dow * (cellSize + gap);
+                    const fill = c.hasData ? scoreToColor(c.avg) : '#0e0e16';
+                    const opacity = c.hasData ? Math.max(0.3, Math.min(1, c.count / Math.max(maxN * 0.5, 1))) : 0.15;
                     return (
-                      <rect
-                        x={x - step / 4}
-                        y={plotH - barH}
-                        width={Math.max(step / 2, 1)}
-                        height={barH}
-                        fill="rgba(99,102,241,0.15)"
-                        rx="1"
-                      >
-                        <title>{d.day}: {d.count} evals, avg {d.avg.toFixed(3)}</title>
+                      <rect x={x} y={y} width={cellSize} height={cellSize} rx="2"
+                            fill={fill} opacity={opacity} stroke={c.hasData ? 'none' : '#1a1a25'} stroke-width="0.5">
+                        <title>{c.hasData ? `${c.day}: ${c.count} evals, avg ${(c.avg as number).toFixed(3)}` : `${c.day}: no evals`}</title>
                       </rect>
                     );
                   })}
-                  {/* Score line */}
-                  <path d={scorePath} fill="none" stroke="#ff6600" stroke-width="1.5" />
-                  {/* Start/end dots */}
-                  <circle cx={margin} cy={plotH / 2 - (dailyHrcb[0].avg * plotH / 2)} r="2" fill="#ff6600" />
-                  <circle cx={chartW - margin} cy={plotH / 2 - (dailyHrcb[dailyHrcb.length - 1].avg * plotH / 2)} r="2" fill="#ff6600" />
-                  {/* Axis labels */}
-                  <text x={margin} y={chartH + 12} fill="#555" font-size="7" font-family="monospace">{dailyHrcb[0].day.slice(5)}</text>
-                  <text x={chartW - margin} y={chartH + 12} fill="#555" font-size="7" font-family="monospace" text-anchor="end">{dailyHrcb[dailyHrcb.length - 1].day.slice(5)}</text>
-                  <text x={chartW - margin} y="8" fill="#555" font-size="7" font-family="monospace" text-anchor="end">+1.0</text>
-                  <text x={chartW - margin} y={plotH - 2} fill="#555" font-size="7" font-family="monospace" text-anchor="end">-1.0</text>
+                  {monthStarts.map(ml => (
+                    <text x={ml.x} y={svgH - 2} fill="#444" font-size="7" font-family="monospace">{ml.label}</text>
+                  ))}
                 </svg>
-                <div style="text-align: center; font-size: 9px; color: #444; margin-top: 2px;">
-                  <span style="color: #ff6600;">—</span> daily avg HRCB · <span style="color: rgba(99,102,241,0.4);">|</span> eval volume · {dailyHrcb.length} days
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 9px; color: #444;">
+                  <span>less</span>
+                  <svg width="52" height="8" viewBox="0 0 52 8">
+                    <rect x="0" y="0" width="10" height="8" rx="1" fill={scoreToColor(-0.5)} opacity="0.6" />
+                    <rect x="14" y="0" width="10" height="8" rx="1" fill={scoreToColor(0)} opacity="0.7" />
+                    <rect x="28" y="0" width="10" height="8" rx="1" fill={scoreToColor(0.3)} opacity="0.85" />
+                    <rect x="42" y="0" width="10" height="8" rx="1" fill={scoreToColor(0.7)} />
+                  </svg>
+                  <span>more</span>
+                  <span style="margin-left: 4px;">· {dailyHrcb.length} days · color = avg HRCB · brightness = volume</span>
                 </div>
               </>
             );
