@@ -1235,6 +1235,75 @@ export async function getDomainFingerprints(db: D1Database, domains: string[]): 
   return profiles;
 }
 
+// --- Domain signal profiles (aggregated supplementary signals per domain) ---
+
+export interface DomainSignalProfile {
+  domain: string;
+  count: number;
+  avg_eq: number | null;
+  avg_so: number | null;
+  avg_sr: number | null;
+  avg_td: number | null;
+  avg_pt_count: number | null;
+  avg_valence: number | null;
+  avg_arousal: number | null;
+  avg_dominance: number | null;
+  avg_fw_ratio: number | null;
+  avg_hn_score: number | null;
+  avg_hn_comments: number | null;
+  avg_poster_karma: number | null;
+  dominant_tone: string | null;
+  dominant_scope: string | null;
+  dominant_reading_level: string | null;
+  dominant_sentiment: string | null;
+}
+
+export async function getDomainSignalProfiles(db: D1Database): Promise<Map<string, DomainSignalProfile>> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+         s.domain,
+         COUNT(*) as count,
+         AVG(s.eq_score) as avg_eq,
+         AVG(s.so_score) as avg_so,
+         AVG(s.sr_score) as avg_sr,
+         AVG(s.td_score) as avg_td,
+         AVG(s.pt_flag_count) as avg_pt_count,
+         AVG(s.et_valence) as avg_valence,
+         AVG(s.et_arousal) as avg_arousal,
+         AVG(s.et_dominance) as avg_dominance,
+         AVG(s.fw_ratio) as avg_fw_ratio,
+         AVG(s.hn_score) as avg_hn_score,
+         AVG(s.hn_comments) as avg_hn_comments,
+         AVG(u.karma) as avg_poster_karma,
+         (SELECT s2.et_primary_tone FROM stories s2
+          WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.et_primary_tone IS NOT NULL
+          GROUP BY s2.et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1) as dominant_tone,
+         (SELECT s2.gs_scope FROM stories s2
+          WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.gs_scope IS NOT NULL
+          GROUP BY s2.gs_scope ORDER BY COUNT(*) DESC LIMIT 1) as dominant_scope,
+         (SELECT s2.cl_reading_level FROM stories s2
+          WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.cl_reading_level IS NOT NULL
+          GROUP BY s2.cl_reading_level ORDER BY COUNT(*) DESC LIMIT 1) as dominant_reading_level,
+         (SELECT s2.hcb_sentiment_tag FROM stories s2
+          WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.hcb_sentiment_tag IS NOT NULL
+          GROUP BY s2.hcb_sentiment_tag ORDER BY COUNT(*) DESC LIMIT 1) as dominant_sentiment
+       FROM stories s
+       LEFT JOIN hn_users u ON s.hn_by = u.username
+       WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
+       GROUP BY s.domain
+       HAVING COUNT(*) >= 3
+       ORDER BY COUNT(*) DESC`
+    )
+    .all<DomainSignalProfile>();
+
+  const map = new Map<string, DomainSignalProfile>();
+  for (const r of results) {
+    map.set(r.domain, r);
+  }
+  return map;
+}
+
 // --- Content type score distributions ---
 
 export interface ContentTypeDistBin {

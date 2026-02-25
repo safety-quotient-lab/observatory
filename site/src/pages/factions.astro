@@ -1,19 +1,22 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getAllDomainStats, getDomainFingerprints } from '../lib/db';
+import { getAllDomainStats, getDomainFingerprints, getDomainSignalProfiles } from '../lib/db';
+import { SECTIONS } from '../lib/udhr';
 import { scoreToColor, formatScore } from '../lib/colors';
 
 const db = Astro.locals.runtime.env.DB;
 
-// Get domains with enough data
-const domains = await getAllDomainStats(db, 'count', 50);
+// --- 1. Parallel fetch ---
+const [domains, signalProfiles] = await Promise.all([
+  getAllDomainStats(db, 'count', 50),
+  getDomainSignalProfiles(db),
+]);
+
 const evaluatedDomains = domains.filter(d => d.avg_score !== null && d.count >= 3);
 const domainNames = evaluatedDomains.map(d => d.domain);
-
-// Get fingerprints (31-dim vectors)
 const fingerprints = await getDomainFingerprints(db, domainNames);
 
-// Compute cosine similarity between all pairs
+// --- 2. Cosine similarity ---
 interface FactionPair {
   a: string;
   b: string;
@@ -21,8 +24,7 @@ interface FactionPair {
 }
 
 function cosineSim(va: (number | null)[], vb: (number | null)[]): number | null {
-  let dot = 0, magA = 0, magB = 0;
-  let valid = 0;
+  let dot = 0, magA = 0, magB = 0, valid = 0;
   for (let i = 0; i < va.length; i++) {
     const a = va[i], b = vb[i];
     if (a === null || b === null) continue;
@@ -43,17 +45,11 @@ for (let i = 0; i < domainList.length; i++) {
     const va = fingerprints.get(a), vb = fingerprints.get(b);
     if (!va || !vb) continue;
     const sim = cosineSim(va, vb);
-    if (sim !== null) {
-      pairs.push({ a, b, similarity: sim });
-    }
+    if (sim !== null) pairs.push({ a, b, similarity: sim });
   }
 }
 
-// Sort by similarity descending
-const alliances = pairs.sort((a, b) => b.similarity - a.similarity).slice(0, 30);
-const rivals = pairs.sort((a, b) => a.similarity - b.similarity).slice(0, 20);
-
-// Build clusters via simple greedy grouping
+// --- 3. Greedy clustering ---
 interface Cluster {
   members: string[];
   avgScore: number | null;
@@ -63,12 +59,11 @@ const clusters: Cluster[] = [];
 const assigned = new Set<string>();
 const threshold = 0.7;
 
-for (const pair of pairs.sort((a, b) => b.similarity - a.similarity)) {
+for (const pair of [...pairs].sort((a, b) => b.similarity - a.similarity)) {
   if (pair.similarity < threshold) break;
   const aCluster = clusters.find(c => c.members.includes(pair.a));
   const bCluster = clusters.find(c => c.members.includes(pair.b));
   if (aCluster && bCluster && aCluster !== bCluster) {
-    // Merge
     aCluster.members.push(...bCluster.members);
     clusters.splice(clusters.indexOf(bCluster), 1);
   } else if (aCluster) {
@@ -84,12 +79,10 @@ for (const pair of pairs.sort((a, b) => b.similarity - a.similarity)) {
 
 // Add lone wolves
 for (const d of domainList) {
-  if (!assigned.has(d)) {
-    clusters.push({ members: [d], avgScore: null });
-  }
+  if (!assigned.has(d)) clusters.push({ members: [d], avgScore: null });
 }
 
-// Compute avg scores per cluster
+// Compute avg scores
 const domainScoreMap = new Map(evaluatedDomains.map(d => [d.domain, d.avg_score]));
 for (const c of clusters) {
   const scores = c.members.map(m => domainScoreMap.get(m)).filter((s): s is number => s !== null);
@@ -98,114 +91,602 @@ for (const c of clusters) {
 
 clusters.sort((a, b) => b.members.length - a.members.length);
 
-const factionNames = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa', 'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron'];
-const factionColors = ['#a78bfa', '#60a5fa', '#34d399', '#fbbf24', '#fb923c', '#f87171', '#22d3ee', '#818cf8', '#c084fc', '#38bdf8', '#4ade80', '#facc15', '#f97316', '#ef4444', '#06b6d4'];
+// --- 4. Per-cluster signal averages ---
+interface FactionSignals {
+  eq: number;
+  so: number;
+  sr: number;
+  td: number;
+  pt: number;
+  fw: number;
+  valence: number;
+  arousal: number;
+  dominance: number;
+  hnScore: number;
+  hnComments: number;
+  posterKarma: number;
+  dominantTone: string | null;
+  dominantScope: string | null;
+  dominantReadingLevel: string | null;
+  dominantSentiment: string | null;
+}
+
+function avgSignals(members: string[]): FactionSignals {
+  const vals = members.map(m => signalProfiles.get(m)).filter(Boolean) as import('../lib/db').DomainSignalProfile[];
+  function avg(fn: (p: import('../lib/db').DomainSignalProfile) => number | null): number {
+    const nums = vals.map(fn).filter((n): n is number => n !== null);
+    return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+  }
+  // Mode: most common non-null value
+  function mode(fn: (p: import('../lib/db').DomainSignalProfile) => string | null): string | null {
+    const strs = vals.map(fn).filter((s): s is string => s !== null);
+    if (strs.length === 0) return null;
+    const counts = new Map<string, number>();
+    for (const s of strs) counts.set(s, (counts.get(s) || 0) + 1);
+    let best = strs[0], bestCount = 0;
+    for (const [k, v] of counts) { if (v > bestCount) { best = k; bestCount = v; } }
+    return best;
+  }
+  return {
+    eq: avg(p => p.avg_eq),
+    so: avg(p => p.avg_so),
+    sr: avg(p => p.avg_sr),
+    td: avg(p => p.avg_td),
+    pt: avg(p => p.avg_pt_count),
+    fw: avg(p => p.avg_fw_ratio),
+    valence: avg(p => p.avg_valence),
+    arousal: avg(p => p.avg_arousal),
+    dominance: avg(p => p.avg_dominance),
+    hnScore: avg(p => p.avg_hn_score),
+    hnComments: avg(p => p.avg_hn_comments),
+    posterKarma: avg(p => p.avg_poster_karma),
+    dominantTone: mode(p => p.dominant_tone),
+    dominantScope: mode(p => p.dominant_scope),
+    dominantReadingLevel: mode(p => p.dominant_reading_level),
+    dominantSentiment: mode(p => p.dominant_sentiment),
+  };
+}
+
+// --- 5. Archetype assignment ---
+interface Archetype {
+  name: string;
+  tagline: string;
+  color: string;
+}
+
+function assignArchetype(sig: FactionSignals): Archetype {
+  const hi = 0.7, lo = 0.4;
+  // Normalize PT: typical range 0-5, map to 0-1
+  const ptNorm = Math.min(sig.pt / 5, 1);
+
+  if (ptNorm >= hi && sig.arousal >= hi)
+    return { name: 'The Agitators', tagline: 'High propaganda density meets high emotional arousal', color: '#f87171' };
+  if (sig.eq >= hi && sig.td >= hi && ptNorm < lo)
+    return { name: 'The Transparents', tagline: 'Epistemic rigor with full disclosure and minimal propaganda', color: '#34d399' };
+  if (sig.eq >= hi && ptNorm < lo && sig.fw >= hi)
+    return { name: 'The Chroniclers', tagline: 'Fact-forward reporting grounded in observable evidence', color: '#60a5fa' };
+  if (sig.so >= hi && sig.sr >= hi)
+    return { name: 'The Bridge Builders', tagline: 'Solution-oriented with broad stakeholder representation', color: '#a78bfa' };
+  if (sig.eq < lo && sig.arousal >= hi)
+    return { name: 'The Firebrands', tagline: 'Emotionally charged with low epistemic quality', color: '#fb923c' };
+  if (sig.eq >= hi && sig.arousal < lo)
+    return { name: 'The Analysts', tagline: 'High epistemic quality delivered with measured restraint', color: '#22d3ee' };
+  if (sig.sr >= hi && sig.valence > 0.1)
+    return { name: 'The Amplifiers', tagline: 'Positive-valence content with diverse stakeholder voices', color: '#fbbf24' };
+  if (sig.fw < lo && sig.valence < -0.1)
+    return { name: 'The Speculators', tagline: 'Inference-heavy coverage with negative emotional lean', color: '#c084fc' };
+  if (sig.so >= hi && sig.arousal < lo)
+    return { name: 'The Pragmatists', tagline: 'Solution-focused with low emotional intensity', color: '#4ade80' };
+  return { name: 'The Moderates', tagline: 'Balanced signal profile without strong extremes', color: '#818cf8' };
+}
+
+// --- 6. Build enriched faction data ---
+interface EnrichedFaction {
+  members: string[];
+  avgScore: number | null;
+  signals: FactionSignals;
+  archetype: Archetype;
+  avgFingerprint: (number | null)[];
+}
+
+const multiFactions: EnrichedFaction[] = [];
+const loneWolves: { domain: string; score: number | null; signals: FactionSignals; nearestFaction: string; nearestSim: number }[] = [];
+
+for (const c of clusters) {
+  const signals = avgSignals(c.members);
+  const archetype = assignArchetype(signals);
+
+  // Compute average fingerprint
+  const avgFp: (number | null)[] = new Array(31).fill(null);
+  for (let i = 0; i < 31; i++) {
+    const vals = c.members.map(m => fingerprints.get(m)?.[i]).filter((v): v is number => v !== null);
+    avgFp[i] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  }
+
+  if (c.members.length > 1) {
+    multiFactions.push({ members: c.members, avgScore: c.avgScore, signals, archetype, avgFingerprint: avgFp });
+  } else {
+    // Lone wolf — find nearest multi-member faction
+    const wolfFp = fingerprints.get(c.members[0]);
+    let nearestName = 'None';
+    let nearestSim = -1;
+    if (wolfFp) {
+      for (const f of multiFactions) {
+        const sim = cosineSim(wolfFp, f.avgFingerprint);
+        if (sim !== null && sim > nearestSim) {
+          nearestSim = sim;
+          nearestName = f.archetype.name;
+        }
+      }
+    }
+    loneWolves.push({
+      domain: c.members[0],
+      score: c.avgScore,
+      signals,
+      nearestFaction: nearestName,
+      nearestSim: Math.max(nearestSim, 0),
+    });
+  }
+}
+
+// --- 7. Alliance/rivalry signal overlap ---
+const sortedPairsDesc = [...pairs].sort((a, b) => b.similarity - a.similarity);
+const sortedPairsAsc = [...pairs].sort((a, b) => a.similarity - b.similarity);
+
+const signalKeys: (keyof Pick<FactionSignals, 'eq' | 'so' | 'sr' | 'td' | 'pt' | 'fw'>)[] = ['eq', 'so', 'sr', 'td', 'pt', 'fw'];
+const signalLabels: Record<string, string> = { eq: 'EQ', so: 'SO', sr: 'SR', td: 'TD', pt: 'PT', fw: 'FW' };
+
+function findSharedFaction(a: string, b: string): string | null {
+  for (const f of multiFactions) {
+    if (f.members.includes(a) && f.members.includes(b)) return f.archetype.name;
+  }
+  return null;
+}
+
+function getSignalOverlap(a: string, b: string): string {
+  const sa = signalProfiles.get(a);
+  const sb = signalProfiles.get(b);
+  if (!sa || !sb) return 'N/A';
+  const sigVals: { key: string; diff: number; va: number; vb: number }[] = [
+    { key: 'EQ', diff: Math.abs((sa.avg_eq ?? 0) - (sb.avg_eq ?? 0)), va: sa.avg_eq ?? 0, vb: sb.avg_eq ?? 0 },
+    { key: 'SO', diff: Math.abs((sa.avg_so ?? 0) - (sb.avg_so ?? 0)), va: sa.avg_so ?? 0, vb: sb.avg_so ?? 0 },
+    { key: 'SR', diff: Math.abs((sa.avg_sr ?? 0) - (sb.avg_sr ?? 0)), va: sa.avg_sr ?? 0, vb: sb.avg_sr ?? 0 },
+    { key: 'TD', diff: Math.abs((sa.avg_td ?? 0) - (sb.avg_td ?? 0)), va: sa.avg_td ?? 0, vb: sb.avg_td ?? 0 },
+    { key: 'PT', diff: Math.abs((sa.avg_pt_count ?? 0) - (sb.avg_pt_count ?? 0)), va: sa.avg_pt_count ?? 0, vb: sb.avg_pt_count ?? 0 },
+    { key: 'FW', diff: Math.abs((sa.avg_fw_ratio ?? 0) - (sb.avg_fw_ratio ?? 0)), va: sa.avg_fw_ratio ?? 0, vb: sb.avg_fw_ratio ?? 0 },
+  ];
+  sigVals.sort((a, b) => a.diff - b.diff);
+  return sigVals[0].key;
+}
+
+function getSignalDivergence(a: string, b: string): string {
+  const sa = signalProfiles.get(a);
+  const sb = signalProfiles.get(b);
+  if (!sa || !sb) return 'N/A';
+  const sigVals: { key: string; diff: number; va: number; vb: number }[] = [
+    { key: 'EQ', diff: Math.abs((sa.avg_eq ?? 0) - (sb.avg_eq ?? 0)), va: sa.avg_eq ?? 0, vb: sb.avg_eq ?? 0 },
+    { key: 'SO', diff: Math.abs((sa.avg_so ?? 0) - (sb.avg_so ?? 0)), va: sa.avg_so ?? 0, vb: sb.avg_so ?? 0 },
+    { key: 'SR', diff: Math.abs((sa.avg_sr ?? 0) - (sb.avg_sr ?? 0)), va: sa.avg_sr ?? 0, vb: sb.avg_sr ?? 0 },
+    { key: 'TD', diff: Math.abs((sa.avg_td ?? 0) - (sb.avg_td ?? 0)), va: sa.avg_td ?? 0, vb: sb.avg_td ?? 0 },
+    { key: 'PT', diff: Math.abs((sa.avg_pt_count ?? 0) - (sb.avg_pt_count ?? 0)), va: sa.avg_pt_count ?? 0, vb: sb.avg_pt_count ?? 0 },
+    { key: 'FW', diff: Math.abs((sa.avg_fw_ratio ?? 0) - (sb.avg_fw_ratio ?? 0)), va: sa.avg_fw_ratio ?? 0, vb: sb.avg_fw_ratio ?? 0 },
+  ];
+  sigVals.sort((a, b) => b.diff - a.diff);
+  const top = sigVals[0];
+  return `${top.key}: ${top.va.toFixed(2)} vs ${top.vb.toFixed(2)}`;
+}
+
+const top20Alliances = sortedPairsDesc.slice(0, 20);
+const rivalPairs = sortedPairsAsc.filter(p => p.similarity < 0.3).slice(0, 20);
+
+// --- 8. Group colors for heatmap ---
+const groupColors: Record<string, string> = {
+  'Foundation': '#a78bfa',
+  'Security': '#f87171',
+  'Legal': '#22d3ee',
+  'Personal': '#34d399',
+  'Privacy': '#38bdf8',
+  'Expression': '#fbbf24',
+  'Economic': '#fb923c',
+  'Cultural': '#e879f9',
+  'Order': '#818cf8',
+};
+
+function getGroupColor(group: string): string {
+  for (const [key, color] of Object.entries(groupColors)) {
+    if (group.toLowerCase().includes(key.toLowerCase())) return color;
+  }
+  return '#888';
+}
+
+// Column labels for heatmap
+const colLabels = ['P', ...Array.from({ length: 30 }, (_, i) => String(i + 1))];
+
+// Stats
+const totalDomains = domainList.length;
+const totalFactions = multiFactions.length;
+const unalignedCount = loneWolves.length;
+
+// Signal bar helper: clamp to [0,1]
+function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
 ---
 
 <Base title="Domain Factions — HN HRCB">
+
+  {/* --- Header --- */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
         <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Domain Factions</span>
         <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
-          Stackpole faction analysis — cosine similarity on 31-dim UDHR fingerprints
+          Stackpole faction analysis
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td style="color: #666; font-size: var(--font-xs); padding: 4px 0 8px 0;">
+        Domains clustered by cosine similarity on 31-dimension UDHR fingerprints, characterized by supplementary signal profile.
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Summary Stats Strip --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 8px 0;">
+    <tr>
+      <td style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
+          {totalFactions} factions
+        </span>
+        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #60a5fa;">
+          {totalDomains} domains
+        </span>
+        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #888;">
+          {unalignedCount} unaligned
+        </span>
+        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #555;">
+          threshold &ge; {threshold}
         </span>
       </td>
     </tr>
   </table>
 
-  {/* Faction clusters */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
-    <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-          Faction Clusters
-          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-            similarity threshold &ge; {threshold} · {clusters.length} factions · {domainList.length} domains
-          </span>
-        </div>
-        {clusters.slice(0, 15).map((c, i) => (
-          <div style="border-top: 1px solid #1a1a25; padding: 8px 0;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span style={`color: ${factionColors[i % factionColors.length]}; font-weight: bold; font-size: var(--font-sm);`}>
-                Faction {factionNames[i] || i}
-              </span>
-              <span style="color: #555; font-size: var(--font-xs);">
-                {c.members.length} domain{c.members.length !== 1 ? 's' : ''}
-              </span>
-              {c.avgScore !== null && (
-                <span class="score-font" style={`color: ${scoreToColor(c.avgScore)}; font-size: var(--font-sm);`}>
-                  avg {formatScore(c.avgScore)}
-                </span>
-              )}
-            </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-              {c.members.map(m => {
-                const score = domainScoreMap.get(m);
-                return (
-                  <a href={`/domain/${m}`}
-                     style={`color: ${score !== undefined && score !== null ? scoreToColor(score) : '#888'}; font-size: var(--font-sm); padding: 2px 6px; background: #0d0d14; border: 1px solid #222230; border-radius: 3px; text-decoration: none;`}>
-                    {m}
-                    {score !== null && score !== undefined && (
-                      <span class="score-font" style="margin-left: 4px; font-size: var(--font-xs);">{formatScore(score)}</span>
-                    )}
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </td>
-    </tr>
-  </table>
-
-  {/* Alliance table */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
-    <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-          Strongest Alliances
-          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-            highest cosine similarity
-          </span>
-        </div>
-        <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-          <tr style="color: #555;"><td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td></tr>
-          {alliances.map(p => (
-            <tr style="border-top: 1px solid #1a1a25;">
-              <td><a href={`/domain/${p.a}`} style="color: #aaa;">{p.a}</a></td>
-              <td><a href={`/domain/${p.b}`} style="color: #aaa;">{p.b}</a></td>
-              <td style="text-align: right; color: #34d399;" class="score-font">{p.similarity.toFixed(3)}</td>
-            </tr>
-          ))}
-        </table>
-      </td>
-    </tr>
-  </table>
-
-  {/* Rivals table */}
-  {rivals.length > 0 && rivals[0].similarity < 0 && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+  {evaluatedDomains.length < 3 ? (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-            Strongest Rivals
-            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-              lowest cosine similarity (opposing rights profiles)
-            </span>
-          </div>
-          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-            <tr style="color: #555;"><td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td></tr>
-            {rivals.filter(p => p.similarity < 0.3).map(p => (
-              <tr style="border-top: 1px solid #1a1a25;">
-                <td><a href={`/domain/${p.a}`} style="color: #aaa;">{p.a}</a></td>
-                <td><a href={`/domain/${p.b}`} style="color: #aaa;">{p.b}</a></td>
-                <td style="text-align: right; color: #f87171;" class="score-font">{p.similarity.toFixed(3)}</td>
-              </tr>
-            ))}
-          </table>
+        <td style="padding: 20px; background: #12121a; border: 1px solid #222230; border-radius: 6px; color: #888; text-align: center;">
+          Not enough evaluated domains to form factions. At least 3 domains with 3+ evaluations are needed.
         </td>
       </tr>
     </table>
+  ) : (
+    <>
+      {/* --- Faction Cards --- */}
+      {multiFactions.map((f, fi) => {
+        const sig = f.signals;
+        const arch = f.archetype;
+        // Normalize values for bars (0-1 scale)
+        const bars = [
+          { label: 'EQ', value: clamp01(sig.eq), tip: `Epistemic Quality: ${sig.eq.toFixed(2)}` },
+          { label: 'SO', value: clamp01(sig.so), tip: `Solution Orientation: ${sig.so.toFixed(2)}` },
+          { label: 'SR', value: clamp01(sig.sr), tip: `Stakeholder Rep: ${sig.sr.toFixed(2)}` },
+          { label: 'TD', value: clamp01(sig.td), tip: `Transparency: ${sig.td.toFixed(2)}` },
+          { label: 'PT', value: clamp01(1 - Math.min(sig.pt / 5, 1)), tip: `Propaganda (inv): ${sig.pt.toFixed(1)} flags` },
+          { label: 'FW', value: clamp01(sig.fw), tip: `Fair Witness: ${sig.fw.toFixed(2)}` },
+        ];
+        const barWidth = 120;
+        return (
+          <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+            <tr>
+              <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+                {/* Header: archetype name + avg HRCB */}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style={`color: ${arch.color}; font-weight: bold; font-size: var(--font-sm);`}>
+                    {arch.name}
+                  </span>
+                  {f.avgScore !== null && (
+                    <span class="score-font" style={`color: ${scoreToColor(f.avgScore)}; font-size: var(--font-sm);`}>
+                      {formatScore(f.avgScore)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Tagline + badges */}
+                <div style="color: #666; font-size: var(--font-xs); margin-bottom: 6px;">
+                  {arch.tagline}
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+                  <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                    {f.members.length} domains
+                  </span>
+                  {sig.dominantTone && (
+                    <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                      {sig.dominantTone}
+                    </span>
+                  )}
+                  {sig.dominantScope && (
+                    <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                      {sig.dominantScope}
+                    </span>
+                  )}
+                  {sig.dominantReadingLevel && (
+                    <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                      {sig.dominantReadingLevel}
+                    </span>
+                  )}
+                </div>
+
+                {/* HN engagement row */}
+                <div style="display: flex; gap: 16px; margin-bottom: 10px; font-size: var(--font-xs);">
+                  <span style="color: #888;">
+                    <span style="color: #555;">Pts</span> <span class="score-font" style="color: #fb923c;">{Math.round(sig.hnScore)}</span>
+                  </span>
+                  <span style="color: #888;">
+                    <span style="color: #555;">Cmts</span> <span class="score-font" style="color: #60a5fa;">{Math.round(sig.hnComments)}</span>
+                  </span>
+                  <span style="color: #888;">
+                    <span style="color: #555;">Karma</span> <span class="score-font" style="color: #a78bfa;">{Math.round(sig.posterKarma)}</span>
+                  </span>
+                </div>
+
+                {/* Signal bars + UDHR fingerprint side by side */}
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px;">
+                  {/* Signal bars */}
+                  <div>
+                    <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Signal Profile</div>
+                    <svg width={barWidth + 32} height={bars.length * 16} xmlns="http://www.w3.org/2000/svg">
+                      {bars.map((b, bi) => (
+                        <g>
+                          <title>{b.tip}</title>
+                          <text x="0" y={bi * 16 + 11} fill="#666" font-size="9" font-family="monospace">{b.label}</text>
+                          <rect x="22" y={bi * 16 + 2} width={barWidth} height="10" rx="2" fill="#1a1a25" />
+                          <rect x="22" y={bi * 16 + 2} width={Math.round(b.value * barWidth)} height="10" rx="2" fill={arch.color} opacity="0.8" />
+                        </g>
+                      ))}
+                    </svg>
+                  </div>
+
+                  {/* UDHR fingerprint */}
+                  <div>
+                    <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">UDHR Fingerprint</div>
+                    <svg width={31 * 12 + 2} height="18" xmlns="http://www.w3.org/2000/svg">
+                      {f.avgFingerprint.map((v, vi) => (
+                        <rect x={vi * 12} y="0" width="11" height="16" rx="1"
+                              fill={v !== null ? scoreToColor(v) : '#1a1a25'}
+                              opacity={v !== null ? '0.9' : '0.3'}>
+                          <title>{colLabels[vi]}: {v !== null ? formatScore(v) : 'ND'}</title>
+                        </rect>
+                      ))}
+                    </svg>
+                  </div>
+                </div>
+
+                {/* Member domains */}
+                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                  {f.members.map(m => {
+                    const score = domainScoreMap.get(m);
+                    return (
+                      <a href={`/domain/${m}`}
+                         style={`color: ${score !== undefined && score !== null ? scoreToColor(score) : '#888'}; font-size: var(--font-xs); padding: 2px 6px; background: #0d0d14; border: 1px solid #222230; border-radius: 3px; text-decoration: none;`}>
+                        {m}
+                        {score !== null && score !== undefined && (
+                          <span class="score-font" style="margin-left: 3px; font-size: var(--font-xs);">{formatScore(score)}</span>
+                        )}
+                      </a>
+                    );
+                  })}
+                </div>
+              </td>
+            </tr>
+          </table>
+        );
+      })}
+
+      {/* --- Fingerprint Comparison Heatmap --- */}
+      {multiFactions.length > 1 && (
+        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 8px 0;">
+          <tr>
+            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                Fingerprint Comparison
+                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                  faction-averaged UDHR provision scores
+                </span>
+              </div>
+              <div style="overflow-x: auto;">
+                <svg width={31 * 16 + 140} height={multiFactions.length * 20 + 36} xmlns="http://www.w3.org/2000/svg">
+                  {/* Group color indicator bars */}
+                  {SECTIONS.map((sec, si) => (
+                    <rect x={140 + si * 16} y="0" width="15" height="4" rx="1" fill={getGroupColor(sec.group)} opacity="0.6">
+                      <title>{sec.group}</title>
+                    </rect>
+                  ))}
+                  {/* Column headers */}
+                  {colLabels.map((label, li) => (
+                    <text x={140 + li * 16 + 7} y="18" fill="#555" font-size="7" font-family="monospace" text-anchor="middle">{label}</text>
+                  ))}
+                  {/* Rows */}
+                  {multiFactions.map((f, fi) => (
+                    <g>
+                      <text x="0" y={24 + fi * 20 + 13} fill={f.archetype.color} font-size="9" font-family="monospace">
+                        {f.archetype.name.replace('The ', '').slice(0, 14)}
+                      </text>
+                      {f.avgFingerprint.map((v, vi) => (
+                        <rect x={140 + vi * 16} y={24 + fi * 20 + 2} width="15" height="16" rx="2"
+                              fill={v !== null ? scoreToColor(v) : '#1a1a25'}
+                              opacity={v !== null ? '0.85' : '0.2'}>
+                          <title>{f.archetype.name} — {colLabels[vi]}: {v !== null ? formatScore(v) : 'ND'}</title>
+                        </rect>
+                      ))}
+                    </g>
+                  ))}
+                </svg>
+              </div>
+              {/* Group legend */}
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+                {Object.entries(groupColors).map(([group, color]) => (
+                  <span style={`color: ${color}; font-size: var(--font-xs);`}>{group}</span>
+                ))}
+              </div>
+            </td>
+          </tr>
+        </table>
+      )}
+
+      {/* --- Faction Signal Comparison Chart --- */}
+      {multiFactions.length > 1 && (
+        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+          <tr>
+            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                Signal Comparison
+                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                  cross-faction signal profiles
+                </span>
+              </div>
+              <div style="overflow-x: auto;">
+                {(() => {
+                  const sigNames = ['EQ', 'SO', 'SR', 'TD', 'PT (inv)', 'FW'];
+                  const nF = multiFactions.length;
+                  const barH = 10;
+                  const groupH = nF * (barH + 2) + 14;
+                  const maxBarW = 200;
+                  const labelW = 60;
+                  const totalH = sigNames.length * groupH + 10;
+                  return (
+                    <svg width={labelW + maxBarW + 10} height={totalH} xmlns="http://www.w3.org/2000/svg">
+                      {sigNames.map((sn, gi) => {
+                        const yOff = gi * groupH;
+                        return (
+                          <g>
+                            <text x="0" y={yOff + 10} fill="#888" font-size="9" font-family="monospace">{sn}</text>
+                            {multiFactions.map((f, fi) => {
+                              const vals = [f.signals.eq, f.signals.so, f.signals.sr, f.signals.td, 1 - Math.min(f.signals.pt / 5, 1), f.signals.fw];
+                              const v = clamp01(vals[gi]);
+                              return (
+                                <g>
+                                  <rect x={labelW} y={yOff + 14 + fi * (barH + 2)} width={maxBarW} height={barH} rx="2" fill="#1a1a25" />
+                                  <rect x={labelW} y={yOff + 14 + fi * (barH + 2)} width={Math.round(v * maxBarW)} height={barH} rx="2" fill={f.archetype.color} opacity="0.8">
+                                    <title>{f.archetype.name}: {vals[gi].toFixed(2)}</title>
+                                  </rect>
+                                </g>
+                              );
+                            })}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  );
+                })()}
+              </div>
+              {/* Legend */}
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+                {multiFactions.map(f => (
+                  <span style={`display: inline-flex; align-items: center; gap: 4px; font-size: var(--font-xs);`}>
+                    <span style={`display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: ${f.archetype.color};`}></span>
+                    <span style={`color: ${f.archetype.color};`}>{f.archetype.name.replace('The ', '')}</span>
+                  </span>
+                ))}
+              </div>
+            </td>
+          </tr>
+        </table>
+      )}
+
+      {/* --- Alliance Table --- */}
+      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+        <tr>
+          <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+              Strongest Alliances
+              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                top 20 most similar domain pairs
+              </span>
+            </div>
+            <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+              <tr style="color: #555;">
+                <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td><td>Shared Faction</td><td>Key Overlap</td>
+              </tr>
+              {top20Alliances.map(p => (
+                <tr style="border-top: 1px solid #1a1a25;">
+                  <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
+                  <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
+                  <td style="text-align: right; color: #34d399;" class="score-font">{p.similarity.toFixed(3)}</td>
+                  <td style="color: #888;">{findSharedFaction(p.a, p.b) || '—'}</td>
+                  <td style="color: #888;">{getSignalOverlap(p.a, p.b)}</td>
+                </tr>
+              ))}
+            </table>
+          </td>
+        </tr>
+      </table>
+
+      {/* --- Rivalry Table --- */}
+      {rivalPairs.length > 0 && (
+        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+          <tr>
+            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                Strongest Rivals
+                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                  pairs with similarity &lt; 0.3
+                </span>
+              </div>
+              <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                <tr style="color: #555;">
+                  <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td><td>Key Divergence</td>
+                </tr>
+                {rivalPairs.map(p => (
+                  <tr style="border-top: 1px solid #1a1a25;">
+                    <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
+                    <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
+                    <td style="text-align: right; color: #f87171;" class="score-font">{p.similarity.toFixed(3)}</td>
+                    <td style="color: #888; font-size: var(--font-xs);">{getSignalDivergence(p.a, p.b)}</td>
+                  </tr>
+                ))}
+              </table>
+            </td>
+          </tr>
+        </table>
+      )}
+
+      {/* --- Lone Wolves --- */}
+      {loneWolves.length > 0 && (
+        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0 20px 0;">
+          <tr>
+            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                Lone Wolves
+                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                  single-member clusters
+                </span>
+              </div>
+              <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                <tr style="color: #555;">
+                  <td>Domain</td><td style="text-align: right;">HRCB</td><td style="text-align: right;">Pts</td><td style="text-align: right;">Karma</td>
+                  <td style="text-align: right;">EQ</td><td style="text-align: right;">PT</td><td>Tone</td><td>Nearest Faction</td>
+                </tr>
+                {loneWolves.map(w => (
+                  <tr style="border-top: 1px solid #1a1a25;">
+                    <td><a href={`/domain/${w.domain}`} style="color: #aaa; text-decoration: none;">{w.domain}</a></td>
+                    <td style={`text-align: right; color: ${w.score !== null ? scoreToColor(w.score) : '#555'};`} class="score-font">
+                      {w.score !== null ? formatScore(w.score) : 'ND'}
+                    </td>
+                    <td style="text-align: right; color: #fb923c;" class="score-font">{Math.round(w.signals.hnScore)}</td>
+                    <td style="text-align: right; color: #a78bfa;" class="score-font">{Math.round(w.signals.posterKarma)}</td>
+                    <td style="text-align: right; color: #888;" class="score-font">{w.signals.eq.toFixed(2)}</td>
+                    <td style="text-align: right; color: #888;" class="score-font">{w.signals.pt.toFixed(1)}</td>
+                    <td style="color: #888;">{w.signals.dominantTone || '—'}</td>
+                    <td style="color: #888;">
+                      {w.nearestFaction}
+                      <span style="color: #555; margin-left: 4px;" class="score-font">{w.nearestSim.toFixed(2)}</span>
+                    </td>
+                  </tr>
+                ))}
+              </table>
+            </td>
+          </tr>
+        </table>
+      )}
+    </>
   )}
 </Base>
