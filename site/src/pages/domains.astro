@@ -79,11 +79,12 @@ function buildDomainUrl(params: Record<string, string>): string {
     </tr>
   </table>
 
+  <div class="table-wrap">
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
     <tr>
       <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
         {domains.length > 0 ? (
-          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); min-width: 480px;">
             <tr style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td width="24">#</td>
               <td>Domain</td>
@@ -122,4 +123,5 @@ function buildDomainUrl(params: Record<string, string>): string {
       </td>
     </tr>
   </table>
+  </div>
 </Base>

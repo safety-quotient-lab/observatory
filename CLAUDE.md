@@ -114,6 +114,18 @@ The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry
 - `calibration-v3.1-set.txt` — 15-URL calibration set with expected score ranges
 - `calibration-v3.1-baselines.txt` — Actual baseline evaluations for 9 calibration URLs
 
+## Factions Page
+
+The factions page (`site/src/pages/factions.astro`) clusters domains by **editorial character** using 8 supplementary signal dimensions (EQ, SO, SR, TD, PT inverted, AR, VA, FW) rather than the 31-dimension UDHR fingerprint.
+
+**Algorithm:** Z-normalize per dimension → cosine similarity on 8D vectors → agglomerative hierarchical clustering with average linkage at 1/φ threshold (fallback to 1/φ² if single giant cluster).
+
+**Page sections (top→bottom):** Signal Landscape (histograms) → Parallel Coordinates → Differentiation (inter-cluster variance) → Cluster Cards (radar charts, members, liminal flags) → Affinity Matrix → Interesting Pairs → Outliers → Methodology Notes.
+
+**Archetype naming:** ~22 pattern rules (e.g., high EQ + TD + low PT → "Rigorous Analysts"), fallback to readable "High X/Y · Low Z" names.
+
+**Key data flow:** `getDomainSignalProfiles(db)` → build raw vectors → z-normalize → cluster → enrich with archetypes, insights, radar data → render. The `getDomainSignalProfiles` query includes `avg_setl` via a SETL subquery.
+
 ## Key Patterns
 
 - **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.

@@ -1,0 +1,289 @@
+---
+import Base from '../layouts/Base.astro';
+import { getStoryDynamics, getEngagementByType } from '../lib/db';
+import type { StoryDynamics } from '../lib/db';
+import { scoreToColor, formatScore } from '../lib/colors';
+
+const db = Astro.locals.runtime.env.DB;
+
+const url = new URL(Astro.request.url);
+const sort = url.searchParams.get('sort') || 'peak';
+const validSorts = ['peak', 'velocity', 'comments', 'ratio', 'gain'];
+const safeSort = validSorts.includes(sort) ? sort : 'peak';
+
+const allStories = await getStoryDynamics(db, 200);
+const typeEngagement = await getEngagementByType(db);
+
+// Sort stories
+const stories = [...allStories].sort((a, b) => {
+  switch (safeSort) {
+    case 'velocity': return b.score_velocity - a.score_velocity;
+    case 'comments': return b.peak_comments - a.peak_comments;
+    case 'ratio': return (b.comment_ratio || 0) - (a.comment_ratio || 0);
+    case 'gain': return b.score_gain - a.score_gain;
+    default: return b.peak_score - a.peak_score;
+  }
+}).slice(0, 100);
+
+// Aggregate stats
+const withVelocity = allStories.filter(s => s.score_velocity > 0);
+const avgVelocity = withVelocity.length > 0 ? withVelocity.reduce((s, d) => s + d.score_velocity, 0) / withVelocity.length : 0;
+const avgCommentVelocity = withVelocity.length > 0 ? withVelocity.reduce((s, d) => s + d.comment_velocity, 0) / withVelocity.length : 0;
+const avgRatio = allStories.filter(s => s.comment_ratio !== null).reduce((s, d) => s + (d.comment_ratio || 0), 0) / (allStories.filter(s => s.comment_ratio !== null).length || 1);
+
+// Top velocity stories
+const topVelocity = [...allStories].sort((a, b) => b.score_velocity - a.score_velocity).slice(0, 5);
+// Highest comment ratio (most discussion-heavy)
+const topRatio = [...allStories].filter(s => s.peak_score >= 20 && s.comment_ratio !== null).sort((a, b) => (b.comment_ratio || 0) - (a.comment_ratio || 0)).slice(0, 5);
+// Biggest score gains
+const topGain = [...allStories].sort((a, b) => b.score_gain - a.score_gain).slice(0, 5);
+// Slow burners (low velocity but high peak)
+const slowBurners = [...allStories].filter(s => s.peak_score >= 50 && s.score_velocity < avgVelocity * 0.5).sort((a, b) => b.peak_score - a.peak_score).slice(0, 5);
+
+// Score velocity histogram (buckets)
+const velBuckets = [0, 5, 10, 20, 50, 100, 200, Infinity];
+const velHist = velBuckets.slice(0, -1).map((lo, i) => {
+  const hi = velBuckets[i + 1];
+  const count = withVelocity.filter(s => s.score_velocity >= lo && s.score_velocity < hi).length;
+  const label = hi === Infinity ? `${lo}+` : `${lo}-${hi}`;
+  return { label, count };
+});
+const maxVelCount = Math.max(...velHist.map(b => b.count), 1);
+
+// Score/comment correlation data (for scatter description)
+const highScoreLowComment = allStories.filter(s => s.peak_score >= 100 && (s.comment_ratio || 0) < 0.3).slice(0, 3);
+const lowScoreHighComment = allStories.filter(s => s.peak_score < 100 && (s.comment_ratio || 0) > 1.5).slice(0, 3);
+
+function sortUrl(s: string): string {
+  return s === 'peak' ? '/dynamics' : `/dynamics?sort=${s}`;
+}
+
+type SortLabels = Record<string, string>;
+const sortLabels: SortLabels = {
+  peak: 'peak score', velocity: 'velocity', comments: 'comments', ratio: 'comment ratio', gain: 'score gain'
+};
+---
+
+<Base title="Story Dynamics — HN HRCB">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
+    <tr>
+      <td>
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Story Dynamics</span>
+        <span style="color: #828282; margin-left: 8px; font-size: var(--font-base);">
+          {allStories.length} stories tracked
+        </span>
+        <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
+          <span style="color: #666;">sort:</span>
+          {Object.entries(sortLabels).map(([key, label], i) => (
+            <>
+              {i > 0 && <span style="color: #444;"> | </span>}
+              {safeSort === key
+                ? <span style="color: #ff6600; font-weight: bold;">{label}</span>
+                : <a href={sortUrl(key)}>{label}</a>
+              }
+            </>
+          ))}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Aggregate stats --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            <td style="vertical-align: top; width: 25%; padding: 6px 8px;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Avg Score Velocity</div>
+              <div class="score-font" style="color: #60a5fa; font-size: var(--font-md);">{avgVelocity.toFixed(1)} <span style="color: #555; font-size: var(--font-xs);">pts/hr</span></div>
+              <div style="color: #555; font-size: var(--font-xs); margin-top: 2px;">first 2 hours</div>
+            </td>
+            <td style="vertical-align: top; width: 25%; padding: 6px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Avg Comment Velocity</div>
+              <div class="score-font" style="color: #a78bfa; font-size: var(--font-md);">{avgCommentVelocity.toFixed(1)} <span style="color: #555; font-size: var(--font-xs);">cmt/hr</span></div>
+              <div style="color: #555; font-size: var(--font-xs); margin-top: 2px;">first 2 hours</div>
+            </td>
+            <td style="vertical-align: top; width: 25%; padding: 6px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Avg Comment Ratio</div>
+              <div class="score-font" style="color: #e2b340; font-size: var(--font-md);">{avgRatio.toFixed(2)} <span style="color: #555; font-size: var(--font-xs);">cmt/pt</span></div>
+            </td>
+            <td style="vertical-align: top; width: 25%; padding: 6px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Velocity Distribution</div>
+              <div style="display: flex; gap: 1px; align-items: flex-end; height: 30px;">
+                {velHist.map(b => (
+                  <div style="display: flex; flex-direction: column; align-items: center; flex: 1;" title={`${b.label} pts/hr: ${b.count} stories`}>
+                    <div style={`width: 100%; height: ${Math.max(2, (b.count / maxVelCount) * 30)}px; background: #60a5fa; border-radius: 1px;`}></div>
+                  </div>
+                ))}
+              </div>
+              <div style="display: flex; gap: 1px;">
+                {velHist.map(b => (
+                  <div style="flex: 1; text-align: center; color: #555; font-size: 7px;">{b.label}</div>
+                ))}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Insight cards --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            {/* Fastest risers */}
+            <td style="vertical-align: top; width: 25%; padding: 4px 8px;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Fastest Risers</div>
+              {topVelocity.map(d => (
+                <div style="margin-bottom: 4px;">
+                  <a href={`/item/${d.hn_id}`} style="color: #c9c9c9; font-size: var(--font-xs);" title={d.title}>{d.title.length > 35 ? d.title.slice(0, 35) + '...' : d.title}</a>
+                  <span class="score-font" style="color: #60a5fa; font-size: var(--font-xs); margin-left: 4px;">{d.score_velocity} pt/h</span>
+                </div>
+              ))}
+            </td>
+            {/* Most discussed */}
+            <td style="vertical-align: top; width: 25%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Discussed</div>
+              {topRatio.map(d => (
+                <div style="margin-bottom: 4px;">
+                  <a href={`/item/${d.hn_id}`} style="color: #c9c9c9; font-size: var(--font-xs);" title={d.title}>{d.title.length > 35 ? d.title.slice(0, 35) + '...' : d.title}</a>
+                  <span class="score-font" style="color: #e2b340; font-size: var(--font-xs); margin-left: 4px;">{d.comment_ratio?.toFixed(1)} c/pt</span>
+                </div>
+              ))}
+            </td>
+            {/* Biggest gains */}
+            <td style="vertical-align: top; width: 25%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Biggest Gains</div>
+              {topGain.map(d => (
+                <div style="margin-bottom: 4px;">
+                  <a href={`/item/${d.hn_id}`} style="color: #c9c9c9; font-size: var(--font-xs);" title={d.title}>{d.title.length > 35 ? d.title.slice(0, 35) + '...' : d.title}</a>
+                  <span class="score-font" style="color: #22c55e; font-size: var(--font-xs); margin-left: 4px;">+{d.score_gain}</span>
+                </div>
+              ))}
+            </td>
+            {/* Slow burners */}
+            <td style="vertical-align: top; width: 25%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Slow Burners</div>
+              {slowBurners.map(d => (
+                <div style="margin-bottom: 4px;">
+                  <a href={`/item/${d.hn_id}`} style="color: #c9c9c9; font-size: var(--font-xs);" title={d.title}>{d.title.length > 35 ? d.title.slice(0, 35) + '...' : d.title}</a>
+                  <span class="score-font" style="color: #888; font-size: var(--font-xs); margin-left: 4px;">{d.score_velocity} pt/h → {d.peak_score}</span>
+                </div>
+              ))}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Engagement by story type --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Engagement by Story Type</div>
+        <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+          <tr style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <td>Type</td>
+            <td width="70" align="center">Stories</td>
+            <td width="80" align="center">Avg Score</td>
+            <td width="90" align="center">Avg Comments</td>
+            <td width="70" align="center">Cmt/Pt</td>
+            <td width="80" align="center">Avg HRCB</td>
+            <td width="200">Score Distribution</td>
+          </tr>
+          {typeEngagement.map(t => {
+            const maxStories = Math.max(...typeEngagement.map(x => x.stories));
+            const barW = Math.max(2, (t.stories / maxStories) * 180);
+            return (
+              <tr style="border-top: 1px solid #1a1a25;">
+                <td style="color: #c9c9c9; font-weight: bold;">
+                  {t.hn_type === 'story' ? 'link' : t.hn_type}
+                </td>
+                <td align="center" class="score-font" style="color: #888;">{t.stories}</td>
+                <td align="center" class="score-font" style="color: #888;">{t.avg_score}</td>
+                <td align="center" class="score-font" style="color: #888;">{t.avg_comments}</td>
+                <td align="center" class="score-font" style={`color: ${(t.avg_comment_ratio || 0) > 0.8 ? '#e2b340' : '#666'};`}>
+                  {t.avg_comment_ratio !== null ? t.avg_comment_ratio.toFixed(2) : '—'}
+                </td>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(t.avg_hrcb)};`}>
+                  {t.avg_hrcb !== null ? formatScore(t.avg_hrcb) : '—'}
+                </td>
+                <td>
+                  <div style={`width: ${barW}px; height: 8px; background: #60a5fa; border-radius: 2px; opacity: 0.6;`}></div>
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Main story table --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+        <div style="overflow-x: auto;">
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm); min-width: 900px;">
+            <tr style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+              <td width="20">#</td>
+              <td>Story</td>
+              <td width="55" align="center" title="Peak HN score observed">Peak</td>
+              <td width="55" align="center" title="Peak comments observed">Cmts</td>
+              <td width="65" align="center" title="Score gained during observation period">Gain</td>
+              <td width="70" align="center" title="Score velocity in first 2 hours (points/hour)">Vel pt/h</td>
+              <td width="70" align="center" title="Comment velocity in first 2 hours (comments/hour)">Vel cm/h</td>
+              <td width="50" align="center" title="Comments per point ratio">C/Pt</td>
+              <td width="65" align="center" title="HRCB score">HRCB</td>
+              <td width="120" align="center" title="Score growth trajectory">Trajectory</td>
+            </tr>
+            {stories.map((d, i) => {
+              // Mini trajectory sparkline
+              const maxPeak = Math.max(...stories.map(s => s.peak_score), 1);
+              const gainPct = d.peak_score > 0 ? Math.min(100, (d.score_gain / d.peak_score) * 100) : 0;
+              const velColor = d.score_velocity >= avgVelocity * 2 ? '#22c55e' : d.score_velocity >= avgVelocity ? '#60a5fa' : '#555';
+              return (
+                <tr style="border-top: 1px solid #1a1a25;">
+                  <td style="color: #555;" class="score-font">{i + 1}</td>
+                  <td>
+                    <a href={`/item/${d.hn_id}`} style="color: #c9c9c9;">{d.title.length > 50 ? d.title.slice(0, 50) + '...' : d.title}</a>
+                    {d.domain && (
+                      <span style="color: #555; font-size: var(--font-xs); margin-left: 4px;">
+                        (<a href={`/domain/${d.domain}`} style="color: #555;">{d.domain}</a>)
+                      </span>
+                    )}
+                  </td>
+                  <td align="center" class="score-font" style="color: #c9c9c9; font-weight: bold;">{d.peak_score}</td>
+                  <td align="center" class="score-font" style="color: #888;">{d.peak_comments}</td>
+                  <td align="center" class="score-font" style="color: #22c55e;">+{d.score_gain}</td>
+                  <td align="center" class="score-font" style={`color: ${velColor};`}>{d.score_velocity}</td>
+                  <td align="center" class="score-font" style="color: #a78bfa;">{d.comment_velocity}</td>
+                  <td align="center" class="score-font" style={`color: ${(d.comment_ratio || 0) > 1.0 ? '#e2b340' : '#666'};`}>
+                    {d.comment_ratio !== null ? d.comment_ratio.toFixed(2) : '—'}
+                  </td>
+                  <td align="center" class="score-font" style={`color: ${scoreToColor(d.hcb_weighted_mean)};`}>
+                    {d.hcb_weighted_mean !== null ? formatScore(d.hcb_weighted_mean) : <span style="color: #555;">—</span>}
+                  </td>
+                  <td align="center">
+                    <div style="display: flex; align-items: center; gap: 2px;" title={`Started at ${d.first_score}, gained ${d.score_gain} over ${d.hours_tracked}h`}>
+                      <span class="score-font" style="color: #555; font-size: 8px;">{d.first_score}</span>
+                      <div style="flex: 1; height: 8px; background: #1a1a25; border-radius: 2px; position: relative; overflow: hidden;">
+                        <div style={`width: ${Math.max(2, (d.peak_score / maxPeak) * 100)}%; height: 100%; background: linear-gradient(90deg, #1a3a5c, #60a5fa); border-radius: 2px;`}></div>
+                      </div>
+                      <span class="score-font" style="color: #888; font-size: 8px;">{d.peak_score}</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+</Base>

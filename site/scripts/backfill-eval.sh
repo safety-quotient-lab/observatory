@@ -42,6 +42,8 @@ run_sql() {
   return $rc
 }
 
+BATCH_START=$(date +%s)
+
 echo "=== HRCB Backfill Eval ==="
 echo "Limit: $LIMIT | Delay: ${DELAY}s | Status: $STATUS"
 echo ""
@@ -74,6 +76,9 @@ rm -f "$STORIES_FILE"
 
 SUCCESS=0
 FAILED=0
+CURRENT=0
+TOTAL_CLAUDE_MS=0
+TOTAL_DB_MS=0
 
 # Read from file to avoid subshell issues with pipe
 while IFS= read -r ROW; do
@@ -83,7 +88,10 @@ while IFS= read -r ROW; do
   HN_TEXT=$(echo "$ROW" | jq -r '.hn_text // empty')
   DOMAIN=$(echo "$ROW" | jq -r '.domain // empty')
 
-  echo "--- hn_id=$HN_ID: $TITLE ---"
+  CURRENT=$((CURRENT + 1))
+  STORY_START=$(date +%s%3N)
+
+  echo "--- [$CURRENT/$COUNT] hn_id=$HN_ID: $TITLE ---"
 
   # Mark as evaluating to prevent double-eval
   npx wrangler d1 execute hrcb-db --remote --command \
@@ -126,6 +134,7 @@ USERMSG
   fi
 
   # Run claude -p with system prompt
+  CLAUDE_START=$(date +%s%3N)
   echo "  Running claude -p..."
   RESULT_FILE=$(mktemp)
   if ! claude -p \
@@ -143,6 +152,9 @@ USERMSG
     continue
   fi
 
+  CLAUDE_END=$(date +%s%3N)
+  CLAUDE_MS=$((CLAUDE_END - CLAUDE_START))
+  TOTAL_CLAUDE_MS=$((TOTAL_CLAUDE_MS + CLAUDE_MS))
   rm -f "$TMPFILE"
 
   # Extract eval JSON from claude's response
@@ -196,6 +208,7 @@ USERMSG
 
   # Use Python helper to generate properly-escaped SQL (avoids all shell/jq quoting issues)
   SQLGEN="$SCRIPT_DIR/eval-to-sql.py"
+  DB_START=$(date +%s%3N)
 
   # Write scores
   python3 "$SQLGEN" "$EVAL_FILE" "$HN_ID" scores | run_sql \
@@ -214,13 +227,38 @@ USERMSG
       2>/dev/null || true
   }
 
+  DB_END=$(date +%s%3N)
+  DB_MS=$((DB_END - DB_START))
+  TOTAL_DB_MS=$((TOTAL_DB_MS + DB_MS))
+  STORY_END=$(date +%s%3N)
+  STORY_MS=$((STORY_END - STORY_START))
+
   rm -f "$EVAL_FILE"
   SUCCESS=$((SUCCESS + 1))
-  echo "  OK: $SCORE_COUNT scores written, marked for rescoring"
+
+  # Timing summary
+  ELAPSED=$((STORY_END / 1000 - BATCH_START))
+  AVG_S=$(( ELAPSED / CURRENT ))
+  REMAINING=$(( (COUNT - CURRENT) * AVG_S ))
+  REMAINING_M=$(( REMAINING / 60 ))
+  REMAINING_S=$(( REMAINING % 60 ))
+  echo "  OK: $SCORE_COUNT scores | claude ${CLAUDE_MS}ms | db ${DB_MS}ms | total ${STORY_MS}ms | avg ${AVG_S}s/story | ETA ${REMAINING_M}m${REMAINING_S}s"
   sleep "$DELAY"
 done < "$LINES_FILE"
 
 rm -f "$LINES_FILE"
 
+BATCH_END=$(date +%s)
+BATCH_ELAPSED=$((BATCH_END - BATCH_START))
+BATCH_MIN=$((BATCH_ELAPSED / 60))
+BATCH_SEC=$((BATCH_ELAPSED % 60))
+AVG_CLAUDE=$((TOTAL_CLAUDE_MS / (SUCCESS + FAILED > 0 ? SUCCESS + FAILED : 1)))
+AVG_DB=$((TOTAL_DB_MS / (SUCCESS > 0 ? SUCCESS : 1)))
+
 echo ""
-echo "=== Backfill complete: $SUCCESS succeeded, $FAILED failed ==="
+echo "=== Backfill complete ==="
+echo "  Results:  $SUCCESS succeeded, $FAILED failed"
+echo "  Duration: ${BATCH_MIN}m${BATCH_SEC}s"
+echo "  Claude:   avg ${AVG_CLAUDE}ms/eval (${TOTAL_CLAUDE_MS}ms total)"
+echo "  DB write: avg ${AVG_DB}ms/eval (${TOTAL_DB_MS}ms total)"
+echo "  Rate:     ~$(( (SUCCESS + FAILED) * 60 / (BATCH_ELAPSED > 0 ? BATCH_ELAPSED : 1) )) evals/min"

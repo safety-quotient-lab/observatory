@@ -1,0 +1,334 @@
+---
+import Base from '../layouts/Base.astro';
+import { getUserIntelligence, getHourlyPatterns, getDayOfWeekPatterns } from '../lib/db';
+import type { UserIntelSortOption } from '../lib/db';
+import { scoreToColor, formatScore } from '../lib/colors';
+
+const db = Astro.locals.runtime.env.DB;
+
+const url = new URL(Astro.request.url);
+const sort = (url.searchParams.get('sort') || 'stories') as UserIntelSortOption;
+const validSorts: UserIntelSortOption[] = ['stories', 'score', 'comments', 'avg_comments', 'hrcb', 'domains', 'avg_score', 'controversy', 'evaluated', 'editorial', 'structural', 'positive', 'negative'];
+const safeSort = validSorts.includes(sort) ? sort : 'stories';
+const minStories = Math.max(2, Math.min(20, parseInt(url.searchParams.get('min') || '3', 10) || 3));
+
+const users = await getUserIntelligence(db, safeSort, minStories, 200);
+const hourly = await getHourlyPatterns(db);
+const daily = await getDayOfWeekPatterns(db);
+
+// Aggregate stats
+const totalUsers = users.length;
+const totalStories = users.reduce((s, u) => s + u.stories, 0);
+const usersWithHrcb = users.filter(u => u.avg_hrcb !== null);
+const avgHrcb = usersWithHrcb.length > 0 ? usersWithHrcb.reduce((s, u) => s + (u.avg_hrcb || 0), 0) / usersWithHrcb.length : null;
+
+// Insight card data: top submitters, highest HRCB, lowest HRCB, most diverse, most controversial
+const topSubmitters = [...users].sort((a, b) => b.stories - a.stories).slice(0, 5);
+const hrcbUsers = users.filter(u => u.evaluated >= 3 && u.avg_hrcb !== null);
+const topHrcb = [...hrcbUsers].sort((a, b) => (b.avg_hrcb || 0) - (a.avg_hrcb || 0)).slice(0, 5);
+const bottomHrcb = [...hrcbUsers].sort((a, b) => (a.avg_hrcb || 0) - (b.avg_hrcb || 0)).slice(0, 5);
+const mostDiverse = [...users].filter(u => u.stories >= 3).sort((a, b) => b.unique_domains - a.unique_domains).slice(0, 5);
+const mostControversial = [...hrcbUsers].filter(u => u.hrcb_range !== null).sort((a, b) => (b.hrcb_range || 0) - (a.hrcb_range || 0)).slice(0, 5);
+
+// Hourly pattern stats
+const maxHourlyStories = Math.max(...hourly.map(h => h.stories), 1);
+const peakHour = hourly.reduce((best, h) => h.avg_hn_score > best.avg_hn_score ? h : best, hourly[0]);
+const peakCommentHour = hourly.reduce((best, h) => h.avg_comments > best.avg_comments ? h : best, hourly[0]);
+
+// Day of week stats
+const maxDailyStories = Math.max(...daily.map(d => d.stories), 1);
+
+function sortUrl(s: string): string {
+  const p = new URLSearchParams();
+  if (s !== 'stories') p.set('sort', s);
+  if (minStories !== 3) p.set('min', String(minStories));
+  const qs = p.toString();
+  return qs ? `/user-intel?${qs}` : '/user-intel';
+}
+
+function minUrl(m: number): string {
+  const p = new URLSearchParams();
+  if (safeSort !== 'stories') p.set('sort', safeSort);
+  if (m !== 3) p.set('min', String(m));
+  const qs = p.toString();
+  return qs ? `/user-intel?${qs}` : '/user-intel';
+}
+
+type SortLabels = Record<string, string>;
+const sortLabels: SortLabels = {
+  stories: 'stories', score: 'total pts', avg_score: 'avg pts', comments: 'comments',
+  hrcb: 'hrcb', domains: 'domains', controversy: 'controversy'
+};
+
+function thStyle(col: string): string {
+  const active = safeSort === col;
+  return `cursor: pointer; ${active ? 'color: #ff6600; font-weight: bold;' : 'color: #555;'}`;
+}
+---
+
+<Base title="User Intelligence — HN HRCB">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
+    <tr>
+      <td>
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">User Intelligence</span>
+        <span style="color: #828282; margin-left: 8px; font-size: var(--font-base);">
+          {totalUsers} users, {totalStories} stories
+        </span>
+        <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
+          <span style="color: #666;">sort:</span>
+          {Object.entries(sortLabels).map(([key, label], i) => (
+            <>
+              {i > 0 && <span style="color: #444;"> | </span>}
+              {safeSort === key
+                ? <span style="color: #ff6600; font-weight: bold;">{label}</span>
+                : <a href={sortUrl(key)}>{label}</a>
+              }
+            </>
+          ))}
+          <br />
+          <span style="color: #666;">min stories:</span>
+          {[2, 3, 5, 10].map((m, i) => (
+            <>
+              {i > 0 && <span style="color: #444;"> | </span>}
+              {minStories === m
+                ? <span style="color: #ff6600; font-weight: bold;">{m}</span>
+                : <a href={minUrl(m)}>{m}</a>
+              }
+            </>
+          ))}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Insight cards --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            {/* Top submitters */}
+            <td style="vertical-align: top; width: 20%; padding: 4px 8px;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Top Submitters</div>
+              {topSubmitters.map(u => (
+                <div style="margin-bottom: 3px;">
+                  <a href={`/user/${u.username}`} style="color: #c9c9c9; font-size: var(--font-sm);">{u.username}</a>
+                  <span class="score-font" style="color: #60a5fa; font-size: var(--font-sm); margin-left: 4px;">{u.stories}</span>
+                  <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">stories</span>
+                </div>
+              ))}
+            </td>
+            {/* Most HR-Positive */}
+            <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
+              {topHrcb.map(u => (
+                <div style="margin-bottom: 3px;">
+                  <a href={`/user/${u.username}`} style="color: #c9c9c9; font-size: var(--font-sm);">{u.username}</a>
+                  <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
+                  <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">({u.evaluated})</span>
+                </div>
+              ))}
+            </td>
+            {/* Most HR-Negative */}
+            <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
+              {bottomHrcb.map(u => (
+                <div style="margin-bottom: 3px;">
+                  <a href={`/user/${u.username}`} style="color: #c9c9c9; font-size: var(--font-sm);">{u.username}</a>
+                  <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
+                  <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">({u.evaluated})</span>
+                </div>
+              ))}
+            </td>
+            {/* Most Diverse (domains) */}
+            <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
+              {mostDiverse.map(u => (
+                <div style="margin-bottom: 3px;">
+                  <a href={`/user/${u.username}`} style="color: #c9c9c9; font-size: var(--font-sm);">{u.username}</a>
+                  <span class="score-font" style="color: #a78bfa; font-size: var(--font-sm); margin-left: 4px;">{u.unique_domains}</span>
+                  <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">domains</span>
+                </div>
+              ))}
+            </td>
+            {/* Most Controversial */}
+            <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
+              {mostControversial.map(u => (
+                <div style="margin-bottom: 3px;">
+                  <a href={`/user/${u.username}`} style="color: #c9c9c9; font-size: var(--font-sm);">{u.username}</a>
+                  <span class="score-font" style="color: #e2b340; font-size: var(--font-sm); margin-left: 4px;">
+                    {u.hrcb_range !== null ? u.hrcb_range.toFixed(2) : '—'}
+                  </span>
+                  <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">range</span>
+                </div>
+              ))}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Posting patterns --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr>
+            {/* Hourly pattern */}
+            <td style="vertical-align: top; width: 65%; padding: 4px 8px;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                Hourly Posting Pattern (UTC)
+                {peakHour && <span style="color: #666; text-transform: none; letter-spacing: normal; margin-left: 8px;">
+                  peak engagement: {peakHour.hour}:00 ({peakHour.avg_hn_score} avg pts)
+                </span>}
+              </div>
+              <div style="display: flex; align-items: flex-end; gap: 2px; height: 50px;">
+                {hourly.map(h => {
+                  const pct = (h.stories / maxHourlyStories) * 100;
+                  const hrcbColor = h.avg_hrcb !== null ? scoreToColor(h.avg_hrcb) : '#444';
+                  return (
+                    <div style={`flex: 1; display: flex; flex-direction: column; align-items: center;`} title={`${h.hour}:00 UTC — ${h.stories} stories, avg ${h.avg_hn_score} pts, avg ${h.avg_comments} cmt${h.avg_hrcb !== null ? `, HRCB ${formatScore(h.avg_hrcb)}` : ''}`}>
+                      <div style={`width: 100%; height: ${pct}%; min-height: 2px; background: ${hrcbColor}; border-radius: 1px 1px 0 0; opacity: 0.8;`}></div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style="display: flex; gap: 2px; margin-top: 2px;">
+                {hourly.map(h => (
+                  <div style="flex: 1; text-align: center; font-size: 7px; color: #555;" class="score-font">
+                    {h.hour % 3 === 0 ? h.hour : ''}
+                  </div>
+                ))}
+              </div>
+            </td>
+            {/* Day of week pattern */}
+            <td style="vertical-align: top; width: 35%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                Day of Week
+              </div>
+              {daily.map(d => {
+                const pct = (d.stories / maxDailyStories) * 100;
+                const hrcbColor = d.avg_hrcb !== null ? scoreToColor(d.avg_hrcb) : '#444';
+                return (
+                  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;" title={`${d.day_name}: ${d.stories} stories, avg ${d.avg_hn_score} pts, avg ${d.avg_comments} cmt${d.avg_hrcb !== null ? `, HRCB ${formatScore(d.avg_hrcb)}` : ''}`}>
+                    <span style="color: #666; font-size: var(--font-xs); width: 28px;" class="score-font">{d.day_name.slice(0, 3)}</span>
+                    <div style="flex: 1; height: 8px; background: #1a1a25; border-radius: 2px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: ${hrcbColor}; border-radius: 2px; opacity: 0.8;`}></div>
+                    </div>
+                    <span style="color: #666; font-size: var(--font-xs); width: 30px; text-align: right;" class="score-font">{d.stories}</span>
+                  </div>
+                );
+              })}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Main user table --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+        <div style="overflow-x: auto;">
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm); min-width: 950px;">
+            <tr style="font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+              <td width="20" style="color: #555;">#</td>
+              <td style="color: #555;">User</td>
+              <td width="55" align="center" title="Total stories submitted">
+                <a href={sortUrl('stories')} style={thStyle('stories')}>Stories</a>
+              </td>
+              <td width="55" align="center" title="Unique domains submitted">
+                <a href={sortUrl('domains')} style={thStyle('domains')}>Domains</a>
+              </td>
+              <td width="80" align="center" style="color: #555;" title="Most frequently submitted domain">Top Domain</td>
+              <td width="65" align="center" title="Average HN score per story">
+                <a href={sortUrl('avg_score')} style={thStyle('avg_score')}>Avg Pts</a>
+              </td>
+              <td width="65" align="center" title="Average comments per story">
+                <a href={sortUrl('avg_comments')} style={thStyle('avg_comments')}>Avg Cmt</a>
+              </td>
+              <td width="65" align="center" title="Average HRCB score">
+                <a href={sortUrl('hrcb')} style={thStyle('hrcb')}>HRCB</a>
+              </td>
+              <td width="130" align="center" title="Sort by Editorial / Structural">
+                <a href={sortUrl('editorial')} style={thStyle('editorial')}>E</a>
+                <span style="color: #444;">/</span>
+                <a href={sortUrl('structural')} style={thStyle('structural')}>S</a>
+              </td>
+              <td width="130" align="center" title="Percentage positive / neutral / negative HRCB">
+                <a href={sortUrl('positive')} style={thStyle('positive')}>+</a>
+                <span style="color: #444;">/</span>
+                <span style="color: #555;">0</span>
+                <span style="color: #444;">/</span>
+                <a href={sortUrl('negative')} style={thStyle('negative')}>-</a>
+              </td>
+              <td width="55" align="center" title="HRCB score range across user submissions">
+                <a href={sortUrl('controversy')} style={thStyle('controversy')}>Range</a>
+              </td>
+            </tr>
+            {users.map((u, i) => {
+              const eBarW = 50;
+              const sBarW = 50;
+              const ePct = u.avg_editorial !== null ? Math.abs(u.avg_editorial) * 50 : 0;
+              const sPct = u.avg_structural !== null ? Math.abs(u.avg_structural) * 50 : 0;
+              const eColor = u.avg_editorial !== null ? scoreToColor(u.avg_editorial) : '#333';
+              const sColor = u.avg_structural !== null ? scoreToColor(u.avg_structural) : '#333';
+              return (
+                <tr style="border-top: 1px solid #1a1a25;">
+                  <td style="color: #555;" class="score-font">{i + 1}</td>
+                  <td>
+                    <a href={`/user/${u.username}`} style="color: #c9c9c9;">{u.username}</a>
+                  </td>
+                  <td align="center" class="score-font" style="color: #888;">{u.stories}</td>
+                  <td align="center" class="score-font" style="color: #888;">{u.unique_domains}</td>
+                  <td align="center" style="font-size: var(--font-xs);">
+                    {u.top_domain
+                      ? <a href={`/domain/${u.top_domain}`} style="color: #888;">{u.top_domain.length > 15 ? u.top_domain.slice(0, 14) + '...' : u.top_domain}</a>
+                      : <span style="color: #555;">—</span>
+                    }
+                  </td>
+                  <td align="center" class="score-font" style="color: #888;">{u.avg_hn_score}</td>
+                  <td align="center" class="score-font" style="color: #888;">{u.avg_comments}</td>
+                  <td align="center" class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-weight: bold;`}>
+                    {u.avg_hrcb !== null ? formatScore(u.avg_hrcb) : <span style="color: #555;">—</span>}
+                  </td>
+                  <td align="center">
+                    {u.avg_editorial !== null && u.avg_structural !== null ? (
+                      <div style="display: inline-flex; gap: 4px; align-items: center;" title={`E: ${formatScore(u.avg_editorial)} | S: ${formatScore(u.avg_structural)}`}>
+                        <span style="color: #555; font-size: 8px;">E</span>
+                        <div style={`width: ${eBarW}px; height: 6px; background: #1a1a25; border-radius: 2px; position: relative; overflow: hidden;`}>
+                          <div style={`position: absolute; ${(u.avg_editorial || 0) >= 0 ? 'left: 50%' : `left: ${50 - ePct}%`}; width: ${ePct}%; height: 100%; background: ${eColor}; border-radius: 1px;`}></div>
+                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #333;"></div>
+                        </div>
+                        <span style="color: #555; font-size: 8px;">S</span>
+                        <div style={`width: ${sBarW}px; height: 6px; background: #1a1a25; border-radius: 2px; position: relative; overflow: hidden;`}>
+                          <div style={`position: absolute; ${(u.avg_structural || 0) >= 0 ? 'left: 50%' : `left: ${50 - sPct}%`}; width: ${sPct}%; height: 100%; background: ${sColor}; border-radius: 1px;`}></div>
+                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #333;"></div>
+                        </div>
+                      </div>
+                    ) : <span style="color: #555;">—</span>}
+                  </td>
+                  <td align="center">
+                    {u.positive_pct !== null ? (
+                      <div style="display: inline-flex; gap: 0; width: 100px; height: 8px; border-radius: 2px; overflow: hidden;" title={`+${u.positive_pct}% / ${u.neutral_pct}% / ${u.negative_pct}%`}>
+                        <div style={`width: ${u.positive_pct}%; background: #22c55e;`}></div>
+                        <div style={`width: ${u.neutral_pct || 0}%; background: #555;`}></div>
+                        <div style={`width: ${u.negative_pct || 0}%; background: #ef4444;`}></div>
+                      </div>
+                    ) : <span style="color: #555;">—</span>}
+                  </td>
+                  <td align="center" class="score-font" style={`color: ${u.hrcb_range !== null && u.hrcb_range > 0.5 ? '#e2b340' : '#666'};`}>
+                    {u.hrcb_range !== null ? u.hrcb_range.toFixed(2) : '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+</Base>

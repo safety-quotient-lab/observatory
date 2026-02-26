@@ -1,8 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getAllDomainStats, getDomainFingerprints, getDomainSignalProfiles } from '../lib/db';
-import { SECTIONS } from '../lib/udhr';
+import { getAllDomainStats, getDomainSignalProfiles } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
+import type { DomainSignalProfile } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -13,416 +13,568 @@ const [domains, signalProfiles] = await Promise.all([
 ]);
 
 const evaluatedDomains = domains.filter(d => d.avg_score !== null && d.count >= 3);
-const domainNames = evaluatedDomains.map(d => d.domain);
-const fingerprints = await getDomainFingerprints(db, domainNames);
+const domainScoreMap = new Map(evaluatedDomains.map(d => [d.domain, d.avg_score]));
 
-// --- 2. Cosine similarity ---
-interface FactionPair {
-  a: string;
-  b: string;
-  similarity: number;
+// --- 2. Signal dimension definitions ---
+const SIGNAL_DIMS: { code: string; fullLabel: string; label: string; color: string; extract: (p: DomainSignalProfile) => number | null }[] = [
+  { code: 'EQ', fullLabel: 'Epistemic Quality', label: 'epistemic quality', color: '#60a5fa', extract: p => p.avg_eq },
+  { code: 'SO', fullLabel: 'Solution Orientation', label: 'solution orientation', color: '#4ade80', extract: p => p.avg_so },
+  { code: 'SR', fullLabel: 'Stakeholder Rep', label: 'stakeholder rep', color: '#a78bfa', extract: p => p.avg_sr },
+  { code: 'TD', fullLabel: 'Transparency', label: 'transparency', color: '#34d399', extract: p => p.avg_td },
+  { code: 'PT', fullLabel: 'Propaganda (inv)', label: 'propaganda (inv)', color: '#f87171', extract: p => p.avg_pt_count !== null ? 1 - Math.min(p.avg_pt_count / 5, 1) : null },
+  { code: 'AR', fullLabel: 'Arousal', label: 'arousal', color: '#fb923c', extract: p => p.avg_arousal },
+  { code: 'VA', fullLabel: 'Valence', label: 'valence', color: '#fbbf24', extract: p => p.avg_valence },
+  { code: 'FW', fullLabel: 'Fair Witness', label: 'fair witness', color: '#22d3ee', extract: p => p.avg_fw_ratio },
+];
+
+// --- 3. Build 8D signal vectors per domain + z-normalize ---
+const profileEntries = [...signalProfiles.entries()];
+const domainNames = profileEntries.map(([d]) => d);
+const rawVectors = new Map<string, number[]>();
+
+for (const [domain, profile] of profileEntries) {
+  const vec = SIGNAL_DIMS.map(dim => dim.extract(profile) ?? NaN);
+  rawVectors.set(domain, vec);
 }
 
-function cosineSim(va: (number | null)[], vb: (number | null)[]): number | null {
-  let dot = 0, magA = 0, magB = 0, valid = 0;
-  for (let i = 0; i < va.length; i++) {
-    const a = va[i], b = vb[i];
-    if (a === null || b === null) continue;
-    dot += a * b;
-    magA += a * a;
-    magB += b * b;
-    valid++;
+// Compute per-dimension mean and stddev for z-normalization
+const nDims = SIGNAL_DIMS.length;
+const means = new Array(nDims).fill(0);
+const stddevs = new Array(nDims).fill(0);
+const counts = new Array(nDims).fill(0);
+
+for (const vec of rawVectors.values()) {
+  for (let i = 0; i < nDims; i++) {
+    if (!isNaN(vec[i])) {
+      means[i] += vec[i];
+      counts[i]++;
+    }
   }
-  if (valid < 5 || magA === 0 || magB === 0) return null;
+}
+for (let i = 0; i < nDims; i++) {
+  means[i] = counts[i] > 0 ? means[i] / counts[i] : 0;
+}
+for (const vec of rawVectors.values()) {
+  for (let i = 0; i < nDims; i++) {
+    if (!isNaN(vec[i])) {
+      stddevs[i] += (vec[i] - means[i]) ** 2;
+    }
+  }
+}
+for (let i = 0; i < nDims; i++) {
+  stddevs[i] = counts[i] > 1 ? Math.sqrt(stddevs[i] / (counts[i] - 1)) : 1;
+  if (stddevs[i] === 0) stddevs[i] = 1;
+}
+
+// Z-normalize: missing → 0 (population mean)
+const zVectors = new Map<string, number[]>();
+const missingDimCounts = new Map<string, number>();
+for (const [domain, vec] of rawVectors) {
+  let missing = 0;
+  const zVec = vec.map((v, i) => {
+    if (isNaN(v)) { missing++; return 0; }
+    return (v - means[i]) / stddevs[i];
+  });
+  zVectors.set(domain, zVec);
+  missingDimCounts.set(domain, missing);
+}
+
+// --- 4. Cosine similarity on z-normalized vectors ---
+function cosineSim(va: number[], vb: number[]): number {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < va.length; i++) {
+    dot += va[i] * vb[i];
+    magA += va[i] * va[i];
+    magB += vb[i] * vb[i];
+  }
+  if (magA === 0 || magB === 0) return 0;
   return dot / (Math.sqrt(magA) * Math.sqrt(magB));
 }
 
-const pairs: FactionPair[] = [];
-const domainList = [...fingerprints.keys()];
-for (let i = 0; i < domainList.length; i++) {
-  for (let j = i + 1; j < domainList.length; j++) {
-    const a = domainList[i], b = domainList[j];
-    const va = fingerprints.get(a), vb = fingerprints.get(b);
+interface SimPair { a: string; b: string; similarity: number }
+const allPairs: SimPair[] = [];
+for (let i = 0; i < domainNames.length; i++) {
+  for (let j = i + 1; j < domainNames.length; j++) {
+    const a = domainNames[i], b = domainNames[j];
+    const va = zVectors.get(a), vb = zVectors.get(b);
     if (!va || !vb) continue;
-    const sim = cosineSim(va, vb);
-    if (sim !== null) pairs.push({ a, b, similarity: sim });
+    allPairs.push({ a, b, similarity: cosineSim(va, vb) });
   }
 }
 
-// --- 3. Greedy clustering ---
-interface Cluster {
-  members: string[];
-  avgScore: number | null;
-}
-
-const clusters: Cluster[] = [];
-const assigned = new Set<string>();
-
-// Golden ratio tier system: φ = (1+√5)/2, thresholds at powers of 1/φ
-// Each tier relates to the next by the same ratio (φ), giving self-similar structure:
-//   Faction:      sim >= 1/φ   (0.618)  — core ideological alignment
-//   Alliance:     sim in [1/φ², 1/φ)    — sympathetic but distinct
-//   Acquaintance: sim in [1/φ³, 1/φ²)   — occasional overlap
-//   Neutral:      sim in [0, 1/φ³)      — no meaningful relationship
-//   Rival:        sim < 0               — oppositional fingerprints
+// --- 5. Agglomerative hierarchical clustering ---
 const PHI = (1 + Math.sqrt(5)) / 2;
-const threshold = 1 / PHI;           // ≈ 0.618
-const allianceThreshold = 1 / (PHI * PHI);  // ≈ 0.382
-const acquaintanceThreshold = 1 / (PHI * PHI * PHI); // ≈ 0.236
+const factionThreshold = 1 / PHI;           // ~0.618
+const allianceThreshold = 1 / (PHI * PHI);  // ~0.382
+const acquaintanceThreshold = 1 / (PHI * PHI * PHI); // ~0.236
 
-for (const pair of [...pairs].sort((a, b) => b.similarity - a.similarity)) {
-  if (pair.similarity < threshold) break;
-  const aCluster = clusters.find(c => c.members.includes(pair.a));
-  const bCluster = clusters.find(c => c.members.includes(pair.b));
-  if (aCluster && bCluster && aCluster !== bCluster) {
-    aCluster.members.push(...bCluster.members);
-    clusters.splice(clusters.indexOf(bCluster), 1);
-  } else if (aCluster) {
-    if (!aCluster.members.includes(pair.b)) aCluster.members.push(pair.b);
-  } else if (bCluster) {
-    if (!bCluster.members.includes(pair.a)) bCluster.members.push(pair.a);
-  } else {
-    clusters.push({ members: [pair.a, pair.b], avgScore: null });
+interface Cluster {
+  id: number;
+  members: string[];
+}
+
+let nextClusterId = 0;
+const clusterList: Cluster[] = [];
+const domainToCluster = new Map<string, Cluster>();
+
+// Sort pairs descending by similarity
+const sortedPairs = [...allPairs].sort((a, b) => b.similarity - a.similarity);
+
+for (const pair of sortedPairs) {
+  if (pair.similarity < factionThreshold) break;
+  const ca = domainToCluster.get(pair.a);
+  const cb = domainToCluster.get(pair.b);
+
+  if (ca && cb && ca !== cb) {
+    // Merge: check average linkage between clusters
+    let simSum = 0, simCount = 0;
+    for (const ma of ca.members) {
+      for (const mb of cb.members) {
+        const va = zVectors.get(ma), vb = zVectors.get(mb);
+        if (va && vb) { simSum += cosineSim(va, vb); simCount++; }
+      }
+    }
+    const avgLinkage = simCount > 0 ? simSum / simCount : 0;
+    if (avgLinkage >= factionThreshold) {
+      ca.members.push(...cb.members);
+      for (const m of cb.members) domainToCluster.set(m, ca);
+      clusterList.splice(clusterList.indexOf(cb), 1);
+    }
+  } else if (ca && !cb) {
+    ca.members.push(pair.b);
+    domainToCluster.set(pair.b, ca);
+  } else if (!ca && cb) {
+    cb.members.push(pair.a);
+    domainToCluster.set(pair.a, cb);
+  } else if (!ca && !cb) {
+    const newC: Cluster = { id: nextClusterId++, members: [pair.a, pair.b] };
+    clusterList.push(newC);
+    domainToCluster.set(pair.a, newC);
+    domainToCluster.set(pair.b, newC);
   }
-  assigned.add(pair.a);
-  assigned.add(pair.b);
 }
 
-// Add lone wolves
-for (const d of domainList) {
-  if (!assigned.has(d)) clusters.push({ members: [d], avgScore: null });
+// If we got 1 giant cluster and no others, try alliance threshold as fallback
+if (clusterList.length === 1 && clusterList[0].members.length > 3) {
+  // Reset and try alliance threshold
+  clusterList.length = 0;
+  domainToCluster.clear();
+  nextClusterId = 0;
+  for (const pair of sortedPairs) {
+    if (pair.similarity < allianceThreshold) break;
+    const ca = domainToCluster.get(pair.a);
+    const cb = domainToCluster.get(pair.b);
+    if (ca && cb && ca !== cb) {
+      let simSum = 0, simCount = 0;
+      for (const ma of ca.members) {
+        for (const mb of cb.members) {
+          const va = zVectors.get(ma), vb = zVectors.get(mb);
+          if (va && vb) { simSum += cosineSim(va, vb); simCount++; }
+        }
+      }
+      const avgLinkage = simCount > 0 ? simSum / simCount : 0;
+      if (avgLinkage >= allianceThreshold) {
+        ca.members.push(...cb.members);
+        for (const m of cb.members) domainToCluster.set(m, ca);
+        clusterList.splice(clusterList.indexOf(cb), 1);
+      }
+    } else if (ca && !cb) {
+      ca.members.push(pair.b);
+      domainToCluster.set(pair.b, ca);
+    } else if (!ca && cb) {
+      cb.members.push(pair.a);
+      domainToCluster.set(pair.a, cb);
+    } else if (!ca && !cb) {
+      const newC: Cluster = { id: nextClusterId++, members: [pair.a, pair.b] };
+      clusterList.push(newC);
+      domainToCluster.set(pair.a, newC);
+      domainToCluster.set(pair.b, newC);
+    }
+  }
 }
 
-// Compute avg scores
-const domainScoreMap = new Map(evaluatedDomains.map(d => [d.domain, d.avg_score]));
-for (const c of clusters) {
-  const scores = c.members.map(m => domainScoreMap.get(m)).filter((s): s is number => s !== null);
-  c.avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+// Lone wolves: domains not in any cluster
+const loneWolfDomains = domainNames.filter(d => !domainToCluster.has(d));
+
+// Sort clusters by size descending
+clusterList.sort((a, b) => b.members.length - a.members.length);
+
+// --- 6. Cluster centroids (mean of z-vectors) ---
+function computeCentroid(members: string[]): number[] {
+  const centroid = new Array(nDims).fill(0);
+  let count = 0;
+  for (const m of members) {
+    const v = zVectors.get(m);
+    if (v) { for (let i = 0; i < nDims; i++) centroid[i] += v[i]; count++; }
+  }
+  if (count > 0) for (let i = 0; i < nDims; i++) centroid[i] /= count;
+  return centroid;
 }
 
-clusters.sort((a, b) => b.members.length - a.members.length);
+// --- 7. Archetype naming ---
+const ARCHETYPE_RULES: { name: string; icon: string; test: (hi: Set<string>, lo: Set<string>) => boolean }[] = [
+  { name: 'Rigorous Analysts', icon: '\u{1F9EA}', test: (hi, lo) => hi.has('EQ') && hi.has('TD') && lo.has('PT') },
+  { name: 'Solution Builders', icon: '\u{1F6E0}', test: (hi, lo) => hi.has('SO') && hi.has('EQ') },
+  { name: 'Watchdog Press', icon: '\u{1F4F0}', test: (hi, lo) => hi.has('EQ') && hi.has('FW') && lo.has('VA') },
+  { name: 'Advocacy Amplifiers', icon: '\u{1F4E2}', test: (hi, lo) => hi.has('SR') && hi.has('VA') && lo.has('TD') },
+  { name: 'Calm Observers', icon: '\u{1F30A}', test: (hi, lo) => lo.has('AR') && hi.has('EQ') },
+  { name: 'Emotional Narrators', icon: '\u{1F525}', test: (hi, lo) => hi.has('AR') && hi.has('VA') },
+  { name: 'Transparent Reporters', icon: '\u{1F50D}', test: (hi, lo) => hi.has('TD') && hi.has('FW') },
+  { name: 'Stakeholder Champions', icon: '\u{1F91D}', test: (hi, lo) => hi.has('SR') && hi.has('SO') },
+  { name: 'Persuasion Engines', icon: '\u{26A0}', test: (hi) => hi.has('PT') },
+  { name: 'Optimistic Voices', icon: '\u{2600}', test: (hi) => hi.has('VA') && hi.has('SO') },
+  { name: 'Evidence Anchors', icon: '\u{2693}', test: (hi) => hi.has('FW') && hi.has('EQ') },
+  { name: 'Broad Spectrum', icon: '\u{1F308}', test: (hi) => hi.has('SR') },
+  // Low-signal patterns
+  { name: 'Minimalist Wire', icon: '\u{1F4CB}', test: (_hi, lo) => lo.size >= 5 },
+  { name: 'Understated Coverage', icon: '\u{1F4C9}', test: (_hi, lo) => lo.size >= 3 },
+  // High-signal patterns
+  { name: 'Signal-Rich Sources', icon: '\u{1F4CA}', test: (hi) => hi.size >= 4 },
+  { name: 'Quality Anchors', icon: '\u{2693}', test: (hi) => hi.has('EQ') },
+  { name: 'Solution-Focused', icon: '\u{1F4A1}', test: (hi) => hi.has('SO') },
+  { name: 'Engaged Voices', icon: '\u{1F3A4}', test: (hi) => hi.has('AR') },
+  { name: 'Positive Framing', icon: '\u{2600}', test: (hi) => hi.has('VA') },
+  { name: 'Fact Witnesses', icon: '\u{1F441}', test: (hi) => hi.has('FW') },
+  { name: 'Open Books', icon: '\u{1F4D6}', test: (hi) => hi.has('TD') },
+  { name: 'Low-Propaganda', icon: '\u{1F6E1}', test: (_hi, lo) => lo.has('PT') },
+  { name: 'Measured Tone', icon: '\u{1F30A}', test: (_hi, lo) => lo.has('AR') },
+];
 
-// --- 4. Per-cluster signal averages ---
-interface FactionSignals {
-  eq: number;
-  so: number;
-  sr: number;
-  td: number;
-  pt: number;
-  fw: number;
-  valence: number;
-  arousal: number;
-  dominance: number;
-  hnScore: number;
-  hnComments: number;
-  posterKarma: number;
+interface EnrichedCluster {
+  id: number;
+  members: string[];
+  centroid: number[];
+  rawCentroid: number[]; // un-normalized for display
+  avgScore: number | null;
+  name: string;
+  icon: string;
+  color: string;
+  insight: string;
   dominantTone: string | null;
   dominantScope: string | null;
   dominantReadingLevel: string | null;
-  dominantSentiment: string | null;
+  avgSetl: number | null;
+  avgHnScore: number;
+  avgHnComments: number;
+  liminalMembers: { domain: string; secondCluster: string; similarity: number }[];
 }
 
-function avgSignals(members: string[]): FactionSignals {
-  const vals = members.map(m => signalProfiles.get(m)).filter(Boolean) as import('../lib/db').DomainSignalProfile[];
-  function avg(fn: (p: import('../lib/db').DomainSignalProfile) => number | null): number {
-    const nums = vals.map(fn).filter((n): n is number => n !== null);
-    return nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+// Population medians (for radar overlay)
+const populationMedian = new Array(nDims).fill(0);
+{
+  const dimVals: number[][] = Array.from({ length: nDims }, () => []);
+  for (const vec of rawVectors.values()) {
+    for (let i = 0; i < nDims; i++) {
+      if (!isNaN(vec[i])) dimVals[i].push(vec[i]);
+    }
   }
-  // Mode: most common non-null value
-  function mode(fn: (p: import('../lib/db').DomainSignalProfile) => string | null): string | null {
-    const strs = vals.map(fn).filter((s): s is string => s !== null);
-    if (strs.length === 0) return null;
-    const counts = new Map<string, number>();
-    for (const s of strs) counts.set(s, (counts.get(s) || 0) + 1);
-    let best = strs[0], bestCount = 0;
-    for (const [k, v] of counts) { if (v > bestCount) { best = k; bestCount = v; } }
-    return best;
+  for (let i = 0; i < nDims; i++) {
+    const sorted = dimVals[i].sort((a, b) => a - b);
+    populationMedian[i] = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : 0;
   }
-  return {
-    eq: avg(p => p.avg_eq),
-    so: avg(p => p.avg_so),
-    sr: avg(p => p.avg_sr),
-    td: avg(p => p.avg_td),
-    pt: avg(p => p.avg_pt_count),
-    fw: avg(p => p.avg_fw_ratio),
-    valence: avg(p => p.avg_valence),
-    arousal: avg(p => p.avg_arousal),
-    dominance: avg(p => p.avg_dominance),
-    hnScore: avg(p => p.avg_hn_score),
-    hnComments: avg(p => p.avg_hn_comments),
-    posterKarma: avg(p => p.avg_poster_karma),
-    dominantTone: mode(p => p.dominant_tone),
-    dominantScope: mode(p => p.dominant_scope),
-    dominantReadingLevel: mode(p => p.dominant_reading_level),
-    dominantSentiment: mode(p => p.dominant_sentiment),
-  };
 }
 
-// --- 5. Signal typecode assignment ---
-interface Archetype {
-  name: string;
-  tagline: string;
-  color: string;
+// Compute p33/p66 for marker assignment
+function percentile(arr: number[], p: number): number {
+  const sorted = [...arr].sort((a, b) => a - b);
+  if (sorted.length === 0) return 0;
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx), hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
 }
 
-// Signal dimension definitions for typecodes
-const SIGNAL_DIMS: { code: string; fullLabel: string; label: string; color: string; extract: (s: FactionSignals) => number }[] = [
-  { code: 'EQ', fullLabel: 'Epistemic Quality (EQ)', label: 'epistemic quality', color: '#60a5fa', extract: s => s.eq },
-  { code: 'SO', fullLabel: 'Solution Orientation (SO)', label: 'solution orientation', color: '#4ade80', extract: s => s.so },
-  { code: 'SR', fullLabel: 'Stakeholder Representation (SR)', label: 'stakeholder representation', color: '#a78bfa', extract: s => s.sr },
-  { code: 'TD', fullLabel: 'Transparency & Disclosure (TD)', label: 'transparency & disclosure', color: '#34d399', extract: s => s.td },
-  { code: 'PT', fullLabel: 'Propaganda Techniques (PT)', label: 'propaganda techniques', color: '#f87171', extract: s => s.pt },
-  { code: 'AR', fullLabel: 'Arousal (AR)', label: 'arousal', color: '#fb923c', extract: s => s.arousal },
-  { code: 'VA', fullLabel: 'Valence (VA)', label: 'valence', color: '#fbbf24', extract: s => s.valence },
-  { code: 'FW', fullLabel: 'Fair Witness (FW)', label: 'fair witness', color: '#22d3ee', extract: s => s.fw },
-];
-
-// Compute p33/p66 percentile thresholds for typecode assignment
-function computePercentiles(profiles: Map<string, import('../lib/db').DomainSignalProfile>) {
-  const vals = [...profiles.values()];
-  function percentile(arr: number[], p: number): number {
-    const sorted = [...arr].sort((a, b) => a - b);
-    if (sorted.length === 0) return 0;
-    const idx = (p / 100) * (sorted.length - 1);
-    const lo = Math.floor(idx), hi = Math.ceil(idx);
-    if (lo === hi) return sorted[lo];
-    return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+const dimValues: number[][] = Array.from({ length: nDims }, () => []);
+for (const vec of rawVectors.values()) {
+  for (let i = 0; i < nDims; i++) {
+    if (!isNaN(vec[i])) dimValues[i].push(vec[i]);
   }
-  function extract(fn: (p: import('../lib/db').DomainSignalProfile) => number | null): number[] {
-    return vals.map(fn).filter((n): n is number => n !== null);
-  }
-  return {
-    eq:      { p33: percentile(extract(p => p.avg_eq), 33),      p66: percentile(extract(p => p.avg_eq), 66) },
-    so:      { p33: percentile(extract(p => p.avg_so), 33),      p66: percentile(extract(p => p.avg_so), 66) },
-    sr:      { p33: percentile(extract(p => p.avg_sr), 33),      p66: percentile(extract(p => p.avg_sr), 66) },
-    td:      { p33: percentile(extract(p => p.avg_td), 33),      p66: percentile(extract(p => p.avg_td), 66) },
-    pt:      { p33: percentile(extract(p => p.avg_pt_count), 33),p66: percentile(extract(p => p.avg_pt_count), 66) },
-    arousal: { p33: percentile(extract(p => p.avg_arousal), 33), p66: percentile(extract(p => p.avg_arousal), 66) },
-    valence: { p33: percentile(extract(p => p.avg_valence), 33), p66: percentile(extract(p => p.avg_valence), 66) },
-    fw:      { p33: percentile(extract(p => p.avg_fw_ratio), 33),p66: percentile(extract(p => p.avg_fw_ratio), 66) },
-  };
 }
+const p33s = dimValues.map(v => percentile(v, 33));
+const p66s = dimValues.map(v => percentile(v, 66));
 
-type Percentiles = ReturnType<typeof computePercentiles>;
+function assignArchetype(centroidRaw: number[]): { name: string; icon: string; color: string } {
+  const hiSet = new Set<string>();
+  const loSet = new Set<string>();
+  for (let i = 0; i < nDims; i++) {
+    if (centroidRaw[i] >= p66s[i]) hiSet.add(SIGNAL_DIMS[i].code);
+    else if (centroidRaw[i] <= p33s[i]) loSet.add(SIGNAL_DIMS[i].code);
+  }
 
-// Map signal codes to percentile keys
-const SIGNAL_PCTL_KEY: Record<string, keyof Percentiles> = {
-  EQ: 'eq', SO: 'so', SR: 'sr', TD: 'td',
-  PT: 'pt', AR: 'arousal', VA: 'valence', FW: 'fw',
-};
-
-function assignTypecode(sig: FactionSignals, pctl: Percentiles): Archetype {
-  const markers: { code: string; sign: '+' | '-'; label: string; color: string }[] = [];
-
-  for (const dim of SIGNAL_DIMS) {
-    const val = dim.extract(sig);
-    const key = SIGNAL_PCTL_KEY[dim.code];
-    const { p33, p66 } = pctl[key];
-    if (val >= p66) {
-      markers.push({ code: dim.code, sign: '+', label: dim.label, color: dim.color });
-    } else if (val <= p33) {
-      markers.push({ code: dim.code, sign: '-', label: dim.label, color: dim.color });
+  for (const rule of ARCHETYPE_RULES) {
+    if (rule.test(hiSet, loSet)) {
+      const primary = [...hiSet][0];
+      const dim = SIGNAL_DIMS.find(d => d.code === primary);
+      return { name: rule.name, icon: rule.icon, color: dim?.color || '#818cf8' };
     }
   }
 
-  if (markers.length === 0) {
-    return { name: '(baseline)', tagline: 'All signals in the middle third of the population', color: '#818cf8' };
-  }
-
-  const name = markers.map(m => `${m.code}${m.sign}`).join('\u00b7');
-  const highItems = markers.filter(m => m.sign === '+');
-  const lowItems = markers.filter(m => m.sign === '-');
-  const parts: string[] = [];
-  if (highItems.length > 0) parts.push('High ' + highItems.map(m => m.label).join(', '));
-  if (lowItems.length > 0) parts.push('Low ' + lowItems.map(m => m.label).join(', '));
-  const tagline = parts.join(' · ');
-  // Color from first marker (prioritize + signals)
-  const primary = highItems[0] || lowItems[0];
-  const color = primary.color;
-
-  return { name, tagline, color };
-}
-
-// --- 6. Build enriched faction data ---
-interface EnrichedFaction {
-  members: string[];
-  avgScore: number | null;
-  signals: FactionSignals;
-  archetype: Archetype;
-  avgFingerprint: (number | null)[];
-}
-
-const percentiles = computePercentiles(signalProfiles);
-
-const multiFactions: EnrichedFaction[] = [];
-const loneWolves: { domain: string; score: number | null; signals: FactionSignals; nearestFaction: string; nearestSim: number }[] = [];
-
-for (const c of clusters) {
-  const signals = avgSignals(c.members);
-  const archetype = assignTypecode(signals, percentiles);
-
-  // Compute average fingerprint
-  const avgFp: (number | null)[] = new Array(31).fill(null);
-  for (let i = 0; i < 31; i++) {
-    const vals = c.members.map(m => fingerprints.get(m)?.[i]).filter((v): v is number => v !== null);
-    avgFp[i] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-  }
-
-  if (c.members.length > 1) {
-    multiFactions.push({ members: c.members, avgScore: c.avgScore, signals, archetype, avgFingerprint: avgFp });
+  // Fallback: readable description from strongest markers
+  const hiMarkers = [...hiSet];
+  const loMarkers = [...loSet];
+  let name: string;
+  if (hiMarkers.length > 0 && loMarkers.length > 0) {
+    name = `High ${hiMarkers.slice(0, 2).join('/')} · Low ${loMarkers.slice(0, 2).join('/')}`;
+  } else if (hiMarkers.length > 0) {
+    name = `High ${hiMarkers.slice(0, 3).join('/')}`;
+  } else if (loMarkers.length > 0) {
+    name = `Low ${loMarkers.slice(0, 3).join('/')}`;
   } else {
-    // Lone wolf — find nearest multi-member faction
-    const wolfFp = fingerprints.get(c.members[0]);
-    let nearestName = 'None';
-    let nearestSim = -1;
-    if (wolfFp) {
-      for (const f of multiFactions) {
-        const sim = cosineSim(wolfFp, f.avgFingerprint);
-        if (sim !== null && sim > nearestSim) {
-          nearestSim = sim;
-          nearestName = f.archetype.name;
-        }
-      }
+    name = 'Centrist Profile';
+  }
+  const primaryCode = hiMarkers[0] || loMarkers[0] || null;
+  const dim = primaryCode ? SIGNAL_DIMS.find(d => d.code === primaryCode) : null;
+  return { name, icon: '\u{1F3F7}', color: dim?.color || '#818cf8' };
+}
+
+function generateInsight(centroidRaw: number[], archName: string): string {
+  const parts: string[] = [];
+  // Find strongest dimension
+  let maxDev = 0, maxDim = '';
+  for (let i = 0; i < nDims; i++) {
+    const dev = Math.abs(centroidRaw[i] - populationMedian[i]);
+    if (dev > maxDev) { maxDev = dev; maxDim = SIGNAL_DIMS[i].fullLabel; }
+  }
+  if (maxDim) {
+    const idx = SIGNAL_DIMS.findIndex(d => d.fullLabel === maxDim);
+    const dir = centroidRaw[idx] > populationMedian[idx] ? 'above' : 'below';
+    parts.push(`Most distinctive in ${maxDim} (${dir} population median).`);
+  }
+  // Check for tension signals
+  const ptIdx = SIGNAL_DIMS.findIndex(d => d.code === 'PT');
+  const eqIdx = SIGNAL_DIMS.findIndex(d => d.code === 'EQ');
+  if (centroidRaw[ptIdx] < p33s[ptIdx] && centroidRaw[eqIdx] > p66s[eqIdx]) {
+    parts.push('Low propaganda with high epistemic rigor suggests evidence-driven coverage.');
+  } else if (centroidRaw[ptIdx] > p66s[ptIdx]) {
+    parts.push('Elevated propaganda techniques may indicate persuasion-oriented content.');
+  }
+  return parts.join(' ') || `Cluster shows a ${archName.toLowerCase()} editorial character.`;
+}
+
+function mode(values: (string | null)[]): string | null {
+  const strs = values.filter((s): s is string => s !== null);
+  if (strs.length === 0) return null;
+  const counts = new Map<string, number>();
+  for (const s of strs) counts.set(s, (counts.get(s) || 0) + 1);
+  let best = strs[0], bestCount = 0;
+  for (const [k, v] of counts) { if (v > bestCount) { best = k; bestCount = v; } }
+  return best;
+}
+
+const enrichedClusters: EnrichedCluster[] = [];
+
+for (const cl of clusterList) {
+  const centroid = computeCentroid(cl.members);
+
+  // Raw centroid (un-normalized, for display)
+  const rawCentroid = new Array(nDims).fill(0);
+  let rc = 0;
+  for (const m of cl.members) {
+    const v = rawVectors.get(m);
+    if (v) {
+      for (let i = 0; i < nDims; i++) { if (!isNaN(v[i])) rawCentroid[i] += v[i]; }
+      rc++;
     }
-    loneWolves.push({
-      domain: c.members[0],
-      score: c.avgScore,
-      signals,
-      nearestFaction: nearestName,
-      nearestSim: Math.max(nearestSim, 0),
-    });
+  }
+  if (rc > 0) for (let i = 0; i < nDims; i++) rawCentroid[i] /= rc;
+
+  const scores = cl.members.map(m => domainScoreMap.get(m)).filter((s): s is number => s != null);
+  const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+
+  const arch = assignArchetype(rawCentroid);
+  const insight = generateInsight(rawCentroid, arch.name);
+
+  // Aggregate metadata
+  const profiles = cl.members.map(m => signalProfiles.get(m)).filter(Boolean) as DomainSignalProfile[];
+  const dominantTone = mode(profiles.map(p => p.dominant_tone));
+  const dominantScope = mode(profiles.map(p => p.dominant_scope));
+  const dominantReadingLevel = mode(profiles.map(p => p.dominant_reading_level));
+  const setlVals = profiles.map(p => p.avg_setl).filter((v): v is number => v !== null);
+  const avgSetl = setlVals.length > 0 ? setlVals.reduce((a, b) => a + b, 0) / setlVals.length : null;
+  const hnScores = profiles.map(p => p.avg_hn_score).filter((v): v is number => v !== null);
+  const avgHnScore = hnScores.length > 0 ? hnScores.reduce((a, b) => a + b, 0) / hnScores.length : 0;
+  const hnComments = profiles.map(p => p.avg_hn_comments).filter((v): v is number => v !== null);
+  const avgHnComments = hnComments.length > 0 ? hnComments.reduce((a, b) => a + b, 0) / hnComments.length : 0;
+
+  enrichedClusters.push({
+    id: cl.id,
+    members: cl.members,
+    centroid,
+    rawCentroid,
+    avgScore,
+    name: arch.name,
+    icon: arch.icon,
+    color: arch.color,
+    insight,
+    dominantTone,
+    dominantScope,
+    dominantReadingLevel,
+    avgSetl,
+    avgHnScore,
+    avgHnComments,
+    liminalMembers: [],
+  });
+}
+
+// --- 8. Liminal members ---
+for (const cl of enrichedClusters) {
+  for (const m of cl.members) {
+    const mv = zVectors.get(m);
+    if (!mv) continue;
+    let bestOtherSim = -Infinity;
+    let bestOtherName = '';
+    for (const other of enrichedClusters) {
+      if (other.id === cl.id) continue;
+      const sim = cosineSim(mv, other.centroid);
+      if (sim > bestOtherSim) { bestOtherSim = sim; bestOtherName = other.name; }
+    }
+    if (bestOtherSim >= allianceThreshold) {
+      cl.liminalMembers.push({ domain: m, secondCluster: bestOtherName, similarity: bestOtherSim });
+    }
   }
 }
 
-// --- 7. Alliance/rivalry signal overlap ---
-const sortedPairsDesc = [...pairs].sort((a, b) => b.similarity - a.similarity);
-const sortedPairsAsc = [...pairs].sort((a, b) => a.similarity - b.similarity);
+// --- 9. Parallel coordinates data ---
+// Cluster color map (assign distinct colors)
+const CLUSTER_COLORS = ['#a78bfa', '#34d399', '#60a5fa', '#fb923c', '#f87171', '#fbbf24', '#22d3ee', '#e879f9', '#818cf8', '#4ade80'];
 
-const signalKeys: (keyof Pick<FactionSignals, 'eq' | 'so' | 'sr' | 'td' | 'pt' | 'fw'>)[] = ['eq', 'so', 'sr', 'td', 'pt', 'fw'];
-const signalFullLabels: Record<string, string> = {
-  EQ: 'Epistemic Quality (EQ)',
-  SO: 'Solution Orientation (SO)',
-  SR: 'Stakeholder Representation (SR)',
-  TD: 'Transparency & Disclosure (TD)',
-  PT: 'Propaganda Techniques (PT)',
-  FW: 'Fair Witness (FW)',
-  AR: 'Arousal (AR)',
-  VA: 'Valence (VA)',
-};
+for (let i = 0; i < enrichedClusters.length; i++) {
+  enrichedClusters[i].color = CLUSTER_COLORS[i % CLUSTER_COLORS.length];
+}
 
-function findSharedFaction(a: string, b: string): string | null {
-  for (const f of multiFactions) {
-    if (f.members.includes(a) && f.members.includes(b)) return f.archetype.name;
+// Domain-to-color mapping
+const domainClusterColor = new Map<string, string>();
+for (const cl of enrichedClusters) {
+  for (const m of cl.members) domainClusterColor.set(m, cl.color);
+}
+
+// Parallel coordinates: use raw (non-z) values, normalize each dim to [0,1] for chart
+const pcDimMins = new Array(nDims).fill(Infinity);
+const pcDimMaxs = new Array(nDims).fill(-Infinity);
+for (const vec of rawVectors.values()) {
+  for (let i = 0; i < nDims; i++) {
+    if (!isNaN(vec[i])) {
+      if (vec[i] < pcDimMins[i]) pcDimMins[i] = vec[i];
+      if (vec[i] > pcDimMaxs[i]) pcDimMaxs[i] = vec[i];
+    }
   }
-  return null;
+}
+const pcDimRanges = pcDimMins.map((mn, i) => pcDimMaxs[i] - mn || 1);
+
+// Chart dimensions
+const pcW = 700, pcH = 300, pcPadL = 30, pcPadR = 30, pcPadT = 30, pcPadB = 40;
+const pcInnerW = pcW - pcPadL - pcPadR;
+const pcInnerH = pcH - pcPadT - pcPadB;
+const axisSpacing = pcInnerW / (nDims - 1);
+
+function pcAxisX(dim: number): number { return pcPadL + dim * axisSpacing; }
+function pcValY(val: number, dim: number): number {
+  const norm = (val - pcDimMins[dim]) / pcDimRanges[dim];
+  return pcPadT + pcInnerH * (1 - norm); // inverted: high values at top
 }
 
-function getSignalOverlap(a: string, b: string): string {
-  const sa = signalProfiles.get(a);
-  const sb = signalProfiles.get(b);
-  if (!sa || !sb) return 'N/A';
-  const sigVals: { key: string; diff: number; va: number; vb: number }[] = [
-    { key: 'EQ', diff: Math.abs((sa.avg_eq ?? 0) - (sb.avg_eq ?? 0)), va: sa.avg_eq ?? 0, vb: sb.avg_eq ?? 0 },
-    { key: 'SO', diff: Math.abs((sa.avg_so ?? 0) - (sb.avg_so ?? 0)), va: sa.avg_so ?? 0, vb: sb.avg_so ?? 0 },
-    { key: 'SR', diff: Math.abs((sa.avg_sr ?? 0) - (sb.avg_sr ?? 0)), va: sa.avg_sr ?? 0, vb: sb.avg_sr ?? 0 },
-    { key: 'TD', diff: Math.abs((sa.avg_td ?? 0) - (sb.avg_td ?? 0)), va: sa.avg_td ?? 0, vb: sb.avg_td ?? 0 },
-    { key: 'PT', diff: Math.abs((sa.avg_pt_count ?? 0) - (sb.avg_pt_count ?? 0)), va: sa.avg_pt_count ?? 0, vb: sb.avg_pt_count ?? 0 },
-    { key: 'FW', diff: Math.abs((sa.avg_fw_ratio ?? 0) - (sb.avg_fw_ratio ?? 0)), va: sa.avg_fw_ratio ?? 0, vb: sb.avg_fw_ratio ?? 0 },
-  ];
-  sigVals.sort((a, b) => a.diff - b.diff);
-  return signalFullLabels[sigVals[0].key] || sigVals[0].key;
+// Build polylines per domain
+interface PcLine {
+  domain: string;
+  color: string;
+  opacity: number;
+  points: string;
+  clusterName: string | null;
 }
+const pcLines: PcLine[] = [];
 
-function getSignalDivergence(a: string, b: string): string {
-  const sa = signalProfiles.get(a);
-  const sb = signalProfiles.get(b);
-  if (!sa || !sb) return 'N/A';
-  const sigVals: { key: string; diff: number; va: number; vb: number }[] = [
-    { key: 'EQ', diff: Math.abs((sa.avg_eq ?? 0) - (sb.avg_eq ?? 0)), va: sa.avg_eq ?? 0, vb: sb.avg_eq ?? 0 },
-    { key: 'SO', diff: Math.abs((sa.avg_so ?? 0) - (sb.avg_so ?? 0)), va: sa.avg_so ?? 0, vb: sb.avg_so ?? 0 },
-    { key: 'SR', diff: Math.abs((sa.avg_sr ?? 0) - (sb.avg_sr ?? 0)), va: sa.avg_sr ?? 0, vb: sb.avg_sr ?? 0 },
-    { key: 'TD', diff: Math.abs((sa.avg_td ?? 0) - (sb.avg_td ?? 0)), va: sa.avg_td ?? 0, vb: sb.avg_td ?? 0 },
-    { key: 'PT', diff: Math.abs((sa.avg_pt_count ?? 0) - (sb.avg_pt_count ?? 0)), va: sa.avg_pt_count ?? 0, vb: sb.avg_pt_count ?? 0 },
-    { key: 'FW', diff: Math.abs((sa.avg_fw_ratio ?? 0) - (sb.avg_fw_ratio ?? 0)), va: sa.avg_fw_ratio ?? 0, vb: sb.avg_fw_ratio ?? 0 },
-  ];
-  sigVals.sort((a, b) => b.diff - a.diff);
-  const top = sigVals[0];
-  const label = signalFullLabels[top.key] || top.key;
-  return `${label}: ${top.va.toFixed(2)} vs ${top.vb.toFixed(2)}`;
+// Draw unaligned domains first (behind), then cluster members
+for (const domain of loneWolfDomains) {
+  const vec = rawVectors.get(domain);
+  if (!vec) continue;
+  const pts = vec.map((v, i) => `${pcAxisX(i)},${pcValY(isNaN(v) ? means[i] : v, i)}`).join(' ');
+  pcLines.push({ domain, color: '#555', opacity: 0.25, points: pts, clusterName: null });
 }
-
-const top20Alliances = sortedPairsDesc.slice(0, 20);
-const rivalPairs = sortedPairsAsc.filter(p => p.similarity < 0).slice(0, 20);
-
-// Classify each pair into a tier
-function tierLabel(sim: number): { label: string; color: string } {
-  if (sim >= threshold) return { label: 'Faction', color: '#a78bfa' };
-  if (sim >= allianceThreshold) return { label: 'Alliance', color: '#34d399' };
-  if (sim >= acquaintanceThreshold) return { label: 'Acquaintance', color: '#fbbf24' };
-  if (sim >= 0) return { label: 'Neutral', color: '#555' };
-  return { label: 'Rival', color: '#f87171' };
-}
-
-// --- 8. Group colors for heatmap ---
-const groupColors: Record<string, string> = {
-  'Foundation': '#a78bfa',
-  'Security': '#f87171',
-  'Legal': '#22d3ee',
-  'Personal': '#34d399',
-  'Privacy': '#38bdf8',
-  'Expression': '#fbbf24',
-  'Economic': '#fb923c',
-  'Cultural': '#e879f9',
-  'Order': '#818cf8',
-};
-
-function getGroupColor(group: string): string {
-  for (const [key, color] of Object.entries(groupColors)) {
-    if (group.toLowerCase().includes(key.toLowerCase())) return color;
+for (const cl of enrichedClusters) {
+  for (const m of cl.members) {
+    const vec = rawVectors.get(m);
+    if (!vec) continue;
+    const pts = vec.map((v, i) => `${pcAxisX(i)},${pcValY(isNaN(v) ? means[i] : v, i)}`).join(' ');
+    pcLines.push({ domain: m, color: cl.color, opacity: 0.6, points: pts, clusterName: cl.name });
   }
-  return '#888';
 }
 
-// Column labels for heatmap
-const colLabels = ['P', ...Array.from({ length: 30 }, (_, i) => String(i + 1))];
+// Cluster centroid polylines (thick, for overlay)
+const pcCentroidLines: { name: string; color: string; points: string }[] = [];
+for (const cl of enrichedClusters) {
+  const pts = cl.rawCentroid.map((v, i) => `${pcAxisX(i)},${pcValY(v, i)}`).join(' ');
+  pcCentroidLines.push({ name: cl.name, color: cl.color, points: pts });
+}
 
-// Stats
-const totalDomains = domainList.length;
-const totalFactions = multiFactions.length;
-const unalignedCount = loneWolves.length;
+// --- 11. Inter-cluster variance per signal (differentiation) ---
+const clusterCentroids = enrichedClusters.map(cl => cl.centroid);
+const globalCentroid = new Array(nDims).fill(0);
+for (const c of clusterCentroids) {
+  for (let i = 0; i < nDims; i++) globalCentroid[i] += c[i];
+}
+for (let i = 0; i < nDims; i++) globalCentroid[i] /= Math.max(clusterCentroids.length, 1);
 
-// Signal bar helper: clamp to [0,1]
-function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
+const interClusterVar: { code: string; label: string; color: string; variance: number }[] = [];
+for (let d = 0; d < nDims; d++) {
+  let variance = 0;
+  for (const c of clusterCentroids) {
+    variance += (c[d] - globalCentroid[d]) ** 2;
+  }
+  variance /= Math.max(clusterCentroids.length - 1, 1);
+  interClusterVar.push({ code: SIGNAL_DIMS[d].code, label: SIGNAL_DIMS[d].fullLabel, color: SIGNAL_DIMS[d].color, variance });
+}
+interClusterVar.sort((a, b) => b.variance - a.variance);
+const maxVar = Math.max(...interClusterVar.map(v => v.variance), 0.01);
 
-// --- 9. Signal distribution histograms ---
+// --- 12. Affinity matrix ---
+const nClusters = enrichedClusters.length;
+const affinityMatrix: number[][] = Array.from({ length: nClusters }, () => new Array(nClusters).fill(0));
+for (let i = 0; i < nClusters; i++) {
+  for (let j = 0; j < nClusters; j++) {
+    affinityMatrix[i][j] = i === j ? 1 : cosineSim(enrichedClusters[i].centroid, enrichedClusters[j].centroid);
+  }
+}
+
+function affinityColor(sim: number): string {
+  if (sim >= factionThreshold) return '#34d399';
+  if (sim >= allianceThreshold) return '#4ade80';
+  if (sim >= acquaintanceThreshold) return '#fbbf24';
+  if (sim >= 0) return '#333';
+  return '#f87171';
+}
+
+function affinityOpacity(sim: number): number {
+  return Math.min(Math.abs(sim) * 0.8 + 0.2, 1);
+}
+
+// --- 13. Signal distribution histograms with cluster overlays ---
 interface SignalHistogram {
   code: string;
   fullLabel: string;
   color: string;
   bins: { x0: number; x1: number; count: number }[];
-  p33: number;
-  p66: number;
   min: number;
   max: number;
   maxCount: number;
+  clusterMarkers: { name: string; value: number; color: string }[];
 }
 
-function buildHistograms(profiles: Map<string, import('../lib/db').DomainSignalProfile>, pctl: Percentiles): SignalHistogram[] {
-  const vals = [...profiles.values()];
-  const extractors: { code: string; fullLabel: string; color: string; fn: (p: import('../lib/db').DomainSignalProfile) => number | null; pctlKey: keyof Percentiles }[] = [
-    { code: 'EQ', fullLabel: 'Epistemic Quality (EQ)', color: '#60a5fa', fn: p => p.avg_eq, pctlKey: 'eq' },
-    { code: 'SO', fullLabel: 'Solution Orientation (SO)', color: '#4ade80', fn: p => p.avg_so, pctlKey: 'so' },
-    { code: 'SR', fullLabel: 'Stakeholder Representation (SR)', color: '#a78bfa', fn: p => p.avg_sr, pctlKey: 'sr' },
-    { code: 'TD', fullLabel: 'Transparency & Disclosure (TD)', color: '#34d399', fn: p => p.avg_td, pctlKey: 'td' },
-    { code: 'PT', fullLabel: 'Propaganda Techniques (PT)', color: '#f87171', fn: p => p.avg_pt_count, pctlKey: 'pt' },
-    { code: 'AR', fullLabel: 'Arousal (AR)', color: '#fb923c', fn: p => p.avg_arousal, pctlKey: 'arousal' },
-    { code: 'VA', fullLabel: 'Valence (VA)', color: '#fbbf24', fn: p => p.avg_valence, pctlKey: 'valence' },
-    { code: 'FW', fullLabel: 'Fair Witness (FW)', color: '#22d3ee', fn: p => p.avg_fw_ratio, pctlKey: 'fw' },
+function buildHistograms(): SignalHistogram[] {
+  const vals = [...signalProfiles.values()];
+  const extractors: { code: string; fullLabel: string; color: string; fn: (p: DomainSignalProfile) => number | null }[] = [
+    { code: 'EQ', fullLabel: 'Epistemic Quality (EQ)', color: '#60a5fa', fn: p => p.avg_eq },
+    { code: 'SO', fullLabel: 'Solution Orientation (SO)', color: '#4ade80', fn: p => p.avg_so },
+    { code: 'SR', fullLabel: 'Stakeholder Rep (SR)', color: '#a78bfa', fn: p => p.avg_sr },
+    { code: 'TD', fullLabel: 'Transparency (TD)', color: '#34d399', fn: p => p.avg_td },
+    { code: 'PT', fullLabel: 'Propaganda Techniques (PT)', color: '#f87171', fn: p => p.avg_pt_count },
+    { code: 'AR', fullLabel: 'Arousal (AR)', color: '#fb923c', fn: p => p.avg_arousal },
+    { code: 'VA', fullLabel: 'Valence (VA)', color: '#fbbf24', fn: p => p.avg_valence },
+    { code: 'FW', fullLabel: 'Fair Witness (FW)', color: '#22d3ee', fn: p => p.avg_fw_ratio },
   ];
 
-  return extractors.map(ext => {
+  return extractors.map((ext, dimIdx) => {
     const raw = vals.map(ext.fn).filter((n): n is number => n !== null);
-    if (raw.length === 0) return { code: ext.code, fullLabel: ext.fullLabel, color: ext.color, bins: [], p33: 0, p66: 0, min: 0, max: 0, maxCount: 0 };
+    if (raw.length === 0) return { code: ext.code, fullLabel: ext.fullLabel, color: ext.color, bins: [], min: 0, max: 0, maxCount: 0, clusterMarkers: [] };
 
     const min = Math.min(...raw);
     const max = Math.max(...raw);
@@ -440,273 +592,564 @@ function buildHistograms(profiles: Map<string, import('../lib/db').DomainSignalP
     }
 
     const maxCount = Math.max(...bins.map(b => b.count), 1);
-    const { p33, p66 } = pctl[ext.pctlKey];
 
-    return { code: ext.code, fullLabel: ext.fullLabel, color: ext.color, bins, p33, p66, min, max, maxCount };
+    // Cluster centroid markers (raw values)
+    const clusterMarkers = enrichedClusters.map(cl => ({
+      name: cl.name,
+      value: cl.rawCentroid[dimIdx],
+      color: cl.color,
+    }));
+
+    return { code: ext.code, fullLabel: ext.fullLabel, color: ext.color, bins, min, max, maxCount, clusterMarkers };
   });
 }
 
-const histograms = buildHistograms(signalProfiles, percentiles);
+const histograms = buildHistograms();
+
+// --- 14. Interesting pairs ---
+// Cross-cluster closest pairs
+const crossClusterPairs: { a: string; b: string; similarity: number; clusterA: string; clusterB: string }[] = [];
+for (const pair of sortedPairs.slice(0, 500)) {
+  const ca = domainToCluster.get(pair.a);
+  const cb = domainToCluster.get(pair.b);
+  if (ca && cb && ca !== cb) {
+    const clA = enrichedClusters.find(c => c.id === ca.id);
+    const clB = enrichedClusters.find(c => c.id === cb.id);
+    if (clA && clB) {
+      crossClusterPairs.push({ a: pair.a, b: pair.b, similarity: pair.similarity, clusterA: clA.name, clusterB: clB.name });
+    }
+  }
+  if (crossClusterPairs.length >= 10) break;
+}
+
+// Most divergent same-cluster pairs
+const sameClusterDivergent: { a: string; b: string; similarity: number; cluster: string }[] = [];
+const reverseSorted = [...allPairs].sort((a, b) => a.similarity - b.similarity);
+for (const pair of reverseSorted) {
+  const ca = domainToCluster.get(pair.a);
+  const cb = domainToCluster.get(pair.b);
+  if (ca && cb && ca === cb) {
+    const cl = enrichedClusters.find(c => c.id === ca.id);
+    if (cl) {
+      sameClusterDivergent.push({ a: pair.a, b: pair.b, similarity: pair.similarity, cluster: cl.name });
+    }
+  }
+  if (sameClusterDivergent.length >= 10) break;
+}
+
+// --- 15. Outlier scoring ---
+interface OutlierEntry {
+  domain: string;
+  score: number | null;
+  outlierScore: number;
+  nearestCluster: string;
+  nearestSim: number;
+  keySignal: string;
+  tone: string | null;
+}
+
+const outlierEntries: OutlierEntry[] = [];
+for (const domain of loneWolfDomains) {
+  const dv = zVectors.get(domain);
+  if (!dv) continue;
+
+  // Avg distance to all cluster centroids
+  let distSum = 0;
+  let nearestSim = -Infinity, nearestName = 'None';
+  for (const cl of enrichedClusters) {
+    const sim = cosineSim(dv, cl.centroid);
+    distSum += (1 - sim);
+    if (sim > nearestSim) { nearestSim = sim; nearestName = cl.name; }
+  }
+  const outlierScore = enrichedClusters.length > 0 ? distSum / enrichedClusters.length : 1;
+
+  // Key distinguishing signal: dimension with largest |z|
+  const rv = rawVectors.get(domain) || new Array(nDims).fill(0);
+  let maxAbsZ = 0, keySignal = '';
+  for (let i = 0; i < nDims; i++) {
+    const absZ = Math.abs(dv[i]);
+    if (absZ > maxAbsZ) { maxAbsZ = absZ; keySignal = SIGNAL_DIMS[i].code; }
+  }
+
+  const profile = signalProfiles.get(domain);
+  outlierEntries.push({
+    domain,
+    score: domainScoreMap.get(domain) ?? null,
+    outlierScore,
+    nearestCluster: nearestName,
+    nearestSim: Math.max(nearestSim, 0),
+    keySignal,
+    tone: profile?.dominant_tone ?? null,
+  });
+}
+outlierEntries.sort((a, b) => b.outlierScore - a.outlierScore);
+
+// --- Stats ---
+const totalDomains = domainNames.length;
+const totalClusters = enrichedClusters.length;
+const unalignedCount = loneWolfDomains.length;
+const loneWolfRatio = totalDomains > 0 ? unalignedCount / totalDomains : 0;
+const mostDiff = interClusterVar.length > 0 ? interClusterVar[0] : null;
+const leastDiff = interClusterVar.length > 0 ? interClusterVar[interClusterVar.length - 1] : null;
+
+// Signal bar helper
+function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
+
+// Tier label helper
+function tierLabel(sim: number): { label: string; color: string } {
+  if (sim >= factionThreshold) return { label: 'Faction', color: '#a78bfa' };
+  if (sim >= allianceThreshold) return { label: 'Alliance', color: '#34d399' };
+  if (sim >= acquaintanceThreshold) return { label: 'Acquaintance', color: '#fbbf24' };
+  if (sim >= 0) return { label: 'Neutral', color: '#555' };
+  return { label: 'Rival', color: '#f87171' };
+}
 ---
 
 <Base title="Domain Factions — HN HRCB">
 
-  {/* --- Header --- */}
+  {/* === Section 0: Header === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
         <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Domain Factions</span>
         <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
-          UDHR fingerprint clustering + signal profiling
+          signal-profile clustering
         </span>
       </td>
     </tr>
     <tr>
-      <td style="color: #666; font-size: var(--font-xs); padding: 4px 0 8px 0;">
-        Domains clustered by cosine similarity on 31-dimension UDHR fingerprints using golden ratio (&#x3C6;) tier thresholds.
+      <td style="color: #666; font-size: var(--font-xs); padding: 4px 0 8px 0; line-height: 1.5;">
+        Domains grouped by <em>editorial character</em> &mdash; how they cover topics, not just what they score.
+        Clustering uses 8 normalized signal dimensions (epistemic quality, solution orientation, stakeholder representation,
+        transparency, propaganda, arousal, valence, fair witness) with cosine similarity on z-normalized vectors and
+        golden ratio (&#x3C6;) tier thresholds.
       </td>
     </tr>
   </table>
 
-  {/* --- Summary Stats Strip --- */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 8px 0;">
-    <tr>
-      <td style="display: flex; flex-wrap: wrap; gap: 8px;">
-        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
-          {totalFactions} factions
-        </span>
-        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #60a5fa;">
-          {totalDomains} domains
-        </span>
-        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #888;">
-          {unalignedCount} unaligned
-        </span>
-        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
-          Faction &ge; 1/&#x3C6; ({threshold.toFixed(3)})
-        </span>
-        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #34d399;">
-          Alliance &ge; 1/&#x3C6;&sup2; ({allianceThreshold.toFixed(3)})
-        </span>
-        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #fbbf24;">
-          Acquaintance &ge; 1/&#x3C6;&sup3; ({acquaintanceThreshold.toFixed(3)})
-        </span>
-      </td>
-    </tr>
-  </table>
-
-  {evaluatedDomains.length < 3 ? (
+  {totalDomains < 5 ? (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
         <td style="padding: 20px; background: #12121a; border: 1px solid #222230; border-radius: 6px; color: #888; text-align: center;">
-          Not enough evaluated domains to form factions. At least 3 domains with 3+ evaluations are needed.
+          Not enough evaluated domains for signal-profile clustering. At least 5 domains with 3+ evaluations are needed ({totalDomains} available).
         </td>
       </tr>
     </table>
   ) : (
     <>
-      {/* --- Signal Distributions --- */}
+      {/* === Section 1: Signal Distributions === */}
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
         <tr>
           <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
             <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-              Signal Distributions
+              Signal Landscape
               <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-                across {signalProfiles.size} domains with 3+ evaluations
+                how {signalProfiles.size} domains distribute across 8 editorial dimensions · colored lines mark cluster centroids
               </span>
             </div>
-            <div style="color: #555; font-size: var(--font-xs); margin-bottom: 10px;">
-              Dashed lines mark p33 / p66 percentile cutoffs used for typecode assignment.
-              Values left of p33 get <span style="color: #f87171;">−</span>, right of p66 get <span style="color: #34d399;">+</span>, middle third omitted.
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+              {histograms.map(h => {
+                const chartW = 200;
+                const chartH = 50;
+                const numBins = h.bins.length;
+                if (numBins === 0) return null;
+                const barW = chartW / numBins;
+                const range = h.max - h.min || 1;
+                const toX = (v: number) => ((v - h.min) / range) * chartW;
+                return (
+                  <div style="background: #0d0d14; border: 1px solid #1a1a25; border-radius: 4px; padding: 6px 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                      <span style={`color: ${h.color}; font-size: var(--font-xs); font-weight: bold;`}>{h.code}</span>
+                      <span style="color: #555; font-size: 9px;">{h.fullLabel}</span>
+                    </div>
+                    <svg width={chartW + 10} height={chartH + 16} viewBox={`0 0 ${chartW + 10} ${chartH + 16}`} style="display: block;">
+                      {h.bins.map((bin, bi) => {
+                        const barH = h.maxCount > 0 ? (bin.count / h.maxCount) * chartH : 0;
+                        const x = 5 + bi * barW;
+                        return (
+                          <rect
+                            x={x}
+                            y={chartH - barH}
+                            width={Math.max(barW - 1, 1)}
+                            height={Math.max(barH, 0)}
+                            fill={h.color}
+                            opacity="0.6"
+                            rx="1"
+                          >
+                            <title>{bin.x0.toFixed(2)}–{bin.x1.toFixed(2)}: {bin.count} domains</title>
+                          </rect>
+                        );
+                      })}
+                      {h.clusterMarkers.map(cm => {
+                        const x = 5 + toX(cm.value);
+                        return (
+                          <line x1={x} y1="0" x2={x} y2={chartH} stroke={cm.color} stroke-width="2" opacity="0.8">
+                            <title>{cm.name}: {cm.value.toFixed(2)}</title>
+                          </line>
+                        );
+                      })}
+                      <text x="5" y={chartH + 11} fill="#444" font-size="7" font-family="monospace">{h.min.toFixed(2)}</text>
+                      <text x={5 + chartW} y={chartH + 11} fill="#444" font-size="7" font-family="monospace" text-anchor="end">{h.max.toFixed(2)}</text>
+                    </svg>
+                  </div>
+                );
+              })}
             </div>
-
-            {/* Percentile threshold table */}
-            <table cellpadding="3" cellspacing="0" style="font-size: var(--font-xs); margin-bottom: 12px; border-collapse: collapse;">
-              <tr style="color: #555;">
-                <td style="padding-right: 12px;">Signal</td>
-                <td style="text-align: right; padding-right: 12px;">p33</td>
-                <td style="text-align: right; padding-right: 12px;">p66</td>
-                <td style="text-align: right; padding-right: 12px;">Range</td>
-              </tr>
-              {histograms.map(h => (
-                <tr style="border-top: 1px solid #1a1a25;">
-                  <td style={`color: ${h.color}; padding-right: 12px;`}>{h.fullLabel}</td>
-                  <td style="text-align: right; color: #f87171; padding-right: 12px;" class="score-font">{h.p33.toFixed(2)}</td>
-                  <td style="text-align: right; color: #34d399; padding-right: 12px;" class="score-font">{h.p66.toFixed(2)}</td>
-                  <td style="text-align: right; color: #666; padding-right: 12px;" class="score-font">{h.min.toFixed(2)} – {h.max.toFixed(2)}</td>
-                </tr>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: var(--font-xs); color: #555;">
+              <span>Colored lines = cluster centroids</span>
+              {enrichedClusters.map(cl => (
+                <span style={`display: inline-flex; align-items: center; gap: 3px;`}>
+                  <span style={`display: inline-block; width: 12px; height: 2px; background: ${cl.color};`}></span>
+                  <span style={`color: ${cl.color};`}>{cl.name}</span>
+                </span>
               ))}
-            </table>
-
-            {/* Combined signal distribution strip chart */}
-            {(() => {
-              const labelW = 170;
-              const stripW = 400;
-              const rowH = 24;
-              const totalH = histograms.length * rowH + 4;
-              const profiles = [...signalProfiles.values()];
-              // Build per-signal raw value arrays for dot plotting
-              const signalExtractors: ((p: import('../lib/db').DomainSignalProfile) => number | null)[] = [
-                p => p.avg_eq, p => p.avg_so, p => p.avg_sr, p => p.avg_td,
-                p => p.avg_pt_count, p => p.avg_arousal, p => p.avg_valence, p => p.avg_fw_ratio,
-              ];
-              return (
-                <div style="overflow-x: auto;">
-                  <svg width={labelW + stripW + 60} height={totalH} xmlns="http://www.w3.org/2000/svg">
-                    {histograms.map((h, hi) => {
-                      const y = hi * rowH;
-                      const range = h.max - h.min || 1;
-                      const toX = (v: number) => labelW + ((v - h.min) / range) * stripW;
-                      const rawVals = profiles.map(signalExtractors[hi]).filter((n): n is number => n !== null);
-                      return (
-                        <g>
-                          {/* Signal label */}
-                          <text x={labelW - 6} y={y + 15} fill={h.color} font-size="9" font-family="monospace" text-anchor="end">{h.code}</text>
-                          {/* Track background */}
-                          <rect x={labelW} y={y + 4} width={stripW} height="14" rx="3" fill="#1a1a25" />
-                          {/* p33-p66 middle zone */}
-                          <rect x={toX(h.p33)} y={y + 4} width={Math.max(toX(h.p66) - toX(h.p33), 1)} height="14" rx="2" fill="#222230" />
-                          {/* Domain dots */}
-                          {rawVals.map((v, vi) => (
-                            <circle cx={toX(v)} cy={y + 11} r="3" fill={h.color} opacity="0.6">
-                              <title>{v.toFixed(2)}</title>
-                            </circle>
-                          ))}
-                          {/* p33 marker */}
-                          <line x1={toX(h.p33)} y1={y + 2} x2={toX(h.p33)} y2={y + 20} stroke="#f87171" stroke-width="1.5" stroke-dasharray="2,2" />
-                          {/* p66 marker */}
-                          <line x1={toX(h.p66)} y1={y + 2} x2={toX(h.p66)} y2={y + 20} stroke="#34d399" stroke-width="1.5" stroke-dasharray="2,2" />
-                          {/* Min/max labels */}
-                          <text x={labelW - 1} y={y + 22} fill="#444" font-size="6" font-family="monospace" text-anchor="end">{h.min.toFixed(1)}</text>
-                          <text x={labelW + stripW + 2} y={y + 15} fill="#444" font-size="6" font-family="monospace">{h.max.toFixed(1)}</text>
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-              );
-            })()}
-            <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs); color: #555;">
-              <span><span style="color: #f87171;">┊</span> p33 cutoff (−)</span>
-              <span><span style="color: #34d399;">┊</span> p66 cutoff (+)</span>
-              <span style="color: #444;">■ middle third</span>
-              <span>● domain values</span>
             </div>
           </td>
         </tr>
       </table>
 
-      {/* --- Faction Cards --- */}
-      {multiFactions.map((f, fi) => {
-        const sig = f.signals;
-        const arch = f.archetype;
-        // Normalize values for bars (0-1 scale)
-        const bars = [
-          { label: 'Epistemic Quality (EQ)', value: clamp01(sig.eq), tip: `Epistemic Quality: ${sig.eq.toFixed(2)}` },
-          { label: 'Solution Orientation (SO)', value: clamp01(sig.so), tip: `Solution Orientation: ${sig.so.toFixed(2)}` },
-          { label: 'Stakeholder Rep (SR)', value: clamp01(sig.sr), tip: `Stakeholder Representation: ${sig.sr.toFixed(2)}` },
-          { label: 'Transparency (TD)', value: clamp01(sig.td), tip: `Transparency & Disclosure: ${sig.td.toFixed(2)}` },
-          { label: 'Propaganda (PT, inv)', value: clamp01(1 - Math.min(sig.pt / 5, 1)), tip: `Propaganda Techniques (inverted): ${sig.pt.toFixed(1)} flags` },
-          { label: 'Fair Witness (FW)', value: clamp01(sig.fw), tip: `Fair Witness ratio: ${sig.fw.toFixed(2)}` },
-        ];
-        const barWidth = 120;
+      {/* === Section 2: Landscape Overview === */}
+      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+        <tr>
+          <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+              Landscape Overview
+              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                parallel coordinates &mdash; each line is a domain across 8 signal dimensions
+              </span>
+            </div>
+
+            {/* Stat badges */}
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
+                {totalClusters} clusters
+              </span>
+              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #60a5fa;">
+                {totalDomains} domains
+              </span>
+              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #888;">
+                {unalignedCount} unaligned
+              </span>
+              {mostDiff && (
+                <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #666;">
+                  Most differentiating: <span style={`color: ${mostDiff.color};`}>{mostDiff.code}</span>
+                </span>
+              )}
+              {leastDiff && (
+                <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #666;">
+                  Least differentiating: <span style={`color: ${leastDiff.color};`}>{leastDiff.code}</span>
+                </span>
+              )}
+            </div>
+
+            {loneWolfRatio > 0.6 && (
+              <div style="font-size: var(--font-xs); color: #fb923c; margin-bottom: 8px;">
+                {Math.round(loneWolfRatio * 100)}% unaligned — most domains have unique editorial profiles
+              </div>
+            )}
+
+            {/* Parallel coordinates chart */}
+            <svg width="100%" viewBox={`0 0 ${pcW} ${pcH}`} style={`max-width: ${pcW}px; height: auto;`}>
+              {/* Background */}
+              <rect x="0" y="0" width={pcW} height={pcH} fill="#0a0a12" rx="4" />
+
+              {/* Vertical axes */}
+              {SIGNAL_DIMS.map((dim, i) => {
+                const x = pcAxisX(i);
+                return (
+                  <g>
+                    <line x1={x} y1={pcPadT} x2={x} y2={pcPadT + pcInnerH} stroke="#2a2a35" stroke-width="1" />
+                    {/* Axis label */}
+                    <text x={x} y={pcPadT + pcInnerH + 16} fill={dim.color} font-size="10" font-family="monospace" text-anchor="middle" font-weight="bold">
+                      {dim.code}
+                    </text>
+                    {/* Min/max tick labels */}
+                    <text x={x} y={pcPadT - 6} fill="#444" font-size="7" font-family="monospace" text-anchor="middle">
+                      {pcDimMaxs[i].toFixed(2)}
+                    </text>
+                    <text x={x} y={pcPadT + pcInnerH + 28} fill="#444" font-size="7" font-family="monospace" text-anchor="middle">
+                      {pcDimMins[i].toFixed(2)}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Domain polylines (individual domains, thin) */}
+              {pcLines.map(line => (
+                <polyline
+                  points={line.points}
+                  fill="none"
+                  stroke={line.color}
+                  stroke-width="1"
+                  opacity={line.opacity}
+                >
+                  <title>{line.domain}{line.clusterName ? ` (${line.clusterName})` : ' (unaligned)'}</title>
+                </polyline>
+              ))}
+
+              {/* Cluster centroid polylines (thick overlay) */}
+              {pcCentroidLines.map(cl => (
+                <polyline
+                  points={cl.points}
+                  fill="none"
+                  stroke={cl.color}
+                  stroke-width="3"
+                  opacity="0.9"
+                  stroke-linejoin="round"
+                >
+                  <title>{cl.name} (cluster centroid)</title>
+                </polyline>
+              ))}
+
+              {/* Centroid dots at each axis */}
+              {enrichedClusters.map(cl =>
+                cl.rawCentroid.map((v, i) => (
+                  <circle cx={pcAxisX(i)} cy={pcValY(v, i)} r="3" fill={cl.color} stroke="#0a0a12" stroke-width="1">
+                    <title>{cl.name} — {SIGNAL_DIMS[i].code}: {v.toFixed(2)}</title>
+                  </circle>
+                ))
+              )}
+            </svg>
+
+            {/* Legend row */}
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+              {enrichedClusters.map(cl => (
+                <span style={`display: inline-flex; align-items: center; gap: 3px; font-size: var(--font-xs);`}>
+                  <span style={`display: inline-block; width: 12px; height: 3px; border-radius: 1px; background: ${cl.color};`}></span>
+                  <span style={`color: ${cl.color};`}>{cl.name}</span>
+                </span>
+              ))}
+              {unalignedCount > 0 && (
+                <span style="display: inline-flex; align-items: center; gap: 3px; font-size: var(--font-xs);">
+                  <span style="display: inline-block; width: 12px; height: 1px; background: #555;"></span>
+                  <span style="color: #555;">Unaligned</span>
+                </span>
+              )}
+              <span style="font-size: var(--font-xs); color: #444; margin-left: 8px;">
+                Thick lines = cluster centroids · Thin lines = individual domains · Bundled = agreement · Crossing = divergence
+              </span>
+            </div>
+
+            {/* Threshold badges */}
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
+                Faction &ge; 1/&#x3C6; ({factionThreshold.toFixed(3)})
+              </span>
+              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #34d399;">
+                Alliance &ge; 1/&#x3C6;&sup2; ({allianceThreshold.toFixed(3)})
+              </span>
+              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #fbbf24;">
+                Acquaintance &ge; 1/&#x3C6;&sup3; ({acquaintanceThreshold.toFixed(3)})
+              </span>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      {/* === Section 2: What Drives Differentiation === */}
+      {enrichedClusters.length > 1 && (
+        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+          <tr>
+            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                What Drives Differentiation
+                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                  inter-cluster variance per signal dimension
+                </span>
+              </div>
+              <svg width="100%" viewBox={`0 0 500 ${interClusterVar.length * 28 + 10}`} style="max-width: 500px; height: auto;">
+                {interClusterVar.map((v, i) => {
+                  const barW = (v.variance / maxVar) * 350;
+                  const y = i * 28 + 5;
+                  return (
+                    <g>
+                      <text x="70" y={y + 14} fill="#888" font-size="10" font-family="monospace" text-anchor="end">{v.code}</text>
+                      <rect x="80" y={y + 2} width={350} height="16" rx="2" fill="#1a1a25" />
+                      <rect x="80" y={y + 2} width={Math.max(barW, 2)} height="16" rx="2" fill={v.color} opacity="0.8">
+                        <title>{v.label}: variance {v.variance.toFixed(3)}</title>
+                      </rect>
+                      <text x={85 + barW} y={y + 14} fill="#666" font-size="9" font-family="monospace">{v.variance.toFixed(3)}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </td>
+          </tr>
+        </table>
+      )}
+
+      {/* === Section 3: Cluster Cards === */}
+      {enrichedClusters.map((cl) => {
+        // Radar chart values: normalize rawCentroid values to [0,1] for display
+        const radarSize = 200;
+        const radarCx = radarSize / 2;
+        const radarCy = radarSize / 2;
+        const radarR = radarSize / 2 - 30;
+        const numAxes = nDims;
+        const angleStep = 360 / numAxes;
+
+        function polarToXY(angle: number, r: number): [number, number] {
+          const rad = ((angle - 90) * Math.PI) / 180;
+          return [radarCx + r * Math.cos(rad), radarCy + r * Math.sin(rad)];
+        }
+
+        // Normalize values for radar: map from raw to [0,1]
+        const radarVals = cl.rawCentroid.map((v, i) => {
+          const dimMin = Math.min(...dimValues[i], 0);
+          const dimMax = Math.max(...dimValues[i], 1);
+          const range = dimMax - dimMin || 1;
+          return clamp01((v - dimMin) / range);
+        });
+        const medianVals = populationMedian.map((v, i) => {
+          const dimMin = Math.min(...dimValues[i], 0);
+          const dimMax = Math.max(...dimValues[i], 1);
+          const range = dimMax - dimMin || 1;
+          return clamp01((v - dimMin) / range);
+        });
+
+        const radarPoints = radarVals.map((v, i) => polarToXY(i * angleStep, v * radarR));
+        const medianPoints = medianVals.map((v, i) => polarToXY(i * angleStep, v * radarR));
+        const radarPoly = radarPoints.map(([x, y]) => `${x},${y}`).join(' ');
+        const medianPoly = medianPoints.map(([x, y]) => `${x},${y}`).join(' ');
+
         return (
           <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
             <tr>
               <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-                {/* Header: archetype name + avg HRCB */}
+                {/* Header */}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                  <span style={`color: ${arch.color}; font-weight: bold; font-size: var(--font-sm);`}>
-                    {arch.name}
+                  <span style={`color: ${cl.color}; font-weight: bold; font-size: var(--font-sm);`}>
+                    {cl.icon} {cl.name}
+                    <span style="color: #888; font-weight: normal; margin-left: 8px; font-size: var(--font-xs);">
+                      {cl.members.length} domains
+                    </span>
                   </span>
-                  {f.avgScore !== null && (
-                    <span class="score-font" style={`color: ${scoreToColor(f.avgScore)}; font-size: var(--font-sm);`}>
-                      {formatScore(f.avgScore)}
+                  {cl.avgScore !== null && (
+                    <span class="score-font" style={`color: ${scoreToColor(cl.avgScore)}; font-size: var(--font-sm);`}>
+                      {formatScore(cl.avgScore)}
                     </span>
                   )}
                 </div>
 
-                {/* Tagline + badges */}
-                <div style="color: #666; font-size: var(--font-xs); margin-bottom: 6px;">
-                  {arch.tagline}
-                </div>
-                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
-                  <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
-                    {f.members.length} domains
-                  </span>
-                  {sig.dominantTone && (
-                    <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
-                      {sig.dominantTone}
-                    </span>
-                  )}
-                  {sig.dominantScope && (
-                    <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
-                      {sig.dominantScope}
-                    </span>
-                  )}
-                  {sig.dominantReadingLevel && (
-                    <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
-                      {sig.dominantReadingLevel}
-                    </span>
-                  )}
+                {/* Insight */}
+                <div style="color: #888; font-size: var(--font-xs); margin-bottom: 8px; line-height: 1.4;">
+                  {cl.insight}
                 </div>
 
-                {/* HN engagement row */}
-                <div style="display: flex; gap: 16px; margin-bottom: 10px; font-size: var(--font-xs);">
-                  <span style="color: #888;">
-                    <span style="color: #555;">Pts</span> <span class="score-font" style="color: #fb923c;">{Math.round(sig.hnScore)}</span>
-                  </span>
-                  <span style="color: #888;">
-                    <span style="color: #555;">Cmts</span> <span class="score-font" style="color: #60a5fa;">{Math.round(sig.hnComments)}</span>
-                  </span>
-                  <span style="color: #888;">
-                    <span style="color: #555;">Karma</span> <span class="score-font" style="color: #a78bfa;">{Math.round(sig.posterKarma)}</span>
-                  </span>
-                </div>
-
-                {/* Signal bars + UDHR fingerprint side by side */}
                 <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px;">
-                  {/* Signal bars */}
+                  {/* Signal radar */}
                   <div>
-                    <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Signal Profile</div>
-                    {bars.map(b => (
-                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;" title={b.tip}>
-                        <span style="color: #666; font-size: 8px; font-family: monospace; width: 160px; flex-shrink: 0; text-align: right;">{b.label}</span>
-                        <div style={`width: ${barWidth}px; height: 10px; background: #1a1a25; border-radius: 2px; position: relative;`}>
-                          <div style={`width: ${Math.round(b.value * barWidth)}px; height: 10px; background: ${arch.color}; opacity: 0.8; border-radius: 2px;`}></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                    <svg width={radarSize} height={radarSize} viewBox={`0 0 ${radarSize} ${radarSize}`} style="display: block;">
+                      {/* Grid rings */}
+                      {[0.25, 0.5, 0.75, 1.0].map(r => {
+                        const pts = Array.from({ length: numAxes }, (_, i) => {
+                          const [x, y] = polarToXY(i * angleStep, r * radarR);
+                          return `${x},${y}`;
+                        }).join(' ');
+                        return <polygon points={pts} fill="none" stroke="#2a2a35" stroke-width="1" />;
+                      })}
 
-                  {/* UDHR fingerprint */}
-                  <div>
-                    <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">UDHR Fingerprint</div>
-                    <svg width={31 * 12 + 2} height="18" xmlns="http://www.w3.org/2000/svg">
-                      {f.avgFingerprint.map((v, vi) => (
-                        <rect x={vi * 12} y="0" width="11" height="16" rx="1"
-                              fill={v !== null ? scoreToColor(v) : '#1a1a25'}
-                              opacity={v !== null ? '0.9' : '0.3'}>
-                          <title>{colLabels[vi]}: {v !== null ? formatScore(v) : 'ND'}</title>
-                        </rect>
+                      {/* Axes */}
+                      {SIGNAL_DIMS.map((dim, i) => {
+                        const [ax, ay] = polarToXY(i * angleStep, radarR);
+                        const [lx, ly] = polarToXY(i * angleStep, radarR + 18);
+                        return (
+                          <g>
+                            <line x1={radarCx} y1={radarCy} x2={ax} y2={ay} stroke="#2a2a35" stroke-width="1" />
+                            <text x={lx} y={ly} fill={dim.color} font-size="8" font-family="monospace" text-anchor="middle" dominant-baseline="middle">
+                              {dim.code}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Population median polygon */}
+                      <polygon points={medianPoly} fill="none" stroke="#555" stroke-width="1" stroke-dasharray="3,2" />
+
+                      {/* Cluster data polygon */}
+                      <polygon points={radarPoly} fill={cl.color} fill-opacity="0.15" stroke={cl.color} stroke-width="2" />
+
+                      {/* Data points */}
+                      {radarPoints.map(([x, y], i) => (
+                        <circle cx={x} cy={y} r="3" fill={cl.color} stroke="#12121a" stroke-width="1">
+                          <title>{SIGNAL_DIMS[i].code}: {cl.rawCentroid[i].toFixed(2)}</title>
+                        </circle>
                       ))}
                     </svg>
+                    <div style="text-align: center; font-size: 8px; color: #555; margin-top: 2px;">
+                      <span style={`color: ${cl.color};`}>&#9632;</span> cluster
+                      <span style="color: #555; margin-left: 6px;">- - -</span> population median
+                    </div>
                   </div>
-                </div>
 
-                {/* Member domains */}
-                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                  {f.members.map(m => {
-                    const score = domainScoreMap.get(m);
-                    return (
-                      <a href={`/domain/${m}`}
-                         style={`color: ${score !== undefined && score !== null ? scoreToColor(score) : '#888'}; font-size: var(--font-xs); padding: 2px 6px; background: #0d0d14; border: 1px solid #222230; border-radius: 3px; text-decoration: none;`}>
-                        {m}
-                        {score !== null && score !== undefined && (
-                          <span class="score-font" style="margin-left: 3px; font-size: var(--font-xs);">{formatScore(score)}</span>
-                        )}
-                      </a>
-                    );
-                  })}
+                  {/* Key characteristics */}
+                  <div style="flex: 1; min-width: 200px;">
+                    <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Key Characteristics</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+                      {cl.dominantTone && (
+                        <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                          {cl.dominantTone}
+                        </span>
+                      )}
+                      {cl.dominantScope && (
+                        <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                          {cl.dominantScope}
+                        </span>
+                      )}
+                      {cl.dominantReadingLevel && (
+                        <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                          {cl.dominantReadingLevel}
+                        </span>
+                      )}
+                      {cl.avgSetl !== null && (
+                        <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                          SETL <span class="score-font" style={`color: ${scoreToColor(cl.avgSetl)};`}>{cl.avgSetl > 0 ? '+' : ''}{cl.avgSetl.toFixed(2)}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* HN engagement */}
+                    <div style="display: flex; gap: 16px; margin-bottom: 10px; font-size: var(--font-xs);">
+                      <span style="color: #888;">
+                        <span style="color: #555;">Pts</span> <span class="score-font" style="color: #fb923c;">{Math.round(cl.avgHnScore)}</span>
+                      </span>
+                      <span style="color: #888;">
+                        <span style="color: #555;">Cmts</span> <span class="score-font" style="color: #60a5fa;">{Math.round(cl.avgHnComments)}</span>
+                      </span>
+                    </div>
+
+                    {/* Member domains */}
+                    <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Members</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                      {cl.members.map(m => {
+                        const score = domainScoreMap.get(m);
+                        const isLiminal = cl.liminalMembers.some(l => l.domain === m);
+                        return (
+                          <a href={`/domain/${m}`}
+                             style={`color: ${score !== undefined && score !== null ? scoreToColor(score) : '#888'}; font-size: var(--font-xs); padding: 2px 6px; background: #0d0d14; border: 1px solid ${isLiminal ? '#fbbf24' : '#222230'}; border-radius: 3px; text-decoration: none;`}>
+                            {m}
+                            {score !== null && score !== undefined && (
+                              <span class="score-font" style="margin-left: 3px; font-size: var(--font-xs);">{formatScore(score)}</span>
+                            )}
+                            {isLiminal && <span style="color: #fbbf24; margin-left: 2px;" title="Liminal member (high affinity with another cluster)">*</span>}
+                          </a>
+                        );
+                      })}
+                    </div>
+
+                    {/* Liminal members detail */}
+                    {cl.liminalMembers.length > 0 && (
+                      <div style="margin-top: 6px; font-size: var(--font-xs); color: #666;">
+                        <span style="color: #fbbf24;">*</span> Liminal:
+                        {cl.liminalMembers.map(l => (
+                          <span style="margin-left: 4px;">
+                            {l.domain} &rarr; {l.secondCluster} <span class="score-font" style="color: #555;">({l.similarity.toFixed(2)})</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </td>
             </tr>
@@ -714,216 +1157,216 @@ const histograms = buildHistograms(signalProfiles, percentiles);
         );
       })}
 
-      {/* --- Fingerprint Comparison Heatmap --- */}
-      {multiFactions.length > 1 && (
-        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 8px 0;">
+      {/* === Section 4: Inter-Cluster Affinity Matrix === */}
+      {nClusters > 1 && (
+        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
           <tr>
-            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
               <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-                Fingerprint Comparison
+                Inter-Cluster Affinity
                 <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-                  faction-averaged UDHR provision scores
+                  cosine similarity between cluster centroids
                 </span>
               </div>
               <div style="overflow-x: auto;">
-                <svg width={31 * 16 + 140} height={multiFactions.length * 20 + 36} xmlns="http://www.w3.org/2000/svg">
-                  {/* Group color indicator bars */}
-                  {SECTIONS.map((sec, si) => (
-                    <rect x={140 + si * 16} y="0" width="15" height="4" rx="1" fill={getGroupColor(sec.group)} opacity="0.6">
-                      <title>{sec.group}</title>
-                    </rect>
-                  ))}
+                <svg width={nClusters * 60 + 120} height={nClusters * 60 + 40} viewBox={`0 0 ${nClusters * 60 + 120} ${nClusters * 60 + 40}`}>
                   {/* Column headers */}
-                  {colLabels.map((label, li) => (
-                    <text x={140 + li * 16 + 7} y="18" fill="#555" font-size="7" font-family="monospace" text-anchor="middle">{label}</text>
+                  {enrichedClusters.map((cl, j) => (
+                    <text x={120 + j * 60 + 25} y="16" fill={cl.color} font-size="8" font-family="monospace" text-anchor="middle">
+                      {cl.name.length > 8 ? cl.name.slice(0, 8) + '..' : cl.name}
+                    </text>
                   ))}
                   {/* Rows */}
-                  {multiFactions.map((f, fi) => (
+                  {enrichedClusters.map((clI, i) => (
                     <g>
-                      <text x="0" y={24 + fi * 20 + 13} fill={f.archetype.color} font-size="9" font-family="monospace">
-                        {f.archetype.name.slice(0, 16)}
+                      <text x="115" y={26 + i * 60 + 25} fill={clI.color} font-size="8" font-family="monospace" text-anchor="end">
+                        {clI.name.length > 14 ? clI.name.slice(0, 14) + '..' : clI.name}
                       </text>
-                      {f.avgFingerprint.map((v, vi) => (
-                        <rect x={140 + vi * 16} y={24 + fi * 20 + 2} width="15" height="16" rx="2"
-                              fill={v !== null ? scoreToColor(v) : '#1a1a25'}
-                              opacity={v !== null ? '0.85' : '0.2'}>
-                          <title>{f.archetype.name} — {colLabels[vi]}: {v !== null ? formatScore(v) : 'ND'}</title>
-                        </rect>
-                      ))}
+                      {enrichedClusters.map((clJ, j) => {
+                        const sim = affinityMatrix[i][j];
+                        const tier = tierLabel(sim);
+                        return (
+                          <g>
+                            <rect x={120 + j * 60} y={26 + i * 60} width="50" height="50" rx="4"
+                                  fill={affinityColor(sim)} opacity={affinityOpacity(sim)}>
+                              <title>{clI.name} vs {clJ.name}: {sim.toFixed(3)} ({tier.label})</title>
+                            </rect>
+                            <text x={120 + j * 60 + 25} y={26 + i * 60 + 28} fill="#eee" font-size="10" font-family="monospace" text-anchor="middle">
+                              {sim.toFixed(2)}
+                            </text>
+                            {i !== j && (
+                              <text x={120 + j * 60 + 25} y={26 + i * 60 + 40} fill="#aaa" font-size="7" font-family="monospace" text-anchor="middle">
+                                {tier.label}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      })}
                     </g>
                   ))}
                 </svg>
               </div>
-              {/* Group legend */}
-              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
-                {Object.entries(groupColors).map(([group, color]) => (
-                  <span style={`color: ${color}; font-size: var(--font-xs);`}>{group}</span>
-                ))}
+              <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs); color: #555;">
+                <span><span style="color: #34d399;">&#9632;</span> Allied</span>
+                <span><span style="color: #fbbf24;">&#9632;</span> Acquaintance</span>
+                <span><span style="color: #333;">&#9632;</span> Neutral</span>
+                <span><span style="color: #f87171;">&#9632;</span> Rival</span>
               </div>
             </td>
           </tr>
         </table>
       )}
 
-      {/* --- Faction Signal Comparison Chart --- */}
-      {multiFactions.length > 1 && (
+      {/* === Section 6: Interesting Pairs === */}
+      {(crossClusterPairs.length > 0 || sameClusterDivergent.length > 0) && (
         <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
           <tr>
-            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
+            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
               <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-                Signal Comparison
+                Interesting Pairs
                 <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-                  cross-faction signal profiles
+                  editorially similar across clusters &amp; divergent within clusters
                 </span>
               </div>
-              <div style="overflow-x: auto;">
-                {(() => {
-                  const sigNames = ['Epistemic Quality (EQ)', 'Solution Orientation (SO)', 'Stakeholder Rep (SR)', 'Transparency (TD)', 'Propaganda (PT, inv)', 'Fair Witness (FW)'];
-                  const nF = multiFactions.length;
-                  const barH = 10;
-                  const groupH = nF * (barH + 2) + 14;
-                  const maxBarW = 200;
-                  const labelW = 170;
-                  const totalH = sigNames.length * groupH + 10;
-                  return (
-                    <svg width={labelW + maxBarW + 10} height={totalH} xmlns="http://www.w3.org/2000/svg">
-                      {sigNames.map((sn, gi) => {
-                        const yOff = gi * groupH;
-                        return (
-                          <g>
-                            <text x="0" y={yOff + 10} fill="#888" font-size="9" font-family="monospace">{sn}</text>
-                            {multiFactions.map((f, fi) => {
-                              const vals = [f.signals.eq, f.signals.so, f.signals.sr, f.signals.td, 1 - Math.min(f.signals.pt / 5, 1), f.signals.fw];
-                              const v = clamp01(vals[gi]);
-                              return (
-                                <g>
-                                  <rect x={labelW} y={yOff + 14 + fi * (barH + 2)} width={maxBarW} height={barH} rx="2" fill="#1a1a25" />
-                                  <rect x={labelW} y={yOff + 14 + fi * (barH + 2)} width={Math.round(v * maxBarW)} height={barH} rx="2" fill={f.archetype.color} opacity="0.8">
-                                    <title>{f.archetype.name}: {vals[gi].toFixed(2)}</title>
-                                  </rect>
-                                </g>
-                              );
-                            })}
-                          </g>
-                        );
-                      })}
-                    </svg>
-                  );
-                })()}
-              </div>
-              {/* Legend */}
-              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
-                {multiFactions.map(f => (
-                  <span style={`display: inline-flex; align-items: center; gap: 4px; font-size: var(--font-xs);`}>
-                    <span style={`display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: ${f.archetype.color};`}></span>
-                    <span style={`color: ${f.archetype.color};`}>{f.archetype.name}</span>
-                  </span>
-                ))}
+              <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                {/* Left: cross-cluster closest */}
+                {crossClusterPairs.length > 0 && (
+                  <div style="flex: 1; min-width: 280px;">
+                    <div style="color: #34d399; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; border-bottom: 1px solid rgba(52, 211, 153, 0.2); padding-bottom: 4px;">
+                      Cross-Cluster Harmony
+                    </div>
+                    <div class="table-wrap">
+                      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                        <tr style="color: #555;">
+                          <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Sim</td><td>Clusters</td>
+                        </tr>
+                        {crossClusterPairs.map(p => (
+                          <tr style="border-top: 1px solid #1a1a25; background: rgba(52, 211, 153, 0.03);">
+                            <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
+                            <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
+                            <td style="text-align: right; color: #34d399;" class="score-font">{p.similarity.toFixed(3)}</td>
+                            <td style="color: #666; font-size: var(--font-xs);">{p.clusterA} / {p.clusterB}</td>
+                          </tr>
+                        ))}
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {/* Right: same-cluster most divergent */}
+                {sameClusterDivergent.length > 0 && (
+                  <div style="flex: 1; min-width: 280px;">
+                    <div style="color: #f87171; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; border-bottom: 1px solid rgba(248, 113, 113, 0.2); padding-bottom: 4px;">
+                      Intra-Cluster Tension
+                    </div>
+                    <div class="table-wrap">
+                      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                        <tr style="color: #555;">
+                          <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Sim</td><td>Cluster</td>
+                        </tr>
+                        {sameClusterDivergent.map(p => (
+                          <tr style="border-top: 1px solid #1a1a25; background: rgba(248, 113, 113, 0.03);">
+                            <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
+                            <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
+                            <td style="text-align: right; color: #f87171;" class="score-font">{p.similarity.toFixed(3)}</td>
+                            <td style="color: #666; font-size: var(--font-xs);">{p.cluster}</td>
+                          </tr>
+                        ))}
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </td>
           </tr>
         </table>
       )}
 
-      {/* --- Alliance Table --- */}
-      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
-        <tr>
-          <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-              Strongest Alliances
-              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-                top 20 most similar domain pairs
-              </span>
-            </div>
-            <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-              <tr style="color: #555;">
-                <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td><td>Tier</td><td>Shared Faction</td><td>Key Overlap</td>
-              </tr>
-              {top20Alliances.map(p => {
-                const tier = tierLabel(p.similarity);
-                return (
-                  <tr style="border-top: 1px solid #1a1a25;">
-                    <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
-                    <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
-                    <td style="text-align: right; color: #34d399;" class="score-font">{p.similarity.toFixed(3)}</td>
-                    <td style={`color: ${tier.color};`}>{tier.label}</td>
-                    <td style="color: #888;">{findSharedFaction(p.a, p.b) || '—'}</td>
-                    <td style="color: #888;">{getSignalOverlap(p.a, p.b)}</td>
+      {/* === Section 7: Outliers & Lone Wolves === */}
+      {outlierEntries.length > 0 && (
+        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+          <tr>
+            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+                Outliers & Lone Wolves
+                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                  domains not assigned to any cluster, sorted by outlier score
+                </span>
+              </div>
+              <div class="table-wrap">
+                <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                  <tr style="color: #555;">
+                    <td>Domain</td>
+                    <td style="text-align: right;">HRCB</td>
+                    <td style="text-align: right;">Outlier</td>
+                    <td>Nearest Cluster</td>
+                    <td style="text-align: right;">Similarity</td>
+                    <td>Key Signal</td>
+                    <td>Tone</td>
                   </tr>
-                );
-              })}
-            </table>
+                  {outlierEntries.map(w => {
+                    const tier = tierLabel(w.nearestSim);
+                    return (
+                      <tr style="border-top: 1px solid #1a1a25;">
+                        <td><a href={`/domain/${w.domain}`} style="color: #aaa; text-decoration: none;">{w.domain}</a></td>
+                        <td style={`text-align: right; color: ${w.score !== null ? scoreToColor(w.score) : '#555'};`} class="score-font">
+                          {w.score !== null ? formatScore(w.score) : 'ND'}
+                        </td>
+                        <td style="text-align: right; color: #fb923c;" class="score-font">{w.outlierScore.toFixed(2)}</td>
+                        <td style="color: #888;">
+                          {w.nearestCluster}
+                        </td>
+                        <td style={`text-align: right; color: ${tier.color};`} class="score-font">
+                          {w.nearestSim.toFixed(2)}
+                          <span style="color: #555; margin-left: 3px; font-size: var(--font-xs);">{tier.label}</span>
+                        </td>
+                        <td style="color: #888;">{w.keySignal}</td>
+                        <td style="color: #888;">{w.tone || '\u2014'}</td>
+                      </tr>
+                    );
+                  })}
+                </table>
+              </div>
+            </td>
+          </tr>
+        </table>
+      )}
+
+      {/* === Section 8: Methodology Notes === */}
+      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0 20px 0;">
+        <tr>
+          <td>
+            <details style="background: #12121a; border: 1px solid #222230; border-radius: 6px; padding: 12px;">
+              <summary style="color: #888; font-size: var(--font-sm); cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;">
+                Methodology Notes
+              </summary>
+              <div style="color: #666; font-size: var(--font-xs); line-height: 1.6; margin-top: 8px;">
+                <p><strong style="color: #888;">Clustering input:</strong> 8 signal dimensions per domain &mdash;
+                  Epistemic Quality (EQ), Solution Orientation (SO), Stakeholder Representation (SR), Transparency (TD),
+                  Propaganda Techniques (PT, inverted), Arousal (AR), Valence (VA), Fair Witness (FW).</p>
+                <p><strong style="color: #888;">Z-normalization:</strong> Each dimension is standardized to zero mean and unit variance
+                  across all domains with 3+ evaluations. Missing values are imputed as 0 (population mean). Domains with &gt;3 missing dimensions are flagged.</p>
+                <p><strong style="color: #888;">Similarity:</strong> Cosine similarity on z-normalized 8D vectors measures editorial character similarity
+                  independent of magnitude.</p>
+                <p><strong style="color: #888;">Clustering:</strong> Agglomerative hierarchical clustering with average linkage. Pairs are sorted by
+                  descending similarity and greedily merged when average inter-cluster similarity &ge; 1/&#x3C6; (~0.618).
+                  If this produces a single giant cluster, the fallback threshold 1/&#x3C6;&sup2; (~0.382) is used.</p>
+                <p><strong style="color: #888;">Golden ratio tiers:</strong>
+                  Faction &ge; 1/&#x3C6; (0.618) &middot;
+                  Alliance &ge; 1/&#x3C6;&sup2; (0.382) &middot;
+                  Acquaintance &ge; 1/&#x3C6;&sup3; (0.236) &middot;
+                  Neutral &ge; 0 &middot;
+                  Rival &lt; 0</p>
+                <p><strong style="color: #888;">Parallel coordinates:</strong> Each domain is drawn as a polyline across 8 vertical axes
+                  (one per signal dimension). Values are normalized to the observed min/max per dimension. Thick lines show cluster centroids;
+                  thin lines show individual domains. Bundled lines indicate agreement; crossing lines indicate divergence.</p>
+                <p><strong style="color: #888;">Archetype naming:</strong> ~12 pattern rules map signal combinations to descriptive names
+                  (e.g., high EQ + high TD + low PT &rarr; &ldquo;Rigorous Analysts&rdquo;). Fallback uses marker-based names.</p>
+                <p><strong style="color: #888;">Minimum data:</strong> Requires 5+ domains with 3+ evaluations each.</p>
+              </div>
+            </details>
           </td>
         </tr>
       </table>
-
-      {/* --- Rivalry Table --- */}
-      {rivalPairs.length > 0 && (
-        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
-          <tr>
-            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-                Strongest Rivals
-                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-                  pairs with negative cosine similarity (oppositional fingerprints)
-                </span>
-              </div>
-              <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                <tr style="color: #555;">
-                  <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td><td>Key Divergence</td>
-                </tr>
-                {rivalPairs.map(p => (
-                  <tr style="border-top: 1px solid #1a1a25;">
-                    <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
-                    <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
-                    <td style="text-align: right; color: #f87171;" class="score-font">{p.similarity.toFixed(3)}</td>
-                    <td style="color: #888; font-size: var(--font-xs);">{getSignalDivergence(p.a, p.b)}</td>
-                  </tr>
-                ))}
-              </table>
-            </td>
-          </tr>
-        </table>
-      )}
-
-      {/* --- Lone Wolves --- */}
-      {loneWolves.length > 0 && (
-        <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0 20px 0;">
-          <tr>
-            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px; overflow-x: auto;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-                Lone Wolves
-                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-                  single-member clusters
-                </span>
-              </div>
-              <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                <tr style="color: #555;">
-                  <td>Domain</td><td style="text-align: right;">HRCB</td><td style="text-align: right;">Pts</td><td style="text-align: right;">Karma</td>
-                  <td style="text-align: right;">Epistemic Quality (EQ)</td><td style="text-align: right;">Propaganda (PT)</td><td>Tone</td><td>Nearest Faction</td>
-                </tr>
-                {loneWolves.map(w => (
-                  <tr style="border-top: 1px solid #1a1a25;">
-                    <td><a href={`/domain/${w.domain}`} style="color: #aaa; text-decoration: none;">{w.domain}</a></td>
-                    <td style={`text-align: right; color: ${w.score !== null ? scoreToColor(w.score) : '#555'};`} class="score-font">
-                      {w.score !== null ? formatScore(w.score) : 'ND'}
-                    </td>
-                    <td style="text-align: right; color: #fb923c;" class="score-font">{Math.round(w.signals.hnScore)}</td>
-                    <td style="text-align: right; color: #a78bfa;" class="score-font">{Math.round(w.signals.posterKarma)}</td>
-                    <td style="text-align: right; color: #888;" class="score-font">{w.signals.eq.toFixed(2)}</td>
-                    <td style="text-align: right; color: #888;" class="score-font">{w.signals.pt.toFixed(1)}</td>
-                    <td style="color: #888;">{w.signals.dominantTone || '—'}</td>
-                    <td style="color: #888;">
-                      {w.nearestFaction}
-                      <span style="color: #555; margin-left: 4px;" class="score-font">{w.nearestSim.toFixed(2)}</span>
-                    </td>
-                  </tr>
-                ))}
-              </table>
-            </td>
-          </tr>
-        </table>
-      )}
     </>
   )}
 </Base>

@@ -1,0 +1,103 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Experiments">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
+    <tr>
+      <td>
+        <div style="color: #ccc; font-size: var(--font-lg); font-weight: bold; margin-bottom: 4px;">
+          Experiments
+        </div>
+        <div style="color: #666; font-size: var(--font-sm); margin-bottom: 20px;">
+          Exploratory views and analysis tools. These may change or break without notice.
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <table cellpadding="0" cellspacing="0" width="100%">
+
+          <tr>
+            <td style="padding: 10px 8px; vertical-align: top; width: 100px;">
+              <a href="/domain-intel" style="color: #ff6600; font-weight: bold; font-size: var(--font-base); text-decoration: none;">domain intel</a>
+            </td>
+            <td style="padding: 10px 8px; color: #aaa; font-size: var(--font-sm);">
+              Domain intelligence analysis. Engagement ratios, HRCB distributions, editorial/structural splits, submitter diversity, and controversy metrics across all tracked domains.
+            </td>
+          </tr>
+
+          <tr style="border-top: 1px solid #1a1a25;">
+            <td style="padding: 10px 8px; vertical-align: top; width: 100px;">
+              <a href="/user-intel" style="color: #ff6600; font-weight: bold; font-size: var(--font-base); text-decoration: none;">user intel</a>
+            </td>
+            <td style="padding: 10px 8px; color: #aaa; font-size: var(--font-sm);">
+              User intelligence analysis. Top submitters, HRCB profiles per user, domain diversity, editorial/structural leanings, hourly posting patterns, and day-of-week engagement.
+            </td>
+          </tr>
+
+          <tr style="border-top: 1px solid #1a1a25;">
+            <td style="padding: 10px 8px; vertical-align: top; width: 100px;">
+              <a href="/dynamics" style="color: #ff6600; font-weight: bold; font-size: var(--font-base); text-decoration: none;">dynamics</a>
+            </td>
+            <td style="padding: 10px 8px; color: #aaa; font-size: var(--font-sm);">
+              Story dynamics analysis. Score and comment velocity curves, engagement ratios by type, fastest risers, slow burners, and growth trajectories.
+            </td>
+          </tr>
+
+          <tr style="border-top: 1px solid #1a1a25;">
+            <td style="padding: 10px 8px; vertical-align: top; width: 100px;">
+              <a href="/seldon" style="color: #ff6600; font-weight: bold; font-size: var(--font-base); text-decoration: none;">seldon</a>
+            </td>
+            <td style="padding: 10px 8px; color: #aaa; font-size: var(--font-sm);">
+              Psychohistorical trend analysis. Score distributions over time, rolling averages, and drift detection across the evaluated corpus.
+            </td>
+          </tr>
+
+          <tr style="border-top: 1px solid #1a1a25;">
+            <td style="padding: 10px 8px; vertical-align: top;">
+              <a href="/network" style="color: #ff6600; font-weight: bold; font-size: var(--font-base); text-decoration: none;">network</a>
+            </td>
+            <td style="padding: 10px 8px; color: #aaa; font-size: var(--font-sm);">
+              Domain relationship network. Visualizes connections between domains based on shared UDHR article signal patterns and score similarity.
+            </td>
+          </tr>
+
+          <tr style="border-top: 1px solid #1a1a25;">
+            <td style="padding: 10px 8px; vertical-align: top;">
+              <a href="/velocity" style="color: #ff6600; font-weight: bold; font-size: var(--font-base); text-decoration: none;">velocity</a>
+            </td>
+            <td style="padding: 10px 8px; color: #aaa; font-size: var(--font-sm);">
+              Pipeline velocity metrics. Evaluation throughput, queue depth over time, and processing rate analysis.
+            </td>
+          </tr>
+
+          <tr style="border-top: 1px solid #1a1a25;">
+            <td style="padding: 10px 8px; vertical-align: top;">
+              <a href="/front" style="color: #ff6600; font-weight: bold; font-size: var(--font-base); text-decoration: none;">past</a>
+            </td>
+            <td style="padding: 10px 8px; color: #aaa; font-size: var(--font-sm);">
+              Historical front page snapshots. Browse evaluated stories by date.
+            </td>
+          </tr>
+
+          <tr style="border-top: 1px solid #1a1a25;">
+            <td style="padding: 10px 8px; vertical-align: top; color: #888; font-size: var(--font-sm);">
+              <span style="color: #ff6600; font-weight: bold; font-size: var(--font-base);">filters</span>
+            </td>
+            <td style="padding: 10px 8px; color: #aaa; font-size: var(--font-sm);">
+              <a href="/?type=ask" style="color: #ff6600; text-decoration: none;">ask</a> |
+              <a href="/?type=show" style="color: #ff6600; text-decoration: none;">show</a> |
+              <a href="/?type=job" style="color: #ff6600; text-decoration: none;">jobs</a>
+              — Filter the main feed by HN story type.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</Base>

@@ -126,3 +126,40 @@
     animation: none;
   }
 }
+
+/* Mobile responsiveness — quick wins */
+@media (max-width: 640px) {
+  :root {
+    --font-base: 12pt;
+    --font-xs: 8pt;
+    --font-sm: 9pt;
+  }
+
+  /* Full-width layout on mobile */
+  #hnmain {
+    width: 100% !important;
+  }
+
+  .hn-page {
+    width: 100%;
+  }
+
+  /* Nav: wrap links instead of overflowing */
+  .nav-links {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 2px 0;
+  }
+
+  /* Make all content tables scrollable */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Tighten padding on small screens */
+  .itemlist td {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+}

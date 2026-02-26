@@ -201,6 +201,105 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
+        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Domain Signal Profiles (Factions)</p>
+
+        <p style="font-size: var(--font-base); color: #828282; margin-bottom: 10px;">
+          The <a href="/factions" style="color: #60a5fa;">Factions page</a> clusters domains by <em>editorial character</em>
+          &mdash; how they cover topics, not just what they score. Instead of using the 31-dimension UDHR fingerprint,
+          it clusters on 8 normalized supplementary signal dimensions:
+        </p>
+
+        <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
+          <tr>
+            <td style="color: #60a5fa;">EQ</td><td style="color: #828282;">Epistemic Quality</td>
+            <td style="color: #a78bfa;">SR</td><td style="color: #828282;">Stakeholder Representation</td>
+          </tr>
+          <tr>
+            <td style="color: #4ade80;">SO</td><td style="color: #828282;">Solution Orientation</td>
+            <td style="color: #34d399;">TD</td><td style="color: #828282;">Transparency & Disclosure</td>
+          </tr>
+          <tr>
+            <td style="color: #f87171;">PT</td><td style="color: #828282;">Propaganda (inverted)</td>
+            <td style="color: #fb923c;">AR</td><td style="color: #828282;">Arousal</td>
+          </tr>
+          <tr>
+            <td style="color: #fbbf24;">VA</td><td style="color: #828282;">Valence</td>
+            <td style="color: #22d3ee;">FW</td><td style="color: #828282;">Fair Witness ratio</td>
+          </tr>
+        </table>
+
+        <p style="font-size: var(--font-base); color: #828282; margin-bottom: 10px;">
+          Each dimension is z-normalized (zero mean, unit variance) across all domains with 3+ evaluations.
+          Missing values are imputed as 0 (population mean). Cosine similarity on the resulting 8D vectors
+          measures editorial character similarity. Domains are then clustered using agglomerative hierarchical
+          clustering with average linkage, using golden ratio tier thresholds:
+        </p>
+
+        <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
+          <tr>
+            <td style="color: #a78bfa; font-family: var(--font-mono);">Faction</td>
+            <td style="color: #828282;">sim &ge; 1/&#x3C6; (0.618) &mdash; core editorial alignment</td>
+          </tr>
+          <tr>
+            <td style="color: #34d399; font-family: var(--font-mono);">Alliance</td>
+            <td style="color: #828282;">sim &ge; 1/&#x3C6;&sup2; (0.382) &mdash; sympathetic but distinct</td>
+          </tr>
+          <tr>
+            <td style="color: #fbbf24; font-family: var(--font-mono);">Acquaintance</td>
+            <td style="color: #828282;">sim &ge; 1/&#x3C6;&sup3; (0.236) &mdash; occasional overlap</td>
+          </tr>
+          <tr>
+            <td style="color: #555; font-family: var(--font-mono);">Neutral</td>
+            <td style="color: #828282;">sim &ge; 0 &mdash; no meaningful relationship</td>
+          </tr>
+          <tr>
+            <td style="color: #f87171; font-family: var(--font-mono);">Rival</td>
+            <td style="color: #828282;">sim &lt; 0 &mdash; oppositional editorial profiles</td>
+          </tr>
+        </table>
+
+        <p style="font-size: var(--font-base); color: #828282; margin-bottom: 10px;">
+          Clusters are named using ~22 pattern rules that map signal combinations to descriptive archetypes
+          (e.g., high EQ + high TD + low PT &rarr; "Rigorous Analysts", many low signals &rarr; "Minimalist Wire").
+          When no named pattern matches, clusters get readable descriptive names based on their strongest
+          high/low markers (e.g., "High EQ/FW" or "Low AR/PT").
+        </p>
+
+        <p style="font-size: var(--font-base); color: #828282; margin-bottom: 10px;">
+          The page flows from terrain to clusters to relationships:
+        </p>
+
+        <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
+          <tr>
+            <td style="color: #c9c9c9; white-space: nowrap;">Signal Landscape</td>
+            <td style="color: #828282;">2&times;4 histogram grid showing how domains distribute across each dimension. Colored vertical lines mark cluster centroids.</td>
+          </tr>
+          <tr>
+            <td style="color: #c9c9c9; white-space: nowrap;">Parallel Coordinates</td>
+            <td style="color: #828282;">Each domain drawn as a polyline across 8 vertical axes. Bundled lines = agreement, crossing lines = divergence. Thick lines show cluster centroids.</td>
+          </tr>
+          <tr>
+            <td style="color: #c9c9c9; white-space: nowrap;">Differentiation</td>
+            <td style="color: #828282;">Inter-cluster variance per signal dimension &mdash; which signals separate clusters most.</td>
+          </tr>
+          <tr>
+            <td style="color: #c9c9c9; white-space: nowrap;">Cluster Cards</td>
+            <td style="color: #828282;">Per-cluster detail: archetype name, 8-axis radar chart (vs population median), key characteristics, member domains, liminal members.</td>
+          </tr>
+          <tr>
+            <td style="color: #c9c9c9; white-space: nowrap;">Affinity Matrix</td>
+            <td style="color: #828282;">N&times;N heatmap of cosine similarity between cluster centroids with golden ratio tier labels.</td>
+          </tr>
+          <tr>
+            <td style="color: #c9c9c9; white-space: nowrap;">Interesting Pairs</td>
+            <td style="color: #828282;">Cross-cluster harmony (similar domains in different clusters) and intra-cluster tension (divergent members within a cluster).</td>
+          </tr>
+          <tr>
+            <td style="color: #c9c9c9; white-space: nowrap;">Outliers</td>
+            <td style="color: #828282;">Unaligned domains sorted by outlier score (mean distance to all cluster centroids), with nearest cluster and key distinguishing signal.</td>
+          </tr>
+        </table>
+
         <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
 
         <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
