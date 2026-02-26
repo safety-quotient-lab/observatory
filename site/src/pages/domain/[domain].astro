@@ -2,7 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
 import DcpTable from '../../components/DcpTable.astro';
-import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp, getDomainSetlHistory } from '../../lib/db';
+import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp, getDomainSetlHistory, getDomainSignals } from '../../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
 
 const { domain } = Astro.params;
@@ -17,13 +17,14 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
-const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, setlHistory] = await Promise.all([
+const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, setlHistory, signals] = await Promise.all([
   getStoriesByDomain(db, domain, PER_PAGE + 1, offset),
   getDomainSetl(db, domain),
   getDomainDetailStats(db, domain),
   getDomainFingerprints(db, [domain]),
   getDomainDcp(db, domain),
   getDomainSetlHistory(db, domain),
+  getDomainSignals(db, domain),
 ]);
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
@@ -81,6 +82,81 @@ if (dcpJson) {
               </tr>
             )}
           </table>
+
+          {/* Supplementary signals + trend */}
+          {(signals.avgEq !== null || signals.topTone || signals.topSentiment) && (
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25;">
+              <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+                {signals.avgEq !== null && (
+                  <tr>
+                    <td style="color: #666; width: 85px;">Epistemic</td>
+                    <td class="score-font" style={`color: ${signals.avgEq >= 0.6 ? '#16a34a' : signals.avgEq >= 0.4 ? '#eab308' : '#dc2626'};`}>
+                      {signals.avgEq.toFixed(2)}
+                    </td>
+                    <td style="color: #666; width: 85px;">Transparency</td>
+                    <td class="score-font" style={`color: ${signals.avgTd !== null ? (signals.avgTd >= 0.6 ? '#16a34a' : signals.avgTd >= 0.3 ? '#eab308' : '#dc2626') : '#555'};`}>
+                      {signals.avgTd !== null ? signals.avgTd.toFixed(2) : 'ND'}
+                    </td>
+                  </tr>
+                )}
+                {(signals.avgSo !== null || signals.avgSr !== null) && (
+                  <tr>
+                    <td style="color: #666;">Solutions</td>
+                    <td class="score-font" style="color: #888;">{signals.avgSo !== null ? signals.avgSo.toFixed(2) : 'ND'}</td>
+                    <td style="color: #666;">Stakeholder</td>
+                    <td class="score-font" style="color: #888;">{signals.avgSr !== null ? signals.avgSr.toFixed(2) : 'ND'}</td>
+                  </tr>
+                )}
+                <tr>
+                  {signals.topTone && (
+                    <Fragment>
+                      <td style="color: #666;">Tone</td>
+                      <td style="color: #888;">{signals.topTone}</td>
+                    </Fragment>
+                  )}
+                  {signals.topSentiment && (
+                    <Fragment>
+                      <td style="color: #666;">Sentiment</td>
+                      <td style={`color: ${signals.topSentiment === 'Champions' || signals.topSentiment === 'Advocates' ? '#16a34a' : signals.topSentiment === 'Hostile' || signals.topSentiment === 'Undermines' ? '#dc2626' : '#888'};`}>
+                        {signals.topSentiment}
+                      </td>
+                    </Fragment>
+                  )}
+                </tr>
+              </table>
+              {/* Trend indicator */}
+              {signals.recentAvgScore !== null && signals.olderAvgScore !== null && (
+                <div style="font-size: var(--font-xs); color: #555; margin-top: 4px;">
+                  {(() => {
+                    const delta = signals.recentAvgScore! - signals.olderAvgScore!;
+                    const arrow = delta > 0.05 ? '\u2191' : delta < -0.05 ? '\u2193' : '\u2192';
+                    const color = delta > 0.05 ? '#16a34a' : delta < -0.05 ? '#dc2626' : '#888';
+                    return (
+                      <span>
+                        7d trend: <span style={`color: ${color}; font-weight: bold;`}>{arrow} {delta > 0 ? '+' : ''}{delta.toFixed(2)}</span>
+                        <span style="color: #444;"> (7d: {signals.recentAvgScore!.toFixed(2)} vs 8-30d: {signals.olderAvgScore!.toFixed(2)})</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
+              {/* Tags row */}
+              {(signals.topScope || signals.avgPtCount !== null) && (
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+                  {signals.topScope && (
+                    <span style="font-size: var(--font-xs); background: #1a1a25; border: 1px solid #2a2a35; border-radius: 3px; padding: 1px 6px; color: #888;">
+                      {signals.topScope}
+                    </span>
+                  )}
+                  {signals.avgPtCount !== null && signals.avgPtCount > 0 && (
+                    <span style={`font-size: var(--font-xs); background: #1a1a25; border: 1px solid ${signals.avgPtCount > 2 ? '#dc2626' : '#2a2a35'}; border-radius: 3px; padding: 1px 6px; color: ${signals.avgPtCount > 2 ? '#dc2626' : '#888'};`}>
+                      {signals.avgPtCount.toFixed(1)} propaganda flags/story
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Fingerprint */}
           {fp && (

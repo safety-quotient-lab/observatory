@@ -1970,6 +1970,166 @@ export interface SignalOverview {
   reading_level_distribution: Record<string, number>;
 }
 
+// --- Domain supplementary signal averages ---
+
+export interface DomainSignals {
+  avgEq: number | null;
+  avgSo: number | null;
+  avgSr: number | null;
+  avgTd: number | null;
+  avgPtCount: number | null;
+  topTone: string | null;
+  topScope: string | null;
+  topSentiment: string | null;
+  recentAvgScore: number | null; // last 7d
+  olderAvgScore: number | null;  // 8-30d
+}
+
+export async function getDomainSignals(db: D1Database, domain: string): Promise<DomainSignals> {
+  try {
+    const agg = await db
+      .prepare(
+        `SELECT
+          AVG(eq_score) as avg_eq,
+          AVG(so_score) as avg_so,
+          AVG(sr_score) as avg_sr,
+          AVG(td_score) as avg_td,
+          AVG(pt_flag_count) as avg_pt_count
+        FROM stories
+        WHERE domain = ? AND eval_status = 'done' AND eq_score IS NOT NULL`
+      )
+      .bind(domain)
+      .first<{ avg_eq: number | null; avg_so: number | null; avg_sr: number | null; avg_td: number | null; avg_pt_count: number | null }>();
+
+    const topTone = await db
+      .prepare(
+        `SELECT et_primary_tone as tone FROM stories
+         WHERE domain = ? AND eval_status = 'done' AND et_primary_tone IS NOT NULL
+         GROUP BY et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1`
+      )
+      .bind(domain)
+      .first<{ tone: string }>();
+
+    const topScope = await db
+      .prepare(
+        `SELECT gs_scope as scope FROM stories
+         WHERE domain = ? AND eval_status = 'done' AND gs_scope IS NOT NULL
+         GROUP BY gs_scope ORDER BY COUNT(*) DESC LIMIT 1`
+      )
+      .bind(domain)
+      .first<{ scope: string }>();
+
+    const topSentiment = await db
+      .prepare(
+        `SELECT hcb_sentiment_tag as tag FROM stories
+         WHERE domain = ? AND eval_status = 'done' AND hcb_sentiment_tag IS NOT NULL
+         GROUP BY hcb_sentiment_tag ORDER BY COUNT(*) DESC LIMIT 1`
+      )
+      .bind(domain)
+      .first<{ tag: string }>();
+
+    const recentRow = await db
+      .prepare(
+        `SELECT AVG(hcb_weighted_mean) as avg_score FROM stories
+         WHERE domain = ? AND eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
+         AND evaluated_at > datetime('now', '-7 days')`
+      )
+      .bind(domain)
+      .first<{ avg_score: number | null }>();
+
+    const olderRow = await db
+      .prepare(
+        `SELECT AVG(hcb_weighted_mean) as avg_score FROM stories
+         WHERE domain = ? AND eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
+         AND evaluated_at <= datetime('now', '-7 days') AND evaluated_at > datetime('now', '-30 days')`
+      )
+      .bind(domain)
+      .first<{ avg_score: number | null }>();
+
+    return {
+      avgEq: agg?.avg_eq ?? null,
+      avgSo: agg?.avg_so ?? null,
+      avgSr: agg?.avg_sr ?? null,
+      avgTd: agg?.avg_td ?? null,
+      avgPtCount: agg?.avg_pt_count ?? null,
+      topTone: topTone?.tone ?? null,
+      topScope: topScope?.scope ?? null,
+      topSentiment: topSentiment?.tag ?? null,
+      recentAvgScore: recentRow?.avg_score ?? null,
+      olderAvgScore: olderRow?.avg_score ?? null,
+    };
+  } catch {
+    return {
+      avgEq: null, avgSo: null, avgSr: null, avgTd: null,
+      avgPtCount: null, topTone: null, topScope: null, topSentiment: null,
+      recentAvgScore: null, olderAvgScore: null,
+    };
+  }
+}
+
+// --- Pipeline health check ---
+
+export interface PipelineHealth {
+  lastCronAge: number | null;       // seconds since last cron_run event
+  lastEvalAge: number | null;       // seconds since last eval_success
+  queueDepth: number;               // stories with eval_status = 'queued'
+  pendingCount: number;             // stories with eval_status = 'pending'
+  dlqPending: number;               // dlq_messages with status = 'pending'
+  evalsDone24h: number;             // evals completed in last 24h
+  failedCount: number;              // stories with eval_status = 'failed'
+  rateLimit: { requests_remaining: number | null; consecutive_429s: number } | null;
+  healthy: boolean;
+}
+
+export async function getPipelineHealth(db: D1Database): Promise<PipelineHealth> {
+  const [cronAge, evalAge, queue, dlq, evals24h, rateLimit] = await Promise.all([
+    db.prepare(
+      `SELECT CAST((julianday('now') - julianday(created_at)) * 86400 AS INTEGER) as age_sec
+       FROM events WHERE event_type = 'cron_run' ORDER BY created_at DESC LIMIT 1`
+    ).first<{ age_sec: number }>(),
+    db.prepare(
+      `SELECT CAST((julianday('now') - julianday(created_at)) * 86400 AS INTEGER) as age_sec
+       FROM events WHERE event_type = 'eval_success' ORDER BY created_at DESC LIMIT 1`
+    ).first<{ age_sec: number }>(),
+    db.prepare(
+      `SELECT
+        SUM(CASE WHEN eval_status = 'queued' THEN 1 ELSE 0 END) as queued,
+        SUM(CASE WHEN eval_status = 'pending' THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN eval_status = 'failed' THEN 1 ELSE 0 END) as failed
+       FROM stories`
+    ).first<{ queued: number; pending: number; failed: number }>(),
+    db.prepare(`SELECT COUNT(*) as cnt FROM dlq_messages WHERE status = 'pending'`)
+      .first<{ cnt: number }>().catch(() => ({ cnt: 0 })),
+    db.prepare(
+      `SELECT COUNT(*) as cnt FROM events WHERE event_type = 'eval_success' AND created_at > datetime('now', '-24 hours')`
+    ).first<{ cnt: number }>(),
+    db.prepare(
+      `SELECT requests_remaining, consecutive_429s FROM ratelimit_snapshots ORDER BY created_at DESC LIMIT 1`
+    ).first<{ requests_remaining: number | null; consecutive_429s: number }>().catch(() => null),
+  ]);
+
+  const lastCronAge = cronAge?.age_sec ?? null;
+  const lastEvalAge = evalAge?.age_sec ?? null;
+  const queueDepth = queue?.queued ?? 0;
+  const pendingCount = queue?.pending ?? 0;
+  const failedCount = queue?.failed ?? 0;
+  const dlqPending = dlq?.cnt ?? 0;
+  const evalsDone24h = evals24h?.cnt ?? 0;
+
+  // Health: cron ran <10min ago, no 3+ consecutive 429s, DLQ backlog <50
+  const cronOk = lastCronAge !== null && lastCronAge < 600;
+  const rateLimitOk = !rateLimit || rateLimit.consecutive_429s < 3;
+  const dlqOk = dlqPending < 50;
+  const healthy = cronOk && rateLimitOk && dlqOk;
+
+  return {
+    lastCronAge, lastEvalAge, queueDepth, pendingCount, dlqPending,
+    evalsDone24h, failedCount,
+    rateLimit: rateLimit ? { requests_remaining: rateLimit.requests_remaining, consecutive_429s: rateLimit.consecutive_429s } : null,
+    healthy,
+  };
+}
+
 export async function getSignalOverview(db: D1Database): Promise<SignalOverview> {
   try {
     const agg = await db

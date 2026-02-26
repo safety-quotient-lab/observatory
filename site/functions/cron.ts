@@ -26,6 +26,7 @@ import {
 import { cleanHtml } from '../src/lib/html-clean';
 import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, runCalibrationCheck } from '../src/lib/calibration';
+import { getPipelineHealth } from '../src/lib/db';
 
 interface Env {
   DB: D1Database;
@@ -852,11 +853,11 @@ export default {
         // Upsert into stories table so the consumer can write results
         await db
           .prepare(
-            `INSERT INTO stories (hn_id, title, url, domain, hn_score, hn_comments, hn_type, eval_status)
-             VALUES (?, ?, ?, ?, 0, 0, 'calibration', 'pending')
+            `INSERT INTO stories (hn_id, title, url, domain, hn_score, hn_comments, hn_time, hn_type, eval_status)
+             VALUES (?, ?, ?, ?, 0, 0, ?, 'calibration', 'pending')
              ON CONFLICT(hn_id) DO UPDATE SET eval_status = 'pending', evaluated_at = NULL`,
           )
-          .bind(syntheticId, `[CAL] ${cal.label} (${cal.slot})`, cal.url, domain)
+          .bind(syntheticId, `[CAL] ${cal.label} (${cal.slot})`, cal.url, domain, Math.floor(Date.now() / 1000))
           .run();
 
         // Enqueue for evaluation
@@ -968,6 +969,15 @@ export default {
 
       return new Response(JSON.stringify({ ...summary, pending: pendingCount, model, methodologyHash }), {
         status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // GET /health — pipeline health check (no auth required)
+    if (path === '/health' && request.method === 'GET') {
+      const health = await getPipelineHealth(env.DB);
+      return new Response(JSON.stringify(health), {
+        status: health.healthy ? 200 : 503,
         headers: { 'Content-Type': 'application/json' },
       });
     }
