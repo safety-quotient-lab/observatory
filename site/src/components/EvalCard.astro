@@ -2,13 +2,17 @@
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../lib/colors';
 import MiniBar from './MiniBar.astro';
 import type { Story, StoryWithMiniScores } from '../lib/db';
+import { modelShortName, PRIMARY_MODEL_ID } from '../lib/shared-eval';
 
 interface Props {
   story: Story | StoryWithMiniScores;
   rank?: number;
+  raterModels?: string[]; // model IDs with done evals for this story
 }
 
-const { story, rank } = Astro.props;
+const { story, rank, raterModels } = Astro.props;
+// Non-primary models that have evaluated this story
+const otherModels = (raterModels || []).filter(m => m !== PRIMARY_MODEL_ID);
 
 const hasEval = story.eval_status === 'done' && story.hcb_weighted_mean !== null;
 const meanColor = hasEval ? scoreToColor(story.hcb_weighted_mean) : '#555';
@@ -27,6 +31,12 @@ const aggSetl = setlValues.length > 0
 
 // Compute evidence-weighted confidence
 const confidence = computeConfidence(story.hcb_evidence_h, story.hcb_evidence_m, story.hcb_evidence_l, story.hcb_nd_count);
+
+// Compute editorial/structural averages from miniScores
+const editorialVals = miniScores.map(s => s.editorial).filter((v): v is number => v !== null);
+const structuralVals = miniScores.map(s => s.structural).filter((v): v is number => v !== null);
+const avgEditorial = editorialVals.length > 0 ? editorialVals.reduce((a, b) => a + b, 0) / editorialVals.length : null;
+const avgStructural = structuralVals.length > 0 ? structuralVals.reduce((a, b) => a + b, 0) / structuralVals.length : null;
 
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
@@ -72,6 +82,24 @@ function timeAgo(unixTime: number): string {
             </>
           )}
         </div>
+        {avgEditorial !== null && avgStructural !== null && (
+          <div style="margin-top: 3px; width: 80px;" title={`Editorial: ${avgEditorial > 0 ? '+' : ''}${avgEditorial.toFixed(2)} | Structural: ${avgStructural > 0 ? '+' : ''}${avgStructural.toFixed(2)}`}>
+            <div style="display: flex; gap: 2px; align-items: center;">
+              <span class="score-font" style="color: #555; font-size: 8px; width: 8px;">E</span>
+              <div style="flex: 1; height: 5px; background: #1a1a25; border-radius: 2px; position: relative; overflow: hidden;">
+                <div style={`position: absolute; ${avgEditorial >= 0 ? 'left: 50%' : `left: ${50 + avgEditorial * 50}%`}; width: ${Math.abs(avgEditorial) * 50}%; height: 100%; background: ${scoreToColor(avgEditorial)}; border-radius: 1px;`}></div>
+                <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #333;"></div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 2px; align-items: center; margin-top: 1px;">
+              <span class="score-font" style="color: #555; font-size: 8px; width: 8px;">S</span>
+              <div style="flex: 1; height: 5px; background: #1a1a25; border-radius: 2px; position: relative; overflow: hidden;">
+                <div style={`position: absolute; ${avgStructural >= 0 ? 'left: 50%' : `left: ${50 + avgStructural * 50}%`}; width: ${Math.abs(avgStructural) * 50}%; height: 100%; background: ${scoreToColor(avgStructural)}; border-radius: 1px;`}></div>
+                <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #333;"></div>
+              </div>
+            </div>
+          </div>
+        )}
       </a>
     ) : story.eval_status === 'evaluating' ? (
       <span class="eval-spinner" style="color: #60a5fa; font-size: var(--font-sm); display: inline-block;" title="Evaluating...">&#9881;</span>
@@ -151,6 +179,14 @@ function timeAgo(unixTime: number): string {
             {story.hcb_theme_tag}
           </span>
         )}
+        {otherModels.length > 0 && otherModels.map(m => (
+          <a href={`/item/${story.hn_id}?model=${m}`}
+             class="badge"
+             style="background: rgba(52,211,153,0.15); color: #34d399; font-size: var(--font-xs); margin-left: 3px; text-decoration: none;"
+             title={`Also evaluated by ${m}`}>
+            {modelShortName(m)}
+          </a>
+        ))}
       </>
     ) : story.eval_status === 'evaluating' ? (
       <span> | <span style="color: #60a5fa; font-size: var(--font-sm);">evaluating</span></span>

@@ -18,6 +18,38 @@ crons = ["* * * * *"]
 queue = "hrcb-eval-queue"
 binding = "EVAL_QUEUE"
 
+[[queues.producers]]
+queue = "hrcb-eval-deepseek"
+binding = "DEEPSEEK_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-trinity"
+binding = "TRINITY_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-nemotron"
+binding = "NEMOTRON_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-step"
+binding = "STEP_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-qwen"
+binding = "QWEN_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-llama"
+binding = "LLAMA_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-mistral"
+binding = "MISTRAL_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-hermes"
+binding = "HERMES_QUEUE"
+
 # Secrets (set via `wrangler secret put --name hn-hrcb-cron`):
 # ANTHROPIC_API_KEY
 # CRON_SECRET

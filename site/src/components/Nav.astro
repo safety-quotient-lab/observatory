@@ -5,33 +5,27 @@ const currentType = Astro.url.searchParams.get('type') || '';
 
 <table style="background-color: #ff6600; padding: 2px;" width="100%" cellpadding="0" cellspacing="0">
   <tr>
-    <td style="width: 18px; padding-right: 4px; padding-left: 4px;">
+    <td style="width: 18px; padding-right: 4px;">
       <a href="/">
         <div style="width: 18px; height: 18px; border: 1px solid white; display: flex; align-items: center; justify-content: center;">
           <span style="color: white; font-weight: bold; font-size: 13px; line-height: 1;">H</span>
         </div>
       </a>
     </td>
-    <td style="line-height: 12px; height: 10px; padding: 4px;">
+    <td style="line-height: 12pt; height: 10px;">
       <span class="pagetop">
         <b class="hnname">
           <a href="/" style="color: black; text-decoration: none;">HN HRCB</a>
         </b>
-        <span style="margin-left: 10px; font-size: var(--font-base);">
+        <span class="nav-links" style="margin-left: 10px; font-size: var(--font-base);">
           <a href="/" style={`color: black;${currentPath === '/' && !currentType ? ' font-weight: bold;' : ''}`}>top</a> |
-          <a href="/front" style={`color: black;${currentPath === '/front' ? ' font-weight: bold;' : ''}`}>past</a> |
-          <a href="https://news.ycombinator.com/newcomments" style="color: black;">comments</a> |
-          <a href="/?type=ask" style={`color: black;${currentType === 'ask' ? ' font-weight: bold;' : ''}`}>ask</a> |
-          <a href="/?type=show" style={`color: black;${currentType === 'show' ? ' font-weight: bold;' : ''}`}>show</a> |
-          <a href="/?type=job" style={`color: black;${currentType === 'job' ? ' font-weight: bold;' : ''}`}>jobs</a> |
           <a href="/articles" style={`color: black;${currentPath === '/articles' || currentPath.startsWith('/article/') ? ' font-weight: bold;' : ''}`}>articles</a> |
           <a href="/domains" style={`color: black;${currentPath === '/domains' || currentPath.startsWith('/domain/') ? ' font-weight: bold;' : ''}`}>domains</a> |
           <a href="/dashboard" style={`color: black;${currentPath === '/dashboard' ? ' font-weight: bold;' : ''}`}>dashboard</a> |
-          <a href="/seldon" style={`color: black;${currentPath === '/seldon' ? ' font-weight: bold;' : ''}`}>seldon</a> |
-          <a href="/network" style={`color: black;${currentPath === '/network' ? ' font-weight: bold;' : ''}`}>network</a> |
+          <a href="/models" style={`color: black;${currentPath === '/models' ? ' font-weight: bold;' : ''}`}>models</a> |
           <a href="/factions" style={`color: black;${currentPath === '/factions' ? ' font-weight: bold;' : ''}`}>factions</a> |
-          <a href="/velocity" style={`color: black;${currentPath === '/velocity' ? ' font-weight: bold;' : ''}`}>velocity</a> |
-          <a href="/about" style={`color: black;${currentPath === '/about' ? ' font-weight: bold;' : ''}`}>about hrcb</a>
+          <a href="/about" style={`color: black;${currentPath === '/about' ? ' font-weight: bold;' : ''}`}>about</a> |
+          <a href="/exp" style={`color: black;${currentPath === '/exp' ? ' font-weight: bold;' : ''}`}>exp</a>
         </span>
       </span>
     </td>

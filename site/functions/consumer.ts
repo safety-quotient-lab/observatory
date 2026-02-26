@@ -21,13 +21,30 @@ import {
   extractDomain,
   buildUserMessageWithDcp,
   parseSlimEvalResponse,
+  parseOpenRouterResponse,
+  extractJsonFromResponse,
+  validateSlimEvalResponse,
   fetchUrlContent,
   writeEvalResult,
+  writeRaterEvalResult,
   markFailed,
   markSkipped,
+  markRaterFailed,
   getCachedDcp,
   cacheDcp,
+  getModelDef,
+  PRIMARY_MODEL_ID,
+  MODEL_REGISTRY,
+  raterHealthKvKey,
+  emptyRaterHealth,
+  shouldSkipModel,
+  updateRaterHealthOnSuccess,
+  updateRaterHealthOnParseFailure,
+  updateRaterHealthOnApiFailure,
   type EvalResult,
+  type ModelDefinition,
+  type RaterHealthState,
+  type SlimEvalResponse,
 } from '../src/lib/shared-eval';
 
 import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
@@ -37,9 +54,10 @@ import { logEvent } from '../src/lib/events';
 interface Env {
   DB: D1Database;
   ANTHROPIC_API_KEY: string;
+  OPENROUTER_API_KEY?: string;
   CONTENT_CACHE: KVNamespace;
   CONTENT_SNAPSHOTS: R2Bucket;
-  EVAL_MODEL_OVERRIDE?: string; // Override default model (e.g., 'claude-sonnet-4-5-20250514')
+  EVAL_MODEL_OVERRIDE?: string;
 }
 
 interface QueueMessage {
@@ -48,6 +66,8 @@ interface QueueMessage {
   title: string;
   hn_text: string | null;
   domain: string | null;
+  eval_model?: string;
+  eval_provider?: string;
 }
 
 // --- Rate Limit State ---
@@ -252,6 +272,78 @@ function addJitter(delaySec: number): number {
 
 // --- End Rate Limit ---
 
+// --- API Routing ---
+
+interface ApiCallResult {
+  slim: SlimEvalResponse;
+  inputTokens: number;
+  outputTokens: number;
+  rateLimitHeaders: RateLimitHeaders | null;
+  cacheHitRate: number | null;
+}
+
+async function callAnthropicApi(
+  apiKey: string,
+  modelId: string,
+  systemPrompt: string,
+  userMessage: string,
+  maxTokens: number,
+  supportsCacheControl: boolean,
+): Promise<{ response: Response; data: any }> {
+  const system = supportsCacheControl
+    ? [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }]
+    : systemPrompt;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: modelId,
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: 'user', content: userMessage }],
+    }),
+  });
+  return { response: res, data: null };
+}
+
+async function callOpenRouterApi(
+  apiKey: string,
+  modelDef: ModelDefinition,
+  systemPrompt: string,
+  userMessage: string,
+): Promise<{ response: Response; data: any }> {
+  const body: Record<string, unknown> = {
+    model: modelDef.api_model_id,
+    max_tokens: modelDef.max_tokens,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage },
+    ],
+  };
+  if (modelDef.supports_json_mode) {
+    body.response_format = { type: 'json_object' };
+  }
+
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': 'https://hn-hrcb.pages.dev',
+      'X-Title': 'HN HRCB Evaluator',
+    },
+    body: JSON.stringify(body),
+  });
+  return { response: res, data: null };
+}
+
+// --- End API Routing ---
+
 async function hashString(input: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
@@ -270,26 +362,52 @@ export default {
     env: Env,
   ): Promise<void> {
     const db = env.DB;
-    const apiKey = env.ANTHROPIC_API_KEY;
-
-    if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY not set');
-      // Retry all — config issue
-      for (const msg of batch.messages) msg.retry();
-      return;
-    }
 
     for (const msg of batch.messages) {
       const story = msg.body;
-      console.log(`[consumer] Processing hn_id=${story.hn_id}: ${story.title}`);
+
+      // Determine model + provider from message payload (default: primary/anthropic)
+      const msgModelId = story.eval_model || env.EVAL_MODEL_OVERRIDE || EVAL_MODEL;
+      const modelDef = getModelDef(msgModelId);
+      const provider = story.eval_provider || modelDef?.provider || 'anthropic';
+      const modelToUse = modelDef?.api_model_id || msgModelId;
+      const isPrimary = msgModelId === PRIMARY_MODEL_ID || (!story.eval_model && !env.EVAL_MODEL_OVERRIDE);
+
+      // Check API key availability
+      const apiKey = provider === 'openrouter' ? env.OPENROUTER_API_KEY : env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        console.warn(`[consumer] No API key for provider=${provider}, model=${msgModelId}, skipping hn_id=${story.hn_id}`);
+        msg.ack();
+        continue;
+      }
+
+      console.log(`[consumer] Processing hn_id=${story.hn_id} model=${msgModelId} provider=${provider}: ${story.title}`);
       let evalStartMs = Date.now();
 
       try {
+        // For non-primary models, check rater health (M5)
+        if (!isPrimary) {
+          const healthKey = raterHealthKvKey(msgModelId);
+          let health: RaterHealthState = emptyRaterHealth();
+          try {
+            const stored = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null;
+            if (stored) health = stored;
+          } catch { /* KV miss */ }
+
+          const skipCheck = shouldSkipModel(health);
+          if (skipCheck.skip) {
+            console.warn(`[consumer] Model ${msgModelId} auto-disabled: ${skipCheck.reason}`);
+            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Auto-disabled: ${skipCheck.reason}`);
+            msg.ack();
+            continue;
+          }
+        }
+
         const isSelfPost = !story.url && !!story.hn_text;
         const evalUrl = story.url || `https://news.ycombinator.com/item?id=${story.hn_id}`;
 
-        // Skip binary content
-        if (story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
+        // Skip binary content (only for primary — non-primary follows primary's decision)
+        if (isPrimary && story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
           await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
           await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: binary/unsupported content type`, details: { reason: 'binary', url: story.url } });
           msg.ack();
@@ -313,8 +431,10 @@ export default {
         }
 
         if (content.length < 50) {
-          await markSkipped(db, story.hn_id, 'Content too short');
-          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: content too short (${content.length} chars)`, details: { reason: 'too_short', content_length: content.length } });
+          if (isPrimary) {
+            await markSkipped(db, story.hn_id, 'Content too short');
+          }
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: content too short (${content.length} chars)`, details: { reason: 'too_short', content_length: content.length, model: msgModelId } });
           msg.ack();
           continue;
         }
@@ -326,7 +446,6 @@ export default {
           const kvDcp = await env.CONTENT_CACHE.get(`dcp:${domain}`, 'json');
           if (kvDcp) {
             cachedDcp = kvDcp as Record<string, unknown>;
-            console.log(`[consumer] DCP KV cache hit for ${domain}`);
           } else {
             cachedDcp = await getCachedDcp(db, domain);
           }
@@ -335,116 +454,121 @@ export default {
         // Build user message with optional cached DCP
         const userMessage = buildUserMessageWithDcp(evalUrl, content, isSelfPost, cachedDcp);
         const promptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT_SLIM, userMessage);
+        const methodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_SLIM);
 
-        // Call Claude API (slim prompt — no aggregates)
-        const modelToUse = env.EVAL_MODEL_OVERRIDE || EVAL_MODEL;
-
-        // Pre-call: check rate limit capacity
-        const capacity = await checkRateLimitCapacity(env.CONTENT_CACHE, modelToUse);
-        if (!capacity.ok) {
-          const delay = addJitter(capacity.delaySeconds!);
-          console.warn(`[consumer] Self-throttle for hn_id=${story.hn_id}: ${capacity.reason}, delaying ${delay}s`);
-          await logEvent(db, { hn_id: story.hn_id, event_type: 'self_throttle', severity: 'info', message: `Self-throttle: ${capacity.reason}`, details: { reason: capacity.reason, delay_seconds: delay } });
-          msg.retry({ delaySeconds: delay });
-          continue;
+        // Pre-call: check rate limit capacity (Anthropic models only — OpenRouter has different limits)
+        if (provider === 'anthropic') {
+          const capacity = await checkRateLimitCapacity(env.CONTENT_CACHE, msgModelId);
+          if (!capacity.ok) {
+            const delay = addJitter(capacity.delaySeconds!);
+            console.warn(`[consumer] Self-throttle for hn_id=${story.hn_id} model=${msgModelId}: ${capacity.reason}, delaying ${delay}s`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'self_throttle', severity: 'info', message: `Self-throttle: ${capacity.reason}`, details: { reason: capacity.reason, delay_seconds: delay, model: msgModelId } });
+            msg.retry({ delaySeconds: delay });
+            continue;
+          }
         }
 
+        // --- Call API ---
         evalStartMs = Date.now();
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: modelToUse,
-            max_tokens: EVAL_MAX_TOKENS,
-            system: [
-              {
-                type: 'text',
-                text: METHODOLOGY_SYSTEM_PROMPT_SLIM,
-                cache_control: { type: 'ephemeral' },
-              },
-            ],
-            messages: [{ role: 'user', content: userMessage }],
-          }),
-        });
+        let slim: SlimEvalResponse;
+        let inputTokens: number;
+        let outputTokens: number;
 
-        if (!res.ok) {
-          const body = await res.text();
-          if (res.status === 429) {
-            // Read headers + update KV state (is429=true)
-            const rlHeaders = readRateLimitHeaders(res);
-            const rlState = await updateRateLimitState(env.CONTENT_CACHE, modelToUse, rlHeaders, true);
-            await writeRateLimitSnapshot(db, modelToUse, rlState);
+        if (provider === 'openrouter') {
+          // --- OpenRouter path ---
+          const { response: res } = await callOpenRouterApi(apiKey, modelDef!, METHODOLOGY_SYSTEM_PROMPT_SLIM, userMessage);
 
-            const retryAfter = res.headers.get('retry-after');
-            const baseSec = retryAfter ? parseInt(retryAfter, 10) : 60;
-            const delaySec = addJitter(Math.min(Math.max(baseSec, 30), 300));
-            console.warn(`[consumer] Rate limited (429) for hn_id=${story.hn_id}. retry-after=${retryAfter ?? 'none'}, delaying ${delaySec}s, consecutive=${rlState.consecutive_429s}`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `Rate limited (429), retrying in ${delaySec}s`, details: { status: 429, retry_after: retryAfter, delay_seconds: delaySec, consecutive_429s: rlState.consecutive_429s, requests_remaining: rlState.requests_remaining } });
-            msg.retry({ delaySeconds: delaySec });
+          if (!res.ok) {
+            const body = await res.text();
+            if (res.status === 429) {
+              const delaySec = addJitter(60);
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `OpenRouter rate limited (429) model=${msgModelId}`, details: { status: 429, delay_seconds: delaySec, model: msgModelId } });
+              msg.retry({ delaySeconds: delaySec });
+              continue;
+            }
+            // Update rater health on API failure
+            const healthKey = raterHealthKvKey(msgModelId);
+            let health = emptyRaterHealth();
+            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+            health = updateRaterHealthOnApiFailure(health);
+            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `OpenRouter API error ${res.status} model=${msgModelId}`, details: { status: res.status, body_preview: body.slice(0, 500), model: msgModelId } });
+            throw new Error(`OpenRouter API error ${res.status}: ${body}`);
+          }
+
+          const rawData = await res.json() as any;
+          const rawText = rawData.choices?.[0]?.message?.content || '';
+
+          // Extract tokens (OpenAI-compatible format)
+          inputTokens = rawData.usage?.prompt_tokens ?? 0;
+          outputTokens = rawData.usage?.completion_tokens ?? 0;
+
+          // M10: Validation pipeline
+          try {
+            slim = parseOpenRouterResponse(rawData);
+          } catch (parseErr) {
+            // M9: Store raw response for debugging
+            try {
+              await env.CONTENT_SNAPSHOTS.put(
+                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
+                rawText,
+                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: String(parseErr).slice(0, 500) } }
+              );
+            } catch {}
+
+            // Update rater health (parse failure)
+            const healthKey = raterHealthKvKey(msgModelId);
+            let health = emptyRaterHealth();
+            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+            health = updateRaterHealthOnParseFailure(health);
+            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+            if (health.disabled_at) {
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
+            }
+
+            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Parse failure: ${parseErr}`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Parse failure for model ${msgModelId}: ${String(parseErr).slice(0, 200)}`, details: { model: msgModelId, error: String(parseErr).slice(0, 500) } });
+            msg.ack(); // Don't retry parse failures
             continue;
           }
-          if (res.status === 529) {
-            // Read headers but do NOT increment consecutive_429s (server-side issue)
-            const rlHeaders = readRateLimitHeaders(res);
-            const rlState = await updateRateLimitState(env.CONTENT_CACHE, modelToUse, rlHeaders, false);
-            await writeRateLimitSnapshot(db, modelToUse, rlState);
 
-            const delaySec = addJitter(120);
-            console.warn(`[consumer] API overloaded (529) for hn_id=${story.hn_id}, delaying ${delaySec}s`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `API overloaded (529), retrying in ${delaySec}s`, details: { status: 529, delay_seconds: delaySec } });
-            msg.retry({ delaySeconds: delaySec });
+          // M2: Schema validation
+          const validation = validateSlimEvalResponse(slim);
+          if (!validation.valid) {
+            try {
+              await env.CONTENT_SNAPSHOTS.put(
+                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
+                rawText,
+                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: validation.errors.join('; ').slice(0, 500) } }
+              );
+            } catch {}
+
+            const healthKey = raterHealthKvKey(msgModelId);
+            let health = emptyRaterHealth();
+            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+            health = updateRaterHealthOnParseFailure(health);
+            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+            if (health.disabled_at) {
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason } });
+            }
+
+            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Validation failed: ${validation.errors.join('; ')}`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Validation failed for model ${msgModelId}`, details: { model: msgModelId, errors: validation.errors, warnings: validation.warnings } });
+            msg.ack();
             continue;
           }
-          if (res.status === 400 && body.includes('credit balance')) {
-            // Credit exhausted — don't burn retries, delay long and log distinctly
-            const delaySec = addJitter(300);
-            console.error(`[consumer] Credit exhausted for hn_id=${story.hn_id}, delaying ${delaySec}s`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'credit_exhausted', severity: 'error', message: `Credit balance too low, retrying in ${delaySec}s`, details: { status: 400, delay_seconds: delaySec } });
-            msg.retry({ delaySeconds: delaySec });
-            continue;
+
+          // Log warnings/repairs
+          if (validation.warnings.length > 0 || validation.repairs.length > 0) {
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Validation warnings for model ${msgModelId}: ${validation.warnings.length}W ${validation.repairs.length}R`, details: { model: msgModelId, warnings: validation.warnings, repairs: validation.repairs } });
           }
-          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `Anthropic API error ${res.status}`, details: { status: res.status, body_preview: body.slice(0, 500) } });
-          throw new Error(`Anthropic API error ${res.status}: ${body}`);
-        }
 
-        let data = (await res.json()) as {
-          content: Array<{ type: string; text?: string }>;
-          stop_reason?: string;
-          usage?: { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number };
-        };
-
-        // Extract token usage for cost tracking
-        const usage = data.usage;
-        const inputTokens = (usage?.input_tokens ?? 0) + (usage?.cache_creation_input_tokens ?? 0) + (usage?.cache_read_input_tokens ?? 0);
-        const outputTokens = usage?.output_tokens ?? 0;
-
-        // Read rate limit headers on success + update KV/D1
-        const rlHeaders = readRateLimitHeaders(res);
-        const cacheReadTokens = usage?.cache_read_input_tokens ?? 0;
-        const totalInput = inputTokens;
-        const cacheHitRate = totalInput > 0 ? cacheReadTokens / totalInput : null;
-        const rlState = await updateRateLimitState(env.CONTENT_CACHE, modelToUse, rlHeaders, false, cacheHitRate);
-        await writeRateLimitSnapshot(db, modelToUse, rlState);
-
-        // Log raw rate limit headers for verification (always, cheap)
-        console.log(`[consumer] Rate limit headers for hn_id=${story.hn_id}: req=${rlHeaders.requests_remaining}/${rlHeaders.requests_limit} input=${rlHeaders.input_tokens_remaining}/${rlHeaders.input_tokens_limit} output=${rlHeaders.output_tokens_remaining}/${rlHeaders.output_tokens_limit} req_reset=${rlHeaders.requests_reset} tok_reset=${rlHeaders.tokens_reset}`);
-
-        // Detect output truncation and retry with extended limit
-        if (data.stop_reason === 'max_tokens') {
-          console.warn(`[consumer] Output truncated for hn_id=${story.hn_id} at ${data.usage?.output_tokens} tokens, retrying with extended limit`);
-          await logEvent(db, {
-            hn_id: story.hn_id,
-            event_type: 'eval_retry',
-            severity: 'warn',
-            message: `Output truncated at ${data.usage?.output_tokens} tokens, retrying with ${EVAL_MAX_TOKENS_EXTENDED}`,
-            details: { output_tokens: data.usage?.output_tokens, max_tokens: EVAL_MAX_TOKENS },
-          });
-
-          const retryRes = await fetch('https://api.anthropic.com/v1/messages', {
+        } else {
+          // --- Anthropic path (existing logic) ---
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -453,7 +577,7 @@ export default {
             },
             body: JSON.stringify({
               model: modelToUse,
-              max_tokens: EVAL_MAX_TOKENS_EXTENDED,
+              max_tokens: modelDef?.max_tokens || EVAL_MAX_TOKENS,
               system: [
                 {
                   type: 'text',
@@ -465,36 +589,122 @@ export default {
             }),
           });
 
-          if (!retryRes.ok) {
-            const retryBody = await retryRes.text();
-            throw new Error(`Anthropic API error ${retryRes.status} on truncation retry: ${retryBody}`);
+          if (!res.ok) {
+            const body = await res.text();
+            if (res.status === 429) {
+              const rlHeaders = readRateLimitHeaders(res);
+              const rlState = await updateRateLimitState(env.CONTENT_CACHE, msgModelId, rlHeaders, true);
+              await writeRateLimitSnapshot(db, msgModelId, rlState);
+
+              const retryAfter = res.headers.get('retry-after');
+              const baseSec = retryAfter ? parseInt(retryAfter, 10) : 60;
+              const delaySec = addJitter(Math.min(Math.max(baseSec, 30), 300));
+              console.warn(`[consumer] Rate limited (429) for hn_id=${story.hn_id}. retry-after=${retryAfter ?? 'none'}, delaying ${delaySec}s, consecutive=${rlState.consecutive_429s}`);
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `Rate limited (429), retrying in ${delaySec}s`, details: { status: 429, retry_after: retryAfter, delay_seconds: delaySec, consecutive_429s: rlState.consecutive_429s, requests_remaining: rlState.requests_remaining, model: msgModelId } });
+              msg.retry({ delaySeconds: delaySec });
+              continue;
+            }
+            if (res.status === 529) {
+              const rlHeaders = readRateLimitHeaders(res);
+              const rlState = await updateRateLimitState(env.CONTENT_CACHE, msgModelId, rlHeaders, false);
+              await writeRateLimitSnapshot(db, msgModelId, rlState);
+
+              const delaySec = addJitter(120);
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `API overloaded (529), retrying in ${delaySec}s`, details: { status: 529, delay_seconds: delaySec, model: msgModelId } });
+              msg.retry({ delaySeconds: delaySec });
+              continue;
+            }
+            if (res.status === 400 && body.includes('credit balance')) {
+              const delaySec = addJitter(300);
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'credit_exhausted', severity: 'error', message: `Credit balance too low, retrying in ${delaySec}s`, details: { status: 400, delay_seconds: delaySec, model: msgModelId } });
+              msg.retry({ delaySeconds: delaySec });
+              continue;
+            }
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `Anthropic API error ${res.status}`, details: { status: res.status, body_preview: body.slice(0, 500), model: msgModelId } });
+            throw new Error(`Anthropic API error ${res.status}: ${body}`);
           }
 
-          const retryData = (await retryRes.json()) as typeof data;
+          let data = (await res.json()) as {
+            content: Array<{ type: string; text?: string }>;
+            stop_reason?: string;
+            usage?: { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number };
+          };
 
-          // Update rate limit state from retry response
-          const retryRlHeaders = readRateLimitHeaders(retryRes);
-          const retryCacheReadTokens = retryData.usage?.cache_read_input_tokens ?? 0;
-          const retryTotalInput = (retryData.usage?.input_tokens ?? 0) + (retryData.usage?.cache_creation_input_tokens ?? 0) + retryCacheReadTokens;
-          const retryCacheHitRate = retryTotalInput > 0 ? retryCacheReadTokens / retryTotalInput : null;
-          const retryRlState = await updateRateLimitState(env.CONTENT_CACHE, modelToUse, retryRlHeaders, false, retryCacheHitRate);
-          await writeRateLimitSnapshot(db, modelToUse, retryRlState);
+          const usage = data.usage;
+          inputTokens = (usage?.input_tokens ?? 0) + (usage?.cache_creation_input_tokens ?? 0) + (usage?.cache_read_input_tokens ?? 0);
+          outputTokens = usage?.output_tokens ?? 0;
 
-          if (retryData.stop_reason === 'max_tokens') {
-            throw new Error(`Output still truncated at ${EVAL_MAX_TOKENS_EXTENDED} tokens for hn_id=${story.hn_id}`);
+          // Rate limit header tracking
+          const rlHeaders = readRateLimitHeaders(res);
+          const cacheReadTokens = usage?.cache_read_input_tokens ?? 0;
+          const totalInput = inputTokens;
+          const cacheHitRate = totalInput > 0 ? cacheReadTokens / totalInput : null;
+          const rlState = await updateRateLimitState(env.CONTENT_CACHE, msgModelId, rlHeaders, false, cacheHitRate);
+          await writeRateLimitSnapshot(db, msgModelId, rlState);
+
+          console.log(`[consumer] Rate limit headers for hn_id=${story.hn_id}: req=${rlHeaders.requests_remaining}/${rlHeaders.requests_limit} input=${rlHeaders.input_tokens_remaining}/${rlHeaders.input_tokens_limit} output=${rlHeaders.output_tokens_remaining}/${rlHeaders.output_tokens_limit}`);
+
+          // Detect output truncation and retry with extended limit
+          if (data.stop_reason === 'max_tokens') {
+            console.warn(`[consumer] Output truncated for hn_id=${story.hn_id} at ${data.usage?.output_tokens} tokens, retrying with extended limit`);
+            await logEvent(db, {
+              hn_id: story.hn_id,
+              event_type: 'eval_retry',
+              severity: 'warn',
+              message: `Output truncated at ${data.usage?.output_tokens} tokens, retrying with ${EVAL_MAX_TOKENS_EXTENDED}`,
+              details: { output_tokens: data.usage?.output_tokens, max_tokens: EVAL_MAX_TOKENS, model: msgModelId },
+            });
+
+            const retryRes = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+              },
+              body: JSON.stringify({
+                model: modelToUse,
+                max_tokens: EVAL_MAX_TOKENS_EXTENDED,
+                system: [
+                  {
+                    type: 'text',
+                    text: METHODOLOGY_SYSTEM_PROMPT_SLIM,
+                    cache_control: { type: 'ephemeral' },
+                  },
+                ],
+                messages: [{ role: 'user', content: userMessage }],
+              }),
+            });
+
+            if (!retryRes.ok) {
+              const retryBody = await retryRes.text();
+              throw new Error(`Anthropic API error ${retryRes.status} on truncation retry: ${retryBody}`);
+            }
+
+            const retryData = (await retryRes.json()) as typeof data;
+
+            const retryRlHeaders = readRateLimitHeaders(retryRes);
+            const retryCacheReadTokens = retryData.usage?.cache_read_input_tokens ?? 0;
+            const retryTotalInput = (retryData.usage?.input_tokens ?? 0) + (retryData.usage?.cache_creation_input_tokens ?? 0) + retryCacheReadTokens;
+            const retryCacheHitRate = retryTotalInput > 0 ? retryCacheReadTokens / retryTotalInput : null;
+            const retryRlState = await updateRateLimitState(env.CONTENT_CACHE, msgModelId, retryRlHeaders, false, retryCacheHitRate);
+            await writeRateLimitSnapshot(db, msgModelId, retryRlState);
+
+            if (retryData.stop_reason === 'max_tokens') {
+              throw new Error(`Output still truncated at ${EVAL_MAX_TOKENS_EXTENDED} tokens for hn_id=${story.hn_id}`);
+            }
+
+            data = retryData;
           }
 
-          // Replace data with retry response for rest of pipeline
-          data = retryData;
+          slim = parseSlimEvalResponse(data);
         }
 
-        // Parse slim response (no aggregates)
-        const slim = parseSlimEvalResponse(data);
+        // --- Shared post-API processing (both providers) ---
 
         // Handle DCP "cached" string — substitute from cached DCP
         let dcpForCompute: Record<string, DcpElement> | null = null;
         if (typeof slim.domain_context_profile === 'string') {
-          // LLM output "cached" — restore from cached DCP
           if (cachedDcp) {
             const elements = (cachedDcp as any).elements || cachedDcp;
             slim.domain_context_profile = {
@@ -514,19 +724,16 @@ export default {
           dcpForCompute = slim.domain_context_profile.elements as Record<string, DcpElement>;
         }
 
-        // Compute derived fields (combined, context_modifier, final) on Worker CPU
+        // Compute derived fields
         const channelWeights = slim.evaluation.channel_weights;
         const derivedScores = computeDerivedScoreFields(slim.scores, channelWeights, dcpForCompute);
 
-        // Compute witness_ratio per score on Worker CPU
         for (const score of derivedScores) {
           (score as any).witness_ratio = computeWitnessRatio(score.witness_facts, score.witness_inferences);
         }
 
-        // Compute aggregates on Worker CPU
         const aggregates = computeAggregates(derivedScores, channelWeights);
 
-        // Assemble full EvalResult
         const fullResult: EvalResult = {
           ...slim,
           domain_context_profile: slim.domain_context_profile as { domain: string; eval_date: string; elements: Record<string, unknown> },
@@ -534,74 +741,78 @@ export default {
           aggregates,
         };
 
-        // Write to D1
-        await writeEvalResult(db, story.hn_id, fullResult, modelToUse, promptHash);
+        // Write to rater tables (always) — writeRaterEvalResult also writes to stories/scores/fair_witness if primary
+        await writeRaterEvalResult(db, story.hn_id, fullResult, msgModelId, provider, promptHash, methodologyHash, inputTokens, outputTokens);
 
-        // Write methodology hash (system prompt only) for reprocessing detection
-        const methodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_SLIM);
-        try {
-          await db
-            .prepare(`UPDATE stories SET methodology_hash = ? WHERE hn_id = ?`)
-            .bind(methodologyHash, story.hn_id)
-            .run();
-        } catch { /* column may not exist yet */ }
-
-        // Also write to eval_history for multi-model comparison + cost tracking
-        await db
-          .prepare(
-            `INSERT INTO eval_history (hn_id, eval_model, hcb_weighted_mean, hcb_classification, hcb_json, input_tokens, output_tokens)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`
-          )
-          .bind(
-            story.hn_id,
-            modelToUse,
-            aggregates.weighted_mean,
-            aggregates.classification,
-            JSON.stringify(fullResult),
-            inputTokens,
-            outputTokens
-          )
-          .run();
-
-        // Snapshot content to R2 for audit trail / re-evaluation
-        try {
-          const snapshotKey = `${story.hn_id}/${new Date().toISOString().slice(0, 10)}.txt`;
-          await env.CONTENT_SNAPSHOTS.put(snapshotKey, content, {
-            customMetadata: {
-              hn_id: String(story.hn_id),
-              url: evalUrl,
-              title: story.title,
-              domain: domain || '',
-              content_length: String(content.length),
-              classification: aggregates.classification,
-              weighted_mean: String(aggregates.weighted_mean),
-            },
-          });
-        } catch (err) {
-          console.error(`[consumer] R2 snapshot failed (non-fatal): ${err}`);
-          await logEvent(db, { hn_id: story.hn_id, event_type: 'r2_error', severity: 'warn', message: `R2 snapshot failed`, details: { error: String(err) } });
+        // For primary model: write methodology hash
+        if (isPrimary) {
+          try {
+            await db
+              .prepare(`UPDATE stories SET methodology_hash = ? WHERE hn_id = ?`)
+              .bind(methodologyHash, story.hn_id)
+              .run();
+          } catch { /* column may not exist yet */ }
         }
 
-        // Cache DCP if we got a new one (not from cache)
-        const dcpObj = slim.domain_context_profile as { elements?: Record<string, unknown> };
-        if (!cachedDcp && domain && typeof slim.domain_context_profile !== 'string' && dcpObj?.elements) {
-          const dcpElements = dcpObj.elements;
-          await cacheDcp(db, domain, dcpElements);
-          // Also cache in KV with 7-day TTL
-          await env.CONTENT_CACHE.put(`dcp:${domain}`, JSON.stringify(dcpElements), {
-            expirationTtl: 604800, // 7 days
-          });
+        // Snapshot content to R2 (primary model only — avoid duplicate snapshots)
+        if (isPrimary) {
+          try {
+            const snapshotKey = `${story.hn_id}/${new Date().toISOString().slice(0, 10)}.txt`;
+            await env.CONTENT_SNAPSHOTS.put(snapshotKey, content, {
+              customMetadata: {
+                hn_id: String(story.hn_id),
+                url: evalUrl,
+                title: story.title,
+                domain: domain || '',
+                content_length: String(content.length),
+                classification: aggregates.classification,
+                weighted_mean: String(aggregates.weighted_mean),
+              },
+            });
+          } catch (err) {
+            console.error(`[consumer] R2 snapshot failed (non-fatal): ${err}`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'r2_error', severity: 'warn', message: `R2 snapshot failed`, details: { error: String(err) } });
+          }
+        }
+
+        // Cache DCP if new (primary model only)
+        if (isPrimary) {
+          const dcpObj = slim.domain_context_profile as { elements?: Record<string, unknown> };
+          if (!cachedDcp && domain && typeof slim.domain_context_profile !== 'string' && dcpObj?.elements) {
+            const dcpElements = dcpObj.elements;
+            await cacheDcp(db, domain, dcpElements);
+            await env.CONTENT_CACHE.put(`dcp:${domain}`, JSON.stringify(dcpElements), {
+              expirationTtl: 604800,
+            });
+          }
+        }
+
+        // Update rater health on success (non-primary)
+        if (!isPrimary) {
+          const healthKey = raterHealthKvKey(msgModelId);
+          let health = emptyRaterHealth();
+          try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+          const wasDisabled = !!health.disabled_at;
+          health = updateRaterHealthOnSuccess(health);
+          await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+          if (wasDisabled) {
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_enable', severity: 'info', message: `Model ${msgModelId} auto-re-enabled after successful probe`, details: { model: msgModelId } });
+          }
         }
 
         const evalDurationMs = Date.now() - evalStartMs;
-        console.log(`[consumer] Done: hn_id=${story.hn_id} → ${aggregates.classification} (${aggregates.weighted_mean}) [${modelToUse}] ${evalDurationMs}ms`);
-        await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_success', severity: 'info', message: `Evaluated: ${aggregates.classification} (${aggregates.weighted_mean.toFixed(2)})`, details: { classification: aggregates.classification, weighted_mean: aggregates.weighted_mean, model: modelToUse, input_tokens: inputTokens, output_tokens: outputTokens, duration_ms: evalDurationMs, requests_remaining: rlState.requests_remaining, input_tokens_remaining: rlState.input_tokens_remaining, output_tokens_remaining: rlState.output_tokens_remaining, cache_hit_rate: rlState.cache_hit_rate } });
+        console.log(`[consumer] Done: hn_id=${story.hn_id} → ${aggregates.classification} (${aggregates.weighted_mean}) [${msgModelId}] ${evalDurationMs}ms`);
+        await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_success', severity: 'info', message: `Evaluated: ${aggregates.classification} (${aggregates.weighted_mean.toFixed(2)})`, details: { classification: aggregates.classification, weighted_mean: aggregates.weighted_mean, model: msgModelId, provider, input_tokens: inputTokens, output_tokens: outputTokens, duration_ms: evalDurationMs } });
         msg.ack();
       } catch (err) {
         const evalDurationMs = Date.now() - evalStartMs;
-        console.error(`[consumer] Failed: hn_id=${story.hn_id} (${evalDurationMs}ms):`, err);
-        await markFailed(db, story.hn_id, `${err}`).catch(() => {});
-        await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_failure', severity: 'error', message: `Evaluation failed: ${String(err).slice(0, 200)}`, details: { error: String(err).slice(0, 500), duration_ms: evalDurationMs } });
+        console.error(`[consumer] Failed: hn_id=${story.hn_id} model=${msgModelId} (${evalDurationMs}ms):`, err);
+        if (isPrimary) {
+          await markFailed(db, story.hn_id, `${err}`).catch(() => {});
+        }
+        await markRaterFailed(db, story.hn_id, msgModelId, provider, `${err}`).catch(() => {});
+        await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_failure', severity: 'error', message: `Evaluation failed: ${String(err).slice(0, 200)}`, details: { error: String(err).slice(0, 500), duration_ms: evalDurationMs, model: msgModelId, provider } });
         msg.retry();
       }
     }

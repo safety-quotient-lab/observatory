@@ -3,6 +3,7 @@ import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
 import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
 import type { SortOption, FilterOption, TypeOption, ModelOption } from '../lib/db';
+import { modelDisplayName } from '../lib/shared-eval';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -22,7 +23,7 @@ const safeType = validTypes.includes(type) ? type : 'all';
 
 // Fetch distinct models for the selector
 const distinctModels = await getDistinctModels(db);
-const safeModel = model === 'all' || distinctModels.includes(model) ? model : 'all';
+const safeModel = model === 'all' || model === 'any' || distinctModels.includes(model) ? model : 'all';
 
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
@@ -84,11 +85,7 @@ const FILTER_OPTIONS = [
 
 // Short display label for model IDs
 function modelLabel(id: string): string {
-  // claude-haiku-4-5-20251001 -> haiku-4.5
-  // claude-sonnet-4-5-20250514 -> sonnet-4.5
-  const m = id.match(/claude-(\w+)-(\d+)-(\d+)/);
-  if (m) return `${m[1]}-${m[2]}.${m[3]}`;
-  return id;
+  return modelDisplayName(id);
 }
 ---
 
@@ -127,6 +124,11 @@ function modelLabel(id: string): string {
                 ? <span style="color: #ff6600; font-weight: bold;"> all</span>
                 : <a href={buildUrl({ model: 'all', p: '1' })}> all</a>
               }
+              <span style="color: #444;"> | </span>
+              {safeModel === 'any'
+                ? <span style="color: #ff6600; font-weight: bold;">any</span>
+                : <a href={buildUrl({ model: 'any', p: '1' })}>any</a>
+              }
               {distinctModels.map((m) => (
                 <>
                   <span style="color: #444;"> | </span>
@@ -147,6 +149,7 @@ function modelLabel(id: string): string {
     </tr>
   </table>
 
+  <div class="table-wrap">
   <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
     {displayStories.map((story, i) => (
       <EvalCard
@@ -155,6 +158,7 @@ function modelLabel(id: string): string {
       />
     ))}
   </table>
+  </div>
 
   {displayStories.length === 0 && (
     <table width="100%">

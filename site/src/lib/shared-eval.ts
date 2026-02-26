@@ -15,6 +15,175 @@ export const ALL_SECTIONS = [
 
 export const EVAL_MODEL = 'claude-haiku-4-5-20251001';
 
+// --- Multi-Model Registry ---
+
+export type ModelProvider = 'anthropic' | 'openrouter';
+
+export interface ModelDefinition {
+  id: string;                    // DB identifier (eval_model column)
+  display_name: string;          // UI label
+  short_name: string;            // 3-char badge label
+  provider: ModelProvider;
+  api_model_id: string;          // sent to API
+  is_free: boolean;              // free → auto-eval alongside primary
+  enabled: boolean;
+  max_tokens: number;
+  supports_cache_control: boolean;
+  supports_json_mode: boolean;
+}
+
+export const MODEL_REGISTRY: ModelDefinition[] = [
+  {
+    id: 'claude-haiku-4-5-20251001',
+    display_name: 'Haiku 4.5',
+    short_name: 'Hku',
+    provider: 'anthropic',
+    api_model_id: 'claude-haiku-4-5-20251001',
+    is_free: false,
+    enabled: true,
+    max_tokens: 10240,
+    supports_cache_control: true,
+    supports_json_mode: false,
+  },
+  {
+    id: 'deepseek-v3.2',
+    display_name: 'DeepSeek V3.2',
+    short_name: 'DS',
+    provider: 'openrouter',
+    api_model_id: 'deepseek/deepseek-v3.2-20251201',
+    is_free: true,
+    enabled: true,
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+  },
+  {
+    id: 'trinity-large',
+    display_name: 'Trinity Large',
+    short_name: 'Tri',
+    provider: 'openrouter',
+    api_model_id: 'arcee-ai/trinity-large-preview:free',
+    is_free: true,
+    enabled: false, // disabled: 77% failure rate
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+  },
+  {
+    id: 'nemotron-nano-30b',
+    display_name: 'Nemotron Nano 30B',
+    short_name: 'Nem',
+    provider: 'openrouter',
+    api_model_id: 'nvidia/nemotron-3-nano-30b-a3b:free',
+    is_free: true,
+    enabled: false,  // disabled: 97% parse failure rate, can't follow HRCB schema
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+  },
+  {
+    id: 'step-3.5-flash',
+    display_name: 'Step 3.5 Flash',
+    short_name: 'Stp',
+    provider: 'openrouter',
+    api_model_id: 'stepfun/step-3.5-flash:free',
+    is_free: true,
+    enabled: false,  // disabled: returns empty responses, 100% failure rate
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: false,
+  },
+  {
+    id: 'qwen3-next-80b',
+    display_name: 'Qwen3 Next 80B',
+    short_name: 'Qwn',
+    provider: 'openrouter',
+    api_model_id: 'qwen/qwen3-next-80b-a3b-instruct:free',
+    is_free: true,
+    enabled: false, // disabled: conserving free tier quota
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+  },
+  {
+    id: 'llama-3.3-70b',
+    display_name: 'Llama 3.3 70B',
+    short_name: 'Lla',
+    provider: 'openrouter',
+    api_model_id: 'meta-llama/llama-3.3-70b-instruct:free',
+    is_free: true,
+    enabled: true,
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+  },
+  {
+    id: 'mistral-small-3.1',
+    display_name: 'Mistral Small 3.1',
+    short_name: 'Mis',
+    provider: 'openrouter',
+    api_model_id: 'mistralai/mistral-small-3.1-24b-instruct:free',
+    is_free: true,
+    enabled: false, // disabled: conserving free tier quota
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+  },
+  {
+    id: 'hermes-3-405b',
+    display_name: 'Hermes 3 405B',
+    short_name: 'Her',
+    provider: 'openrouter',
+    api_model_id: 'nousresearch/hermes-3-llama-3.1-405b:free',
+    is_free: true,
+    enabled: false, // disabled: conserving free tier quota
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+  },
+];
+
+export const PRIMARY_MODEL_ID = 'claude-haiku-4-5-20251001';
+
+export function getModelDef(modelId: string): ModelDefinition | undefined {
+  return MODEL_REGISTRY.find(m => m.id === modelId);
+}
+
+export function getEnabledModels(): ModelDefinition[] {
+  return MODEL_REGISTRY.filter(m => m.enabled);
+}
+
+export function getEnabledFreeModels(): ModelDefinition[] {
+  return MODEL_REGISTRY.filter(m => m.enabled && m.is_free);
+}
+
+export function modelDisplayName(modelId: string): string {
+  return getModelDef(modelId)?.display_name ?? modelId;
+}
+
+export function modelShortName(modelId: string): string {
+  return getModelDef(modelId)?.short_name ?? modelId.slice(0, 3);
+}
+
+/** Map model IDs to their queue binding names in wrangler config. */
+export const MODEL_QUEUE_BINDINGS: Record<string, string> = {
+  'claude-haiku-4-5-20251001': 'EVAL_QUEUE',
+  'deepseek-v3.2': 'DEEPSEEK_QUEUE',
+  'trinity-large': 'TRINITY_QUEUE',
+  'nemotron-nano-30b': 'NEMOTRON_QUEUE',
+  'step-3.5-flash': 'STEP_QUEUE',
+  'qwen3-next-80b': 'QWEN_QUEUE',
+  'llama-3.3-70b': 'LLAMA_QUEUE',
+  'mistral-small-3.1': 'MISTRAL_QUEUE',
+  'hermes-3-405b': 'HERMES_QUEUE',
+};
+
+/** Get the queue for a given model from the env bindings. Falls back to EVAL_QUEUE. */
+export function getModelQueue(modelId: string, env: Record<string, any>): Queue {
+  const binding = MODEL_QUEUE_BINDINGS[modelId] || 'EVAL_QUEUE';
+  return env[binding] as Queue;
+}
+
 /** Max output tokens for Claude API calls. Slim prompt needs fewer tokens (no aggregates). */
 export const EVAL_MAX_TOKENS = 10240;
 
@@ -1177,5 +1346,542 @@ export async function cacheDcp(
        VALUES (?, ?, datetime('now'))`
     )
     .bind(domain, JSON.stringify(dcp))
+    .run();
+}
+
+// --- M1: Robust JSON Extraction ---
+
+export function extractJsonFromResponse(raw: string): string {
+  let text = raw.trim();
+  // Strip markdown fences
+  text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '');
+  // Find JSON object boundaries
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error(`No JSON object found. Response starts with: ${raw.slice(0, 300)}`);
+  }
+  return text.slice(firstBrace, lastBrace + 1);
+}
+
+// --- M3: Section Name Normalization ---
+
+export function normalizeSection(raw: string): string | null {
+  const s = raw.trim();
+  if (/^preamble$/i.test(s)) return 'Preamble';
+  // Match "Article 1", "Art. 1", "Art 1", "article_1", "A1", etc.
+  const m = s.match(/^(?:art(?:icle)?[\s._-]*)?(\d{1,2})$/i);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    if (n >= 1 && n <= 30) return `Article ${n}`;
+  }
+  // Exact match fallback
+  if (ALL_SECTIONS.includes(s)) return s;
+  return null;
+}
+
+// --- M2: Schema Validation ---
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  repairs: string[];
+}
+
+export function validateSlimEvalResponse(parsed: any): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const repairs: string[] = [];
+
+  // --- Hard requirements ---
+  if (!Array.isArray(parsed.scores)) {
+    errors.push('Missing or non-array "scores" field');
+  } else {
+    // Normalize section names before checking
+    for (const score of parsed.scores) {
+      if (score.section) {
+        const normalized = normalizeSection(score.section);
+        if (normalized && normalized !== score.section) {
+          repairs.push(`Normalized section "${score.section}" → "${normalized}"`);
+          score.section = normalized;
+        }
+      }
+    }
+
+    if (parsed.scores.length !== 31) {
+      errors.push(`Expected 31 scores, got ${parsed.scores.length}`);
+    }
+
+    const expectedSections = new Set(ALL_SECTIONS);
+    const foundSections = new Set(parsed.scores.map((s: any) => s.section));
+    const missing = [...expectedSections].filter(s => !foundSections.has(s));
+    const extra = [...foundSections].filter(s => !expectedSections.has(s));
+    if (missing.length > 0) errors.push(`Missing sections: ${missing.join(', ')}`);
+    if (extra.length > 0) warnings.push(`Unexpected sections (ignored): ${extra.join(', ')}`);
+  }
+
+  if (!parsed.evaluation || typeof parsed.evaluation !== 'object') {
+    errors.push('Missing "evaluation" object');
+  }
+
+  // --- Soft validations (auto-repair or warn) ---
+  if (Array.isArray(parsed.scores)) {
+    for (const score of parsed.scores) {
+      for (const channel of ['editorial', 'structural'] as const) {
+        if (score[channel] !== null && score[channel] !== undefined) {
+          if (typeof score[channel] !== 'number') {
+            warnings.push(`${score.section}.${channel} is not a number: ${score[channel]}`);
+            score[channel] = null;
+            repairs.push(`Set ${score.section}.${channel} to null (was non-numeric)`);
+          } else if (score[channel] < -1.0 || score[channel] > 1.0) {
+            const original = score[channel];
+            score[channel] = Math.max(-1.0, Math.min(1.0, score[channel]));
+            repairs.push(`Clamped ${score.section}.${channel}: ${original} → ${score[channel]}`);
+          }
+        }
+      }
+      // Evidence
+      if (score.evidence !== null && score.evidence !== undefined) {
+        const ev = String(score.evidence).toUpperCase();
+        if (!['H', 'M', 'L'].includes(ev)) {
+          warnings.push(`${score.section}.evidence invalid: "${score.evidence}"`);
+          score.evidence = null;
+          repairs.push(`Set ${score.section}.evidence to null (was "${score.evidence}")`);
+        } else {
+          score.evidence = ev;
+        }
+      }
+      // Directionality
+      if (!Array.isArray(score.directionality)) {
+        score.directionality = [];
+        repairs.push(`Set ${score.section}.directionality to [] (was missing/non-array)`);
+      }
+      // Notes
+      for (const noteField of ['editorial_note', 'structural_note', 'note']) {
+        if (score[noteField] !== undefined && typeof score[noteField] !== 'string') {
+          score[noteField] = String(score[noteField] ?? '');
+          repairs.push(`Coerced ${score.section}.${noteField} to string`);
+        }
+      }
+      // Witness
+      for (const wf of ['witness_facts', 'witness_inferences']) {
+        if (score[wf] !== undefined && !Array.isArray(score[wf])) {
+          score[wf] = [];
+          repairs.push(`Set ${score.section}.${wf} to [] (was non-array)`);
+        }
+      }
+    }
+  }
+
+  // Supplementary signals (all optional)
+  for (const signal of ['epistemic_quality', 'propaganda_flags', 'solution_orientation',
+    'emotional_tone', 'stakeholder_representation', 'temporal_framing',
+    'geographic_scope', 'complexity_level', 'transparency_disclosure']) {
+    if (parsed[signal] === undefined) {
+      warnings.push(`Missing supplementary signal: ${signal}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors, warnings, repairs };
+}
+
+// --- OpenRouter Response Parsing ---
+
+export function parseOpenRouterResponse(data: {
+  choices?: Array<{ message?: { content?: string } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+}): SlimEvalResponse {
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error('No content in OpenRouter response');
+
+  const jsonText = extractJsonFromResponse(content);
+
+  try {
+    return JSON.parse(jsonText) as SlimEvalResponse;
+  } catch (err) {
+    throw new Error(`Failed to parse OpenRouter JSON: ${err}. Extracted text starts with: ${jsonText.slice(0, 200)}`);
+  }
+}
+
+// --- M5: Per-Model Health State ---
+
+export interface RaterHealthState {
+  consecutive_failures: number;
+  consecutive_parse_failures: number;
+  total_attempts: number;
+  total_successes: number;
+  total_parse_failures: number;
+  total_api_failures: number;
+  last_success_at: string | null;
+  last_failure_at: string | null;
+  disabled_at: string | null;
+  disabled_reason: string | null;
+}
+
+export const PARSE_FAILURE_DISABLE_THRESHOLD = 5;
+export const FAILURE_RATE_DISABLE_THRESHOLD = 0.7;
+export const FAILURE_RATE_MIN_ATTEMPTS = 20;
+export const AUTO_DISABLE_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24h
+
+export function emptyRaterHealth(): RaterHealthState {
+  return {
+    consecutive_failures: 0,
+    consecutive_parse_failures: 0,
+    total_attempts: 0,
+    total_successes: 0,
+    total_parse_failures: 0,
+    total_api_failures: 0,
+    last_success_at: null,
+    last_failure_at: null,
+    disabled_at: null,
+    disabled_reason: null,
+  };
+}
+
+export function raterHealthKvKey(modelId: string): string {
+  return `rater_health:${modelId}`;
+}
+
+export function shouldSkipModel(health: RaterHealthState): { skip: boolean; reason?: string; probe?: boolean } {
+  if (!health.disabled_at) return { skip: false };
+  const disabledMs = new Date(health.disabled_at).getTime();
+  if (Date.now() - disabledMs < AUTO_DISABLE_COOLDOWN_MS) {
+    return { skip: true, reason: health.disabled_reason ?? 'auto-disabled' };
+  }
+  // Cooldown passed — allow one probe
+  return { skip: false, probe: true };
+}
+
+export function updateRaterHealthOnSuccess(health: RaterHealthState): RaterHealthState {
+  return {
+    ...health,
+    consecutive_failures: 0,
+    consecutive_parse_failures: 0,
+    total_attempts: health.total_attempts + 1,
+    total_successes: health.total_successes + 1,
+    last_success_at: new Date().toISOString(),
+    disabled_at: null,
+    disabled_reason: null,
+  };
+}
+
+export function updateRaterHealthOnParseFailure(health: RaterHealthState): RaterHealthState {
+  const updated: RaterHealthState = {
+    ...health,
+    consecutive_failures: health.consecutive_failures + 1,
+    consecutive_parse_failures: health.consecutive_parse_failures + 1,
+    total_attempts: health.total_attempts + 1,
+    total_parse_failures: health.total_parse_failures + 1,
+    last_failure_at: new Date().toISOString(),
+  };
+  // Auto-disable check
+  if (updated.consecutive_parse_failures >= PARSE_FAILURE_DISABLE_THRESHOLD) {
+    updated.disabled_at = new Date().toISOString();
+    updated.disabled_reason = `${updated.consecutive_parse_failures} consecutive parse failures`;
+  } else if (updated.total_attempts >= FAILURE_RATE_MIN_ATTEMPTS) {
+    const failRate = (updated.total_parse_failures + updated.total_api_failures) / updated.total_attempts;
+    if (failRate >= FAILURE_RATE_DISABLE_THRESHOLD) {
+      updated.disabled_at = new Date().toISOString();
+      updated.disabled_reason = `${(failRate * 100).toFixed(0)}% failure rate over ${updated.total_attempts} attempts`;
+    }
+  }
+  return updated;
+}
+
+export function updateRaterHealthOnApiFailure(health: RaterHealthState): RaterHealthState {
+  const updated: RaterHealthState = {
+    ...health,
+    consecutive_failures: health.consecutive_failures + 1,
+    total_attempts: health.total_attempts + 1,
+    total_api_failures: health.total_api_failures + 1,
+    last_failure_at: new Date().toISOString(),
+  };
+  return updated;
+}
+
+// --- Rater Eval DB Writes ---
+
+export interface RaterEval {
+  hn_id: number;
+  eval_model: string;
+  eval_provider: string;
+  eval_status: string;
+  eval_error: string | null;
+  hcb_weighted_mean: number | null;
+  hcb_classification: string | null;
+  hcb_json: string | null;
+  hcb_signal_sections: number | null;
+  hcb_nd_count: number | null;
+  hcb_evidence_h: number | null;
+  hcb_evidence_m: number | null;
+  hcb_evidence_l: number | null;
+  eval_prompt_hash: string | null;
+  methodology_hash: string | null;
+  content_type: string | null;
+  schema_version: string | null;
+  hcb_theme_tag: string | null;
+  hcb_sentiment_tag: string | null;
+  hcb_executive_summary: string | null;
+  fw_ratio: number | null;
+  fw_observable_count: number;
+  fw_inference_count: number;
+  hcb_editorial_mean: number | null;
+  hcb_structural_mean: number | null;
+  hcb_setl: number | null;
+  hcb_confidence: number | null;
+  eq_score: number | null;
+  so_score: number | null;
+  et_primary_tone: string | null;
+  et_valence: number | null;
+  sr_score: number | null;
+  pt_flag_count: number;
+  td_score: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  evaluated_at: string | null;
+  created_at: string;
+}
+
+export async function writeRaterEvalResult(
+  db: D1Database,
+  hnId: number,
+  result: EvalResult,
+  modelId: string,
+  provider: string,
+  promptHash: string | null,
+  methodologyHash: string | null,
+  inputTokens: number,
+  outputTokens: number,
+): Promise<void> {
+  const agg = result.aggregates;
+
+  // Fair Witness aggregates
+  let fwObservableCount = 0;
+  let fwInferenceCount = 0;
+  for (const score of result.scores) {
+    if (score.witness_facts) fwObservableCount += score.witness_facts.length;
+    if (score.witness_inferences) fwInferenceCount += score.witness_inferences.length;
+  }
+  const fwTotal = fwObservableCount + fwInferenceCount;
+  const fwRatio = fwTotal > 0 ? fwObservableCount / fwTotal : null;
+
+  // Channel means
+  const editorials = result.scores.filter(s => s.editorial !== null).map(s => s.editorial!);
+  const structurals = result.scores.filter(s => s.structural !== null).map(s => s.structural!);
+  const hcbEditorialMean = editorials.length > 0 ? editorials.reduce((a, b) => a + b, 0) / editorials.length : null;
+  const hcbStructuralMean = structurals.length > 0 ? structurals.reduce((a, b) => a + b, 0) / structurals.length : null;
+
+  // SETL + Confidence
+  const hcbSetl = computeSetl(result.scores);
+  let confWeightedSum = 0;
+  const totalSections = result.scores.length;
+  for (const s of result.scores) {
+    const ev = s.evidence?.toUpperCase();
+    if (ev === 'H') confWeightedSum += 1.0;
+    else if (ev === 'M') confWeightedSum += 0.6;
+    else if (ev === 'L') confWeightedSum += 0.2;
+  }
+  const hcbConfidence = totalSections > 0 ? confWeightedSum / totalSections : null;
+
+  const eq = result.epistemic_quality;
+  const pt = result.propaganda_flags;
+  const so = result.solution_orientation;
+  const et = result.emotional_tone;
+  const sr = result.stakeholder_representation;
+  const td = result.transparency_disclosure;
+
+  // UPSERT rater_evals
+  await db
+    .prepare(
+      `INSERT INTO rater_evals (
+        hn_id, eval_model, eval_provider, eval_status,
+        hcb_weighted_mean, hcb_classification, hcb_json,
+        hcb_signal_sections, hcb_nd_count,
+        hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
+        eval_prompt_hash, methodology_hash,
+        content_type, schema_version,
+        hcb_theme_tag, hcb_sentiment_tag, hcb_executive_summary,
+        fw_ratio, fw_observable_count, fw_inference_count,
+        hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
+        eq_score, so_score, et_primary_tone, et_valence,
+        sr_score, pt_flag_count, td_score,
+        input_tokens, output_tokens,
+        evaluated_at
+      ) VALUES (
+        ?, ?, ?, 'done',
+        ?, ?, ?,
+        ?, ?,
+        ?, ?, ?,
+        ?, ?,
+        ?, ?,
+        ?, ?, ?,
+        ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?,
+        ?, ?,
+        datetime('now')
+      )
+      ON CONFLICT(hn_id, eval_model) DO UPDATE SET
+        eval_status = 'done',
+        eval_error = NULL,
+        hcb_weighted_mean = excluded.hcb_weighted_mean,
+        hcb_classification = excluded.hcb_classification,
+        hcb_json = excluded.hcb_json,
+        hcb_signal_sections = excluded.hcb_signal_sections,
+        hcb_nd_count = excluded.hcb_nd_count,
+        hcb_evidence_h = excluded.hcb_evidence_h,
+        hcb_evidence_m = excluded.hcb_evidence_m,
+        hcb_evidence_l = excluded.hcb_evidence_l,
+        eval_prompt_hash = excluded.eval_prompt_hash,
+        methodology_hash = excluded.methodology_hash,
+        content_type = excluded.content_type,
+        schema_version = excluded.schema_version,
+        hcb_theme_tag = excluded.hcb_theme_tag,
+        hcb_sentiment_tag = excluded.hcb_sentiment_tag,
+        hcb_executive_summary = excluded.hcb_executive_summary,
+        fw_ratio = excluded.fw_ratio,
+        fw_observable_count = excluded.fw_observable_count,
+        fw_inference_count = excluded.fw_inference_count,
+        hcb_editorial_mean = excluded.hcb_editorial_mean,
+        hcb_structural_mean = excluded.hcb_structural_mean,
+        hcb_setl = excluded.hcb_setl,
+        hcb_confidence = excluded.hcb_confidence,
+        eq_score = excluded.eq_score,
+        so_score = excluded.so_score,
+        et_primary_tone = excluded.et_primary_tone,
+        et_valence = excluded.et_valence,
+        sr_score = excluded.sr_score,
+        pt_flag_count = excluded.pt_flag_count,
+        td_score = excluded.td_score,
+        input_tokens = excluded.input_tokens,
+        output_tokens = excluded.output_tokens,
+        evaluated_at = excluded.evaluated_at`
+    )
+    .bind(
+      hnId, modelId, provider,
+      agg.weighted_mean,
+      (agg.classification || '').split(' — ')[0],
+      JSON.stringify(result),
+      agg.signal_sections, agg.nd_count,
+      agg.evidence_profile?.H ?? 0, agg.evidence_profile?.M ?? 0, agg.evidence_profile?.L ?? 0,
+      promptHash, methodologyHash,
+      result.evaluation.content_type.primary,
+      result.schema_version || null,
+      result.theme_tag || null, result.sentiment_tag || null, result.executive_summary || null,
+      fwRatio, fwObservableCount, fwInferenceCount,
+      hcbEditorialMean, hcbStructuralMean, hcbSetl, hcbConfidence,
+      eq?.eq_score ?? null,
+      so?.so_score ?? null,
+      et?.primary_tone ?? null, et?.valence ?? null,
+      sr?.sr_score ?? null,
+      pt ? pt.length : 0,
+      td?.td_score ?? null,
+      inputTokens, outputTokens,
+    )
+    .run();
+
+  // DELETE + INSERT rater_scores
+  await db
+    .prepare(`DELETE FROM rater_scores WHERE hn_id = ? AND eval_model = ?`)
+    .bind(hnId, modelId)
+    .run();
+
+  const scoreStmts = result.scores.map((score) => {
+    const sortOrder = ALL_SECTIONS.indexOf(score.section);
+    const editorialNote = score.editorial_note || '';
+    const structuralNote = score.structural_note || '';
+    const note = score.note || editorialNote || structuralNote || '';
+    return db
+      .prepare(
+        `INSERT INTO rater_scores (hn_id, section, eval_model, sort_order, final, editorial, structural, evidence, directionality, note, editorial_note, structural_note, combined, context_modifier)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        hnId, score.section, modelId,
+        sortOrder >= 0 ? sortOrder : 0,
+        score.final, score.editorial, score.structural, score.evidence,
+        JSON.stringify(score.directionality || []),
+        note, editorialNote, structuralNote,
+        score.combined ?? null, score.context_modifier ?? null,
+      );
+  });
+  if (scoreStmts.length > 0) {
+    for (let i = 0; i < scoreStmts.length; i += 100) {
+      await db.batch(scoreStmts.slice(i, i + 100));
+    }
+  }
+
+  // DELETE + INSERT rater_witness
+  await db
+    .prepare(`DELETE FROM rater_witness WHERE hn_id = ? AND eval_model = ?`)
+    .bind(hnId, modelId)
+    .run();
+
+  const fwRows: { section: string; factType: string; factText: string }[] = [];
+  for (const score of result.scores) {
+    if (score.witness_facts) {
+      for (const fact of score.witness_facts) {
+        fwRows.push({ section: score.section, factType: 'observable', factText: fact });
+      }
+    }
+    if (score.witness_inferences) {
+      for (const inference of score.witness_inferences) {
+        fwRows.push({ section: score.section, factType: 'inference', factText: inference });
+      }
+    }
+  }
+  if (fwRows.length > 0) {
+    for (let i = 0; i < fwRows.length; i += 100) {
+      const chunk = fwRows.slice(i, i + 100);
+      const fwStmts = chunk.map((row) =>
+        db
+          .prepare(
+            `INSERT INTO rater_witness (hn_id, eval_model, section, fact_type, fact_text) VALUES (?, ?, ?, ?, ?)`
+          )
+          .bind(hnId, modelId, row.section, row.factType, row.factText)
+      );
+      await db.batch(fwStmts);
+    }
+  }
+
+  // Write to eval_history
+  await db
+    .prepare(
+      `INSERT INTO eval_history (hn_id, eval_model, hcb_weighted_mean, hcb_classification, hcb_json, input_tokens, output_tokens)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .bind(
+      hnId, modelId,
+      agg.weighted_mean,
+      agg.classification,
+      JSON.stringify(result),
+      inputTokens, outputTokens,
+    )
+    .run();
+
+  // If this is the primary model, also write to stories/scores/fair_witness for backward compat
+  if (modelId === PRIMARY_MODEL_ID) {
+    await writeEvalResult(db, hnId, result, modelId, promptHash);
+  }
+}
+
+export async function markRaterFailed(
+  db: D1Database,
+  hnId: number,
+  modelId: string,
+  provider: string,
+  error: string,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, eval_error)
+       VALUES (?, ?, ?, 'failed', ?)
+       ON CONFLICT(hn_id, eval_model) DO UPDATE SET
+         eval_status = 'failed',
+         eval_error = excluded.eval_error`
+    )
+    .bind(hnId, modelId, provider, error.slice(0, 500))
     .run();
 }

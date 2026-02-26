@@ -4,13 +4,18 @@ import HeatMap from '../../components/HeatMap.astro';
 import RadarChart from '../../components/RadarChart.astro';
 import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
+import ModelCompareTable from '../../components/ModelCompareTable.astro';
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
-import { getStory, getStoryComments, getDomainDcp, getEventsForStory } from '../../lib/db';
+import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getRaterEvalsForStory, getRaterScores } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
+import { modelDisplayName, PRIMARY_MODEL_ID } from '../../lib/shared-eval';
 
 const { id } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
+const url = new URL(Astro.request.url);
+const modelParam = url.searchParams.get('model');
+const viewParam = url.searchParams.get('view');
 
 const hnId = parseInt(id!, 10);
 if (isNaN(hnId)) {
@@ -20,6 +25,32 @@ if (isNaN(hnId)) {
 const storyData = await getStory(db, hnId);
 if (!storyData) {
   return Astro.redirect('/');
+}
+
+// Fetch multi-model evals for tabs
+let raterEvals: Awaited<ReturnType<typeof getRaterEvalsForStory>> = [];
+try {
+  raterEvals = await getRaterEvalsForStory(db, hnId);
+} catch { /* table may not exist yet */ }
+const hasMultipleModels = raterEvals.length > 1;
+
+// If viewing a non-primary model, load its scores
+let altModelScores: Awaited<ReturnType<typeof getRaterScores>> = [];
+let altModelEval = modelParam ? raterEvals.find(e => e.eval_model === modelParam) : null;
+if (modelParam && altModelEval) {
+  try {
+    altModelScores = await getRaterScores(db, hnId, modelParam);
+  } catch { /* table may not exist yet */ }
+}
+
+// For compare view, load scores for all models
+const compareScoresByModel: Record<string, Awaited<ReturnType<typeof getRaterScores>>> = {};
+if (viewParam === 'compare' && raterEvals.length >= 2) {
+  for (const re of raterEvals) {
+    try {
+      compareScoresByModel[re.eval_model] = await getRaterScores(db, hnId, re.eval_model);
+    } catch { /* ignore */ }
+  }
 }
 
 // Handle statuses
@@ -230,6 +261,35 @@ function timeAgo(unixTime: number): string {
     <span style="color: #333;"> / </span>
     <span style="color: #888;">item {storyData.hn_id}</span>
   </div>
+
+  {/* Model tab bar (shown when multiple models have evaluated) */}
+  {isDone && hasMultipleModels && (
+    <div style="padding: 6px 0; margin-bottom: 4px; display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
+      <span style="color: #555; font-size: var(--font-xs); margin-right: 4px;">Model:</span>
+      {raterEvals.map(re => {
+        const isActive = modelParam ? modelParam === re.eval_model : re.eval_model === PRIMARY_MODEL_ID;
+        const isPrimary = re.eval_model === PRIMARY_MODEL_ID;
+        return (
+          <a href={isPrimary ? `/item/${hnId}` : `/item/${hnId}?model=${re.eval_model}`}
+             style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #2a2a3a; color: #ccc; border: 1px solid #444;' : 'background: #12121a; color: #888; border: 1px solid #222;'}`}>
+            {modelDisplayName(re.eval_model)}
+            <span style={`margin-left: 4px; color: ${scoreToColor(re.hcb_weighted_mean)};`}>
+              {formatScore(re.hcb_weighted_mean)}
+            </span>
+          </a>
+        );
+      })}
+      <a href={`/item/${hnId}?view=compare`}
+         style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${viewParam === 'compare' ? 'background: #2a2a3a; color: #ccc; border: 1px solid #444;' : 'background: #12121a; color: #888; border: 1px solid #222;'}`}>
+        Compare
+      </a>
+    </div>
+  )}
+
+  {/* Compare view */}
+  {viewParam === 'compare' && raterEvals.length >= 2 && (
+    <ModelCompareTable evals={raterEvals} scoresByModel={compareScoresByModel} />
+  )}
 
   {isFailed ? (
     <>

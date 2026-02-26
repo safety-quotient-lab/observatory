@@ -15,6 +15,7 @@ id = "ffe31e8bd21f43169e81f6d6137772bf"
 binding = "CONTENT_SNAPSHOTS"
 bucket_name = "hrcb-content-snapshots"
 
+# Primary model (Anthropic API — separate rate limit)
 [[queues.consumers]]
 queue = "hrcb-eval-queue"
 max_batch_size = 1
@@ -22,5 +23,63 @@ max_concurrency = 3
 max_retries = 2
 dead_letter_queue = "hrcb-eval-dlq"
 
+# OpenRouter models — concurrency=1 each to stay under free tier rate limits
+[[queues.consumers]]
+queue = "hrcb-eval-deepseek"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-trinity"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-nemotron"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-step"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-qwen"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-llama"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-mistral"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-hermes"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
 # Secrets (set via `wrangler secret put --name hn-hrcb-consumer`):
 # ANTHROPIC_API_KEY
+# OPENROUTER_API_KEY

@@ -1,4 +1,5 @@
 import type { Score } from './types';
+import { PRIMARY_MODEL_ID, getEnabledModels } from './shared-eval';
 
 export interface Story {
   hn_id: number;
@@ -134,9 +135,13 @@ export type ModelOption = string; // 'all' or a model ID like 'claude-haiku-4-5-
 export async function getDistinctModels(db: D1Database): Promise<string[]> {
   const { results } = await db
     .prepare(
-      `SELECT DISTINCT eval_model FROM stories
-       WHERE eval_status = 'done' AND eval_model IS NOT NULL
-       ORDER BY eval_model`
+      `SELECT DISTINCT eval_model FROM (
+         SELECT eval_model FROM stories
+         WHERE eval_status = 'done' AND eval_model IS NOT NULL
+         UNION
+         SELECT eval_model FROM rater_evals
+         WHERE eval_status = 'done'
+       ) ORDER BY eval_model`
     )
     .all<{ eval_model: string }>();
   return results.map(r => r.eval_model);
@@ -190,10 +195,17 @@ export async function getFilteredStoriesWithScores(
   }
 
   const bindParams: (string | number)[] = [];
+  const isAltModel = model !== 'all' && model !== 'any' && model !== PRIMARY_MODEL_ID;
 
-  if (model !== 'all') {
-    conditions.push(`s.eval_model = ?`);
-    bindParams.push(model);
+  // "all" model filter: only show stories evaluated by every enabled model
+  if (model === 'all') {
+    const enabledModelCount = getEnabledModels().length;
+    if (enabledModelCount > 1) {
+      conditions.push(
+        `(SELECT COUNT(DISTINCT re_all.eval_model) FROM rater_evals re_all
+          WHERE re_all.hn_id = s.hn_id AND re_all.eval_status = 'done') >= ${enabledModelCount}`
+      );
+    }
   }
 
   // Day filter: show stories from a specific date
@@ -205,23 +217,35 @@ export async function getFilteredStoriesWithScores(
     }
   }
 
+  // For alt models, require a done rater_eval and override score columns
+  if (isAltModel) {
+    conditions.push(`re.eval_model = ?`);
+    conditions.push(`re.eval_status = 'done'`);
+    bindParams.push(model);
+  }
+
   const where = conditions.join(' AND ');
+
+  // Score column references differ for alt model (from rater_evals re) vs primary (from stories s)
+  const scorePrefix = isAltModel ? 're' : 's';
 
   let orderBy = 's.hn_time DESC';
   let joinSetl = false;
   switch (sort) {
     case 'top': orderBy = 's.hn_rank ASC NULLS LAST, s.hn_time DESC'; break;
-    case 'score_desc': orderBy = 's.hcb_weighted_mean DESC NULLS LAST'; break;
-    case 'score_asc': orderBy = 's.hcb_weighted_mean ASC NULLS LAST'; break;
+    case 'score_desc': orderBy = `${scorePrefix}.hcb_weighted_mean DESC NULLS LAST`; break;
+    case 'score_asc': orderBy = `${scorePrefix}.hcb_weighted_mean ASC NULLS LAST`; break;
     case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
-    case 'conf_desc': orderBy = 'CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1) DESC NULLS LAST'; break;
-    case 'conf_asc': orderBy = 'CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1) ASC NULLS LAST'; break;
+    case 'conf_desc': orderBy = `CAST((COALESCE(${scorePrefix}.hcb_evidence_h,0)*1.0 + COALESCE(${scorePrefix}.hcb_evidence_m,0)*0.6 + COALESCE(${scorePrefix}.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(${scorePrefix}.hcb_evidence_h,0) + COALESCE(${scorePrefix}.hcb_evidence_m,0) + COALESCE(${scorePrefix}.hcb_evidence_l,0) + COALESCE(${scorePrefix}.hcb_nd_count,0), 1) DESC NULLS LAST`; break;
+    case 'conf_asc': orderBy = `CAST((COALESCE(${scorePrefix}.hcb_evidence_h,0)*1.0 + COALESCE(${scorePrefix}.hcb_evidence_m,0)*0.6 + COALESCE(${scorePrefix}.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(${scorePrefix}.hcb_evidence_h,0) + COALESCE(${scorePrefix}.hcb_evidence_m,0) + COALESCE(${scorePrefix}.hcb_evidence_l,0) + COALESCE(${scorePrefix}.hcb_nd_count,0), 1) ASC NULLS LAST`; break;
     case 'setl_desc': joinSetl = true; orderBy = 'story_setl DESC NULLS LAST'; break;
     case 'setl_asc': joinSetl = true; orderBy = 'story_setl ASC NULLS LAST'; break;
     case 'velocity': orderBy = 's.hn_score DESC NULLS LAST'; break; // proxy: highest points = most momentum
   }
 
-  // Stories query — excludes hcb_json blob but includes truncated hn_text preview
+  // SETL subquery uses rater_scores for alt models
+  const setlScoreTable = isAltModel ? 'rater_scores' : 'scores';
+  const setlExtraWhere = isAltModel ? ` AND sc2.eval_model = '${model.replace(/'/g, "''")}'` : '';
   const setlSelect = joinSetl ? `,
               (SELECT AVG(
                 CASE WHEN sc2.editorial >= sc2.structural
@@ -229,21 +253,35 @@ export async function getFilteredStoriesWithScores(
                   ELSE -SQRT(ABS(sc2.editorial - sc2.structural) * MAX(ABS(sc2.editorial), ABS(sc2.structural)))
                 END
                )
-               FROM scores sc2
+               FROM ${setlScoreTable} sc2
                WHERE sc2.hn_id = s.hn_id
                  AND sc2.editorial IS NOT NULL AND sc2.structural IS NOT NULL
-                 AND (ABS(sc2.editorial) > 0 OR ABS(sc2.structural) > 0)
+                 AND (ABS(sc2.editorial) > 0 OR ABS(sc2.structural) > 0)${setlExtraWhere}
               ) as story_setl` : '';
+
+  // For alt models, JOIN rater_evals and overlay score columns
+  const joinClause = isAltModel ? `INNER JOIN rater_evals re ON re.hn_id = s.hn_id` : '';
+  const selectCols = isAltModel
+    ? `s.hn_id, s.url, s.title, s.domain, s.hn_score, s.hn_comments, s.hn_by,
+              s.hn_time, s.hn_type, re.content_type,
+              re.hcb_weighted_mean, re.hcb_classification,
+              re.hcb_signal_sections, re.hcb_nd_count, re.hcb_evidence_h, re.hcb_evidence_m, re.hcb_evidence_l,
+              re.eval_model, s.eval_prompt_hash,
+              re.eval_status, re.eval_error, re.evaluated_at, s.created_at, re.schema_version,
+              re.hcb_theme_tag,
+              SUBSTR(s.hn_text, 1, 100) as hn_text_preview${setlSelect}`
+    : `s.hn_id, s.url, s.title, s.domain, s.hn_score, s.hn_comments, s.hn_by,
+              s.hn_time, s.hn_type, s.content_type, s.hcb_weighted_mean, s.hcb_classification,
+              s.hcb_signal_sections, s.hcb_nd_count, s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l,
+              s.eval_model, s.eval_prompt_hash,
+              s.eval_status, s.eval_error, s.evaluated_at, s.created_at, s.schema_version,
+              s.hcb_theme_tag,
+              SUBSTR(s.hn_text, 1, 100) as hn_text_preview${setlSelect}`;
+
   const { results: storyRows } = await db
     .prepare(
-      `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
-              hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
-              hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
-              eval_model, eval_prompt_hash,
-              eval_status, eval_error, evaluated_at, created_at, schema_version,
-              hcb_theme_tag,
-              SUBSTR(hn_text, 1, 100) as hn_text_preview${setlSelect}
-       FROM stories s WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
+      `SELECT ${selectCols}
+       FROM stories s ${joinClause} WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
     .bind(...bindParams, limit, offset)
     .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>();
@@ -256,14 +294,18 @@ export async function getFilteredStoriesWithScores(
   const scoresByHnId = new Map<number, MiniScore[]>();
 
   if (evaluatedIds.length > 0) {
+    // Use rater_scores for alt models, scores for primary/all
+    const scoreTable = isAltModel ? 'rater_scores' : 'scores';
+    const extraWhere = isAltModel ? ` AND eval_model = ?` : '';
+    const extraBinds = isAltModel ? [model] : [];
     const { results: scoreRows } = await db
       .prepare(
         `SELECT hn_id, section, sort_order, final, editorial, structural
-         FROM scores
-         WHERE hn_id IN (${evaluatedIds.map(() => '?').join(',')})
+         FROM ${scoreTable}
+         WHERE hn_id IN (${evaluatedIds.map(() => '?').join(',')})${extraWhere}
          ORDER BY sort_order`
       )
-      .bind(...evaluatedIds)
+      .bind(...evaluatedIds, ...extraBinds)
       .all<{ hn_id: number; section: string; sort_order: number; final: number | null; editorial: number | null; structural: number | null }>();
 
     for (const row of scoreRows) {
@@ -857,6 +899,222 @@ export async function getAllDomainStats(
   return results;
 }
 
+// --- Domain Intelligence ---
+
+export interface DomainIntelligence {
+  domain: string;
+  stories: number;
+  evaluated: number;
+  unique_submitters: number;
+  total_hn_score: number;
+  avg_hn_score: number;
+  total_comments: number;
+  avg_comments: number;
+  comment_per_point: number | null;
+  avg_hrcb: number | null;
+  min_hrcb: number | null;
+  max_hrcb: number | null;
+  hrcb_range: number | null;
+  positive_pct: number | null;
+  negative_pct: number | null;
+  neutral_pct: number | null;
+  avg_editorial: number | null;
+  avg_structural: number | null;
+}
+
+export type DomainIntelSortOption = 'stories' | 'score' | 'comments' | 'hrcb' | 'engagement' | 'submitters' | 'controversy';
+
+export async function getDomainIntelligence(
+  db: D1Database,
+  sort: DomainIntelSortOption = 'stories',
+  minStories = 2,
+  limit = 100
+): Promise<DomainIntelligence[]> {
+  let orderBy: string;
+  switch (sort) {
+    case 'score': orderBy = 'total_hn_score DESC'; break;
+    case 'comments': orderBy = 'total_comments DESC'; break;
+    case 'hrcb': orderBy = 'avg_hrcb DESC NULLS LAST'; break;
+    case 'engagement': orderBy = 'comment_per_point DESC NULLS LAST'; break;
+    case 'submitters': orderBy = 'unique_submitters DESC'; break;
+    case 'controversy': orderBy = 'hrcb_range DESC NULLS LAST'; break;
+    default: orderBy = 'stories DESC'; break;
+  }
+  const { results } = await db
+    .prepare(
+      `SELECT
+        s.domain,
+        COUNT(*) as stories,
+        SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
+        COUNT(DISTINCT s.hn_by) as unique_submitters,
+        SUM(s.hn_score) as total_hn_score,
+        ROUND(AVG(s.hn_score), 1) as avg_hn_score,
+        SUM(s.hn_comments) as total_comments,
+        ROUND(AVG(s.hn_comments), 1) as avg_comments,
+        ROUND(1.0 * SUM(s.hn_comments) / NULLIF(SUM(s.hn_score), 0), 2) as comment_per_point,
+        ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) as avg_hrcb,
+        ROUND(MIN(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) as min_hrcb,
+        ROUND(MAX(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) as max_hrcb,
+        ROUND(MAX(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) -
+              MIN(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) as hrcb_range,
+        ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean > 0.05 THEN 1 ELSE 0 END)
+              / NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) as positive_pct,
+        ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean < -0.05 THEN 1 ELSE 0 END)
+              / NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) as negative_pct,
+        ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END)
+              / NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) as neutral_pct,
+        (SELECT ROUND(AVG(sc.editorial), 4) FROM scores sc
+         JOIN stories s2 ON s2.hn_id = sc.hn_id
+         WHERE s2.domain = s.domain AND sc.editorial IS NOT NULL) as avg_editorial,
+        (SELECT ROUND(AVG(sc.structural), 4) FROM scores sc
+         JOIN stories s2 ON s2.hn_id = sc.hn_id
+         WHERE s2.domain = s.domain AND sc.structural IS NOT NULL) as avg_structural
+      FROM stories s
+      WHERE s.domain IS NOT NULL
+      GROUP BY s.domain
+      HAVING stories >= ?
+      ORDER BY ${orderBy}
+      LIMIT ?`
+    )
+    .bind(minStories, limit)
+    .all<DomainIntelligence>();
+  return results;
+}
+
+// --- Story Dynamics ---
+
+export interface StoryDynamics {
+  hn_id: number;
+  title: string;
+  domain: string | null;
+  hn_by: string | null;
+  hn_type: string | null;
+  hn_time: number;
+  hcb_weighted_mean: number | null;
+  peak_score: number;
+  peak_comments: number;
+  first_score: number;
+  score_gain: number;
+  comment_gain: number;
+  snap_count: number;
+  first_snap: string;
+  last_snap: string;
+  hours_tracked: number;
+  score_velocity: number;   // points per hour in first 2 hours
+  comment_velocity: number; // comments per hour in first 2 hours
+  comment_ratio: number | null; // comments / score
+}
+
+export async function getStoryDynamics(
+  db: D1Database,
+  limit = 100
+): Promise<StoryDynamics[]> {
+  const { results } = await db
+    .prepare(
+      `WITH snap_agg AS (
+        SELECT
+          ss.hn_id,
+          COUNT(*) as snap_count,
+          MIN(ss.snapshot_at) as first_snap,
+          MAX(ss.snapshot_at) as last_snap,
+          MIN(ss.hn_score) as first_score,
+          MAX(ss.hn_score) as peak_score,
+          MAX(ss.hn_comments) as peak_comments,
+          MAX(ss.hn_score) - MIN(ss.hn_score) as score_gain,
+          MAX(ss.hn_comments) - MIN(ss.hn_comments) as comment_gain,
+          ROUND((julianday(MAX(ss.snapshot_at)) - julianday(MIN(ss.snapshot_at))) * 24, 2) as hours_tracked
+        FROM story_snapshots ss
+        GROUP BY ss.hn_id
+        HAVING snap_count >= 5
+      ),
+      early_velocity AS (
+        SELECT
+          ss.hn_id,
+          MAX(ss.hn_score) - MIN(ss.hn_score) as early_score_gain,
+          MAX(ss.hn_comments) - MIN(ss.hn_comments) as early_comment_gain,
+          ROUND((julianday(MAX(ss.snapshot_at)) - julianday(MIN(ss.snapshot_at))) * 24, 2) as early_hours
+        FROM story_snapshots ss
+        JOIN snap_agg sa ON sa.hn_id = ss.hn_id
+        WHERE ss.snapshot_at <= datetime(sa.first_snap, '+2 hours')
+        GROUP BY ss.hn_id
+      )
+      SELECT
+        s.hn_id, s.title, s.domain, s.hn_by, s.hn_type, s.hn_time,
+        s.hcb_weighted_mean,
+        sa.peak_score, sa.peak_comments, sa.first_score,
+        sa.score_gain, sa.comment_gain,
+        sa.snap_count, sa.first_snap, sa.last_snap, sa.hours_tracked,
+        CASE WHEN ev.early_hours > 0 THEN ROUND(ev.early_score_gain / ev.early_hours, 1) ELSE 0 END as score_velocity,
+        CASE WHEN ev.early_hours > 0 THEN ROUND(ev.early_comment_gain / ev.early_hours, 1) ELSE 0 END as comment_velocity,
+        CASE WHEN sa.peak_score > 0 THEN ROUND(1.0 * sa.peak_comments / sa.peak_score, 2) ELSE NULL END as comment_ratio
+      FROM snap_agg sa
+      JOIN stories s ON s.hn_id = sa.hn_id
+      LEFT JOIN early_velocity ev ON ev.hn_id = sa.hn_id
+      ORDER BY sa.peak_score DESC
+      LIMIT ?`
+    )
+    .bind(limit)
+    .all<StoryDynamics>();
+  return results;
+}
+
+export interface StoryTimeline {
+  hn_score: number;
+  hn_comments: number;
+  hn_rank: number | null;
+  snapshot_at: string;
+  minutes_elapsed: number;
+}
+
+export async function getStoryTimeline(
+  db: D1Database,
+  hnId: number
+): Promise<StoryTimeline[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+        hn_score, hn_comments, hn_rank, snapshot_at,
+        ROUND((julianday(snapshot_at) - julianday(
+          (SELECT MIN(snapshot_at) FROM story_snapshots WHERE hn_id = ?)
+        )) * 24 * 60, 0) as minutes_elapsed
+      FROM story_snapshots
+      WHERE hn_id = ?
+      ORDER BY snapshot_at`
+    )
+    .bind(hnId, hnId)
+    .all<StoryTimeline>();
+  return results;
+}
+
+export interface TypeEngagement {
+  hn_type: string;
+  stories: number;
+  avg_score: number;
+  avg_comments: number;
+  avg_comment_ratio: number | null;
+  avg_hrcb: number | null;
+}
+
+export async function getEngagementByType(
+  db: D1Database
+): Promise<TypeEngagement[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+        COALESCE(s.hn_type, 'story') as hn_type,
+        COUNT(*) as stories,
+        ROUND(AVG(s.hn_score), 1) as avg_score,
+        ROUND(AVG(s.hn_comments), 1) as avg_comments,
+        ROUND(1.0 * AVG(s.hn_comments) / NULLIF(AVG(s.hn_score), 0), 2) as avg_comment_ratio,
+        ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 3) as avg_hrcb
+      FROM stories s
+      GROUP BY COALESCE(s.hn_type, 'story')
+      ORDER BY stories DESC`
+    )
+    .all<TypeEngagement>();
+  return results;
+}
+
 // --- Model comparison ---
 
 export interface ModelComparisonStat {
@@ -1218,6 +1476,7 @@ export interface DomainSignalProfile {
   avg_hn_score: number | null;
   avg_hn_comments: number | null;
   avg_poster_karma: number | null;
+  avg_setl: number | null;
   dominant_tone: string | null;
   dominant_scope: string | null;
   dominant_reading_level: string | null;
@@ -1242,6 +1501,18 @@ export async function getDomainSignalProfiles(db: D1Database): Promise<Map<strin
          AVG(s.hn_score) as avg_hn_score,
          AVG(s.hn_comments) as avg_hn_comments,
          AVG(u.karma) as avg_poster_karma,
+         (SELECT AVG(
+           CASE WHEN sc.editorial >= sc.structural
+             THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+             ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
+           END
+          )
+          FROM scores sc
+          JOIN stories s3 ON s3.hn_id = sc.hn_id
+          WHERE s3.domain = s.domain
+            AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+            AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
+         ) as avg_setl,
          (SELECT s2.et_primary_tone FROM stories s2
           WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.et_primary_tone IS NOT NULL
           GROUP BY s2.et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1) as dominant_tone,
@@ -1958,4 +2229,458 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
       tone_distribution: {}, scope_distribution: {}, reading_level_distribution: {},
     };
   }
+}
+
+// --- Multi-model (rater) query functions ---
+
+export interface RaterEval {
+  hn_id: number;
+  eval_model: string;
+  eval_provider: string;
+  eval_status: string;
+  eval_error: string | null;
+  hcb_weighted_mean: number | null;
+  hcb_classification: string | null;
+  hcb_json: string | null;
+  hcb_signal_sections: number | null;
+  hcb_nd_count: number | null;
+  hcb_evidence_h: number | null;
+  hcb_evidence_m: number | null;
+  hcb_evidence_l: number | null;
+  content_type: string | null;
+  schema_version: string | null;
+  hcb_theme_tag: string | null;
+  hcb_sentiment_tag: string | null;
+  hcb_executive_summary: string | null;
+  fw_ratio: number | null;
+  fw_observable_count: number | null;
+  fw_inference_count: number | null;
+  hcb_editorial_mean: number | null;
+  hcb_structural_mean: number | null;
+  hcb_setl: number | null;
+  hcb_confidence: number | null;
+  eq_score: number | null;
+  so_score: number | null;
+  et_primary_tone: string | null;
+  et_valence: number | null;
+  sr_score: number | null;
+  pt_flag_count: number | null;
+  td_score: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  evaluated_at: string | null;
+  created_at: string;
+}
+
+export interface RaterScore {
+  hn_id: number;
+  section: string;
+  eval_model: string;
+  sort_order: number;
+  final: number | null;
+  editorial: number | null;
+  structural: number | null;
+  evidence: string | null;
+  directionality: string;
+  note: string;
+  editorial_note: string;
+  structural_note: string;
+  combined: number | null;
+  context_modifier: number | null;
+}
+
+export interface RaterWitness {
+  id: number;
+  hn_id: number;
+  eval_model: string;
+  section: string;
+  fact_type: string;
+  fact_text: string;
+}
+
+/** Get all done rater_evals for a story */
+export async function getRaterEvalsForStory(db: D1Database, hnId: number): Promise<RaterEval[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT * FROM rater_evals WHERE hn_id = ? AND eval_status = 'done' ORDER BY eval_model`
+    )
+    .bind(hnId)
+    .all<RaterEval>();
+  return results;
+}
+
+/** Get rater_scores for a specific model */
+export async function getRaterScores(db: D1Database, hnId: number, evalModel: string): Promise<RaterScore[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT * FROM rater_scores WHERE hn_id = ? AND eval_model = ? ORDER BY sort_order`
+    )
+    .bind(hnId, evalModel)
+    .all<RaterScore>();
+  return results;
+}
+
+/** Get rater_witness for a specific model */
+export async function getRaterWitness(db: D1Database, hnId: number, evalModel: string): Promise<RaterWitness[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT * FROM rater_witness WHERE hn_id = ? AND eval_model = ? ORDER BY section, fact_type`
+    )
+    .bind(hnId, evalModel)
+    .all<RaterWitness>();
+  return results;
+}
+
+/** Get model IDs that have done evals for given hn_ids (for badge display) */
+export async function getRaterEvalCounts(db: D1Database, hnIds: number[]): Promise<Map<number, string[]>> {
+  if (hnIds.length === 0) return new Map();
+
+  const placeholders = hnIds.map(() => '?').join(',');
+  const { results } = await db
+    .prepare(
+      `SELECT hn_id, eval_model FROM rater_evals
+       WHERE hn_id IN (${placeholders}) AND eval_status = 'done'
+       ORDER BY hn_id, eval_model`
+    )
+    .bind(...hnIds)
+    .all<{ hn_id: number; eval_model: string }>();
+
+  const map = new Map<number, string[]>();
+  for (const row of results) {
+    const existing = map.get(row.hn_id) || [];
+    existing.push(row.eval_model);
+    map.set(row.hn_id, existing);
+  }
+  return map;
+}
+
+/** Per-model summary stats for dashboard */
+export async function getRaterSummaryStats(db: D1Database): Promise<{
+  model: string;
+  eval_count: number;
+  avg_score: number | null;
+  avg_confidence: number | null;
+}[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT eval_model AS model,
+                COUNT(*) AS eval_count,
+                AVG(hcb_weighted_mean) AS avg_score,
+                AVG(hcb_confidence) AS avg_confidence
+         FROM rater_evals
+         WHERE eval_status = 'done'
+         GROUP BY eval_model
+         ORDER BY eval_count DESC`
+      )
+      .all<{ model: string; eval_count: number; avg_score: number | null; avg_confidence: number | null }>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+/** Per-model queue/status breakdown for dashboard */
+export async function getRaterStatusBreakdown(db: D1Database): Promise<{
+  model: string;
+  done: number;
+  queued: number;
+  failed: number;
+  pending: number;
+  evaluating: number;
+  total_primary: number;
+}[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT
+           re.eval_model AS model,
+           SUM(CASE WHEN re.eval_status = 'done' THEN 1 ELSE 0 END) AS done,
+           SUM(CASE WHEN re.eval_status = 'queued' THEN 1 ELSE 0 END) AS queued,
+           SUM(CASE WHEN re.eval_status = 'failed' THEN 1 ELSE 0 END) AS failed,
+           SUM(CASE WHEN re.eval_status = 'pending' THEN 1 ELSE 0 END) AS pending,
+           SUM(CASE WHEN re.eval_status = 'evaluating' THEN 1 ELSE 0 END) AS evaluating,
+           (SELECT COUNT(*) FROM stories WHERE eval_status = 'done') AS total_primary
+         FROM rater_evals re
+         GROUP BY re.eval_model
+         ORDER BY re.eval_model`
+      )
+      .all<{ model: string; done: number; queued: number; failed: number; pending: number; evaluating: number; total_primary: number }>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+/** Stories evaluated by 2+ models, with each model's score */
+export interface MultiModelStory {
+  hn_id: number;
+  title: string;
+  url: string | null;
+  domain: string | null;
+  hn_score: number | null;
+  models: { model: string; score: number; classification: string | null; confidence: number | null; setl: number | null; theme: string | null }[];
+}
+
+export async function getMultiModelStories(db: D1Database, limit = 500): Promise<MultiModelStory[]> {
+  const { results: rows } = await db
+    .prepare(
+      `SELECT re.hn_id, re.eval_model, re.hcb_weighted_mean, re.hcb_classification,
+              re.hcb_confidence, re.hcb_setl, re.hcb_theme_tag,
+              s.title, s.url, s.domain, s.hn_score
+       FROM rater_evals re
+       JOIN stories s ON s.hn_id = re.hn_id
+       WHERE re.eval_status = 'done'
+         AND re.hn_id IN (
+           SELECT hn_id FROM rater_evals
+           WHERE eval_status = 'done'
+           GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+         )
+       ORDER BY s.hn_time DESC, re.eval_model
+       LIMIT ?`
+    )
+    .bind(limit * 3)
+    .all<{
+      hn_id: number; eval_model: string; hcb_weighted_mean: number;
+      hcb_classification: string | null; hcb_confidence: number | null;
+      hcb_setl: number | null; hcb_theme_tag: string | null;
+      title: string; url: string | null; domain: string | null; hn_score: number | null;
+    }>();
+
+  const storyMap = new Map<number, MultiModelStory>();
+  for (const row of rows) {
+    let story = storyMap.get(row.hn_id);
+    if (!story) {
+      story = { hn_id: row.hn_id, title: row.title, url: row.url, domain: row.domain, hn_score: row.hn_score, models: [] };
+      storyMap.set(row.hn_id, story);
+    }
+    story.models.push({
+      model: row.eval_model,
+      score: row.hcb_weighted_mean,
+      classification: row.hcb_classification,
+      confidence: row.hcb_confidence,
+      setl: row.hcb_setl,
+      theme: row.hcb_theme_tag,
+    });
+  }
+
+  return [...storyMap.values()].filter(s => s.models.length >= 2).slice(0, limit);
+}
+
+/** Aggregate model comparison stats across all shared stories */
+export async function getModelComparisonAggregates(db: D1Database): Promise<{
+  model: string;
+  story_count: number;
+  avg_score: number;
+  avg_abs_score: number;
+  positive_pct: number;
+  negative_pct: number;
+  neutral_pct: number;
+}[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+         re.eval_model AS model,
+         COUNT(*) AS story_count,
+         AVG(re.hcb_weighted_mean) AS avg_score,
+         AVG(ABS(re.hcb_weighted_mean)) AS avg_abs_score,
+         ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean > 0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS positive_pct,
+         ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean < -0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS negative_pct,
+         ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS neutral_pct
+       FROM rater_evals re
+       WHERE re.eval_status = 'done'
+         AND re.hn_id IN (
+           SELECT hn_id FROM rater_evals
+           WHERE eval_status = 'done'
+           GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+         )
+       GROUP BY re.eval_model
+       ORDER BY re.eval_model`
+    )
+    .all<{ model: string; story_count: number; avg_score: number; avg_abs_score: number; positive_pct: number; negative_pct: number; neutral_pct: number }>();
+  return results;
+}
+
+/** Per-section average scores across all shared stories, per model */
+export async function getModelSectionAverages(db: D1Database): Promise<{
+  model: string;
+  section: string;
+  avg_final: number;
+  count: number;
+}[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+         rs.eval_model AS model,
+         rs.section,
+         AVG(rs.final) AS avg_final,
+         COUNT(*) AS count
+       FROM rater_scores rs
+       WHERE rs.hn_id IN (
+         SELECT hn_id FROM rater_evals
+         WHERE eval_status = 'done'
+         GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+       )
+       AND rs.final IS NOT NULL
+       GROUP BY rs.eval_model, rs.section
+       ORDER BY rs.section, rs.eval_model`
+    )
+    .all<{ model: string; section: string; avg_final: number; count: number }>();
+  return results;
+}
+
+// --- User Intelligence ---
+
+export interface UserIntelligence {
+  username: string;
+  stories: number;
+  evaluated: number;
+  unique_domains: number;
+  total_hn_score: number;
+  avg_hn_score: number;
+  total_comments: number;
+  avg_comments: number;
+  avg_hrcb: number | null;
+  min_hrcb: number | null;
+  max_hrcb: number | null;
+  hrcb_range: number | null;
+  positive_pct: number | null;
+  negative_pct: number | null;
+  neutral_pct: number | null;
+  avg_editorial: number | null;
+  avg_structural: number | null;
+  top_domain: string | null;
+}
+
+export type UserIntelSortOption = 'stories' | 'score' | 'comments' | 'hrcb' | 'domains' | 'avg_score' | 'avg_comments' | 'controversy' | 'evaluated' | 'editorial' | 'structural' | 'positive' | 'negative';
+
+export async function getUserIntelligence(
+  db: D1Database,
+  sort: UserIntelSortOption = 'stories',
+  minStories = 3,
+  limit = 150
+): Promise<UserIntelligence[]> {
+  let orderBy: string;
+  switch (sort) {
+    case 'score': orderBy = 'total_hn_score DESC'; break;
+    case 'comments': orderBy = 'total_comments DESC'; break;
+    case 'avg_comments': orderBy = 'avg_comments DESC'; break;
+    case 'hrcb': orderBy = 'avg_hrcb DESC'; break;
+    case 'domains': orderBy = 'unique_domains DESC'; break;
+    case 'avg_score': orderBy = 'avg_hn_score DESC'; break;
+    case 'controversy': orderBy = 'hrcb_range DESC'; break;
+    case 'evaluated': orderBy = 'evaluated DESC'; break;
+    case 'editorial': orderBy = 'avg_editorial DESC'; break;
+    case 'structural': orderBy = 'avg_structural DESC'; break;
+    case 'positive': orderBy = 'positive_pct DESC'; break;
+    case 'negative': orderBy = 'negative_pct DESC'; break;
+    default: orderBy = 'stories DESC';
+  }
+
+  const { results } = await db
+    .prepare(
+      `WITH user_stats AS (
+        SELECT
+          s.hn_by AS username,
+          COUNT(*) AS stories,
+          SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) AS evaluated,
+          COUNT(DISTINCT s.domain) AS unique_domains,
+          COALESCE(SUM(s.hn_score), 0) AS total_hn_score,
+          ROUND(AVG(s.hn_score), 1) AS avg_hn_score,
+          COALESCE(SUM(s.hn_comments), 0) AS total_comments,
+          ROUND(AVG(s.hn_comments), 1) AS avg_comments,
+          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) AS avg_hrcb,
+          MIN(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) AS min_hrcb,
+          MAX(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) AS max_hrcb,
+          ROUND(MAX(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) -
+                MIN(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) AS hrcb_range,
+          ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean > 0.05 THEN 1 ELSE 0 END) /
+                NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) AS positive_pct,
+          ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean < -0.05 THEN 1 ELSE 0 END) /
+                NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) AS negative_pct,
+          ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END) /
+                NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) AS neutral_pct,
+          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN
+            (SELECT AVG(sc.editorial) FROM scores sc WHERE sc.hn_id = s.hn_id AND sc.editorial IS NOT NULL)
+          END), 4) AS avg_editorial,
+          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN
+            (SELECT AVG(sc.structural) FROM scores sc WHERE sc.hn_id = s.hn_id AND sc.structural IS NOT NULL)
+          END), 4) AS avg_structural
+        FROM stories s
+        WHERE s.hn_by IS NOT NULL AND s.hn_id > 0
+        GROUP BY s.hn_by
+        HAVING stories >= ?
+      ),
+      user_top_domain AS (
+        SELECT s.hn_by AS username, s.domain AS top_domain,
+               ROW_NUMBER() OVER (PARTITION BY s.hn_by ORDER BY COUNT(*) DESC) AS rn
+        FROM stories s
+        WHERE s.hn_by IS NOT NULL AND s.domain IS NOT NULL AND s.hn_id > 0
+        GROUP BY s.hn_by, s.domain
+      )
+      SELECT u.*, COALESCE(d.top_domain, NULL) AS top_domain
+      FROM user_stats u
+      LEFT JOIN user_top_domain d ON d.username = u.username AND d.rn = 1
+      ORDER BY ${orderBy}
+      LIMIT ?`
+    )
+    .bind(minStories, limit)
+    .all<UserIntelligence>();
+  return results;
+}
+
+export interface HourlyPattern {
+  hour: number;
+  stories: number;
+  avg_hn_score: number;
+  avg_comments: number;
+  avg_hrcb: number | null;
+  evaluated: number;
+}
+
+export async function getHourlyPatterns(db: D1Database): Promise<HourlyPattern[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+        CAST(strftime('%H', datetime(s.hn_time, 'unixepoch')) AS INTEGER) AS hour,
+        COUNT(*) AS stories,
+        ROUND(AVG(s.hn_score), 1) AS avg_hn_score,
+        ROUND(AVG(s.hn_comments), 1) AS avg_comments,
+        ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) AS avg_hrcb,
+        SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) AS evaluated
+      FROM stories s
+      WHERE s.hn_time > 0 AND s.hn_id > 0
+      GROUP BY hour
+      ORDER BY hour`
+    )
+    .all<HourlyPattern>();
+  return results;
+}
+
+export interface DayOfWeekPattern {
+  day: number;
+  day_name: string;
+  stories: number;
+  avg_hn_score: number;
+  avg_comments: number;
+  avg_hrcb: number | null;
+}
+
+export async function getDayOfWeekPatterns(db: D1Database): Promise<DayOfWeekPattern[]> {
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const { results } = await db
+    .prepare(
+      `SELECT
+        CAST(strftime('%w', datetime(s.hn_time, 'unixepoch')) AS INTEGER) AS day,
+        COUNT(*) AS stories,
+        ROUND(AVG(s.hn_score), 1) AS avg_hn_score,
+        ROUND(AVG(s.hn_comments), 1) AS avg_comments,
+        ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) AS avg_hrcb
+      FROM stories s
+      WHERE s.hn_time > 0 AND s.hn_id > 0
+      GROUP BY day
+      ORDER BY day`
+    )
+    .all<{ day: number; stories: number; avg_hn_score: number; avg_comments: number; avg_hrcb: number | null }>();
+  return results.map(r => ({ ...r, day_name: dayNames[r.day] || `Day ${r.day}` }));
 }
