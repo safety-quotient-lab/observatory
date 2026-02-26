@@ -155,15 +155,15 @@ interface Archetype {
 }
 
 // Signal dimension definitions for typecodes
-const SIGNAL_DIMS: { code: string; label: string; color: string; extract: (s: FactionSignals) => number }[] = [
-  { code: 'EQ', label: 'epistemic quality', color: '#60a5fa', extract: s => s.eq },
-  { code: 'SO', label: 'solution orientation', color: '#4ade80', extract: s => s.so },
-  { code: 'SR', label: 'stakeholder representation', color: '#a78bfa', extract: s => s.sr },
-  { code: 'TD', label: 'transparency', color: '#34d399', extract: s => s.td },
-  { code: 'PT', label: 'propaganda density', color: '#f87171', extract: s => s.pt },
-  { code: 'AR', label: 'arousal', color: '#fb923c', extract: s => s.arousal },
-  { code: 'VA', label: 'valence', color: '#fbbf24', extract: s => s.valence },
-  { code: 'FW', label: 'fair witness', color: '#22d3ee', extract: s => s.fw },
+const SIGNAL_DIMS: { code: string; fullLabel: string; label: string; color: string; extract: (s: FactionSignals) => number }[] = [
+  { code: 'EQ', fullLabel: 'Epistemic Quality (EQ)', label: 'epistemic quality', color: '#60a5fa', extract: s => s.eq },
+  { code: 'SO', fullLabel: 'Solution Orientation (SO)', label: 'solution orientation', color: '#4ade80', extract: s => s.so },
+  { code: 'SR', fullLabel: 'Stakeholder Representation (SR)', label: 'stakeholder representation', color: '#a78bfa', extract: s => s.sr },
+  { code: 'TD', fullLabel: 'Transparency & Disclosure (TD)', label: 'transparency & disclosure', color: '#34d399', extract: s => s.td },
+  { code: 'PT', fullLabel: 'Propaganda Techniques (PT)', label: 'propaganda techniques', color: '#f87171', extract: s => s.pt },
+  { code: 'AR', fullLabel: 'Arousal (AR)', label: 'arousal', color: '#fb923c', extract: s => s.arousal },
+  { code: 'VA', fullLabel: 'Valence (VA)', label: 'valence', color: '#fbbf24', extract: s => s.valence },
+  { code: 'FW', fullLabel: 'Fair Witness (FW)', label: 'fair witness', color: '#22d3ee', extract: s => s.fw },
 ];
 
 // Compute medians from all domain signal profiles
@@ -273,7 +273,16 @@ const sortedPairsDesc = [...pairs].sort((a, b) => b.similarity - a.similarity);
 const sortedPairsAsc = [...pairs].sort((a, b) => a.similarity - b.similarity);
 
 const signalKeys: (keyof Pick<FactionSignals, 'eq' | 'so' | 'sr' | 'td' | 'pt' | 'fw'>)[] = ['eq', 'so', 'sr', 'td', 'pt', 'fw'];
-const signalLabels: Record<string, string> = { eq: 'EQ', so: 'SO', sr: 'SR', td: 'TD', pt: 'PT', fw: 'FW' };
+const signalFullLabels: Record<string, string> = {
+  EQ: 'Epistemic Quality (EQ)',
+  SO: 'Solution Orientation (SO)',
+  SR: 'Stakeholder Representation (SR)',
+  TD: 'Transparency & Disclosure (TD)',
+  PT: 'Propaganda Techniques (PT)',
+  FW: 'Fair Witness (FW)',
+  AR: 'Arousal (AR)',
+  VA: 'Valence (VA)',
+};
 
 function findSharedFaction(a: string, b: string): string | null {
   for (const f of multiFactions) {
@@ -295,7 +304,7 @@ function getSignalOverlap(a: string, b: string): string {
     { key: 'FW', diff: Math.abs((sa.avg_fw_ratio ?? 0) - (sb.avg_fw_ratio ?? 0)), va: sa.avg_fw_ratio ?? 0, vb: sb.avg_fw_ratio ?? 0 },
   ];
   sigVals.sort((a, b) => a.diff - b.diff);
-  return sigVals[0].key;
+  return signalFullLabels[sigVals[0].key] || sigVals[0].key;
 }
 
 function getSignalDivergence(a: string, b: string): string {
@@ -312,7 +321,8 @@ function getSignalDivergence(a: string, b: string): string {
   ];
   sigVals.sort((a, b) => b.diff - a.diff);
   const top = sigVals[0];
-  return `${top.key}: ${top.va.toFixed(2)} vs ${top.vb.toFixed(2)}`;
+  const label = signalFullLabels[top.key] || top.key;
+  return `${label}: ${top.va.toFixed(2)} vs ${top.vb.toFixed(2)}`;
 }
 
 const top20Alliances = sortedPairsDesc.slice(0, 20);
@@ -405,12 +415,12 @@ function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
         const arch = f.archetype;
         // Normalize values for bars (0-1 scale)
         const bars = [
-          { label: 'EQ', value: clamp01(sig.eq), tip: `Epistemic Quality: ${sig.eq.toFixed(2)}` },
-          { label: 'SO', value: clamp01(sig.so), tip: `Solution Orientation: ${sig.so.toFixed(2)}` },
-          { label: 'SR', value: clamp01(sig.sr), tip: `Stakeholder Rep: ${sig.sr.toFixed(2)}` },
-          { label: 'TD', value: clamp01(sig.td), tip: `Transparency: ${sig.td.toFixed(2)}` },
-          { label: 'PT', value: clamp01(1 - Math.min(sig.pt / 5, 1)), tip: `Propaganda (inv): ${sig.pt.toFixed(1)} flags` },
-          { label: 'FW', value: clamp01(sig.fw), tip: `Fair Witness: ${sig.fw.toFixed(2)}` },
+          { label: 'Epistemic Quality (EQ)', value: clamp01(sig.eq), tip: `Epistemic Quality: ${sig.eq.toFixed(2)}` },
+          { label: 'Solution Orientation (SO)', value: clamp01(sig.so), tip: `Solution Orientation: ${sig.so.toFixed(2)}` },
+          { label: 'Stakeholder Rep (SR)', value: clamp01(sig.sr), tip: `Stakeholder Representation: ${sig.sr.toFixed(2)}` },
+          { label: 'Transparency (TD)', value: clamp01(sig.td), tip: `Transparency & Disclosure: ${sig.td.toFixed(2)}` },
+          { label: 'Propaganda (PT, inv)', value: clamp01(1 - Math.min(sig.pt / 5, 1)), tip: `Propaganda Techniques (inverted): ${sig.pt.toFixed(1)} flags` },
+          { label: 'Fair Witness (FW)', value: clamp01(sig.fw), tip: `Fair Witness ratio: ${sig.fw.toFixed(2)}` },
         ];
         const barWidth = 120;
         return (
@@ -472,16 +482,14 @@ function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
                   {/* Signal bars */}
                   <div>
                     <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Signal Profile</div>
-                    <svg width={barWidth + 32} height={bars.length * 16} xmlns="http://www.w3.org/2000/svg">
-                      {bars.map((b, bi) => (
-                        <g>
-                          <title>{b.tip}</title>
-                          <text x="0" y={bi * 16 + 11} fill="#666" font-size="9" font-family="monospace">{b.label}</text>
-                          <rect x="22" y={bi * 16 + 2} width={barWidth} height="10" rx="2" fill="#1a1a25" />
-                          <rect x="22" y={bi * 16 + 2} width={Math.round(b.value * barWidth)} height="10" rx="2" fill={arch.color} opacity="0.8" />
-                        </g>
-                      ))}
-                    </svg>
+                    {bars.map(b => (
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;" title={b.tip}>
+                        <span style="color: #666; font-size: 8px; font-family: monospace; width: 160px; flex-shrink: 0; text-align: right;">{b.label}</span>
+                        <div style={`width: ${barWidth}px; height: 10px; background: #1a1a25; border-radius: 2px; position: relative;`}>
+                          <div style={`width: ${Math.round(b.value * barWidth)}px; height: 10px; background: ${arch.color}; opacity: 0.8; border-radius: 2px;`}></div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   {/* UDHR fingerprint */}
@@ -584,12 +592,12 @@ function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
               </div>
               <div style="overflow-x: auto;">
                 {(() => {
-                  const sigNames = ['EQ', 'SO', 'SR', 'TD', 'PT (inv)', 'FW'];
+                  const sigNames = ['Epistemic Quality (EQ)', 'Solution Orientation (SO)', 'Stakeholder Rep (SR)', 'Transparency (TD)', 'Propaganda (PT, inv)', 'Fair Witness (FW)'];
                   const nF = multiFactions.length;
                   const barH = 10;
                   const groupH = nF * (barH + 2) + 14;
                   const maxBarW = 200;
-                  const labelW = 60;
+                  const labelW = 170;
                   const totalH = sigNames.length * groupH + 10;
                   return (
                     <svg width={labelW + maxBarW + 10} height={totalH} xmlns="http://www.w3.org/2000/svg">
@@ -702,7 +710,7 @@ function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
               <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
                 <tr style="color: #555;">
                   <td>Domain</td><td style="text-align: right;">HRCB</td><td style="text-align: right;">Pts</td><td style="text-align: right;">Karma</td>
-                  <td style="text-align: right;">EQ</td><td style="text-align: right;">PT</td><td>Tone</td><td>Nearest Faction</td>
+                  <td style="text-align: right;">Epistemic Quality (EQ)</td><td style="text-align: right;">Propaganda (PT)</td><td>Tone</td><td>Nearest Faction</td>
                 </tr>
                 {loneWolves.map(w => (
                   <tr style="border-top: 1px solid #1a1a25;">
