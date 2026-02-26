@@ -4,6 +4,7 @@
  */
 
 import { errorSlugFromStatus, errorSlugFromException, ERROR_TYPES } from './types';
+import { computeSetl } from './compute-aggregates';
 
 // --- Constants ---
 
@@ -15,7 +16,10 @@ export const ALL_SECTIONS = [
 export const EVAL_MODEL = 'claude-haiku-4-5-20251001';
 
 /** Max output tokens for Claude API calls. Slim prompt needs fewer tokens (no aggregates). */
-export const EVAL_MAX_TOKENS = 8192;
+export const EVAL_MAX_TOKENS = 10240;
+
+/** Extended max output tokens for retry when output is truncated. */
+export const EVAL_MAX_TOKENS_EXTENDED = 12288;
 
 /** Max output tokens for full prompt (includes aggregates). */
 export const EVAL_MAX_TOKENS_FULL = 10240;
@@ -904,16 +908,7 @@ export async function writeEvalResult(
   const hcbStructuralMean = structurals.length > 0 ? structurals.reduce((a, b) => a + b, 0) / structurals.length : null;
 
   // SETL
-  const setlValues: number[] = [];
-  for (const s of result.scores) {
-    if (s.editorial !== null && s.structural !== null && (Math.abs(s.editorial) > 0 || Math.abs(s.structural) > 0)) {
-      const diff = Math.abs(s.editorial - s.structural);
-      const maxAbs = Math.max(Math.abs(s.editorial), Math.abs(s.structural));
-      const mag = Math.sqrt(diff * maxAbs);
-      setlValues.push(s.editorial >= s.structural ? mag : -mag);
-    }
-  }
-  const hcbSetl = setlValues.length > 0 ? setlValues.reduce((a, b) => a + b, 0) / setlValues.length : null;
+  const hcbSetl = computeSetl(result.scores);
 
   // Confidence
   let confWeightedSum = 0;
@@ -1148,16 +1143,6 @@ export async function markSkipped(db: D1Database, hnId: number, reason: string):
 }
 
 // --- DCP Cache helpers ---
-
-export async function ensureDcpTable(db: D1Database): Promise<void> {
-  await db.exec(
-    `CREATE TABLE IF NOT EXISTS domain_dcp (
-      domain    TEXT PRIMARY KEY,
-      dcp_json  TEXT NOT NULL,
-      cached_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )`
-  );
-}
 
 export async function getCachedDcp(
   db: D1Database,

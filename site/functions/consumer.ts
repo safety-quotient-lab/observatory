@@ -15,6 +15,7 @@
 import {
   EVAL_MODEL,
   EVAL_MAX_TOKENS,
+  EVAL_MAX_TOKENS_EXTENDED,
   CONTENT_MAX_CHARS,
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
   extractDomain,
@@ -410,8 +411,9 @@ export default {
           throw new Error(`Anthropic API error ${res.status}: ${body}`);
         }
 
-        const data = (await res.json()) as {
+        let data = (await res.json()) as {
           content: Array<{ type: string; text?: string }>;
+          stop_reason?: string;
           usage?: { input_tokens: number; output_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number };
         };
 
@@ -430,6 +432,61 @@ export default {
 
         // Log raw rate limit headers for verification (always, cheap)
         console.log(`[consumer] Rate limit headers for hn_id=${story.hn_id}: req=${rlHeaders.requests_remaining}/${rlHeaders.requests_limit} input=${rlHeaders.input_tokens_remaining}/${rlHeaders.input_tokens_limit} output=${rlHeaders.output_tokens_remaining}/${rlHeaders.output_tokens_limit} req_reset=${rlHeaders.requests_reset} tok_reset=${rlHeaders.tokens_reset}`);
+
+        // Detect output truncation and retry with extended limit
+        if (data.stop_reason === 'max_tokens') {
+          console.warn(`[consumer] Output truncated for hn_id=${story.hn_id} at ${data.usage?.output_tokens} tokens, retrying with extended limit`);
+          await logEvent(db, {
+            hn_id: story.hn_id,
+            event_type: 'eval_retry',
+            severity: 'warn',
+            message: `Output truncated at ${data.usage?.output_tokens} tokens, retrying with ${EVAL_MAX_TOKENS_EXTENDED}`,
+            details: { output_tokens: data.usage?.output_tokens, max_tokens: EVAL_MAX_TOKENS },
+          });
+
+          const retryRes = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+              model: modelToUse,
+              max_tokens: EVAL_MAX_TOKENS_EXTENDED,
+              system: [
+                {
+                  type: 'text',
+                  text: METHODOLOGY_SYSTEM_PROMPT_SLIM,
+                  cache_control: { type: 'ephemeral' },
+                },
+              ],
+              messages: [{ role: 'user', content: userMessage }],
+            }),
+          });
+
+          if (!retryRes.ok) {
+            const retryBody = await retryRes.text();
+            throw new Error(`Anthropic API error ${retryRes.status} on truncation retry: ${retryBody}`);
+          }
+
+          const retryData = (await retryRes.json()) as typeof data;
+
+          // Update rate limit state from retry response
+          const retryRlHeaders = readRateLimitHeaders(retryRes);
+          const retryCacheReadTokens = retryData.usage?.cache_read_input_tokens ?? 0;
+          const retryTotalInput = (retryData.usage?.input_tokens ?? 0) + (retryData.usage?.cache_creation_input_tokens ?? 0) + retryCacheReadTokens;
+          const retryCacheHitRate = retryTotalInput > 0 ? retryCacheReadTokens / retryTotalInput : null;
+          const retryRlState = await updateRateLimitState(env.CONTENT_CACHE, modelToUse, retryRlHeaders, false, retryCacheHitRate);
+          await writeRateLimitSnapshot(db, modelToUse, retryRlState);
+
+          if (retryData.stop_reason === 'max_tokens') {
+            throw new Error(`Output still truncated at ${EVAL_MAX_TOKENS_EXTENDED} tokens for hn_id=${story.hn_id}`);
+          }
+
+          // Replace data with retry response for rest of pipeline
+          data = retryData;
+        }
 
         // Parse slim response (no aggregates)
         const slim = parseSlimEvalResponse(data);

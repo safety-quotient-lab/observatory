@@ -1,33 +1,30 @@
 /**
- * Cron Worker v5: HN crawling + score refresh + queue-based evaluation dispatch.
+ * Cron Worker v6: Thin orchestrator.
  *
- * v5 changes (merged score-refresh worker):
- * - Runs every 5 minutes (was 10)
- * - Robust score refresh via /updates endpoint (batched DB queries, 18-concurrent fetches)
- * - 48h sweep of recent stories every other run (on 10-min marks)
- * - Replaces separate hn-score-refresh worker
- *
- * Inherited from v4:
- * - Queue-based evaluation dispatch to hrcb-eval-queue
- * - Consumer worker (consumer.ts) handles actual evaluation
- *
- * Inherited from v3/v2:
- * - Fetches topstories + askstories + showstories (3 list calls)
- * - Diffs against DB — only fetches details for genuinely new items
- * - Tags stories with hn_type (story/ask/show) from API source
- * - Stores hn_text for self-posts
+ * HN crawling logic lives in src/lib/hn-bot.ts.
+ * This file handles:
+ * - Cron scheduling (scheduled handler)
+ * - HTTP endpoints: /trigger, /calibrate, /calibrate/check, /recalc, /health
+ * - Coverage-driven crawl integration
+ * - Event pruning
  */
 
 import {
   extractDomain,
-  markSkipped,
-  fetchUrlContent,
+  type EvalScore,
 } from '../src/lib/shared-eval';
-import { cleanHtml } from '../src/lib/html-clean';
 import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, runCalibrationCheck } from '../src/lib/calibration';
 import { getPipelineHealth } from '../src/lib/db';
 import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions } from '../src/lib/coverage-crawl';
+import {
+  computeAggregates,
+  computeDerivedScoreFields,
+  computeStoryLevelAggregates,
+  computeFairWitnessAggregates,
+  type DcpElement,
+} from '../src/lib/compute-aggregates';
+import { runCrawlCycle, enqueueForEvaluation } from '../src/lib/hn-bot';
 
 interface Env {
   DB: D1Database;
@@ -37,820 +34,20 @@ interface Env {
   DAILY_EVAL_BUDGET?: string;
 }
 
-interface HNItem {
-  id: number;
-  type: string;
-  title?: string;
-  url?: string;
-  text?: string;
-  score?: number;
-  descendants?: number;
-  by?: string;
-  time?: number;
-  kids?: number[];
-  dead?: boolean;
-  deleted?: boolean;
-}
-
-interface QueueMessage {
-  hn_id: number;
-  url: string | null;
-  title: string;
-  hn_text: string | null;
-  domain: string | null;
-}
-
-// --- Helpers ---
-
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
-  return (await res.json()) as T;
-}
-
-// --- Domain circuit breaker ---
-// Tracks consecutive fetch failures per domain in KV.
-// After DOMAIN_FAIL_THRESHOLD failures, new stories from that domain are auto-skipped.
-
-const DOMAIN_FAIL_THRESHOLD = 5;
-const DOMAIN_FAIL_TTL = 86400; // 24h — auto-resets if we stop seeing the domain
-
-interface DomainHealth {
-  failures: number;
-  lastFailure: string;
-  lastError: string;
-}
-
-async function getDomainHealth(kv: KVNamespace, domain: string): Promise<DomainHealth | null> {
-  try {
-    return await kv.get(`domain-health:${domain}`, 'json') as DomainHealth | null;
-  } catch { return null; }
-}
-
-async function recordDomainFailure(kv: KVNamespace, domain: string, error: string): Promise<DomainHealth> {
-  const existing = await getDomainHealth(kv, domain);
-  const state: DomainHealth = {
-    failures: (existing?.failures ?? 0) + 1,
-    lastFailure: new Date().toISOString(),
-    lastError: error.slice(0, 200),
-  };
-  await kv.put(`domain-health:${domain}`, JSON.stringify(state), { expirationTtl: DOMAIN_FAIL_TTL });
-  return state;
-}
-
-async function clearDomainFailures(kv: KVNamespace, domain: string): Promise<void> {
-  try { await kv.delete(`domain-health:${domain}`); } catch { /* ignore */ }
-}
-
-function isDomainCircuitOpen(health: DomainHealth | null): boolean {
-  return health !== null && health.failures >= DOMAIN_FAIL_THRESHOLD;
-}
-
-/**
- * Fetch item details in parallel batches.
- * ~18 concurrent requests per batch ≈ 60% of ~30 req/s safe limit.
- */
-async function fetchItemsBatched(ids: number[], batchSize = 18): Promise<HNItem[]> {
-  const results: HNItem[] = [];
-  for (let i = 0; i < ids.length; i += batchSize) {
-    const batch = ids.slice(i, i + batchSize);
-    const items = await Promise.all(
-      batch.map(async (id): Promise<HNItem | null> => {
-        try {
-          return await fetchJson<HNItem>(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
-        } catch {
-          return null;
-        }
-      })
-    );
-    for (const item of items) {
-      if (item) results.push(item);
-    }
-  }
-  return results;
-}
-
-// --- Score refresh ---
-
-async function refreshFromUpdates(db: D1Database): Promise<number> {
-  const updates = await fetchJson<{ items: number[]; profiles: string[] }>(
-    'https://hacker-news.firebaseio.com/v0/updates.json'
-  );
-
-  if (!updates.items || updates.items.length === 0) {
-    console.log('[score-refresh] No updated items from HN');
-    return 0;
-  }
-
-  console.log(`[score-refresh] HN reports ${updates.items.length} updated items`);
-
-  // Find which of these items we have in our DB (batched for D1 100-param limit)
-  const ourIds: number[] = [];
-  for (let i = 0; i < updates.items.length; i += 100) {
-    const chunk = updates.items.slice(i, i + 100);
-    const { results } = await db
-      .prepare(
-        `SELECT hn_id FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`
-      )
-      .bind(...chunk)
-      .all<{ hn_id: number }>();
-    for (const r of results) ourIds.push(r.hn_id);
-  }
-
-  if (ourIds.length === 0) {
-    console.log('[score-refresh] No tracked stories in updates list');
-    return 0;
-  }
-
-  console.log(`[score-refresh] ${ourIds.length} tracked stories need refresh`);
-
-  const items = await fetchItemsBatched(ourIds);
-
-  // Separate dead/deleted items from live ones
-  const deadIds = items.filter(item => item.dead || item.deleted).map(item => item.id);
-  const liveItems = items.filter(item => !item.dead && !item.deleted);
-
-  const stmts: D1PreparedStatement[] = [];
-
-  // Mark dead/deleted stories as skipped
-  for (const id of deadIds) {
-    stmts.push(
-      db.prepare(
-        `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story dead/deleted on HN'
-         WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'skipped')`
-      ).bind(id)
-    );
-  }
-  if (deadIds.length > 0) {
-    console.log(`[score-refresh] ${deadIds.length} stories now dead/deleted on HN`);
-  }
-
-  // Update scores for live items
-  for (const item of liveItems) {
-    if (item.score !== undefined || item.descendants !== undefined) {
-      stmts.push(
-        db.prepare(`UPDATE stories SET hn_score = ?, hn_comments = ? WHERE hn_id = ?`)
-          .bind(item.score ?? null, item.descendants ?? null, item.id)
-      );
-    }
-  }
-
-  if (stmts.length > 0) {
-    for (let i = 0; i < stmts.length; i += 100) {
-      await db.batch(stmts.slice(i, i + 100));
-    }
-  }
-
-  return liveItems.filter(item => item.score !== undefined || item.descendants !== undefined).length;
-}
-
-async function refreshRecentStories(db: D1Database): Promise<number> {
-  const { results: recentStories } = await db
-    .prepare(
-      `SELECT hn_id FROM stories
-       WHERE hn_time > unixepoch('now', '-48 hours')
-       ORDER BY hn_time DESC
-       LIMIT 200`
-    )
-    .all<{ hn_id: number }>();
-
-  if (recentStories.length === 0) return 0;
-
-  const ids = recentStories.map(r => r.hn_id);
-  const items = await fetchItemsBatched(ids);
-
-  const stmts = items
-    .filter(item => item.score !== undefined || item.descendants !== undefined)
-    .map(item =>
-      db
-        .prepare(`UPDATE stories SET hn_score = ?, hn_comments = ? WHERE hn_id = ?`)
-        .bind(item.score ?? null, item.descendants ?? null, item.id)
-    );
-
-  if (stmts.length > 0) {
-    for (let i = 0; i < stmts.length; i += 100) {
-      await db.batch(stmts.slice(i, i + 100));
-    }
-  }
-
-  return stmts.length;
-}
-
-// --- Comment crawling ---
-
-async function crawlComments(db: D1Database): Promise<number> {
-  // Find recently evaluated stories that need comment crawling
-  // Only crawl stories with >5 comments and evaluated in last 7 days
-  const { results: stories } = await db
-    .prepare(
-      `SELECT s.hn_id FROM stories s
-       WHERE s.eval_status = 'done'
-         AND s.hn_comments > 5
-         AND s.evaluated_at >= datetime('now', '-7 days')
-         AND s.hn_id NOT IN (SELECT DISTINCT hn_id FROM story_comments)
-       ORDER BY s.hn_comments DESC
-       LIMIT 5`
-    )
-    .all<{ hn_id: number }>();
-
-  if (stories.length === 0) return 0;
-
-  let totalCrawled = 0;
-
-  for (const story of stories) {
-    try {
-      // Fetch the story item to get kids (top-level comment IDs)
-      const item = await fetchJson<{
-        id: number;
-        kids?: number[];
-      }>(`https://hacker-news.firebaseio.com/v0/item/${story.hn_id}.json`);
-
-      if (!item.kids || item.kids.length === 0) continue;
-
-      // Fetch top-level comments (up to 20)
-      const topCommentIds = item.kids.slice(0, 20);
-      const topComments = await fetchItemsBatched(topCommentIds);
-
-      const stmts: D1PreparedStatement[] = [];
-
-      // Insert top-level comments (depth 0)
-      const validTopComments = topComments.filter(c => c.text && !c.dead && !c.deleted);
-      for (const c of validTopComments) {
-        stmts.push(
-          db
-            .prepare(
-              `INSERT OR IGNORE INTO story_comments (hn_id, comment_id, parent_id, author, text, time, depth, hn_score)
-               VALUES (?, ?, ?, ?, ?, ?, 0, ?)`
-            )
-            .bind(
-              story.hn_id,
-              c.id,
-              story.hn_id,
-              c.by || null,
-              c.text || null,
-              c.time || null,
-              c.score ?? null
-            )
-        );
-      }
-
-      // Crawl depth-1 replies for top comments with kids
-      const replyIds: number[] = [];
-      const replyParents = new Map<number, number>(); // reply_id -> parent_comment_id
-      for (const c of validTopComments) {
-        if (c.kids && c.kids.length > 0) {
-          for (const kid of c.kids.slice(0, 5)) { // Up to 5 replies per top comment
-            replyIds.push(kid);
-            replyParents.set(kid, c.id);
-          }
-        }
-      }
-
-      if (replyIds.length > 0) {
-        const replies = await fetchItemsBatched(replyIds);
-        for (const r of replies) {
-          if (!r.text || r.dead || r.deleted) continue;
-          stmts.push(
-            db
-              .prepare(
-                `INSERT OR IGNORE INTO story_comments (hn_id, comment_id, parent_id, author, text, time, depth, hn_score)
-                 VALUES (?, ?, ?, ?, ?, ?, 1, ?)`
-              )
-              .bind(
-                story.hn_id,
-                r.id,
-                replyParents.get(r.id) || story.hn_id,
-                r.by || null,
-                r.text || null,
-                r.time || null,
-                r.score ?? null
-              )
-          );
-        }
-      }
-
-      if (stmts.length > 0) {
-        for (let i = 0; i < stmts.length; i += 100) {
-          await db.batch(stmts.slice(i, i + 100));
-        }
-        totalCrawled += stmts.length;
-      }
-    } catch (err) {
-      console.error(`[comments] Failed for hn_id=${story.hn_id}:`, err);
-    }
-  }
-
-  return totalCrawled;
-}
-
-// --- User profile crawling ---
-
-async function crawlUserProfiles(db: D1Database): Promise<number> {
-  // Find story submitters whose profiles we haven't cached (or cached >7 days ago)
-  const { results: users } = await db
-    .prepare(
-      `SELECT DISTINCT s.hn_by FROM stories s
-       WHERE s.hn_by IS NOT NULL
-         AND s.hn_by NOT IN (
-           SELECT username FROM hn_users WHERE cached_at >= datetime('now', '-7 days')
-         )
-       ORDER BY s.hn_time DESC
-       LIMIT 20`
-    )
-    .all<{ hn_by: string }>();
-
-  if (users.length === 0) return 0;
-
-  const profiles = await Promise.all(
-    users.map(async (u): Promise<{ username: string; karma: number | null; created: number | null; about: string | null } | null> => {
-      try {
-        const data = await fetchJson<{ id: string; karma?: number; created?: number; about?: string }>(
-          `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(u.hn_by)}.json`
-        );
-        if (!data) return null;
-        return {
-          username: data.id,
-          karma: data.karma ?? null,
-          created: data.created ?? null,
-          about: data.about?.slice(0, 2000) ?? null,
-        };
-      } catch {
-        return null;
-      }
-    })
-  );
-
-  const stmts = profiles
-    .filter((p): p is NonNullable<typeof p> => p !== null)
-    .map(p =>
-      db
-        .prepare(
-          `INSERT INTO hn_users (username, karma, created, about, cached_at)
-           VALUES (?, ?, ?, ?, datetime('now'))
-           ON CONFLICT(username) DO UPDATE SET karma = ?, created = ?, about = ?, cached_at = datetime('now')`
-        )
-        .bind(p.username, p.karma, p.created, p.about, p.karma, p.created, p.about)
-    );
-
-  if (stmts.length > 0) {
-    for (let i = 0; i < stmts.length; i += 100) {
-      await db.batch(stmts.slice(i, i + 100));
-    }
-  }
-
-  return stmts.length;
-}
-
-// --- Queue dispatch ---
-
-async function enqueueForEvaluation(
-  db: D1Database,
-  queue: Queue,
-  kv: KVNamespace,
-): Promise<void> {
-  const limit = 100; // CF Queue sendBatch max; consumer rate-limits via 429/529 backoff
-  console.log(`[queue] Dispatching up to ${limit} pending stories`);
-
-  // Priority: HN top stories rank first (lower rank = higher priority),
-  // then composite of hn_score + HOTL extremity for unranked stories.
-  const { results: pending } = await db
-    .prepare(
-      `SELECT hn_id, url, title, domain, hn_text FROM stories
-       WHERE eval_status = 'pending'
-         AND (url IS NOT NULL OR hn_text IS NOT NULL)
-       ORDER BY
-         CASE WHEN hn_rank IS NOT NULL THEN 0 ELSE 1 END,
-         hn_rank ASC,
-         (
-           COALESCE(hn_score, 0) / 500.0
-           + 0.3 * CASE
-              WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
-              THEN ABS(CAST(hn_comments - hn_score AS REAL) / (hn_comments + hn_score))
-              ELSE 0
-            END
-         ) DESC
-       LIMIT ?`
-    )
-    .bind(limit)
-    .all<{
-      hn_id: number;
-      url: string | null;
-      title: string;
-      domain: string | null;
-      hn_text: string | null;
-    }>();
-
-  if (pending.length === 0) {
-    console.log('[queue] No pending stories to enqueue');
-    return;
-  }
-
-  console.log(`[queue] Enqueuing ${pending.length} stories`);
-
-  const messages: { body: QueueMessage }[] = [];
-  const enqueuedIds: number[] = [];
-
-  for (const story of pending) {
-    // Skip binary content
-    if (story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
-      await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
-      continue;
-    }
-
-    // Skip self-posts with no text
-    if (!story.url && (!story.hn_text || story.hn_text.length < 50)) {
-      await markSkipped(db, story.hn_id, 'No URL and no text');
-      continue;
-    }
-
-    messages.push({
-      body: {
-        hn_id: story.hn_id,
-        url: story.url,
-        title: story.title,
-        hn_text: story.hn_text,
-        domain: story.domain,
-      },
-    });
-    enqueuedIds.push(story.hn_id);
-  }
-
-  if (messages.length === 0) {
-    console.log('[queue] No valid stories after filtering');
-    return;
-  }
-
-  // Pre-fetch URL content and store in KV for consumer to use
-  let prefetchedCount = 0;
-  let prefetchFailed = 0;
-  let circuitBroken = 0;
-  for (const msg of messages) {
-    if (!msg.body.url) continue; // Self-posts don't need pre-fetching
-    const domain = msg.body.domain;
-
-    // Check domain circuit breaker before fetching
-    if (domain) {
-      const health = await getDomainHealth(kv, domain);
-      if (isDomainCircuitOpen(health)) {
-        circuitBroken++;
-        continue; // Skip pre-fetch, consumer will also fail but that's fine — it'll DLQ and we'll notice
-      }
-    }
-
-    const kvKey = `content:${msg.body.hn_id}`;
-    try {
-      const existing = await kv.get(kvKey);
-      if (existing) continue; // Already cached
-      const rawHtml = await fetchUrlContent(msg.body.url);
-      const cleaned = cleanHtml(rawHtml, 20000);
-      if (cleaned.length >= 50) {
-        await kv.put(kvKey, cleaned, { expirationTtl: 86400 }); // 24h TTL
-        prefetchedCount++;
-        // Clear domain failures on success
-        if (domain) await clearDomainFailures(kv, domain);
-      }
-    } catch (err) {
-      prefetchFailed++;
-      if (domain) {
-        const health = await recordDomainFailure(kv, domain, String(err));
-        if (health.failures === DOMAIN_FAIL_THRESHOLD) {
-          console.warn(`[queue] Domain circuit breaker opened for ${domain} (${health.failures} consecutive failures)`);
-          await logEvent(db, { event_type: 'fetch_error', severity: 'warn', message: `Domain circuit breaker opened: ${domain}`, details: { domain, failures: health.failures, last_error: health.lastError } });
-        }
-      }
-    }
-  }
-  if (prefetchedCount > 0 || prefetchFailed > 0) {
-    console.log(`[queue] Pre-fetch: ${prefetchedCount} ok, ${prefetchFailed} failed, ${circuitBroken} circuit-broken`);
-  }
-
-  // Send to queue in batches of 25 (Queue.sendBatch limit)
-  for (let i = 0; i < messages.length; i += 25) {
-    const batch = messages.slice(i, i + 25);
-    await queue.sendBatch(batch);
-  }
-
-  // Mark stories as queued
-  const updateStmts = enqueuedIds.map(hnId =>
-    db
-      .prepare(`UPDATE stories SET eval_status = 'queued' WHERE hn_id = ?`)
-      .bind(hnId)
-  );
-
-  if (updateStmts.length > 0) {
-    await db.batch(updateStmts);
-  }
-
-  console.log(`[queue] Enqueued ${messages.length} stories`);
-}
-
 // --- Main cron handler ---
 
 export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     const db = env.DB;
-    const cronStartTime = Date.now();
+    const minute = new Date(event.scheduledTime).getMinutes();
 
-    // ─── STEP 1: Fetch story ID lists from HN API (5 calls) ───
+    // ─── HN crawl cycle (fetch, diff, insert, refresh, comments, users, re-eval, enqueue) ───
 
-    let topIds: number[] = [];
-    let newIds_hn: number[] = [];
-    let bestIds: number[] = [];
-    let askIds: number[] = [];
-    let showIds: number[] = [];
-    let jobIds: number[] = [];
+    const crawlResult = await runCrawlCycle(db, env.EVAL_QUEUE, env.CONTENT_CACHE, minute);
+
+    // ─── Coverage-driven crawl strategies ───
 
     try {
-      [topIds, newIds_hn, bestIds, askIds, showIds, jobIds] = await Promise.all([
-        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/topstories.json'),
-        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/newstories.json'),
-        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/beststories.json'),
-        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/askstories.json'),
-        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/showstories.json'),
-        fetchJson<number[]>('https://hacker-news.firebaseio.com/v0/jobstories.json'),
-      ]);
-    } catch (err) {
-      console.error('Failed to fetch HN story lists:', err);
-      await logEvent(db, { event_type: 'cron_error', severity: 'error', message: `HN fetch failed: ${err}`, details: { phase: 'hn_fetch', error: String(err) } });
-      return;
-    }
-
-    // Build type map: which list(s) each ID appeared in
-    const typeMap = new Map<number, string>();
-    for (const id of topIds) typeMap.set(id, 'story');
-    for (const id of newIds_hn) typeMap.set(id, typeMap.get(id) || 'story');
-    for (const id of bestIds) typeMap.set(id, typeMap.get(id) || 'story');
-    for (const id of jobIds) typeMap.set(id, 'job');    // job before show/ask
-    for (const id of showIds) typeMap.set(id, 'show');  // override if in both
-    for (const id of askIds) typeMap.set(id, 'ask');     // ask takes priority
-
-    // Track which feed lists each story appeared on
-    const feedMap = new Map<number, Set<string>>();
-    function tagFeed(ids: number[], feed: string) {
-      for (const id of ids) {
-        let s = feedMap.get(id);
-        if (!s) { s = new Set(); feedMap.set(id, s); }
-        s.add(feed);
-      }
-    }
-    tagFeed(topIds, 'top');
-    tagFeed(newIds_hn, 'new');
-    tagFeed(bestIds, 'best');
-    tagFeed(askIds, 'ask');
-    tagFeed(showIds, 'show');
-    tagFeed(jobIds, 'job');
-
-    // Top 5 pages (~150 items) are auto-evaluated; rest are tracked but skipped
-    const TOP_PAGES = 5;
-    const ITEMS_PER_PAGE = 30;
-    const autoEvalIds = new Set(topIds.slice(0, TOP_PAGES * ITEMS_PER_PAGE));
-
-    const allIds = [...new Set([
-      ...topIds.slice(0, 200),
-      ...newIds_hn.slice(0, 200),
-      ...bestIds.slice(0, 200),
-      ...askIds,
-      ...showIds,
-      ...jobIds,
-    ])];
-    console.log(`HN lists: ${topIds.length} top, ${newIds_hn.length} new, ${bestIds.length} best, ${askIds.length} ask, ${showIds.length} show, ${jobIds.length} job → ${allIds.length} unique`);
-
-    // ─── STEP 2: Diff against DB — find genuinely new IDs ───
-
-    // D1 limits bind params to 100, so batch the IN query
-    const existingIds = new Set<number>();
-    for (let i = 0; i < allIds.length; i += 100) {
-      const chunk = allIds.slice(i, i + 100);
-      const { results: existingRows } = await db
-        .prepare(
-          `SELECT hn_id FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`,
-        )
-        .bind(...chunk)
-        .all<{ hn_id: number }>();
-      for (const r of existingRows) existingIds.add(r.hn_id);
-    }
-
-    const newIds = allIds.filter((id) => !existingIds.has(id));
-    console.log(`${newIds.length} new stories to fetch (${existingIds.size} already in DB)`);
-
-    // ─── STEP 3: Fetch details only for new IDs ───
-
-    let insertedCount = 0;
-    // Fetch in parallel batches of 20
-    for (let i = 0; i < newIds.length; i += 20) {
-      const batch = newIds.slice(i, i + 20);
-      const items = await Promise.all(
-        batch.map(async (id): Promise<HNItem | null> => {
-          try {
-            return await fetchJson<HNItem>(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      const validItems = items
-        .filter((item): item is HNItem => item !== null && item.type === 'story' && !!item.title);
-
-      const stmts = validItems.map((item) => {
-          const domain = item.url ? extractDomain(item.url) : null;
-          const hnType = typeMap.get(item.id) || 'story';
-          // Only auto-evaluate stories in top 5 pages of topstories
-          const status = autoEvalIds.has(item.id) ? 'pending' : 'skipped';
-          return db
-            .prepare(
-              `INSERT OR IGNORE INTO stories (hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, hn_type, hn_text, eval_status, eval_error)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            )
-            .bind(
-              item.id,
-              item.url || null,
-              item.title || 'Untitled',
-              domain,
-              item.score || null,
-              item.descendants || null,
-              item.by || null,
-              item.time || Math.floor(Date.now() / 1000),
-              hnType,
-              item.text || null,
-              status,
-              status === 'skipped' ? 'Not in top 5 pages' : null
-            );
-        });
-
-      if (stmts.length > 0) {
-        await db.batch(stmts);
-        insertedCount += stmts.length;
-      }
-      // Track inserted IDs so feed tracking can filter to valid FK refs
-      for (const item of validItems) existingIds.add(item.id);
-    }
-    console.log(`Inserted ${insertedCount} new stories`);
-
-    // ─── STEP 3.1: Record feed source memberships ───
-    // Only insert feeds for IDs that actually exist in stories table
-    // (existingIds has pre-existing ones, newIds that passed insert are also in DB now)
-
-    try {
-      const feedStmts: D1PreparedStatement[] = [];
-      for (const [id, feeds] of feedMap) {
-        if (!existingIds.has(id)) continue; // skip IDs not in stories table
-        for (const feed of feeds) {
-          feedStmts.push(
-            db
-              .prepare(
-                `INSERT OR IGNORE INTO story_feeds (hn_id, feed) VALUES (?, ?)`
-              )
-              .bind(id, feed)
-          );
-        }
-      }
-      // Batch in chunks of 100
-      for (let i = 0; i < feedStmts.length; i += 100) {
-        await db.batch(feedStmts.slice(i, i + 100));
-      }
-      console.log(`[feeds] Recorded feed memberships for ${feedMap.size} stories`);
-    } catch (err) {
-      console.error('Feed tracking failed (non-fatal):', err);
-      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Feed tracking failed`, details: { phase: 'feeds', error: String(err) } });
-    }
-
-    // ─── STEP 3.5: Update hn_rank on stories table ───
-    // Clear all existing ranks, then set current rank for top stories
-    try {
-      await db.prepare(`UPDATE stories SET hn_rank = NULL WHERE hn_rank IS NOT NULL`).run();
-
-      const topToRank = topIds.slice(0, 200); // Top 200 positions
-      const rankStmts = topToRank.map((hnId, idx) =>
-        db.prepare(`UPDATE stories SET hn_rank = ? WHERE hn_id = ?`).bind(idx + 1, hnId)
-      );
-      for (let i = 0; i < rankStmts.length; i += 100) {
-        await db.batch(rankStmts.slice(i, i + 100));
-      }
-      console.log(`[rank] Updated hn_rank for ${topToRank.length} top stories`);
-
-      // Promote skipped stories that have risen into top 5 pages
-      const autoEvalList = [...autoEvalIds];
-      let promoted = 0;
-      for (let i = 0; i < autoEvalList.length; i += 100) {
-        const chunk = autoEvalList.slice(i, i + 100);
-        const { meta } = await db
-          .prepare(
-            `UPDATE stories SET eval_status = 'pending', eval_error = NULL
-             WHERE eval_status = 'skipped'
-               AND hn_id IN (${chunk.map(() => '?').join(',')})`
-          )
-          .bind(...chunk)
-          .run();
-        promoted += meta?.changes ?? 0;
-      }
-      if (promoted > 0) console.log(`[rank] Promoted ${promoted} stories to pending (entered top 5 pages)`);
-    } catch (err) {
-      console.error('Rank update failed (non-fatal):', err);
-      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Rank update failed`, details: { phase: 'rank', error: String(err) } });
-    }
-
-    // ─── STEP 3.6: Record rank snapshots for tracked stories ───
-
-    try {
-      // Record rank positions for top stories we track
-      const topTracked = topIds.slice(0, 60); // Top 60 positions
-      const trackedInDb: number[] = [];
-      for (let i = 0; i < topTracked.length; i += 100) {
-        const chunk = topTracked.slice(i, i + 100);
-        const { results } = await db
-          .prepare(`SELECT hn_id FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`)
-          .bind(...chunk)
-          .all<{ hn_id: number }>();
-        for (const r of results) trackedInDb.push(r.hn_id);
-      }
-
-      if (trackedInDb.length > 0) {
-        // Get current scores for these stories
-        const scoreMap = new Map<number, { score: number | null; comments: number | null }>();
-        for (let i = 0; i < trackedInDb.length; i += 100) {
-          const chunk = trackedInDb.slice(i, i + 100);
-          const { results } = await db
-            .prepare(`SELECT hn_id, hn_score, hn_comments FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`)
-            .bind(...chunk)
-            .all<{ hn_id: number; hn_score: number | null; hn_comments: number | null }>();
-          for (const r of results) scoreMap.set(r.hn_id, { score: r.hn_score, comments: r.hn_comments });
-        }
-
-        const snapshotStmts = trackedInDb.map(hnId => {
-          const rank = topIds.indexOf(hnId) + 1; // 1-indexed rank
-          const data = scoreMap.get(hnId);
-          return db
-            .prepare(
-              `INSERT INTO story_snapshots (hn_id, hn_rank, hn_score, hn_comments, list_type)
-               VALUES (?, ?, ?, ?, 'top')`
-            )
-            .bind(hnId, rank > 0 ? rank : null, data?.score ?? null, data?.comments ?? null);
-        });
-
-        // D1 batch limit is 100
-        for (let i = 0; i < snapshotStmts.length; i += 100) {
-          await db.batch(snapshotStmts.slice(i, i + 100));
-        }
-        console.log(`[snapshots] Recorded ${trackedInDb.length} rank snapshots`);
-      }
-    } catch (err) {
-      console.error('Snapshot recording failed (non-fatal):', err);
-      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Snapshot recording failed`, details: { phase: 'snapshots', error: String(err) } });
-    }
-
-    // ─── STEP 4: Refresh scores/comments ───
-
-    try {
-      // Phase 1: Refresh items from /v0/updates.json (batched, all matching items)
-      const updatedCount = await refreshFromUpdates(db);
-      console.log(`[score-refresh] Updated ${updatedCount} stories from /updates`);
-
-      // Phase 2: Sweep recent stories every other run (on 10-min marks)
-      const minute = new Date(event.scheduledTime).getMinutes();
-      if (minute % 10 === 0) {
-        const sweepCount = await refreshRecentStories(db);
-        console.log(`[score-refresh] Swept ${sweepCount} recent stories`);
-      }
-    } catch (err) {
-      console.error('Score refresh failed (non-fatal):', err);
-      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Score refresh failed`, details: { phase: 'score_refresh', error: String(err) } });
-    }
-
-    // ─── STEP 4.5: Crawl comments for evaluated stories ───
-
-    try {
-      const minute = new Date(event.scheduledTime).getMinutes();
-      if (minute % 10 === 5) { // Run on 5, 15, 25, 35, 45, 55 marks
-        const commentCount = await crawlComments(db);
-        if (commentCount > 0) {
-          console.log(`[comments] Crawled ${commentCount} comments`);
-        }
-      }
-    } catch (err) {
-      console.error('Comment crawling failed (non-fatal):', err);
-      await logEvent(db, { event_type: 'crawl_error', severity: 'warn', message: `Comment crawling failed`, details: { phase: 'comments', error: String(err) } });
-    }
-
-    // ─── STEP 4.7: Crawl user profiles for poster analysis ───
-
-    try {
-      const minute = new Date(event.scheduledTime).getMinutes();
-      if (minute % 15 === 0) { // Run on 0, 15, 30, 45 marks
-        const userCount = await crawlUserProfiles(db);
-        if (userCount > 0) {
-          console.log(`[users] Cached ${userCount} user profiles`);
-        }
-      }
-    } catch (err) {
-      console.error('User profile crawling failed (non-fatal):', err);
-      await logEvent(db, { event_type: 'crawl_error', severity: 'warn', message: `User profile crawling failed`, details: { phase: 'users', error: String(err) } });
-    }
-
-    // ─── STEP 4.75: Coverage-driven crawl strategies ───
-
-    try {
-      const minute = new Date(event.scheduledTime).getMinutes();
       const coverageResult = await runScheduledCoverageStrategy(minute, db);
       if (coverageResult && coverageResult.inserted > 0) {
         console.log(`[coverage] ${coverageResult.strategy}: inserted ${coverageResult.inserted} stories`);
@@ -866,68 +63,8 @@ export default {
       await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Coverage crawl failed`, details: { phase: 'coverage_crawl', error: String(err) } });
     }
 
-    // ─── STEP 4.8: Re-evaluate viral stories ───
-    // Stories that gained significant score after initial evaluation may have
-    // changed content or deserve a fresh look. Trigger re-eval if:
-    // - hn_score now >= 5x what it was at eval time, OR
-    // - hn_score increased by >= 200 since eval
-    // Only re-evaluate stories done >6h ago (avoid churn on fresh evals).
-    // Cap at 10 re-evals per cycle to avoid flooding the queue.
+    // ─── Event pruning (90-day retention, once per hour) ───
 
-    try {
-      // Find stories that are currently ranked on HN front page, were evaluated >6h ago,
-      // and have only been evaluated once — these are worth a fresh look.
-      // Also catch stories with hn_score >= 300 that were evaluated early.
-      // Cap at 5 per cycle to avoid flooding the queue.
-      const { results: reEvalCandidates } = await db
-        .prepare(
-          `SELECT s.hn_id, s.hn_score, s.hn_rank FROM stories s
-           WHERE s.eval_status = 'done'
-             AND s.evaluated_at < datetime('now', '-6 hours')
-             AND s.hcb_weighted_mean IS NOT NULL
-             AND (s.hn_rank <= 30 OR s.hn_score >= 300)
-             AND (SELECT COUNT(*) FROM eval_history WHERE hn_id = s.hn_id) < 2
-           ORDER BY COALESCE(s.hn_rank, 999) ASC, s.hn_score DESC
-           LIMIT 5`
-        )
-        .all<{ hn_id: number; hn_score: number | null; hn_rank: number | null }>();
-
-      if (reEvalCandidates.length > 0) {
-        const reEvalIds = reEvalCandidates.map(r => r.hn_id);
-        for (const id of reEvalIds) {
-          await db.prepare(`UPDATE stories SET eval_status = 'pending', eval_error = NULL WHERE hn_id = ?`).bind(id).run();
-        }
-        console.log(`[re-eval] Triggered re-evaluation for ${reEvalIds.length} high-value stories: ${reEvalIds.join(', ')}`);
-        await logEvent(db, { event_type: 'cron_run', severity: 'info', message: `Re-eval triggered for ${reEvalIds.length} viral stories`, details: { phase: 're_eval', count: reEvalIds.length, hn_ids: reEvalIds } });
-      }
-    } catch (err) {
-      console.error('Re-eval trigger failed (non-fatal):', err);
-    }
-
-    // ─── STEP 5: Enqueue pending stories for evaluation ───
-
-    // Also reset any stories stuck in 'evaluating' for >1 hour back to pending
-    await db
-      .prepare(
-        `UPDATE stories SET eval_status = 'pending'
-         WHERE eval_status IN ('evaluating', 'queued')
-           AND (evaluated_at IS NULL OR evaluated_at < datetime('now', '-1 hour'))`
-      )
-      .run();
-
-    await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
-
-    // Skip self-posts with no text AND no URL (truly empty)
-    await db
-      .prepare(
-        `UPDATE stories SET eval_status = 'skipped', eval_error = 'No URL and no text'
-         WHERE eval_status = 'pending' AND url IS NULL AND (hn_text IS NULL OR LENGTH(hn_text) < 50)`
-      )
-      .run();
-
-    // ─── STEP 6: Event pruning (90-day retention, once per hour) ───
-
-    const minute = new Date(event.scheduledTime).getMinutes();
     if (minute === 0) {
       const pruned = await pruneEvents(db, 90);
       if (pruned > 0) console.log(`[events] Pruned ${pruned} events older than 90 days`);
@@ -938,12 +75,9 @@ export default {
     await logEvent(db, {
       event_type: 'cron_run',
       severity: 'info',
-      message: `Cron: ${insertedCount} new, ${allIds.length} unique stories`,
+      message: `Cron: ${crawlResult.stories_new} new, ${crawlResult.stories_found} unique stories`,
       details: {
-        stories_found: allIds.length,
-        stories_new: insertedCount,
-        feeds: { top: topIds.length, new: newIds_hn.length, best: bestIds.length, ask: askIds.length, show: showIds.length, job: jobIds.length },
-        duration_ms: Date.now() - cronStartTime,
+        ...crawlResult,
       },
     });
 
@@ -971,7 +105,7 @@ export default {
 
       const sweep = url.searchParams.get('sweep');
 
-      // No sweep param → full cron cycle (unchanged behavior)
+      // No sweep param → full cron cycle
       if (!sweep) {
         ctx.waitUntil(
           this.scheduled({ scheduledTime: Date.now(), cron: '*/5 * * * *' } as ScheduledEvent, env, ctx)
@@ -983,7 +117,6 @@ export default {
       const rawLimit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 200);
 
       if (sweep === 'failed') {
-        // Reset failed evals back to pending so queue dispatch picks them up
         const { meta } = await db
           .prepare(
             `UPDATE stories SET eval_status = 'pending', eval_error = NULL
@@ -1018,7 +151,6 @@ export default {
       if (sweep === 'skipped') {
         const minScore = parseInt(url.searchParams.get('min_score') || '50', 10) || 50;
 
-        // Promote high-value skipped stories (only "Not in top 5 pages") to pending
         const { meta } = await db
           .prepare(
             `UPDATE stories SET eval_status = 'pending', eval_error = NULL
@@ -1056,7 +188,6 @@ export default {
       if (sweep === 'coverage') {
         const strategyParam = url.searchParams.get('strategy') || 'all';
 
-        // Validate strategy name
         if (strategyParam !== 'all' && !STRATEGY_NAMES.includes(strategyParam as StrategyName)) {
           return new Response(JSON.stringify({
             error: `Unknown strategy: ${strategyParam}`,
@@ -1064,7 +195,6 @@ export default {
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // Build strategy options from query params
         const articleParam = url.searchParams.get('article');
         const strategyOptions: StrategyOptions = {};
         if (articleParam) strategyOptions.article = articleParam;
@@ -1094,7 +224,6 @@ export default {
         });
       }
 
-      // Unknown sweep type
       return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage'] }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
@@ -1111,11 +240,9 @@ export default {
 
       for (let i = 0; i < CALIBRATION_SET.length; i++) {
         const cal = CALIBRATION_SET[i];
-        // Use negative hn_ids: -1001 to -1015 for calibration URLs
         const syntheticId = -(1000 + i + 1);
         const domain = extractDomain(cal.url);
 
-        // Upsert into stories table so the consumer can write results
         await db
           .prepare(
             `INSERT INTO stories (hn_id, title, url, domain, hn_score, hn_comments, hn_time, hn_type, eval_status)
@@ -1125,7 +252,6 @@ export default {
           .bind(syntheticId, `[CAL] ${cal.label} (${cal.slot})`, cal.url, domain, Math.floor(Date.now() / 1000))
           .run();
 
-        // Enqueue for evaluation
         await env.EVAL_QUEUE.send({
           hn_id: syntheticId,
           url: cal.url,
@@ -1156,7 +282,6 @@ export default {
 
       const db = env.DB;
 
-      // Collect scores for calibration URLs (by synthetic hn_id)
       const scores = new Map<string, number | null>();
       let pendingCount = 0;
 
@@ -1177,24 +302,20 @@ export default {
         }
       }
 
-      // Run the calibration check
       const summary = runCalibrationCheck(scores);
 
-      // Get the methodology hash from any completed calibration eval
       let methodologyHash = 'unknown';
       const hashRow = await db
         .prepare(`SELECT methodology_hash FROM stories WHERE hn_id < -1000 AND hn_id >= -1015 AND methodology_hash IS NOT NULL LIMIT 1`)
         .first<{ methodology_hash: string }>();
       if (hashRow) methodologyHash = hashRow.methodology_hash;
 
-      // Get the model from eval_history
       let model = 'unknown';
       const modelRow = await db
         .prepare(`SELECT eval_model FROM eval_history WHERE hn_id < -1000 AND hn_id >= -1015 ORDER BY id DESC LIMIT 1`)
         .first<{ eval_model: string }>();
       if (modelRow) model = modelRow.eval_model;
 
-      // Write to calibration_runs table
       await db
         .prepare(
           `INSERT INTO calibration_runs (model, methodology_hash, total_urls, passed, failed, skipped, status, details_json)
@@ -1238,6 +359,209 @@ export default {
       });
     }
 
+    // POST /recalc — recompute aggregates for stories with eval_status='rescoring'
+    if (path === '/recalc' && request.method === 'POST') {
+      const authErr = checkAuth();
+      if (authErr) return authErr;
+
+      const db = env.DB;
+
+      // Content type → channel weights lookup (from methodology section 2)
+      const CHANNEL_WEIGHTS: Record<string, { editorial: number; structural: number }> = {
+        ED: { editorial: 0.6, structural: 0.4 },
+        PO: { editorial: 0.3, structural: 0.7 },
+        LP: { editorial: 0.3, structural: 0.7 },
+        PR: { editorial: 0.5, structural: 0.5 },
+        AC: { editorial: 0.4, structural: 0.6 },
+        MI: { editorial: 0.7, structural: 0.3 },
+        AD: { editorial: 0.2, structural: 0.8 },
+        HR: { editorial: 0.5, structural: 0.5 },
+        CO: { editorial: 0.4, structural: 0.6 },
+        ME: { editorial: 0.5, structural: 0.5 },
+        MX: { editorial: 0.5, structural: 0.5 },
+      };
+
+      const { results: stories } = await db
+        .prepare(
+          `SELECT hn_id, domain, content_type FROM stories
+           WHERE eval_status = 'rescoring'
+           LIMIT 50`
+        )
+        .all<{ hn_id: number; domain: string | null; content_type: string | null }>();
+
+      if (stories.length === 0) {
+        return new Response(JSON.stringify({ rescored: 0 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      let rescored = 0;
+      const errors: string[] = [];
+
+      for (const story of stories) {
+        try {
+          const { results: scoreRows } = await db
+            .prepare(
+              `SELECT section, editorial, structural, evidence, directionality, note, editorial_note, structural_note
+               FROM scores WHERE hn_id = ? ORDER BY sort_order`
+            )
+            .bind(story.hn_id)
+            .all<{
+              section: string;
+              editorial: number | null;
+              structural: number | null;
+              evidence: string | null;
+              directionality: string;
+              note: string;
+              editorial_note: string | null;
+              structural_note: string | null;
+            }>();
+
+          if (scoreRows.length === 0) {
+            errors.push(`hn_id=${story.hn_id}: no scores found`);
+            await db.prepare(`UPDATE stories SET eval_status = 'failed', eval_error = 'no scores for rescoring' WHERE hn_id = ?`).bind(story.hn_id).run();
+            continue;
+          }
+
+          const { results: fwRows } = await db
+            .prepare(`SELECT section, fact_type, fact_text FROM fair_witness WHERE hn_id = ?`)
+            .bind(story.hn_id)
+            .all<{ section: string; fact_type: string; fact_text: string }>();
+
+          const witnessBySection = new Map<string, { facts: string[]; inferences: string[] }>();
+          for (const fw of fwRows) {
+            let entry = witnessBySection.get(fw.section);
+            if (!entry) { entry = { facts: [], inferences: [] }; witnessBySection.set(fw.section, entry); }
+            if (fw.fact_type === 'observable') entry.facts.push(fw.fact_text);
+            else entry.inferences.push(fw.fact_text);
+          }
+
+          const rawScores = scoreRows.map(r => {
+            let dir: string[] = [];
+            try { dir = JSON.parse(r.directionality || '[]'); } catch { /* ignore */ }
+            const fw = witnessBySection.get(r.section);
+            return {
+              section: r.section,
+              editorial: r.editorial,
+              structural: r.structural,
+              directionality: dir,
+              evidence: r.evidence,
+              editorial_note: r.editorial_note || '',
+              structural_note: r.structural_note || '',
+              note: r.note || r.editorial_note || r.structural_note || '',
+              witness_facts: fw?.facts,
+              witness_inferences: fw?.inferences,
+            };
+          });
+
+          const contentType = story.content_type || 'MX';
+          const channelWeights = CHANNEL_WEIGHTS[contentType] || CHANNEL_WEIGHTS['MX'];
+
+          let dcpElements: Record<string, DcpElement> | null = null;
+          if (story.domain) {
+            try {
+              const dcpRow = await db
+                .prepare(`SELECT dcp_json FROM domain_dcp WHERE domain = ? LIMIT 1`)
+                .bind(story.domain)
+                .first<{ dcp_json: string }>();
+              if (dcpRow?.dcp_json) {
+                const parsed = JSON.parse(dcpRow.dcp_json);
+                dcpElements = parsed.elements || parsed;
+              }
+            } catch { /* no DCP available */ }
+          }
+
+          const derivedScores = computeDerivedScoreFields(rawScores as EvalScore[], channelWeights, dcpElements);
+          const aggregates = computeAggregates(derivedScores, channelWeights);
+          const storyLevel = computeStoryLevelAggregates(derivedScores);
+          const fwAgg = computeFairWitnessAggregates(derivedScores);
+
+          const scoreStmts = derivedScores.map(s => {
+            return db
+              .prepare(
+                `UPDATE scores SET final = ?, combined = ?, context_modifier = ?
+                 WHERE hn_id = ? AND section = ?`
+              )
+              .bind(s.final, s.combined ?? null, s.context_modifier ?? null, story.hn_id, s.section);
+          });
+          for (let i = 0; i < scoreStmts.length; i += 100) {
+            await db.batch(scoreStmts.slice(i, i + 100));
+          }
+
+          const hcbJson = JSON.stringify({
+            schema_version: '3.7',
+            evaluation: {
+              content_type: { primary: contentType, secondary: [] },
+              channel_weights: channelWeights,
+            },
+            scores: derivedScores,
+            aggregates,
+          });
+
+          await db
+            .prepare(
+              `UPDATE stories SET
+                hcb_weighted_mean = ?,
+                hcb_classification = ?,
+                hcb_signal_sections = ?,
+                hcb_nd_count = ?,
+                hcb_evidence_h = ?,
+                hcb_evidence_m = ?,
+                hcb_evidence_l = ?,
+                hcb_json = ?,
+                eval_model = 'claude-haiku-4-5-20251001',
+                fw_ratio = ?,
+                fw_observable_count = ?,
+                fw_inference_count = ?,
+                hcb_editorial_mean = ?,
+                hcb_structural_mean = ?,
+                hcb_setl = ?,
+                hcb_confidence = ?,
+                eval_status = 'done',
+                eval_error = NULL
+              WHERE hn_id = ?`
+            )
+            .bind(
+              aggregates.weighted_mean,
+              aggregates.classification,
+              aggregates.signal_sections,
+              aggregates.nd_count,
+              aggregates.evidence_profile?.H ?? 0,
+              aggregates.evidence_profile?.M ?? 0,
+              aggregates.evidence_profile?.L ?? 0,
+              hcbJson,
+              fwAgg.fw_ratio,
+              fwAgg.fw_observable_count,
+              fwAgg.fw_inference_count,
+              storyLevel.hcb_editorial_mean,
+              storyLevel.hcb_structural_mean,
+              storyLevel.hcb_setl,
+              storyLevel.hcb_confidence,
+              story.hn_id,
+            )
+            .run();
+
+          rescored++;
+        } catch (err) {
+          errors.push(`hn_id=${story.hn_id}: ${err}`);
+          await db.prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ?`).bind(String(err).slice(0, 500), story.hn_id).run();
+        }
+      }
+
+      await logEvent(db, {
+        event_type: 'trigger',
+        severity: 'info',
+        message: `Recalc: rescored ${rescored}/${stories.length} stories`,
+        details: { rescored, total: stories.length, errors: errors.length > 0 ? errors : undefined },
+      });
+
+      return new Response(JSON.stringify({ rescored, total: stories.length, errors: errors.length > 0 ? errors : undefined }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // GET /health — pipeline health check (no auth required)
     if (path === '/health' && request.method === 'GET') {
       const health = await getPipelineHealth(env.DB);
@@ -1247,6 +571,6 @@ export default {
       });
     }
 
-    return new Response('HN HRCB Cron Worker v5 (crawl + refresh + queue dispatch)', { status: 200 });
+    return new Response('HN HRCB Cron Worker v6 (hn-bot + eval pipeline)', { status: 200 });
   },
 };

@@ -1,5 +1,12 @@
 # TODO
 
+## Active / In Progress
+
+- [ ] **Fix 5 stuck 2-eval domains** — archive.org, hackaday.com, paultendo.github.io, pnas.org, www.xda-developers.com each have only 2 evals; need 3rd to qualify for factions. Use Algolia search to find+import a 3rd story per domain, then eval via backfill.
+- [ ] **Run bigger backfill batch** — pending stories in D1, run `./scripts/backfill-eval.sh 50` then `/recalc`
+- [ ] **Commit new scripts + cron changes** — backfill-eval.sh, eval-to-sql.py, system-prompt.txt, cron.ts (/recalc), consumer.ts, compute-aggregates.ts, db.ts, shared-eval.ts
+- [ ] **Factor out hn-bot** — extract HN crawling/fetching/story mgmt from cron.ts into `src/lib/hn-bot.ts` (API fetching, story upsert, score refresh, comment crawl, user profile crawl, feed mgmt, domain circuit breaker). cron.ts becomes thin orchestrator.
+
 ## Data Sources
 
 - [ ] **Add Lobsters (lobste.rs) as a data source**

@@ -241,6 +241,21 @@ export function computeDerivedScoreFields(
   });
 }
 
+// --- SETL (Structural-Editorial Tension Level) ---
+
+export function computeSetl(scores: Array<{ editorial: number | null; structural: number | null }>): number | null {
+  const vals: number[] = [];
+  for (const s of scores) {
+    if (s.editorial !== null && s.structural !== null && (Math.abs(s.editorial) > 0 || Math.abs(s.structural) > 0)) {
+      const diff = Math.abs(s.editorial - s.structural);
+      const maxAbs = Math.max(Math.abs(s.editorial), Math.abs(s.structural));
+      const mag = Math.sqrt(diff * maxAbs);
+      vals.push(s.editorial >= s.structural ? mag : -mag);
+    }
+  }
+  return vals.length > 0 ? round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+}
+
 // --- Story-level aggregate helpers ---
 
 export interface StoryLevelAggregates {
@@ -261,19 +276,7 @@ export function computeStoryLevelAggregates(scores: EvalScore[]): StoryLevelAggr
     ? round(structurals.reduce((a, b) => a + b, 0) / structurals.length)
     : null;
 
-  // SETL: mean of per-article SETL values
-  const setlValues: number[] = [];
-  for (const s of scores) {
-    if (s.editorial !== null && s.structural !== null && (Math.abs(s.editorial) > 0 || Math.abs(s.structural) > 0)) {
-      const diff = Math.abs(s.editorial - s.structural);
-      const maxAbs = Math.max(Math.abs(s.editorial), Math.abs(s.structural));
-      const mag = Math.sqrt(diff * maxAbs);
-      setlValues.push(s.editorial >= s.structural ? mag : -mag);
-    }
-  }
-  const hcb_setl = setlValues.length > 0
-    ? round(setlValues.reduce((a, b) => a + b, 0) / setlValues.length)
-    : null;
+  const hcb_setl = computeSetl(scores);
 
   // Confidence: evidence-weighted coverage
   const scored = scores.filter(s => s.final !== null);
