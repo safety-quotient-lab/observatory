@@ -273,7 +273,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               return (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td style={`color: ${reg.enabled ? '#c9c9c9' : '#555'};`} class="score-font">
-                  {reg.display_name}
+                  {reg.id}
                 </td>
                 <td align="center" class="score-font">
                   {reg.enabled
@@ -537,7 +537,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                 <div style="font-size: var(--font-xs);">
                   {driftStats.models.map((m) => (
                     <div style="color: #888;">
-                      <span style="color: #60a5fa;">{m.eval_model.replace('claude-', '').replace('-20251001', '')}</span>
+                      <span style="color: #60a5fa;">{m.eval_model}</span>
                       <span style="color: #555;"> · {m.count} evals · avg </span>
                       <span style={`color: ${m.avg_score > 0.05 ? '#16a34a' : m.avg_score < -0.05 ? '#dc2626' : '#888'};`}>{m.avg_score?.toFixed(3)}</span>
                       <span style="color: #444;"> ±{m.stddev?.toFixed(3)}</span>

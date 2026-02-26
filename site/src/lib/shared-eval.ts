@@ -160,7 +160,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-4-scout-17b-16e-instruct',
     is_free: true,
-    enabled: false, // disabled: needs DLQ cleanup from prior failures
+    enabled: true,
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
@@ -182,7 +182,7 @@ export function getEnabledFreeModels(): ModelDefinition[] {
 }
 
 export function modelDisplayName(modelId: string): string {
-  return getModelDef(modelId)?.display_name ?? modelId;
+  return getModelDef(modelId)?.id ?? modelId;
 }
 
 export function modelShortName(modelId: string): string {
