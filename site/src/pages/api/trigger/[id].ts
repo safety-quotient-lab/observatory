@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { fetchUrlContent, callClaude, writeEvalResult } from '../../../lib/evaluate';
+import { logEvent } from '../../../lib/events';
 
 export const POST: APIRoute = async ({ params, locals, request }) => {
   const hnId = parseInt(params.id!, 10);
@@ -56,6 +57,8 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
         .bind(hnId)
         .run();
 
+      await logEvent(db, { hn_id: hnId, event_type: 'trigger', severity: 'info', message: `Manual trigger started`, details: { url: evalUrl, is_self_post: isSelfPost } });
+
       try {
         let pageContent: string;
 
@@ -104,12 +107,16 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
         }
 
         // Call Claude for evaluation
+        const evalStartMs = Date.now();
         const evalCall = await callClaude(apiKey, evalUrl, pageContent, isSelfPost);
+        const evalDurationMs = Date.now() - evalStartMs;
 
         send('status', { step: 'writing', message: 'Writing results...' });
 
         // Write results to D1
         await writeEvalResult(db, hnId, evalCall.result, evalCall.model, evalCall.promptHash);
+
+        await logEvent(db, { hn_id: hnId, event_type: 'eval_success', severity: 'info', message: `Trigger eval done: ${evalCall.result.aggregates.classification} (${evalCall.result.aggregates.weighted_mean.toFixed(2)})`, details: { classification: evalCall.result.aggregates.classification, weighted_mean: evalCall.result.aggregates.weighted_mean, model: evalCall.model, duration_ms: evalDurationMs } });
 
         send('done', {
           hn_id: hnId,
@@ -121,6 +128,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
           .prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ?`)
           .bind(`${err}`.slice(0, 500), hnId)
           .run();
+        await logEvent(db, { hn_id: hnId, event_type: 'eval_failure', severity: 'error', message: `Trigger eval failed: ${String(err).slice(0, 200)}`, details: { error: String(err).slice(0, 500) } });
         send('error', { error: 'Evaluation failed' });
       }
 

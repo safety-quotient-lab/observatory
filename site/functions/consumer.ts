@@ -30,6 +30,7 @@ import {
 
 import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
 import { cleanHtml } from '../src/lib/html-clean';
+import { logEvent } from '../src/lib/events';
 
 interface Env {
   DB: D1Database;
@@ -73,6 +74,7 @@ export default {
     for (const msg of batch.messages) {
       const story = msg.body;
       console.log(`[consumer] Processing hn_id=${story.hn_id}: ${story.title}`);
+      let evalStartMs = Date.now();
 
       try {
         const isSelfPost = !story.url && !!story.hn_text;
@@ -81,6 +83,7 @@ export default {
         // Skip binary content
         if (story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
           await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: binary/unsupported content type`, details: { reason: 'binary', url: story.url } });
           msg.ack();
           continue;
         }
@@ -103,6 +106,7 @@ export default {
 
         if (content.length < 50) {
           await markSkipped(db, story.hn_id, 'Content too short');
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: content too short (${content.length} chars)`, details: { reason: 'too_short', content_length: content.length } });
           msg.ack();
           continue;
         }
@@ -126,6 +130,7 @@ export default {
 
         // Call Claude API (slim prompt — no aggregates)
         const modelToUse = env.EVAL_MODEL_OVERRIDE || EVAL_MODEL;
+        evalStartMs = Date.now();
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
@@ -154,15 +159,18 @@ export default {
             const retryAfter = res.headers.get('retry-after');
             const delaySec = retryAfter ? parseInt(retryAfter, 10) : 60;
             console.warn(`[consumer] Rate limited (429) for hn_id=${story.hn_id}. retry-after=${retryAfter ?? 'none'}, delaying ${delaySec}s`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `Rate limited (429), retrying in ${delaySec}s`, details: { status: 429, retry_after: retryAfter, delay_seconds: Math.min(Math.max(delaySec, 30), 300) } });
             msg.retry({ delaySeconds: Math.min(Math.max(delaySec, 30), 300) });
             continue;
           }
           if (res.status === 529) {
             // API overloaded — retry with longer delay
             console.warn(`[consumer] API overloaded (529) for hn_id=${story.hn_id}, delaying 120s`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `API overloaded (529), retrying in 120s`, details: { status: 529, delay_seconds: 120 } });
             msg.retry({ delaySeconds: 120 });
             continue;
           }
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `Anthropic API error ${res.status}`, details: { status: res.status, body_preview: body.slice(0, 500) } });
           throw new Error(`Anthropic API error ${res.status}: ${body}`);
         }
 
@@ -258,6 +266,7 @@ export default {
           });
         } catch (err) {
           console.error(`[consumer] R2 snapshot failed (non-fatal): ${err}`);
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'r2_error', severity: 'warn', message: `R2 snapshot failed`, details: { error: String(err) } });
         }
 
         // Cache DCP if we got a new one (not from cache)
@@ -271,11 +280,15 @@ export default {
           });
         }
 
-        console.log(`[consumer] Done: hn_id=${story.hn_id} → ${aggregates.classification} (${aggregates.weighted_mean}) [${modelToUse}]`);
+        const evalDurationMs = Date.now() - evalStartMs;
+        console.log(`[consumer] Done: hn_id=${story.hn_id} → ${aggregates.classification} (${aggregates.weighted_mean}) [${modelToUse}] ${evalDurationMs}ms`);
+        await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_success', severity: 'info', message: `Evaluated: ${aggregates.classification} (${aggregates.weighted_mean.toFixed(2)})`, details: { classification: aggregates.classification, weighted_mean: aggregates.weighted_mean, model: modelToUse, input_tokens: inputTokens, output_tokens: outputTokens, duration_ms: evalDurationMs } });
         msg.ack();
       } catch (err) {
-        console.error(`[consumer] Failed: hn_id=${story.hn_id}:`, err);
+        const evalDurationMs = Date.now() - evalStartMs;
+        console.error(`[consumer] Failed: hn_id=${story.hn_id} (${evalDurationMs}ms):`, err);
         await markFailed(db, story.hn_id, `${err}`).catch(() => {});
+        await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_failure', severity: 'error', message: `Evaluation failed: ${String(err).slice(0, 200)}`, details: { error: String(err).slice(0, 500), duration_ms: evalDurationMs } });
         msg.retry();
       }
     }

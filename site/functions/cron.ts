@@ -345,28 +345,9 @@ async function enqueueForEvaluation(
   db: D1Database,
   queue: Queue,
   kv: KVNamespace,
-  dailyBudget: number,
 ): Promise<void> {
-  // Check how many evals have been dispatched/completed today
-  // Count stories that finished today OR are currently in-flight
-  const { results: [budgetRow] } = await db
-    .prepare(
-      `SELECT COUNT(*) as cnt FROM stories
-       WHERE (eval_status = 'done' AND evaluated_at >= datetime('now', 'start of day'))
-          OR eval_status IN ('queued', 'evaluating')`
-    )
-    .all<{ cnt: number }>();
-
-  const todayCount = budgetRow?.cnt ?? 0;
-  const remaining = Math.max(0, dailyBudget - todayCount);
-
-  if (remaining === 0) {
-    console.log(`[queue] Daily budget exhausted: ${todayCount}/${dailyBudget} evals today`);
-    return;
-  }
-
-  const limit = Math.min(remaining, 25); // Queue.sendBatch limit is 25, also cap to remaining budget
-  console.log(`[queue] Budget: ${todayCount}/${dailyBudget} used today, dispatching up to ${limit}`);
+  const limit = 25; // Queue.sendBatch limit
+  console.log(`[queue] Dispatching up to ${limit} pending stories`);
 
   // Priority: HN top stories rank first (lower rank = higher priority),
   // then composite of hn_score + HOTL extremity for unranked stories.
@@ -793,8 +774,7 @@ export default {
       )
       .run();
 
-    const dailyBudget = parseInt(env.DAILY_EVAL_BUDGET || '50', 10);
-    await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, dailyBudget);
+    await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
 
     // Skip self-posts with no text AND no URL (truly empty)
     await db
