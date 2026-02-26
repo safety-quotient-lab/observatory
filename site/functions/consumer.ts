@@ -406,12 +406,25 @@ export default {
         const isSelfPost = !story.url && !!story.hn_text;
         const evalUrl = story.url || `https://news.ycombinator.com/item?id=${story.hn_id}`;
 
-        // Skip binary content (only for primary — non-primary follows primary's decision)
-        if (isPrimary && story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
-          await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
-          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: binary/unsupported content type`, details: { reason: 'binary', url: story.url } });
+        // Skip binary content
+        if (story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
+          if (isPrimary) {
+            await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
+          }
+          await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: binary/unsupported content type').catch(() => {});
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: binary/unsupported content type`, details: { reason: 'binary', url: story.url, model: msgModelId } });
           msg.ack();
           continue;
+        }
+
+        // Non-primary: skip if primary already skipped this story
+        if (!isPrimary) {
+          const primaryStatus = await db.prepare('SELECT eval_status FROM stories WHERE hn_id = ?').bind(story.hn_id).first<{ eval_status: string }>();
+          if (primaryStatus?.eval_status === 'skipped') {
+            await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: primary model skipped this story').catch(() => {});
+            msg.ack();
+            continue;
+          }
         }
 
         // Fetch content (check KV cache first)
@@ -427,6 +440,10 @@ export default {
           } else {
             const rawHtml = await fetchUrlContent(story.url!);
             content = cleanHtml(rawHtml, CONTENT_MAX_CHARS);
+            // Cache for subsequent model evaluations (1-hour TTL)
+            try {
+              await env.CONTENT_CACHE.put(kvKey, content, { expirationTtl: 3600 });
+            } catch {}
           }
         }
 
@@ -434,6 +451,7 @@ export default {
           if (isPrimary) {
             await markSkipped(db, story.hn_id, 'Content too short');
           }
+          await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: content too short').catch(() => {});
           await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: content too short (${content.length} chars)`, details: { reason: 'too_short', content_length: content.length, model: msgModelId } });
           msg.ack();
           continue;
@@ -476,7 +494,10 @@ export default {
 
         if (provider === 'openrouter') {
           // --- OpenRouter path ---
-          const { response: res } = await callOpenRouterApi(apiKey, modelDef!, METHODOLOGY_SYSTEM_PROMPT_SLIM, userMessage);
+          if (!modelDef) {
+            throw new Error(`Unknown model in registry: ${msgModelId}`);
+          }
+          const { response: res } = await callOpenRouterApi(apiKey, modelDef, METHODOLOGY_SYSTEM_PROMPT_SLIM, userMessage);
 
           if (!res.ok) {
             const body = await res.text();
@@ -503,6 +524,15 @@ export default {
           // Extract tokens (OpenAI-compatible format)
           inputTokens = rawData.usage?.prompt_tokens ?? 0;
           outputTokens = rawData.usage?.completion_tokens ?? 0;
+
+          // Detect output truncation (OpenRouter uses 'length' as finish_reason for truncation)
+          const finishReason = rawData.choices?.[0]?.finish_reason;
+          if (finishReason === 'length') {
+            console.warn(`[consumer] OpenRouter output truncated for hn_id=${story.hn_id} model=${msgModelId} at ${outputTokens} tokens`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'warn', message: `OpenRouter output truncated at ${outputTokens} tokens`, details: { model: msgModelId, output_tokens: outputTokens, finish_reason: finishReason } });
+            // Don't retry — OpenRouter free models don't support higher max_tokens
+            // Fall through to parse what we have; if it's incomplete, parse will fail gracefully
+          }
 
           // M10: Validation pipeline
           try {
