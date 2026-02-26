@@ -796,77 +796,73 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
 
 /**
  * Light system prompt for small/free models that can't produce full 31-section output.
- * Asks for a single editorial + structural score pair plus basic metadata (~200-400 output tokens).
- * No per-article breakdown, no DCP, no Fair Witness evidence, no full supplementary signals.
+ * Editorial-only: single editorial score + basic metadata (~200-400 output tokens).
+ * No structural channel, no per-article breakdown, no DCP, no Fair Witness evidence.
  */
 export const METHODOLOGY_SYSTEM_PROMPT_LIGHT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Assess web content against the Universal Declaration of Human Rights (UDHR). Report only what you directly observe.
 
-## CONSTRUCT DEFINITION
+## WHAT IS HRCB?
 
-HRCB measures the directional lean of content relative to the UDHR's 30 Articles and Preamble. It is NOT a compliance audit, truth check, or moral judgment. Score scale: [-1.0, +1.0].
+HRCB measures the editorial lean of content relative to the UDHR's 30 Articles and Preamble. It is NOT a compliance audit or truth check. It measures how the content's message relates to human rights themes.
 
-| Range | Label |
-|---|---|
-| +0.7 to +1.0 | Strong positive |
-| +0.4 to +0.6 | Moderate positive |
-| +0.1 to +0.3 | Mild positive |
-| -0.1 to +0.1 | Neutral |
-| -0.3 to -0.1 | Mild negative |
-| -0.6 to -0.4 | Moderate negative |
-| -1.0 to -0.7 | Strong negative |
-| null | No data |
+Score scale: [-1.0, +1.0]
 
-Principles: (1) Score only what is observable on-domain. (2) Score editorial and structural channels independently. (3) When evidence is ambiguous, regress toward zero. (4) Be equally willing to assign negative and positive scores.
+## SCORING GUIDE WITH EXAMPLES
+
+Use the full range. Most content should NOT be 0.
+
+| Score | Label | Example content |
+|---|---|---|
+| +0.7 to +1.0 | Strong positive | NGO report championing refugee rights with calls to action |
+| +0.4 to +0.6 | Moderate positive | Investigative journalism exposing labor exploitation, seeking reform |
+| +0.2 to +0.3 | Mild positive | Tech article discussing accessibility features or privacy improvements |
+| +0.1 | Borderline positive | General news that briefly mentions a rights-adjacent topic |
+| 0.0 | Truly neutral | Pure technical tutorial, math paper, product changelog with zero rights relevance |
+| -0.1 | Borderline negative | Content that casually normalizes minor rights concerns |
+| -0.2 to -0.3 | Mild negative | Article framing surveillance as purely beneficial without acknowledging privacy costs |
+| -0.4 to -0.6 | Moderate negative | Content actively dismissing labor rights or justifying censorship |
+| -0.7 to -1.0 | Strong negative | Propaganda dehumanizing a group or explicitly opposing UDHR provisions |
+
+Key: score 0.0 ONLY when content has genuinely no human rights relevance. If the topic touches any UDHR article (privacy, expression, labor, equality, education, health, etc.), it should score non-zero.
 
 ## CONTENT TYPE
 
-Classify the page into one of these types (determines channel weights):
+Classify the page:
 
-| Code | Type | E Weight | S Weight |
-|---|---|---|---|
-| ED | Editorial / Article | 0.6 | 0.4 |
-| PO | Policy / Legal | 0.3 | 0.7 |
-| LP | Landing Page | 0.3 | 0.7 |
-| PR | Product / Feature | 0.5 | 0.5 |
-| AC | Account / Profile | 0.4 | 0.6 |
-| MI | Mission / Values | 0.7 | 0.3 |
-| AD | Advertising / Commerce | 0.2 | 0.8 |
-| HR | Human Rights Specific | 0.5 | 0.5 |
-| CO | Community | 0.4 | 0.6 |
-| ME | Media (video/audio) | 0.5 | 0.5 |
-| MX | Mixed (default) | 0.5 | 0.5 |
-
-## SIGNAL CHANNELS
-
-- **Editorial (E)**: What the content says about human rights themes. Consider overall tone, framing, advocacy, and coverage across all UDHR provisions.
-- **Structural (S)**: What the site does — privacy practices, accessibility, paywalls, tracking, consent mechanisms, data collection.
-
-Provide a single overall score for each channel considering the content holistically.
+| Code | Type |
+|---|---|
+| ED | Editorial / Article |
+| PO | Policy / Legal |
+| LP | Landing Page |
+| PR | Product / Feature |
+| MI | Mission / Values |
+| HR | Human Rights Specific |
+| CO | Community / Forum |
+| MX | Mixed (default) |
 
 ## EVIDENCE STRENGTH
 
-- H (High): Clear, direct evidence for the score.
-- M (Medium): Indirect or moderate evidence.
-- L (Low): Minimal or weak evidence.
+- H: Clear, direct evidence — content explicitly discusses rights themes
+- M: Indirect evidence — content touches rights themes implicitly
+- L: Minimal evidence — only tangential connection to rights
 
 ## OUTPUT FORMAT
 
 Output a single JSON object. No markdown fences, no explanation before or after.
 
 {
-  "schema_version": "light-1.0",
+  "schema_version": "light-1.1",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
     "content_type": "<CODE>",
-    "editorial": <-1.0 to +1.0 or null>,
-    "structural": <-1.0 to +1.0 or null>,
+    "editorial": <-1.0 to +1.0>,
     "evidence_strength": "<H|M|L>",
     "confidence": <0.0 to 1.0>
   },
-  "theme_tag": "<2-4 word theme>",
+  "theme_tag": "<2-4 word human rights theme>",
   "sentiment_tag": "<Champions|Advocates|Acknowledges|Neutral|Neglects|Undermines|Hostile>",
-  "executive_summary": "<1-2 sentences>",
+  "executive_summary": "<1-2 sentences describing the content and its human rights relevance>",
   "eq_score": <0.0 to 1.0>,
   "so_score": <0.0 to 1.0>,
   "td_score": <0.0 to 1.0>,
@@ -1819,7 +1815,7 @@ export async function writeRaterEvalResult(
   await db
     .prepare(
       `INSERT INTO rater_evals (
-        hn_id, eval_model, eval_provider, eval_status,
+        hn_id, eval_model, eval_provider, eval_status, prompt_mode,
         hcb_weighted_mean, hcb_classification, hcb_json,
         hcb_signal_sections, hcb_nd_count,
         hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
@@ -1833,7 +1829,7 @@ export async function writeRaterEvalResult(
         input_tokens, output_tokens,
         evaluated_at
       ) VALUES (
-        ?, ?, ?, 'done',
+        ?, ?, ?, 'done', 'full',
         ?, ?, ?,
         ?, ?,
         ?, ?, ?,
@@ -1850,6 +1846,7 @@ export async function writeRaterEvalResult(
       ON CONFLICT(hn_id, eval_model) DO UPDATE SET
         eval_status = 'done',
         eval_error = NULL,
+        prompt_mode = 'full',
         hcb_weighted_mean = excluded.hcb_weighted_mean,
         hcb_classification = excluded.hcb_classification,
         hcb_json = excluded.hcb_json,
@@ -2019,7 +2016,6 @@ export interface LightEvalResponse {
     domain: string;
     content_type: string;
     editorial: number | null;
-    structural: number | null;
     evidence_strength: string;
     confidence: number;
   };
@@ -2032,24 +2028,12 @@ export interface LightEvalResponse {
   primary_tone: string | null;
 }
 
-/** Content type → channel weights (matches Section 2 of methodology). */
-const CONTENT_TYPE_WEIGHTS: Record<string, { e: number; s: number }> = {
-  ED: { e: 0.6, s: 0.4 },
-  PO: { e: 0.3, s: 0.7 },
-  LP: { e: 0.3, s: 0.7 },
-  PR: { e: 0.5, s: 0.5 },
-  AC: { e: 0.4, s: 0.6 },
-  MI: { e: 0.7, s: 0.3 },
-  AD: { e: 0.2, s: 0.8 },
-  HR: { e: 0.5, s: 0.5 },
-  CO: { e: 0.4, s: 0.6 },
-  ME: { e: 0.5, s: 0.5 },
-  MX: { e: 0.5, s: 0.5 },
-};
+/** Valid content type codes for light evals. */
+const LIGHT_CONTENT_TYPES = new Set(['ED', 'PO', 'LP', 'PR', 'AC', 'MI', 'AD', 'HR', 'CO', 'ME', 'MX']);
 
 const VALID_SENTIMENT_TAGS = ['Champions', 'Advocates', 'Acknowledges', 'Neutral', 'Neglects', 'Undermines', 'Hostile'];
 const VALID_EVIDENCE_STRENGTHS = ['H', 'M', 'L'];
-const VALID_CONTENT_TYPES = new Set(Object.keys(CONTENT_TYPE_WEIGHTS));
+const VALID_CONTENT_TYPES = LIGHT_CONTENT_TYPES;
 
 export function validateLightEvalResponse(parsed: any): ValidationResult {
   const errors: string[] = [];
@@ -2082,7 +2066,7 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
     }
   }
 
-  // Editorial score
+  // Editorial score (the only scored channel in light mode)
   if (ev.editorial !== null && ev.editorial !== undefined) {
     if (typeof ev.editorial !== 'number') {
       const num = parseFloat(ev.editorial);
@@ -2100,27 +2084,9 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
     }
   }
 
-  // Structural score
-  if (ev.structural !== null && ev.structural !== undefined) {
-    if (typeof ev.structural !== 'number') {
-      const num = parseFloat(ev.structural);
-      if (!isNaN(num)) {
-        ev.structural = Math.max(-1.0, Math.min(1.0, num));
-        repairs.push(`Coerced structural to number: ${ev.structural}`);
-      } else {
-        ev.structural = null;
-        repairs.push('Set structural to null (was non-numeric)');
-      }
-    } else if (ev.structural < -1.0 || ev.structural > 1.0) {
-      const original = ev.structural;
-      ev.structural = Math.max(-1.0, Math.min(1.0, ev.structural));
-      repairs.push(`Clamped structural: ${original} → ${ev.structural}`);
-    }
-  }
-
-  // Need at least one channel scored
-  if (ev.editorial === null && ev.structural === null) {
-    errors.push('Both editorial and structural are null — no data to score');
+  // Editorial is required for light evals
+  if (ev.editorial === null || ev.editorial === undefined) {
+    errors.push('Editorial score is null — no data to score');
   }
 
   // Evidence strength
@@ -2169,23 +2135,10 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
 export function computeLightAggregates(light: LightEvalResponse): {
   weighted_mean: number;
   classification: string;
-  setl: number;
 } {
-  const ct = light.evaluation.content_type || 'MX';
-  const weights = CONTENT_TYPE_WEIGHTS[ct] || CONTENT_TYPE_WEIGHTS['MX'];
+  // Light mode is editorial-only — editorial score IS the weighted mean
   const e = light.evaluation.editorial;
-  const s = light.evaluation.structural;
-
-  let weightedMean: number;
-  if (e !== null && s !== null) {
-    weightedMean = weights.e * e + weights.s * s;
-  } else if (e !== null) {
-    weightedMean = e;
-  } else if (s !== null) {
-    weightedMean = s;
-  } else {
-    weightedMean = 0;
-  }
+  let weightedMean = e !== null && e !== undefined ? e : 0;
 
   // Clamp
   weightedMean = Math.max(-1.0, Math.min(1.0, weightedMean));
@@ -2200,10 +2153,7 @@ export function computeLightAggregates(light: LightEvalResponse): {
     }
   }
 
-  // SETL from single E/S pair
-  const setl = (e !== null && s !== null) ? Math.abs(e - s) : 0;
-
-  return { weighted_mean: weightedMean, classification, setl };
+  return { weighted_mean: weightedMean, classification };
 }
 
 export function buildLightUserMessage(url: string, title: string, content: string): string {
@@ -2242,7 +2192,7 @@ export async function writeLightRaterEvalResult(
   await db
     .prepare(
       `INSERT INTO rater_evals (
-        hn_id, eval_model, eval_provider, eval_status,
+        hn_id, eval_model, eval_provider, eval_status, prompt_mode,
         hcb_weighted_mean, hcb_classification, hcb_json,
         hcb_signal_sections, hcb_nd_count,
         hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
@@ -2256,7 +2206,7 @@ export async function writeLightRaterEvalResult(
         input_tokens, output_tokens,
         evaluated_at
       ) VALUES (
-        ?, ?, ?, 'done',
+        ?, ?, ?, 'done', 'light',
         ?, ?, ?,
         ?, ?,
         ?, ?, ?,
@@ -2273,6 +2223,7 @@ export async function writeLightRaterEvalResult(
       ON CONFLICT(hn_id, eval_model) DO UPDATE SET
         eval_status = 'done',
         eval_error = NULL,
+        prompt_mode = 'light',
         hcb_weighted_mean = excluded.hcb_weighted_mean,
         hcb_classification = excluded.hcb_classification,
         hcb_json = excluded.hcb_json,
@@ -2316,7 +2267,7 @@ export async function writeLightRaterEvalResult(
       hcbEvidenceH, hcbEvidenceM, hcbEvidenceL,
       promptHash, methodologyHash,
       light.evaluation.content_type || 'MX',
-      light.schema_version || 'light-1.0',
+      light.schema_version || 'light-1.1',
       light.theme_tag || null,
       light.sentiment_tag || null,
       light.executive_summary || null,
@@ -2324,8 +2275,8 @@ export async function writeLightRaterEvalResult(
       0,    // fw_observable_count
       0,    // fw_inference_count
       light.evaluation.editorial,   // hcb_editorial_mean
-      light.evaluation.structural,  // hcb_structural_mean
-      agg.setl,                     // hcb_setl
+      null,                         // hcb_structural_mean (editorial-only in light mode)
+      0,                            // hcb_setl (no structural channel)
       light.evaluation.confidence,  // hcb_confidence
       light.eq_score ?? null,
       light.so_score ?? null,
