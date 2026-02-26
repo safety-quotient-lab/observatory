@@ -41,8 +41,18 @@ Cron Worker (1min) → Queue (hrcb-eval-queue) → Consumer Worker → D1 + R2
 
 ### Site (Astro + Cloudflare Pages)
 
-- `site/src/pages/` — Astro SSR pages: dashboard, front page, domains, articles, velocity, network, factions, seldon, item/[id], domain/[domain], article/[n], user/[username]
-- `site/src/lib/db.ts` — All D1 query functions (~2200 lines)
+**Navigation:** `stories | rights | sources | trends | system | about` (6 hubs)
+
+**Page taxonomy:**
+- **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]`
+- **Rights** (`/rights`): hub → `/rights/observatory` (research dashboard), `/rights/articles`, `/rights/network`, `/article/[n]`
+- **Sources** (`/sources`): hub → `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
+- **Trends** (`/trends`): hub → `/seldon`
+- **System** (`/system`): ops dashboard → `/models`
+- **About** (`/about`)
+- **Redirects** (301): `/dashboard`→`/system`, `/front`→`/past`, `/articles`→`/rights/articles`, `/network`→`/rights/network`, `/user-intel`→`/users`, `/domain-intel`→`/domains`
+
+- `site/src/lib/db.ts` — All D1 query functions (~2900 lines)
 - `site/src/lib/events.ts` — Structured event logger with typed event taxonomy
 - `site/src/lib/shared-eval.ts` — Shared evaluation primitives (prompts, parsing, schema)
 - `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
