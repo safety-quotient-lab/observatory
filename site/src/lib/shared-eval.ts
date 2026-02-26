@@ -182,7 +182,7 @@ export function getEnabledFreeModels(): ModelDefinition[] {
 }
 
 export function modelDisplayName(modelId: string): string {
-  return getModelDef(modelId)?.id ?? modelId;
+  return getModelDef(modelId)?.api_model_id ?? modelId;
 }
 
 export function modelShortName(modelId: string): string {
