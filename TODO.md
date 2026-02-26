@@ -23,6 +23,9 @@
 - [x] Migration 0010: depth + hn_score on story_comments
 - [x] 2-level deep comment crawling
 - [x] Threaded comment display on item page
+- [ ] Deep comment crawling: recursive depth 2+ for high-engagement stories
+- [ ] Comment refresh: re-crawl comments periodically for active discussions
+- [ ] Comment score tracking over time
 - [ ] Comment-level HRCB evaluation (divergence scoring)
 - [ ] Aggregate comment sentiment vs story HRCB comparison
 

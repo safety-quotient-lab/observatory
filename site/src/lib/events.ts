@@ -20,7 +20,12 @@ export type EventType =
   | 'dlq_replay'
   | 'calibration'
   | 'coverage_crawl'
-  | 'trigger';
+  | 'trigger'
+  | 'rater_validation_warn'
+  | 'rater_validation_fail'
+  | 'rater_auto_disable'
+  | 'rater_auto_enable'
+  | 'story_dead';
 
 export type Severity = 'info' | 'warn' | 'error';
 

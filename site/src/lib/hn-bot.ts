@@ -15,7 +15,7 @@
  * - Re-evaluation triggers for viral stories
  */
 
-import { extractDomain, markSkipped, fetchUrlContent } from './shared-eval';
+import { extractDomain, markSkipped, fetchUrlContent, getEnabledFreeModels, getModelQueue } from './shared-eval';
 import { cleanHtml } from './html-clean';
 import { logEvent } from './events';
 
@@ -42,6 +42,8 @@ export interface QueueMessage {
   title: string;
   hn_text: string | null;
   domain: string | null;
+  eval_model?: string;
+  eval_provider?: string;
 }
 
 export interface DomainHealth {
@@ -58,6 +60,7 @@ export interface CrawlResult {
   comments: number;
   users: number;
   re_evals: number;
+  dead_check: { checked: number; dead: number };
   enqueued: boolean;
   duration_ms: number;
 }
@@ -67,7 +70,7 @@ export interface CrawlResult {
 const DOMAIN_FAIL_THRESHOLD = 5;
 const DOMAIN_FAIL_TTL = 86400; // 24h
 
-const TOP_PAGES = 5;
+const TOP_PAGES = 7;
 const ITEMS_PER_PAGE = 30;
 
 // ─── HN API helpers ───
@@ -562,6 +565,206 @@ export async function triggerReEvals(db: D1Database): Promise<number[]> {
   return reEvalIds;
 }
 
+// ─── Multi-model dispatch ───
+
+/**
+ * Dispatch evaluations for enabled free models alongside the primary model.
+ * For ALL primary-evaluated stories, check which free models haven't evaluated
+ * them yet and enqueue those. Prioritizes recent stories first, then backfills
+ * older ones. Runs in batches each cron cycle until full coverage is reached.
+ */
+export async function dispatchFreeModelEvals(
+  db: D1Database,
+  env: Record<string, any>,
+  limit = 50,
+): Promise<{ model: string; dispatched: number }[]> {
+  const freeModels = getEnabledFreeModels();
+  if (freeModels.length === 0) return [];
+
+  const results: { model: string; dispatched: number }[] = [];
+
+  for (const model of freeModels) {
+    // Find ALL stories done by primary that this model hasn't evaluated yet.
+    // Recent stories first (most visible), then backfill older ones.
+    const { results: candidates } = await db
+      .prepare(
+        `SELECT s.hn_id, s.url, s.title, s.domain, s.hn_text
+         FROM stories s
+         WHERE s.eval_status = 'done'
+           AND NOT EXISTS (
+             SELECT 1 FROM rater_evals re
+             WHERE re.hn_id = s.hn_id
+               AND re.eval_model = ?
+               AND re.eval_status IN ('done', 'queued', 'evaluating', 'pending')
+           )
+         ORDER BY s.evaluated_at DESC
+         LIMIT ?`
+      )
+      .bind(model.id, limit)
+      .all<{
+        hn_id: number;
+        url: string | null;
+        title: string;
+        domain: string | null;
+        hn_text: string | null;
+      }>();
+
+    if (candidates.length === 0) {
+      results.push({ model: model.id, dispatched: 0 });
+      continue;
+    }
+
+    const messages: { body: QueueMessage }[] = [];
+    for (const story of candidates) {
+      messages.push({
+        body: {
+          hn_id: story.hn_id,
+          url: story.url,
+          title: story.title,
+          hn_text: story.hn_text,
+          domain: story.domain,
+          eval_model: model.id,
+          eval_provider: model.provider,
+        },
+      });
+
+      // UPSERT rater_evals as queued
+      await db
+        .prepare(
+          `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status)
+           VALUES (?, ?, ?, 'queued')
+           ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued'`
+        )
+        .bind(story.hn_id, model.id, model.provider)
+        .run();
+    }
+
+    // Send to per-model queue in batches of 25
+    const modelQueue = getModelQueue(model.id, env);
+    for (let i = 0; i < messages.length; i += 25) {
+      const batch = messages.slice(i, i + 25);
+      await modelQueue.sendBatch(batch);
+    }
+
+    results.push({ model: model.id, dispatched: messages.length });
+    console.log(`[multi-model] Dispatched ${messages.length} stories for model ${model.id}`);
+  }
+
+  return results;
+}
+
+// ─── Feed snapshot helper ───
+
+async function recordFeedSnapshots(
+  db: D1Database,
+  feedName: string,
+  feedIds: number[],
+  depth: number,
+): Promise<number> {
+  const sliced = feedIds.slice(0, depth);
+  if (sliced.length === 0) return 0;
+
+  // Filter to IDs we're tracking in DB
+  const trackedInDb: number[] = [];
+  for (let i = 0; i < sliced.length; i += 100) {
+    const chunk = sliced.slice(i, i + 100);
+    const { results } = await db
+      .prepare(`SELECT hn_id FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`)
+      .bind(...chunk)
+      .all<{ hn_id: number }>();
+    for (const r of results) trackedInDb.push(r.hn_id);
+  }
+
+  if (trackedInDb.length === 0) return 0;
+
+  // Fetch current scores from DB
+  const scoreMap = new Map<number, { score: number | null; comments: number | null }>();
+  for (let i = 0; i < trackedInDb.length; i += 100) {
+    const chunk = trackedInDb.slice(i, i + 100);
+    const { results } = await db
+      .prepare(`SELECT hn_id, hn_score, hn_comments FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`)
+      .bind(...chunk)
+      .all<{ hn_id: number; hn_score: number | null; hn_comments: number | null }>();
+    for (const r of results) scoreMap.set(r.hn_id, { score: r.hn_score, comments: r.hn_comments });
+  }
+
+  const snapshotStmts = trackedInDb.map(hnId => {
+    const rank = sliced.indexOf(hnId) + 1;
+    const data = scoreMap.get(hnId);
+    return db
+      .prepare(
+        `INSERT INTO story_snapshots (hn_id, hn_rank, hn_score, hn_comments, list_type)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .bind(hnId, rank > 0 ? rank : null, data?.score ?? null, data?.comments ?? null, feedName);
+  });
+
+  for (let i = 0; i < snapshotStmts.length; i += 100) {
+    await db.batch(snapshotStmts.slice(i, i + 100));
+  }
+
+  return trackedInDb.length;
+}
+
+// ─── Dead/deleted story detection ───
+
+export async function checkDeadStories(db: D1Database): Promise<{ checked: number; dead: number }> {
+  // Sample 30 stories: prioritize pending/queued, then done/evaluating, last 30 days
+  const { results: candidates } = await db
+    .prepare(
+      `SELECT hn_id FROM stories
+       WHERE eval_status IN ('pending', 'queued', 'done', 'evaluating')
+         AND hn_time > unixepoch('now', '-30 days')
+       ORDER BY
+         CASE eval_status WHEN 'pending' THEN 0 WHEN 'queued' THEN 1 ELSE 2 END,
+         hn_time DESC
+       LIMIT 30`
+    )
+    .all<{ hn_id: number }>();
+
+  if (candidates.length === 0) return { checked: 0, dead: 0 };
+
+  const ids = candidates.map(r => r.hn_id);
+  const items = await fetchItemsBatched(ids);
+
+  // IDs that returned null (deleted/missing) or have dead/deleted flags
+  const fetchedIds = new Set(items.map(i => i.id));
+  const deadIds: number[] = [];
+
+  // Items that came back null (not in fetched set)
+  for (const id of ids) {
+    if (!fetchedIds.has(id)) deadIds.push(id);
+  }
+
+  // Items that came back with dead/deleted flags
+  for (const item of items) {
+    if (item.dead || item.deleted) deadIds.push(item.id);
+  }
+
+  if (deadIds.length === 0) return { checked: candidates.length, dead: 0 };
+
+  const stmts = deadIds.map(id =>
+    db.prepare(
+      `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story dead/deleted on HN'
+       WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'done', 'evaluating')`
+    ).bind(id)
+  );
+
+  for (let i = 0; i < stmts.length; i += 100) {
+    await db.batch(stmts.slice(i, i + 100));
+  }
+
+  console.log(`[dead-check] Checked ${candidates.length} stories, found ${deadIds.length} dead/deleted`);
+  await logEvent(db, {
+    event_type: 'story_dead',
+    severity: 'info',
+    message: `Dead check: ${deadIds.length} stories marked dead/deleted`,
+    details: { checked: candidates.length, dead: deadIds.length, hn_ids: deadIds },
+  });
+
+  return { checked: candidates.length, dead: deadIds.length };
+}
+
 // ─── Main crawl cycle ───
 
 /**
@@ -585,6 +788,7 @@ export async function runCrawlCycle(
     comments: 0,
     users: 0,
     re_evals: 0,
+    dead_check: { checked: 0, dead: 0 },
     enqueued: false,
     duration_ms: 0,
   };
@@ -641,8 +845,13 @@ export async function runCrawlCycle(
   tagFeed(showIds, 'show');
   tagFeed(jobIds, 'job');
 
-  // Top 5 pages (~150 items) are auto-evaluated; rest are tracked but skipped
-  const autoEvalIds = new Set(topIds.slice(0, TOP_PAGES * ITEMS_PER_PAGE));
+  // Top 7 pages (~210 items) + top 30 from best/ask/show are auto-evaluated; rest are tracked but skipped
+  const autoEvalIds = new Set([
+    ...topIds.slice(0, TOP_PAGES * ITEMS_PER_PAGE),
+    ...bestIds.slice(0, 30),
+    ...askIds.slice(0, 30),
+    ...showIds.slice(0, 30),
+  ]);
 
   const allIds = [...new Set([
     ...topIds.slice(0, 200),
@@ -711,7 +920,7 @@ export async function runCrawlCycle(
           hnType,
           item.text || null,
           status,
-          status === 'skipped' ? 'Not in top 5 pages' : null
+          status === 'skipped' ? 'Not in top pages' : null
         );
     });
 
@@ -774,52 +983,33 @@ export async function runCrawlCycle(
         .run();
       promoted += meta?.changes ?? 0;
     }
-    if (promoted > 0) console.log(`[rank] Promoted ${promoted} stories to pending (entered top 5 pages)`);
+    if (promoted > 0) console.log(`[rank] Promoted ${promoted} stories to pending (entered top pages)`);
   } catch (err) {
     console.error('Rank update failed (non-fatal):', err);
     await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Rank update failed`, details: { phase: 'rank', error: String(err) } });
   }
 
-  // ─── STEP 3.6: Record rank snapshots ───
+  // ─── STEP 3.6: Record rank snapshots (multi-feed) ───
 
   try {
-    const topTracked = topIds.slice(0, 60);
-    const trackedInDb: number[] = [];
-    for (let i = 0; i < topTracked.length; i += 100) {
-      const chunk = topTracked.slice(i, i + 100);
-      const { results } = await db
-        .prepare(`SELECT hn_id FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`)
-        .bind(...chunk)
-        .all<{ hn_id: number }>();
-      for (const r of results) trackedInDb.push(r.hn_id);
+    // Top feed: top 60 every minute; new/best: top 30 every 5 min; ask/show/job: top 20 every 5 min
+    const feedSnapshots: { name: string; ids: number[]; depth: number; everyMin: number }[] = [
+      { name: 'top', ids: topIds, depth: 60, everyMin: 1 },
+      { name: 'new', ids: newIds_hn, depth: 30, everyMin: 5 },
+      { name: 'best', ids: bestIds, depth: 30, everyMin: 5 },
+      { name: 'ask', ids: askIds, depth: 20, everyMin: 5 },
+      { name: 'show', ids: showIds, depth: 20, everyMin: 5 },
+      { name: 'job', ids: jobIds, depth: 20, everyMin: 5 },
+    ];
+
+    let totalSnapshots = 0;
+    for (const feed of feedSnapshots) {
+      if (feed.everyMin > 1 && minute % feed.everyMin !== 0) continue;
+      const count = await recordFeedSnapshots(db, feed.name, feed.ids, feed.depth);
+      totalSnapshots += count;
     }
-
-    if (trackedInDb.length > 0) {
-      const scoreMap = new Map<number, { score: number | null; comments: number | null }>();
-      for (let i = 0; i < trackedInDb.length; i += 100) {
-        const chunk = trackedInDb.slice(i, i + 100);
-        const { results } = await db
-          .prepare(`SELECT hn_id, hn_score, hn_comments FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`)
-          .bind(...chunk)
-          .all<{ hn_id: number; hn_score: number | null; hn_comments: number | null }>();
-        for (const r of results) scoreMap.set(r.hn_id, { score: r.hn_score, comments: r.hn_comments });
-      }
-
-      const snapshotStmts = trackedInDb.map(hnId => {
-        const rank = topIds.indexOf(hnId) + 1;
-        const data = scoreMap.get(hnId);
-        return db
-          .prepare(
-            `INSERT INTO story_snapshots (hn_id, hn_rank, hn_score, hn_comments, list_type)
-             VALUES (?, ?, ?, ?, 'top')`
-          )
-          .bind(hnId, rank > 0 ? rank : null, data?.score ?? null, data?.comments ?? null);
-      });
-
-      for (let i = 0; i < snapshotStmts.length; i += 100) {
-        await db.batch(snapshotStmts.slice(i, i + 100));
-      }
-      console.log(`[snapshots] Recorded ${trackedInDb.length} rank snapshots`);
+    if (totalSnapshots > 0) {
+      console.log(`[snapshots] Recorded ${totalSnapshots} rank snapshots across feeds`);
     }
   } catch (err) {
     console.error('Snapshot recording failed (non-fatal):', err);
@@ -871,6 +1061,18 @@ export async function runCrawlCycle(
   } catch (err) {
     console.error('User profile crawling failed (non-fatal):', err);
     await logEvent(db, { event_type: 'crawl_error', severity: 'warn', message: `User profile crawling failed`, details: { phase: 'users', error: String(err) } });
+  }
+
+  // ─── STEP 4.75: Check for dead/deleted stories ───
+
+  try {
+    if (minute % 10 === 3) {
+      const deadResult = await checkDeadStories(db);
+      result.dead_check = deadResult;
+    }
+  } catch (err) {
+    console.error('Dead story check failed (non-fatal):', err);
+    await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Dead story check failed`, details: { phase: 'dead_check', error: String(err) } });
   }
 
   // ─── STEP 4.8: Re-evaluate viral stories ───

@@ -11,6 +11,8 @@
 
 import {
   extractDomain,
+  getEnabledModels,
+  getEnabledFreeModels,
   type EvalScore,
 } from '../src/lib/shared-eval';
 import { logEvent, pruneEvents } from '../src/lib/events';
@@ -24,11 +26,20 @@ import {
   computeFairWitnessAggregates,
   type DcpElement,
 } from '../src/lib/compute-aggregates';
-import { runCrawlCycle, enqueueForEvaluation } from '../src/lib/hn-bot';
+import { runCrawlCycle, enqueueForEvaluation, dispatchFreeModelEvals } from '../src/lib/hn-bot';
+import { getModelQueue } from '../src/lib/shared-eval';
 
 interface Env {
   DB: D1Database;
   EVAL_QUEUE: Queue;
+  DEEPSEEK_QUEUE: Queue;
+  TRINITY_QUEUE: Queue;
+  NEMOTRON_QUEUE: Queue;
+  STEP_QUEUE: Queue;
+  QWEN_QUEUE: Queue;
+  LLAMA_QUEUE: Queue;
+  MISTRAL_QUEUE: Queue;
+  HERMES_QUEUE: Queue;
   CONTENT_CACHE: KVNamespace;
   CRON_SECRET?: string;
   DAILY_EVAL_BUDGET?: string;
@@ -44,6 +55,21 @@ export default {
     // ─── HN crawl cycle (fetch, diff, insert, refresh, comments, users, re-eval, enqueue) ───
 
     const crawlResult = await runCrawlCycle(db, env.EVAL_QUEUE, env.CONTENT_CACHE, minute);
+
+    // ─── Multi-model dispatch (every 5 minutes) ───
+
+    if (minute % 5 === 0) {
+      try {
+        const multiModelResults = await dispatchFreeModelEvals(db, env as unknown as Record<string, any>, 50);
+        const totalDispatched = multiModelResults.reduce((sum, r) => sum + r.dispatched, 0);
+        if (totalDispatched > 0) {
+          console.log(`[multi-model] Dispatched ${totalDispatched} total evals across ${multiModelResults.length} models`);
+        }
+      } catch (err) {
+        console.error('Multi-model dispatch failed (non-fatal):', err);
+        await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Multi-model dispatch failed`, details: { phase: 'multi_model', error: String(err) } });
+      }
+    }
 
     // ─── Coverage-driven crawl strategies ───
 
@@ -157,7 +183,7 @@ export default {
              WHERE hn_id IN (
                SELECT hn_id FROM stories
                WHERE eval_status = 'skipped'
-                 AND eval_error = 'Not in top 5 pages'
+                 AND eval_error LIKE 'Not in top%pages'
                  AND url IS NOT NULL
                  AND hn_score >= ?
                ORDER BY hn_score DESC
@@ -230,13 +256,14 @@ export default {
       });
     }
 
-    // POST /calibrate — enqueue 15 calibration URLs for evaluation
+    // POST /calibrate — enqueue 15 calibration URLs for evaluation (all enabled models)
     if (path === '/calibrate' && request.method === 'POST') {
       const authErr = checkAuth();
       if (authErr) return authErr;
 
       const db = env.DB;
       let enqueued = 0;
+      const enabledModels = getEnabledModels();
 
       for (let i = 0; i < CALIBRATION_SET.length; i++) {
         const cal = CALIBRATION_SET[i];
@@ -252,6 +279,7 @@ export default {
           .bind(syntheticId, `[CAL] ${cal.label} (${cal.slot})`, cal.url, domain, Math.floor(Date.now() / 1000))
           .run();
 
+        // Primary model (no eval_model field = default)
         await env.EVAL_QUEUE.send({
           hn_id: syntheticId,
           url: cal.url,
@@ -260,27 +288,55 @@ export default {
           domain,
         });
         enqueued++;
+
+        // Non-primary enabled models — route to per-model queues
+        for (const model of enabledModels) {
+          if (model.id === 'claude-haiku-4-5-20251001') continue; // primary already sent
+          const modelQueue = getModelQueue(model.id, env as unknown as Record<string, any>);
+          await modelQueue.send({
+            hn_id: syntheticId,
+            url: cal.url,
+            title: `[CAL] ${cal.label} (${cal.slot})`,
+            hn_text: null,
+            domain,
+            eval_model: model.id,
+            eval_provider: model.provider,
+          });
+
+          // UPSERT rater_evals as queued
+          await db
+            .prepare(
+              `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status)
+               VALUES (?, ?, ?, 'queued')
+               ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued'`
+            )
+            .bind(syntheticId, model.id, model.provider)
+            .run();
+          enqueued++;
+        }
       }
 
       await logEvent(db, {
         event_type: 'calibration',
         severity: 'info',
-        message: `Calibration run started: ${enqueued} URLs enqueued`,
-        details: { enqueued },
+        message: `Calibration run started: ${enqueued} URLs enqueued across ${enabledModels.length} models`,
+        details: { enqueued, models: enabledModels.map(m => m.id) },
       });
 
-      return new Response(JSON.stringify({ enqueued, calibration_ids: CALIBRATION_SET.map((_, i) => -(1000 + i + 1)) }), {
+      return new Response(JSON.stringify({ enqueued, models: enabledModels.map(m => m.id), calibration_ids: CALIBRATION_SET.map((_, i) => -(1000 + i + 1)) }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
     // POST /calibrate/check — collect results and run drift check
+    // Optional: ?model=deepseek-v3.2 to check a specific model's calibration from rater_evals
     if (path === '/calibrate/check' && request.method === 'POST') {
       const authErr = checkAuth();
       if (authErr) return authErr;
 
       const db = env.DB;
+      const modelParam = url.searchParams.get('model');
 
       const scores = new Map<string, number | null>();
       let pendingCount = 0;
@@ -289,32 +345,58 @@ export default {
         const cal = CALIBRATION_SET[i];
         const syntheticId = -(1000 + i + 1);
 
-        const row = await db
-          .prepare(`SELECT eval_status, hcb_weighted_mean FROM stories WHERE hn_id = ?`)
-          .bind(syntheticId)
-          .first<{ eval_status: string; hcb_weighted_mean: number | null }>();
+        if (modelParam) {
+          // Read from rater_evals for specific model
+          const row = await db
+            .prepare(`SELECT eval_status, hcb_weighted_mean FROM rater_evals WHERE hn_id = ? AND eval_model = ?`)
+            .bind(syntheticId, modelParam)
+            .first<{ eval_status: string; hcb_weighted_mean: number | null }>();
 
-        if (row && row.eval_status === 'done' && row.hcb_weighted_mean !== null) {
-          scores.set(cal.url, row.hcb_weighted_mean);
+          if (row && row.eval_status === 'done' && row.hcb_weighted_mean !== null) {
+            scores.set(cal.url, row.hcb_weighted_mean);
+          } else {
+            scores.set(cal.url, null);
+            if (row && (row.eval_status === 'pending' || row.eval_status === 'queued')) pendingCount++;
+          }
         } else {
-          scores.set(cal.url, null);
-          if (row && row.eval_status === 'pending') pendingCount++;
+          // Default: read from stories (primary model)
+          const row = await db
+            .prepare(`SELECT eval_status, hcb_weighted_mean FROM stories WHERE hn_id = ?`)
+            .bind(syntheticId)
+            .first<{ eval_status: string; hcb_weighted_mean: number | null }>();
+
+          if (row && row.eval_status === 'done' && row.hcb_weighted_mean !== null) {
+            scores.set(cal.url, row.hcb_weighted_mean);
+          } else {
+            scores.set(cal.url, null);
+            if (row && row.eval_status === 'pending') pendingCount++;
+          }
         }
       }
 
       const summary = runCalibrationCheck(scores);
 
+      const model = modelParam || 'unknown';
       let methodologyHash = 'unknown';
-      const hashRow = await db
-        .prepare(`SELECT methodology_hash FROM stories WHERE hn_id < -1000 AND hn_id >= -1015 AND methodology_hash IS NOT NULL LIMIT 1`)
-        .first<{ methodology_hash: string }>();
-      if (hashRow) methodologyHash = hashRow.methodology_hash;
+      if (modelParam) {
+        const hashRow = await db
+          .prepare(`SELECT methodology_hash FROM rater_evals WHERE hn_id < -1000 AND hn_id >= -1015 AND eval_model = ? AND methodology_hash IS NOT NULL LIMIT 1`)
+          .bind(modelParam)
+          .first<{ methodology_hash: string }>();
+        if (hashRow) methodologyHash = hashRow.methodology_hash;
+      } else {
+        const hashRow = await db
+          .prepare(`SELECT methodology_hash FROM stories WHERE hn_id < -1000 AND hn_id >= -1015 AND methodology_hash IS NOT NULL LIMIT 1`)
+          .first<{ methodology_hash: string }>();
+        if (hashRow) methodologyHash = hashRow.methodology_hash;
 
-      let model = 'unknown';
-      const modelRow = await db
-        .prepare(`SELECT eval_model FROM eval_history WHERE hn_id < -1000 AND hn_id >= -1015 ORDER BY id DESC LIMIT 1`)
-        .first<{ eval_model: string }>();
-      if (modelRow) model = modelRow.eval_model;
+        const modelRow = await db
+          .prepare(`SELECT eval_model FROM eval_history WHERE hn_id < -1000 AND hn_id >= -1015 ORDER BY id DESC LIMIT 1`)
+          .first<{ eval_model: string }>();
+        if (modelRow && model === 'unknown') {
+          // Use detected model
+        }
+      }
 
       await db
         .prepare(
@@ -341,9 +423,10 @@ export default {
       await logEvent(db, {
         event_type: 'calibration',
         severity: summary.status === 'fail' ? 'error' : summary.status === 'warn' ? 'warn' : 'info',
-        message: `Calibration check: ${summary.status} (${summary.passed} pass, ${summary.failed} fail, ${summary.skipped} skip)`,
+        message: `Calibration check: ${summary.status} model=${model} (${summary.passed} pass, ${summary.failed} fail, ${summary.skipped} skip)`,
         details: {
           status: summary.status,
+          model,
           passed: summary.passed,
           failed: summary.failed,
           warned: summary.warned,
