@@ -153,6 +153,18 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     supports_cache_control: false,
     supports_json_mode: false,
   },
+  {
+    id: 'llama-4-scout-wai',
+    display_name: 'Llama 4 Scout (WAI)',
+    short_name: 'L4S',
+    provider: 'workers-ai',
+    api_model_id: '@cf/meta/llama-4-scout-17b-16e-instruct',
+    is_free: true,
+    enabled: false, // disabled: needs DLQ cleanup from prior failures
+    max_tokens: 16384,
+    supports_cache_control: false,
+    supports_json_mode: false,
+  },
 ];
 
 export const PRIMARY_MODEL_ID = 'claude-haiku-4-5-20251001';

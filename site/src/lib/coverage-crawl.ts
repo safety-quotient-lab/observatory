@@ -385,7 +385,7 @@ async function strategySubmitterNetwork(
               (SELECT COUNT(*) FROM stories s WHERE s.hn_by = u.username AND s.eval_status = 'done') as eval_cnt
        FROM hn_users u
        WHERE u.karma > 10000
-       HAVING eval_cnt < 3
+         AND (SELECT COUNT(*) FROM stories s WHERE s.hn_by = u.username AND s.eval_status = 'done') < 3
        ORDER BY u.karma DESC
        LIMIT 5`,
     )
