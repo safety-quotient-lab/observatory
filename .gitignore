@@ -3,12 +3,20 @@
 .env
 .env.*
 .dev.vars
+.cron-secret
 
 # OS
 .DS_Store
 
 # wrangler local state
 .wrangler/
+
+# debug/scratch
+rater-debug/
+
+# build output
+.astro/
+dist/
 
 # node
 node_modules/
