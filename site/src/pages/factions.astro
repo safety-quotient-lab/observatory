@@ -212,32 +212,32 @@ function computeCentroid(members: string[]): number[] {
 }
 
 // --- 7. Archetype naming ---
-const ARCHETYPE_RULES: { name: string; icon: string; test: (hi: Set<string>, lo: Set<string>) => boolean }[] = [
-  { name: 'Rigorous Analysts', icon: '\u{1F9EA}', test: (hi, lo) => hi.has('EQ') && hi.has('TD') && lo.has('PT') },
-  { name: 'Solution Builders', icon: '\u{1F6E0}', test: (hi, lo) => hi.has('SO') && hi.has('EQ') },
-  { name: 'Watchdog Press', icon: '\u{1F4F0}', test: (hi, lo) => hi.has('EQ') && hi.has('FW') && lo.has('VA') },
-  { name: 'Advocacy Amplifiers', icon: '\u{1F4E2}', test: (hi, lo) => hi.has('SR') && hi.has('VA') && lo.has('TD') },
-  { name: 'Calm Observers', icon: '\u{1F30A}', test: (hi, lo) => lo.has('AR') && hi.has('EQ') },
-  { name: 'Emotional Narrators', icon: '\u{1F525}', test: (hi, lo) => hi.has('AR') && hi.has('VA') },
-  { name: 'Transparent Reporters', icon: '\u{1F50D}', test: (hi, lo) => hi.has('TD') && hi.has('FW') },
-  { name: 'Stakeholder Champions', icon: '\u{1F91D}', test: (hi, lo) => hi.has('SR') && hi.has('SO') },
-  { name: 'Persuasion Engines', icon: '\u{26A0}', test: (hi) => hi.has('PT') },
-  { name: 'Optimistic Voices', icon: '\u{2600}', test: (hi) => hi.has('VA') && hi.has('SO') },
-  { name: 'Evidence Anchors', icon: '\u{2693}', test: (hi) => hi.has('FW') && hi.has('EQ') },
-  { name: 'Broad Spectrum', icon: '\u{1F308}', test: (hi) => hi.has('SR') },
+const ARCHETYPE_RULES: { name: string; desc: string; icon: string; test: (hi: Set<string>, lo: Set<string>) => boolean }[] = [
+  { name: 'Rigorous Analysts', desc: 'High epistemic quality and transparency with minimal propaganda techniques. Evidence-driven coverage that prioritizes verifiable claims.', icon: '\u{1F9EA}', test: (hi, lo) => hi.has('EQ') && hi.has('TD') && lo.has('PT') },
+  { name: 'Solution Builders', desc: 'Content oriented toward actionable outcomes, combining strong epistemic standards with a focus on constructive approaches.', icon: '\u{1F6E0}', test: (hi, lo) => hi.has('SO') && hi.has('EQ') },
+  { name: 'Watchdog Press', desc: 'Fact-heavy reporting that favors observable evidence over positive framing. Investigative style that surfaces structural issues.', icon: '\u{1F4F0}', test: (hi, lo) => hi.has('EQ') && hi.has('FW') && lo.has('VA') },
+  { name: 'Advocacy Amplifiers', desc: 'Stakeholder-centered content with strong positive valence but lower transparency. Platforms that elevate voices and perspectives.', icon: '\u{1F4E2}', test: (hi, lo) => hi.has('SR') && hi.has('VA') && lo.has('TD') },
+  { name: 'Calm Observers', desc: 'Measured, low-arousal coverage with strong epistemic grounding. Analytical rather than emotional in editorial character.', icon: '\u{1F30A}', test: (hi, lo) => lo.has('AR') && hi.has('EQ') },
+  { name: 'Emotional Narrators', desc: 'High-arousal storytelling with strong affective elements. Content that engages through narrative energy and emotional resonance.', icon: '\u{1F525}', test: (hi, lo) => hi.has('AR') && hi.has('VA') },
+  { name: 'Transparent Reporters', desc: 'High disclosure and observable-fact orientation. Content that shows its work and distinguishes clearly between fact and inference.', icon: '\u{1F50D}', test: (hi, lo) => hi.has('TD') && hi.has('FW') },
+  { name: 'Stakeholder Champions', desc: 'Diverse representation combined with solution orientation. Content that centers affected communities while seeking constructive paths.', icon: '\u{1F91D}', test: (hi, lo) => hi.has('SR') && hi.has('SO') },
+  { name: 'Persuasion Engines', desc: 'Elevated use of propaganda techniques including emotional appeals, framing devices, and rhetorical strategies.', icon: '\u{26A0}', test: (hi) => hi.has('PT') },
+  { name: 'Optimistic Voices', desc: 'Positive-valence content paired with solution-seeking orientation. Constructive framing that emphasizes possibilities.', icon: '\u{2600}', test: (hi) => hi.has('VA') && hi.has('SO') },
+  { name: 'Evidence Anchors', desc: 'Grounded in observable facts with strong epistemic standards. Content where claims are closely tied to verifiable evidence.', icon: '\u{2693}', test: (hi) => hi.has('FW') && hi.has('EQ') },
+  { name: 'Broad Spectrum', desc: 'Wide stakeholder representation across perspectives. Content that draws from diverse sources and viewpoints.', icon: '\u{1F308}', test: (hi) => hi.has('SR') },
   // Low-signal patterns
-  { name: 'Minimalist Wire', icon: '\u{1F4CB}', test: (_hi, lo) => lo.size >= 5 },
-  { name: 'Understated Coverage', icon: '\u{1F4C9}', test: (_hi, lo) => lo.size >= 3 },
+  { name: 'Minimalist Wire', desc: 'Sparse editorial signals across most dimensions. Stripped-down, wire-service-style content with minimal editorial fingerprint.', icon: '\u{1F4CB}', test: (_hi, lo) => lo.size >= 5 },
+  { name: 'Understated Coverage', desc: 'Below-average signal strength in multiple dimensions. Restrained editorial voice with limited use of rhetorical devices.', icon: '\u{1F4C9}', test: (_hi, lo) => lo.size >= 3 },
   // High-signal patterns
-  { name: 'Signal-Rich Sources', icon: '\u{1F4CA}', test: (hi) => hi.size >= 4 },
-  { name: 'Quality Anchors', icon: '\u{2693}', test: (hi) => hi.has('EQ') },
-  { name: 'Solution-Focused', icon: '\u{1F4A1}', test: (hi) => hi.has('SO') },
-  { name: 'Engaged Voices', icon: '\u{1F3A4}', test: (hi) => hi.has('AR') },
-  { name: 'Positive Framing', icon: '\u{2600}', test: (hi) => hi.has('VA') },
-  { name: 'Fact Witnesses', icon: '\u{1F441}', test: (hi) => hi.has('FW') },
-  { name: 'Open Books', icon: '\u{1F4D6}', test: (hi) => hi.has('TD') },
-  { name: 'Low-Propaganda', icon: '\u{1F6E1}', test: (_hi, lo) => lo.has('PT') },
-  { name: 'Measured Tone', icon: '\u{1F30A}', test: (_hi, lo) => lo.has('AR') },
+  { name: 'Signal-Rich Sources', desc: 'Strong signals across many dimensions simultaneously. Editorially rich content with distinct fingerprints.', icon: '\u{1F4CA}', test: (hi) => hi.size >= 4 },
+  { name: 'Quality Anchors', desc: 'Above-average epistemic quality. Content that demonstrates careful sourcing and claim substantiation.', icon: '\u{2693}', test: (hi) => hi.has('EQ') },
+  { name: 'Solution-Focused', desc: 'Elevated orientation toward proposed solutions and constructive outcomes.', icon: '\u{1F4A1}', test: (hi) => hi.has('SO') },
+  { name: 'Engaged Voices', desc: 'High-arousal editorial character. Content with strong emotional or motivational energy.', icon: '\u{1F3A4}', test: (hi) => hi.has('AR') },
+  { name: 'Positive Framing', desc: 'Above-average positive valence in editorial tone. Content that leans toward affirmative and constructive framing.', icon: '\u{2600}', test: (hi) => hi.has('VA') },
+  { name: 'Fact Witnesses', desc: 'High ratio of observable facts to editorial inference. Content grounded in direct evidence.', icon: '\u{1F441}', test: (hi) => hi.has('FW') },
+  { name: 'Open Books', desc: 'High transparency and disclosure. Content that surfaces methodology, limitations, and sourcing.', icon: '\u{1F4D6}', test: (hi) => hi.has('TD') },
+  { name: 'Low-Propaganda', desc: 'Below-average use of propaganda techniques. Content that avoids rhetorical manipulation.', icon: '\u{1F6E1}', test: (_hi, lo) => lo.has('PT') },
+  { name: 'Measured Tone', desc: 'Low arousal and restrained editorial energy. Calm, analytical coverage.', icon: '\u{1F30A}', test: (_hi, lo) => lo.has('AR') },
 ];
 
 interface EnrichedCluster {
@@ -247,6 +247,8 @@ interface EnrichedCluster {
   rawCentroid: number[]; // un-normalized for display
   avgScore: number | null;
   name: string;
+  archetype: string;
+  description: string;
   icon: string;
   color: string;
   insight: string;
@@ -293,7 +295,7 @@ for (const vec of rawVectors.values()) {
 const p33s = dimValues.map(v => percentile(v, 33));
 const p66s = dimValues.map(v => percentile(v, 66));
 
-function assignArchetype(centroidRaw: number[]): { name: string; icon: string; color: string } {
+function assignArchetype(centroidRaw: number[]): { name: string; archetype: string; description: string; icon: string; color: string } {
   const hiSet = new Set<string>();
   const loSet = new Set<string>();
   for (let i = 0; i < nDims; i++) {
@@ -301,30 +303,36 @@ function assignArchetype(centroidRaw: number[]): { name: string; icon: string; c
     else if (centroidRaw[i] <= p33s[i]) loSet.add(SIGNAL_DIMS[i].code);
   }
 
+  // Build signal profile name (always used as primary name)
+  const hiMarkers = [...hiSet];
+  const loMarkers = [...loSet];
+  let profileName: string;
+  if (hiMarkers.length > 0 && loMarkers.length > 0) {
+    profileName = `High ${hiMarkers.slice(0, 2).join('/')} · Low ${loMarkers.slice(0, 2).join('/')}`;
+  } else if (hiMarkers.length > 0) {
+    profileName = `High ${hiMarkers.slice(0, 3).join('/')}`;
+  } else if (loMarkers.length > 0) {
+    profileName = `Low ${loMarkers.slice(0, 3).join('/')}`;
+  } else {
+    profileName = 'Centrist Profile';
+  }
+
+  // Find archetype (used as subtitle) and description
+  let archetype = '';
+  let description = '';
+  let icon = '\u{1F3F7}';
   for (const rule of ARCHETYPE_RULES) {
     if (rule.test(hiSet, loSet)) {
-      const primary = [...hiSet][0];
-      const dim = SIGNAL_DIMS.find(d => d.code === primary);
-      return { name: rule.name, icon: rule.icon, color: dim?.color || '#818cf8' };
+      archetype = rule.name;
+      description = rule.desc;
+      icon = rule.icon;
+      break;
     }
   }
 
-  // Fallback: readable description from strongest markers
-  const hiMarkers = [...hiSet];
-  const loMarkers = [...loSet];
-  let name: string;
-  if (hiMarkers.length > 0 && loMarkers.length > 0) {
-    name = `High ${hiMarkers.slice(0, 2).join('/')} · Low ${loMarkers.slice(0, 2).join('/')}`;
-  } else if (hiMarkers.length > 0) {
-    name = `High ${hiMarkers.slice(0, 3).join('/')}`;
-  } else if (loMarkers.length > 0) {
-    name = `Low ${loMarkers.slice(0, 3).join('/')}`;
-  } else {
-    name = 'Centrist Profile';
-  }
   const primaryCode = hiMarkers[0] || loMarkers[0] || null;
   const dim = primaryCode ? SIGNAL_DIMS.find(d => d.code === primaryCode) : null;
-  return { name, icon: '\u{1F3F7}', color: dim?.color || '#818cf8' };
+  return { name: profileName, archetype, description, icon, color: dim?.color || '#818cf8' };
 }
 
 function generateInsight(centroidRaw: number[], archName: string): string {
@@ -403,6 +411,8 @@ for (const cl of clusterList) {
     rawCentroid,
     avgScore,
     name: arch.name,
+    archetype: arch.archetype,
+    description: arch.description,
     icon: arch.icon,
     color: arch.color,
     insight,
@@ -1018,9 +1028,9 @@ function tierLabel(sim: number): { label: string; color: string } {
             <tr>
               <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
                 {/* Header */}
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                   <span style={`color: ${cl.color}; font-weight: bold; font-size: var(--font-sm);`}>
-                    {cl.icon} {cl.name}
+                    {cl.name}
                     <span style="color: #888; font-weight: normal; margin-left: 8px; font-size: var(--font-xs);">
                       {cl.members.length} domains
                     </span>
@@ -1031,6 +1041,20 @@ function tierLabel(sim: number): { label: string; color: string } {
                     </span>
                   )}
                 </div>
+
+                {/* Archetype + description */}
+                {cl.archetype && (
+                  <div style="margin-bottom: 4px;">
+                    <span style="color: #888; font-size: var(--font-xs); font-style: italic;">
+                      {cl.icon} {cl.archetype}
+                    </span>
+                    {cl.description && (
+                      <span style="color: #555; font-size: var(--font-xs); margin-left: 6px;">
+                        &mdash; {cl.description}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Insight */}
                 <div style="color: #888; font-size: var(--font-xs); margin-bottom: 8px; line-height: 1.4;">
@@ -1169,33 +1193,33 @@ function tierLabel(sim: number): { label: string; color: string } {
                 </span>
               </div>
               <div style="overflow-x: auto;">
-                <svg width={nClusters * 60 + 120} height={nClusters * 60 + 40} viewBox={`0 0 ${nClusters * 60 + 120} ${nClusters * 60 + 40}`}>
+                <svg width={nClusters * 60 + 180} height={nClusters * 60 + 40} viewBox={`0 0 ${nClusters * 60 + 180} ${nClusters * 60 + 40}`}>
                   {/* Column headers */}
                   {enrichedClusters.map((cl, j) => (
-                    <text x={120 + j * 60 + 25} y="16" fill={cl.color} font-size="8" font-family="monospace" text-anchor="middle">
-                      {cl.name.length > 8 ? cl.name.slice(0, 8) + '..' : cl.name}
+                    <text x={180 + j * 60 + 25} y="16" fill={cl.color} font-size="7" font-family="monospace" text-anchor="middle">
+                      {cl.name.length > 12 ? cl.name.slice(0, 12) + '..' : cl.name}
                     </text>
                   ))}
                   {/* Rows */}
                   {enrichedClusters.map((clI, i) => (
                     <g>
-                      <text x="115" y={26 + i * 60 + 25} fill={clI.color} font-size="8" font-family="monospace" text-anchor="end">
-                        {clI.name.length > 14 ? clI.name.slice(0, 14) + '..' : clI.name}
+                      <text x="175" y={26 + i * 60 + 25} fill={clI.color} font-size="7" font-family="monospace" text-anchor="end">
+                        {clI.name.length > 22 ? clI.name.slice(0, 22) + '..' : clI.name}
                       </text>
                       {enrichedClusters.map((clJ, j) => {
                         const sim = affinityMatrix[i][j];
                         const tier = tierLabel(sim);
                         return (
                           <g>
-                            <rect x={120 + j * 60} y={26 + i * 60} width="50" height="50" rx="4"
+                            <rect x={180 + j * 60} y={26 + i * 60} width="50" height="50" rx="4"
                                   fill={affinityColor(sim)} opacity={affinityOpacity(sim)}>
                               <title>{clI.name} vs {clJ.name}: {sim.toFixed(3)} ({tier.label})</title>
                             </rect>
-                            <text x={120 + j * 60 + 25} y={26 + i * 60 + 28} fill="#eee" font-size="10" font-family="monospace" text-anchor="middle">
+                            <text x={180 + j * 60 + 25} y={26 + i * 60 + 28} fill="#eee" font-size="10" font-family="monospace" text-anchor="middle">
                               {sim.toFixed(2)}
                             </text>
                             {i !== j && (
-                              <text x={120 + j * 60 + 25} y={26 + i * 60 + 40} fill="#aaa" font-size="7" font-family="monospace" text-anchor="middle">
+                              <text x={180 + j * 60 + 25} y={26 + i * 60 + 40} fill="#aaa" font-size="7" font-family="monospace" text-anchor="middle">
                                 {tier.label}
                               </text>
                             )}
