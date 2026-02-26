@@ -569,6 +569,25 @@ interface SignalHistogram {
   clusterMarkers: { name: string; value: number; color: string }[];
 }
 
+function buildHistogramFromValues(code: string, fullLabel: string, color: string, raw: number[], markers: { name: string; value: number; color: string }[]): SignalHistogram {
+  if (raw.length === 0) return { code, fullLabel, color, bins: [], min: 0, max: 0, maxCount: 0, clusterMarkers: [] };
+  const min = Math.min(...raw);
+  const max = Math.max(...raw);
+  const numBins = 12;
+  const range = max - min || 1;
+  const binWidth = range / numBins;
+  const bins: { x0: number; x1: number; count: number }[] = [];
+  for (let i = 0; i < numBins; i++) {
+    bins.push({ x0: min + i * binWidth, x1: min + (i + 1) * binWidth, count: 0 });
+  }
+  for (const v of raw) {
+    const idx = Math.min(Math.floor((v - min) / binWidth), numBins - 1);
+    bins[idx].count++;
+  }
+  const maxCount = Math.max(...bins.map(b => b.count), 1);
+  return { code, fullLabel, color, bins, min, max, maxCount, clusterMarkers: markers };
+}
+
 function buildHistograms(): SignalHistogram[] {
   const vals = [...signalProfiles.values()];
   const extractors: { code: string; fullLabel: string; color: string; fn: (p: DomainSignalProfile) => number | null }[] = [
@@ -584,37 +603,45 @@ function buildHistograms(): SignalHistogram[] {
 
   return extractors.map((ext, dimIdx) => {
     const raw = vals.map(ext.fn).filter((n): n is number => n !== null);
-    if (raw.length === 0) return { code: ext.code, fullLabel: ext.fullLabel, color: ext.color, bins: [], min: 0, max: 0, maxCount: 0, clusterMarkers: [] };
-
-    const min = Math.min(...raw);
-    const max = Math.max(...raw);
-    const numBins = 12;
-    const range = max - min || 1;
-    const binWidth = range / numBins;
-
-    const bins: { x0: number; x1: number; count: number }[] = [];
-    for (let i = 0; i < numBins; i++) {
-      bins.push({ x0: min + i * binWidth, x1: min + (i + 1) * binWidth, count: 0 });
-    }
-    for (const v of raw) {
-      const idx = Math.min(Math.floor((v - min) / binWidth), numBins - 1);
-      bins[idx].count++;
-    }
-
-    const maxCount = Math.max(...bins.map(b => b.count), 1);
-
-    // Cluster centroid markers (raw values)
-    const clusterMarkers = enrichedClusters.map(cl => ({
+    const markers = enrichedClusters.map(cl => ({
       name: cl.name,
       value: cl.rawCentroid[dimIdx],
       color: cl.color,
     }));
-
-    return { code: ext.code, fullLabel: ext.fullLabel, color: ext.color, bins, min, max, maxCount, clusterMarkers };
+    return buildHistogramFromValues(ext.code, ext.fullLabel, ext.color, raw, markers);
   });
 }
 
 const histograms = buildHistograms();
+
+// --- 13b. Core signal histograms (HRCB, Editorial, Structural, Confidence, SETL) ---
+function buildCoreHistograms(): SignalHistogram[] {
+  const vals = [...signalProfiles.values()];
+  const coreExtractors: { code: string; fullLabel: string; color: string; fn: (p: DomainSignalProfile) => number | null }[] = [
+    { code: 'HRCB', fullLabel: 'HRCB Score', color: '#e879f9', fn: p => p.avg_hrcb },
+    { code: 'E', fullLabel: 'Editorial Channel', color: '#818cf8', fn: p => p.avg_editorial },
+    { code: 'S', fullLabel: 'Structural Channel', color: '#38bdf8', fn: p => p.avg_structural },
+    { code: 'CONF', fullLabel: 'Confidence', color: '#a3e635', fn: p => p.avg_confidence },
+    { code: 'SETL', fullLabel: 'Structural-Editorial Tension', color: '#fb7185', fn: p => p.avg_setl },
+  ];
+
+  return coreExtractors.map(ext => {
+    const raw = vals.map(ext.fn).filter((n): n is number => n !== null);
+    // Compute cluster averages for markers
+    const markers = enrichedClusters.map(cl => {
+      const memberVals = cl.members
+        .map(m => signalProfiles.get(m))
+        .filter(Boolean)
+        .map(p => ext.fn(p!))
+        .filter((v): v is number => v !== null);
+      const avg = memberVals.length > 0 ? memberVals.reduce((a, b) => a + b, 0) / memberVals.length : 0;
+      return { name: cl.name, value: avg, color: cl.color };
+    });
+    return buildHistogramFromValues(ext.code, ext.fullLabel, ext.color, raw, markers);
+  });
+}
+
+const coreHistograms = buildCoreHistograms();
 
 // --- 14. Interesting pairs ---
 // Cross-cluster closest pairs
@@ -730,9 +757,9 @@ function tierLabel(sim: number): { label: string; color: string } {
     <tr>
       <td style="color: #666; font-size: var(--font-xs); padding: 4px 0 8px 0; line-height: 1.5;">
         Domains grouped by <em>editorial character</em> &mdash; how they cover topics, not just what they score.
-        Clustering uses 8 normalized signal dimensions (epistemic quality, solution orientation, stakeholder representation,
-        transparency, propaganda, arousal, valence, fair witness) with cosine similarity on z-normalized vectors and
-        golden ratio (&#x3C6;) tier thresholds.
+        Signal landscape shows 13 dimensions: 5 core (HRCB, editorial, structural, confidence, SETL) and
+        8 editorial character signals. Clustering uses the 8 editorial dimensions with cosine similarity
+        on z-normalized vectors and golden ratio (&#x3C6;) tier thresholds.
       </td>
     </tr>
   </table>
@@ -754,11 +781,60 @@ function tierLabel(sim: number): { label: string; color: string } {
             <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
               Signal Landscape
               <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-                how {signalProfiles.size} domains distribute across 8 editorial dimensions · colored lines mark cluster centroids
+                how {signalProfiles.size} domains distribute across core and editorial dimensions · colored lines mark cluster centroids
               </span>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+            {/* Core signals: HRCB, Editorial, Structural, Confidence, SETL */}
+            <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px; margin-bottom: 4px;">
+              Core Signals
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              {coreHistograms.map(h => {
+                const chartW = 200;
+                const chartH = 50;
+                const numBins = h.bins.length;
+                if (numBins === 0) return null;
+                const barW = chartW / numBins;
+                const range = h.max - h.min || 1;
+                const toX = (v: number) => ((v - h.min) / range) * chartW;
+                return (
+                  <div style="background: #0d0d14; border: 1px solid #1a1a25; border-radius: 4px; padding: 6px 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                      <span style={`color: ${h.color}; font-size: var(--font-xs); font-weight: bold;`}>{h.code}</span>
+                      <span style="color: #555; font-size: 9px;">{h.fullLabel}</span>
+                    </div>
+                    <svg width={chartW + 10} height={chartH + 16} viewBox={`0 0 ${chartW + 10} ${chartH + 16}`} style="display: block;">
+                      {h.bins.map((bin, bi) => {
+                        const barH = h.maxCount > 0 ? (bin.count / h.maxCount) * chartH : 0;
+                        const x = 5 + bi * barW;
+                        return (
+                          <rect x={x} y={chartH - barH} width={Math.max(barW - 1, 1)} height={Math.max(barH, 0)} fill={h.color} opacity="0.6" rx="1">
+                            <title>{bin.x0.toFixed(2)}–{bin.x1.toFixed(2)}: {bin.count} domains</title>
+                          </rect>
+                        );
+                      })}
+                      {h.clusterMarkers.map(cm => {
+                        const x = 5 + toX(cm.value);
+                        return (
+                          <line x1={x} y1="0" x2={x} y2={chartH} stroke={cm.color} stroke-width="2" opacity="0.8">
+                            <title>{cm.name}: {cm.value.toFixed(2)}</title>
+                          </line>
+                        );
+                      })}
+                      <text x="5" y={chartH + 11} fill="#444" font-size="7" font-family="monospace">{h.min.toFixed(2)}</text>
+                      <text x={5 + chartW} y={chartH + 11} fill="#444" font-size="7" font-family="monospace" text-anchor="end">{h.max.toFixed(2)}</text>
+                    </svg>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Editorial signal dimensions */}
+            <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 10px; margin-bottom: 4px;">
+              Editorial Character <span style="text-transform: none; letter-spacing: 0; color: #444;">(used for clustering)</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
               {histograms.map(h => {
                 const chartW = 200;
                 const chartH = 50;
@@ -778,15 +854,7 @@ function tierLabel(sim: number): { label: string; color: string } {
                         const barH = h.maxCount > 0 ? (bin.count / h.maxCount) * chartH : 0;
                         const x = 5 + bi * barW;
                         return (
-                          <rect
-                            x={x}
-                            y={chartH - barH}
-                            width={Math.max(barW - 1, 1)}
-                            height={Math.max(barH, 0)}
-                            fill={h.color}
-                            opacity="0.6"
-                            rx="1"
-                          >
+                          <rect x={x} y={chartH - barH} width={Math.max(barW - 1, 1)} height={Math.max(barH, 0)} fill={h.color} opacity="0.6" rx="1">
                             <title>{bin.x0.toFixed(2)}–{bin.x1.toFixed(2)}: {bin.count} domains</title>
                           </rect>
                         );

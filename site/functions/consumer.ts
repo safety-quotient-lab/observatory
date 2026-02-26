@@ -55,6 +55,7 @@ interface Env {
   DB: D1Database;
   ANTHROPIC_API_KEY: string;
   OPENROUTER_API_KEY?: string;
+  AI?: any; // Cloudflare Workers AI binding
   CONTENT_CACHE: KVNamespace;
   CONTENT_SNAPSHOTS: R2Bucket;
   EVAL_MODEL_OVERRIDE?: string;
@@ -217,6 +218,19 @@ function secondsUntilReset(resetTime: string | null): number {
   }
 }
 
+async function checkCreditPause(kv: KVNamespace, provider: string): Promise<boolean> {
+  try {
+    const v = await kv.get(`credit_pause:${provider}`);
+    return v !== null;
+  } catch { return false; }
+}
+
+async function setCreditPause(kv: KVNamespace, provider: string): Promise<void> {
+  try {
+    await kv.put(`credit_pause:${provider}`, new Date().toISOString(), { expirationTtl: 1800 }); // 30 min
+  } catch {}
+}
+
 async function checkRateLimitCapacity(kv: KVNamespace, model: string): Promise<CapacityResult> {
   const key = `ratelimit:${model}`;
   let state: RateLimitState | null = null;
@@ -342,6 +356,37 @@ async function callOpenRouterApi(
   return { response: res, data: null };
 }
 
+async function callWorkersAi(
+  ai: any,
+  modelDef: ModelDefinition,
+  systemPrompt: string,
+  userMessage: string,
+): Promise<{ text: string }> {
+  const result = await ai.run(modelDef.api_model_id, {
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userMessage },
+    ],
+    max_tokens: modelDef.max_tokens,
+    temperature: 0.0,
+  });
+  // Workers AI text generation returns { response: "..." }
+  let text: string;
+  if (typeof result === 'string') {
+    text = result;
+  } else if (result && typeof result.response === 'string') {
+    text = result.response;
+  } else {
+    // Unexpected format — stringify for debugging
+    text = JSON.stringify(result) || '';
+    console.warn(`[consumer] Workers AI unexpected result format: ${text.slice(0, 200)}`);
+  }
+  if (!text) {
+    throw new Error('Workers AI returned empty response');
+  }
+  return { text };
+}
+
 // --- End API Routing ---
 
 async function hashString(input: string): Promise<string> {
@@ -373,10 +418,25 @@ export default {
       const modelToUse = modelDef?.api_model_id || msgModelId;
       const isPrimary = msgModelId === PRIMARY_MODEL_ID || (!story.eval_model && !env.EVAL_MODEL_OVERRIDE);
 
-      // Check API key availability
-      const apiKey = provider === 'openrouter' ? env.OPENROUTER_API_KEY : env.ANTHROPIC_API_KEY;
-      if (!apiKey) {
+      // Check API key / binding availability
+      const apiKey = provider === 'openrouter' ? env.OPENROUTER_API_KEY : provider === 'anthropic' ? env.ANTHROPIC_API_KEY : undefined;
+      if (provider === 'workers-ai' && !env.AI) {
+        console.warn(`[consumer] No AI binding for workers-ai model=${msgModelId}, skipping hn_id=${story.hn_id}`);
+        msg.ack();
+        continue;
+      }
+      if (provider !== 'workers-ai' && !apiKey) {
         console.warn(`[consumer] No API key for provider=${provider}, model=${msgModelId}, skipping hn_id=${story.hn_id}`);
+        msg.ack();
+        continue;
+      }
+
+      // Credit pause: if provider credits are exhausted, reset to pending and skip
+      if (await checkCreditPause(env.CONTENT_CACHE, provider)) {
+        console.warn(`[consumer] Credit pause active for provider=${provider}, deferring hn_id=${story.hn_id}`);
+        if (isPrimary) {
+          await db.prepare(`UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status IN ('queued', 'evaluating')`).bind(story.hn_id).run().catch(() => {});
+        }
         msg.ack();
         continue;
       }
@@ -596,6 +656,77 @@ export default {
             await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Validation warnings for model ${msgModelId}: ${validation.warnings.length}W ${validation.repairs.length}R`, details: { model: msgModelId, warnings: validation.warnings, repairs: validation.repairs } });
           }
 
+        } else if (provider === 'workers-ai') {
+          // --- Workers AI path ---
+          if (!modelDef) {
+            throw new Error(`Unknown model in registry: ${msgModelId}`);
+          }
+          const { text: rawText } = await callWorkersAi(env.AI, modelDef, METHODOLOGY_SYSTEM_PROMPT_SLIM, userMessage);
+
+          // Workers AI doesn't provide token counts
+          inputTokens = 0;
+          outputTokens = 0;
+
+          // M10: Validation pipeline — parse raw text to JSON
+          try {
+            const extracted = extractJsonFromResponse(rawText);
+            slim = JSON.parse(extracted) as SlimEvalResponse;
+          } catch (parseErr) {
+            try {
+              await env.CONTENT_SNAPSHOTS.put(
+                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
+                rawText,
+                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: String(parseErr).slice(0, 500) } }
+              );
+            } catch {}
+
+            const healthKey = raterHealthKvKey(msgModelId);
+            let health = emptyRaterHealth();
+            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+            health = updateRaterHealthOnParseFailure(health);
+            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+            if (health.disabled_at) {
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
+            }
+
+            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Parse failure: ${parseErr}`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Parse failure for model ${msgModelId}: ${String(parseErr).slice(0, 200)}`, details: { model: msgModelId, error: String(parseErr).slice(0, 500) } });
+            msg.ack();
+            continue;
+          }
+
+          // M2: Schema validation
+          const validation = validateSlimEvalResponse(slim);
+          if (!validation.valid) {
+            try {
+              await env.CONTENT_SNAPSHOTS.put(
+                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
+                rawText,
+                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: validation.errors.join('; ').slice(0, 500) } }
+              );
+            } catch {}
+
+            const healthKey = raterHealthKvKey(msgModelId);
+            let health = emptyRaterHealth();
+            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+            health = updateRaterHealthOnParseFailure(health);
+            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+            if (health.disabled_at) {
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason } });
+            }
+
+            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Validation failed: ${validation.errors.join('; ')}`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Validation failed for model ${msgModelId}`, details: { model: msgModelId, errors: validation.errors, warnings: validation.warnings } });
+            msg.ack();
+            continue;
+          }
+
+          if (validation.warnings.length > 0 || validation.repairs.length > 0) {
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Validation warnings for model ${msgModelId}: ${validation.warnings.length}W ${validation.repairs.length}R`, details: { model: msgModelId, warnings: validation.warnings, repairs: validation.repairs } });
+          }
+
         } else {
           // --- Anthropic path (existing logic) ---
           const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -645,9 +776,12 @@ export default {
               continue;
             }
             if (res.status === 400 && body.includes('credit balance')) {
-              const delaySec = addJitter(300);
-              await logEvent(db, { hn_id: story.hn_id, event_type: 'credit_exhausted', severity: 'error', message: `Credit balance too low, retrying in ${delaySec}s`, details: { status: 400, delay_seconds: delaySec, model: msgModelId } });
-              msg.retry({ delaySeconds: delaySec });
+              await setCreditPause(env.CONTENT_CACHE, 'anthropic');
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'credit_exhausted', severity: 'error', message: `Credit balance too low, pausing provider for 30 min`, details: { status: 400, model: msgModelId } });
+              if (isPrimary) {
+                await db.prepare(`UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status IN ('queued', 'evaluating')`).bind(story.hn_id).run().catch(() => {});
+              }
+              msg.ack();
               continue;
             }
             await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `Anthropic API error ${res.status}`, details: { status: res.status, body_preview: body.slice(0, 500), model: msgModelId } });

@@ -17,7 +17,7 @@ export const EVAL_MODEL = 'claude-haiku-4-5-20251001';
 
 // --- Multi-Model Registry ---
 
-export type ModelProvider = 'anthropic' | 'openrouter';
+export type ModelProvider = 'anthropic' | 'openrouter' | 'workers-ai';
 
 export interface ModelDefinition {
   id: string;                    // DB identifier (eval_model column)
@@ -141,6 +141,18 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     supports_cache_control: false,
     supports_json_mode: true,
   },
+  {
+    id: 'llama-3.3-70b-wai',
+    display_name: 'Llama 3.3 70B (WAI)',
+    short_name: 'L3W',
+    provider: 'workers-ai',
+    api_model_id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+    is_free: true,
+    enabled: false, // disabled: not ready for production yet, pending testing
+    max_tokens: 16384,
+    supports_cache_control: false,
+    supports_json_mode: false,
+  },
 ];
 
 export const PRIMARY_MODEL_ID = 'claude-haiku-4-5-20251001';
@@ -176,6 +188,7 @@ export const MODEL_QUEUE_BINDINGS: Record<string, string> = {
   'llama-3.3-70b': 'LLAMA_QUEUE',
   'mistral-small-3.1': 'MISTRAL_QUEUE',
   'hermes-3-405b': 'HERMES_QUEUE',
+  'llama-3.3-70b-wai': 'WORKERS_AI_QUEUE',
 };
 
 /** Get the queue for a given model from the env bindings. Falls back to EVAL_QUEUE. */
@@ -1353,6 +1366,8 @@ export async function cacheDcp(
 
 export function extractJsonFromResponse(raw: string): string {
   let text = raw.trim();
+  // Strip <think>...</think> blocks (DeepSeek R1, reasoning models)
+  text = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
   // Strip markdown fences
   text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?\s*```\s*$/i, '');
   // Find JSON object boundaries

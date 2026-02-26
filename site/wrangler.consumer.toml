@@ -15,6 +15,9 @@ id = "ffe31e8bd21f43169e81f6d6137772bf"
 binding = "CONTENT_SNAPSHOTS"
 bucket_name = "hrcb-content-snapshots"
 
+[ai]
+binding = "AI"
+
 # Primary model (Anthropic API — separate rate limit)
 [[queues.consumers]]
 queue = "hrcb-eval-queue"
@@ -75,6 +78,14 @@ dead_letter_queue = "hrcb-eval-dlq"
 
 [[queues.consumers]]
 queue = "hrcb-eval-hermes"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+# Workers AI models — uses Cloudflare AI binding (no API key needed)
+[[queues.consumers]]
+queue = "hrcb-eval-workers-ai"
 max_batch_size = 1
 max_concurrency = 1
 max_retries = 2

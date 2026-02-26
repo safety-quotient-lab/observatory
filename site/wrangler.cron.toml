@@ -50,6 +50,10 @@ binding = "MISTRAL_QUEUE"
 queue = "hrcb-eval-hermes"
 binding = "HERMES_QUEUE"
 
+[[queues.producers]]
+queue = "hrcb-eval-workers-ai"
+binding = "WORKERS_AI_QUEUE"
+
 # Secrets (set via `wrangler secret put --name hn-hrcb-cron`):
 # ANTHROPIC_API_KEY
 # CRON_SECRET
