@@ -16,4 +16,5 @@ queue = "hrcb-eval-dlq"
 max_batch_size = 5
 max_retries = 0
 
-# Secrets: none needed (no API calls)
+# Secrets (set via `wrangler secret put --name hn-hrcb-dlq`):
+# CRON_SECRET (shared with cron worker for auth)

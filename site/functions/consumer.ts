@@ -428,6 +428,9 @@ export default {
         const rlState = await updateRateLimitState(env.CONTENT_CACHE, modelToUse, rlHeaders, false, cacheHitRate);
         await writeRateLimitSnapshot(db, modelToUse, rlState);
 
+        // Log raw rate limit headers for verification (always, cheap)
+        console.log(`[consumer] Rate limit headers for hn_id=${story.hn_id}: req=${rlHeaders.requests_remaining}/${rlHeaders.requests_limit} input=${rlHeaders.input_tokens_remaining}/${rlHeaders.input_tokens_limit} output=${rlHeaders.output_tokens_remaining}/${rlHeaders.output_tokens_limit} req_reset=${rlHeaders.requests_reset} tok_reset=${rlHeaders.tokens_reset}`);
+
         // Parse slim response (no aggregates)
         const slim = parseSlimEvalResponse(data);
 

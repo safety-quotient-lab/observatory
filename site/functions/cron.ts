@@ -25,6 +25,7 @@ import {
 } from '../src/lib/shared-eval';
 import { cleanHtml } from '../src/lib/html-clean';
 import { logEvent, pruneEvents } from '../src/lib/events';
+import { CALIBRATION_SET, runCalibrationCheck } from '../src/lib/calibration';
 
 interface Env {
   DB: D1Database;
@@ -810,18 +811,167 @@ export default {
   },
 
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    if (new URL(request.url).pathname === '/trigger') {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    // Auth check helper
+    const checkAuth = (): Response | null => {
       if (env.CRON_SECRET) {
         const auth = request.headers.get('Authorization');
         if (auth !== `Bearer ${env.CRON_SECRET}`) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
         }
       }
+      return null;
+    };
+
+    if (path === '/trigger') {
+      const authErr = checkAuth();
+      if (authErr) return authErr;
       ctx.waitUntil(
         this.scheduled({ scheduledTime: Date.now(), cron: '*/5 * * * *' } as ScheduledEvent, env, ctx)
       );
       return new Response('Cron triggered', { status: 200 });
     }
+
+    // POST /calibrate — enqueue 15 calibration URLs for evaluation
+    if (path === '/calibrate' && request.method === 'POST') {
+      const authErr = checkAuth();
+      if (authErr) return authErr;
+
+      const db = env.DB;
+      let enqueued = 0;
+      let skipped = 0;
+
+      for (let i = 0; i < CALIBRATION_SET.length; i++) {
+        const cal = CALIBRATION_SET[i];
+        // Use negative hn_ids: -1001 to -1015 for calibration URLs
+        const syntheticId = -(1000 + i + 1);
+        const domain = extractDomain(cal.url);
+
+        // Upsert into stories table so the consumer can write results
+        await db
+          .prepare(
+            `INSERT INTO stories (hn_id, title, url, domain, hn_score, hn_comments, hn_type, eval_status)
+             VALUES (?, ?, ?, ?, 0, 0, 'calibration', 'pending')
+             ON CONFLICT(hn_id) DO UPDATE SET eval_status = 'pending', evaluated_at = NULL`,
+          )
+          .bind(syntheticId, `[CAL] ${cal.label} (${cal.slot})`, cal.url, domain)
+          .run();
+
+        // Enqueue for evaluation
+        await env.EVAL_QUEUE.send({
+          hn_id: syntheticId,
+          url: cal.url,
+          title: `[CAL] ${cal.label} (${cal.slot})`,
+          hn_text: null,
+          domain,
+        });
+        enqueued++;
+      }
+
+      await logEvent(db, {
+        event_type: 'calibration',
+        severity: 'info',
+        message: `Calibration run started: ${enqueued} URLs enqueued`,
+        details: { enqueued, skipped },
+      });
+
+      return new Response(JSON.stringify({ enqueued, skipped, calibration_ids: CALIBRATION_SET.map((_, i) => -(1000 + i + 1)) }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // POST /calibrate/check — collect results and run drift check
+    if (path === '/calibrate/check' && request.method === 'POST') {
+      const authErr = checkAuth();
+      if (authErr) return authErr;
+
+      const db = env.DB;
+
+      // Collect scores for calibration URLs (by synthetic hn_id)
+      const scores = new Map<string, number | null>();
+      let pendingCount = 0;
+
+      for (let i = 0; i < CALIBRATION_SET.length; i++) {
+        const cal = CALIBRATION_SET[i];
+        const syntheticId = -(1000 + i + 1);
+
+        const row = await db
+          .prepare(`SELECT eval_status, hcb_weighted_mean FROM stories WHERE hn_id = ?`)
+          .bind(syntheticId)
+          .first<{ eval_status: string; hcb_weighted_mean: number | null }>();
+
+        if (row && row.eval_status === 'done' && row.hcb_weighted_mean !== null) {
+          scores.set(cal.url, row.hcb_weighted_mean);
+        } else {
+          scores.set(cal.url, null);
+          if (row && row.eval_status === 'pending') pendingCount++;
+        }
+      }
+
+      // Run the calibration check
+      const summary = runCalibrationCheck(scores);
+
+      // Get the methodology hash from any completed calibration eval
+      let methodologyHash = 'unknown';
+      const hashRow = await db
+        .prepare(`SELECT methodology_hash FROM stories WHERE hn_id < -1000 AND hn_id >= -1015 AND methodology_hash IS NOT NULL LIMIT 1`)
+        .first<{ methodology_hash: string }>();
+      if (hashRow) methodologyHash = hashRow.methodology_hash;
+
+      // Get the model from eval_history
+      let model = 'unknown';
+      const modelRow = await db
+        .prepare(`SELECT eval_model FROM eval_history WHERE hn_id < -1000 AND hn_id >= -1015 ORDER BY id DESC LIMIT 1`)
+        .first<{ eval_model: string }>();
+      if (modelRow) model = modelRow.eval_model;
+
+      // Write to calibration_runs table
+      await db
+        .prepare(
+          `INSERT INTO calibration_runs (model, methodology_hash, total_urls, passed, failed, skipped, status, details_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          model,
+          methodologyHash,
+          CALIBRATION_SET.length,
+          summary.passed,
+          summary.failed,
+          summary.skipped,
+          summary.status,
+          JSON.stringify({
+            results: summary.results,
+            classOrderingOk: summary.classOrderingOk,
+            pairChecks: summary.pairChecks,
+            warned: summary.warned,
+          }),
+        )
+        .run();
+
+      await logEvent(db, {
+        event_type: 'calibration',
+        severity: summary.status === 'fail' ? 'error' : summary.status === 'warn' ? 'warn' : 'info',
+        message: `Calibration check: ${summary.status} (${summary.passed} pass, ${summary.failed} fail, ${summary.skipped} skip)`,
+        details: {
+          status: summary.status,
+          passed: summary.passed,
+          failed: summary.failed,
+          warned: summary.warned,
+          skipped: summary.skipped,
+          classOrderingOk: summary.classOrderingOk,
+          pending: pendingCount,
+        },
+      });
+
+      return new Response(JSON.stringify({ ...summary, pending: pendingCount, model, methodologyHash }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response('HN HRCB Cron Worker v5 (crawl + refresh + queue dispatch)', { status: 200 });
   },
 };

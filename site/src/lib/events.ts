@@ -18,6 +18,8 @@ export type EventType =
   | 'crawl_error'
   | 'r2_error'
   | 'dlq'
+  | 'dlq_replay'
+  | 'calibration'
   | 'trigger';
 
 export type Severity = 'info' | 'warn' | 'error';
