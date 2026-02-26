@@ -13,7 +13,7 @@ const type = (url.searchParams.get('type') || 'all') as TypeOption;
 const model = (url.searchParams.get('model') || 'all') as ModelOption;
 const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
-const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'setl_desc', 'setl_asc', 'velocity'];
+const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'velocity'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
 const safeSort = validSorts.includes(sort) ? sort : 'top';
@@ -69,8 +69,6 @@ const SORT_OPTIONS = [
   { value: 'hn_points', label: 'points' },
   { value: 'conf_desc', label: 'top conf' },
   { value: 'conf_asc', label: 'bottom conf' },
-  { value: 'setl_desc', label: 'top setl' },
-  { value: 'setl_asc', label: 'bottom setl' },
   { value: 'velocity', label: 'velocity' },
 ] as const;
 

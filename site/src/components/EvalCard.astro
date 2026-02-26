@@ -58,25 +58,16 @@ function timeAgo(unixTime: number): string {
           >
             {formatScore(story.hcb_weighted_mean)}
           </span>
-          {confidence !== null && (
-            <span
-              class="score-font"
-              style={`color: ${confidenceToColor(confidence)}; font-size: var(--font-sm); margin-left: 4px;`}
-              title={`Confidence: ${story.hcb_signal_sections}/${(story.hcb_signal_sections || 0) + (story.hcb_nd_count || 0)} articles scored`}
-            >
-              {formatConfidence(confidence)}
-            </span>
-          )}
         </div>
         <div style="white-space: nowrap; margin-top: 1px;">
-          {aggSetl !== null && (
+          {confidence !== null && (
             <>
-              <span class="score-font" style="color: #555; font-size: var(--font-xs);" title="Structural-Editorial Tension Level">SETL</span>
+              <span class="score-font" style="color: #555; font-size: var(--font-xs);" title={`Confidence: ${story.hcb_signal_sections}/${(story.hcb_signal_sections || 0) + (story.hcb_nd_count || 0)} articles scored`}>Conf</span>
               <span
                 class="score-font"
-                style={`color: ${setlToColor(aggSetl)}; font-size: var(--font-sm); margin-left: 2px;`}
+                style={`color: ${confidenceToColor(confidence)}; font-size: var(--font-sm); margin-left: 2px;`}
               >
-                {formatSetl(aggSetl)}
+                {formatConfidence(confidence)}
               </span>
             </>
           )}
