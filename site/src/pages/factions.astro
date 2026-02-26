@@ -437,7 +437,7 @@ const histograms = buildHistograms(signalProfiles, percentiles);
       <td>
         <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Domain Factions</span>
         <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
-          Stackpole faction analysis
+          UDHR fingerprint clustering + signal profiling
         </span>
       </td>
     </tr>
@@ -511,48 +511,59 @@ const histograms = buildHistograms(signalProfiles, percentiles);
               ))}
             </table>
 
-            {/* Histogram grid */}
-            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-              {histograms.map(h => {
-                if (h.bins.length === 0) return null;
-                const chartW = 220;
-                const chartH = 60;
-                const barW = chartW / h.bins.length;
-                const range = h.max - h.min || 1;
-                // Map a value to x position
-                const toX = (v: number) => ((v - h.min) / range) * chartW;
-                return (
-                  <div style={`width: ${chartW + 2}px; flex-shrink: 0;`}>
-                    <div style={`color: ${h.color}; font-size: var(--font-xs); margin-bottom: 2px;`}>{h.code}</div>
-                    <svg width={chartW + 2} height={chartH + 16} xmlns="http://www.w3.org/2000/svg">
-                      {/* Bars */}
-                      {h.bins.map((bin, bi) => {
-                        const barH = (bin.count / h.maxCount) * chartH;
-                        return (
-                          <rect x={bi * barW + 1} y={chartH - barH} width={Math.max(barW - 1, 1)} height={barH}
-                                fill={h.color} opacity="0.5" rx="1">
-                            <title>{bin.x0.toFixed(2)} – {bin.x1.toFixed(2)}: {bin.count} domains</title>
-                          </rect>
-                        );
-                      })}
-                      {/* p33 line */}
-                      <line x1={toX(h.p33) + 1} y1="0" x2={toX(h.p33) + 1} y2={chartH}
-                            stroke="#f87171" stroke-width="1.5" stroke-dasharray="3,2" />
-                      <text x={toX(h.p33) + 1} y={chartH + 10} fill="#f87171" font-size="7" font-family="monospace" text-anchor="middle">
-                        p33: {h.p33.toFixed(2)}
-                      </text>
-                      {/* p66 line */}
-                      <line x1={toX(h.p66) + 1} y1="0" x2={toX(h.p66) + 1} y2={chartH}
-                            stroke="#34d399" stroke-width="1.5" stroke-dasharray="3,2" />
-                      <text x={toX(h.p66) + 1} y={chartH + 10} fill="#34d399" font-size="7" font-family="monospace" text-anchor="middle">
-                        p66: {h.p66.toFixed(2)}
-                      </text>
-                      {/* Axis line */}
-                      <line x1="1" y1={chartH} x2={chartW + 1} y2={chartH} stroke="#333" stroke-width="0.5" />
-                    </svg>
-                  </div>
-                );
-              })}
+            {/* Combined signal distribution strip chart */}
+            {(() => {
+              const labelW = 170;
+              const stripW = 400;
+              const rowH = 24;
+              const totalH = histograms.length * rowH + 4;
+              const profiles = [...signalProfiles.values()];
+              // Build per-signal raw value arrays for dot plotting
+              const signalExtractors: ((p: import('../lib/db').DomainSignalProfile) => number | null)[] = [
+                p => p.avg_eq, p => p.avg_so, p => p.avg_sr, p => p.avg_td,
+                p => p.avg_pt_count, p => p.avg_arousal, p => p.avg_valence, p => p.avg_fw_ratio,
+              ];
+              return (
+                <div style="overflow-x: auto;">
+                  <svg width={labelW + stripW + 60} height={totalH} xmlns="http://www.w3.org/2000/svg">
+                    {histograms.map((h, hi) => {
+                      const y = hi * rowH;
+                      const range = h.max - h.min || 1;
+                      const toX = (v: number) => labelW + ((v - h.min) / range) * stripW;
+                      const rawVals = profiles.map(signalExtractors[hi]).filter((n): n is number => n !== null);
+                      return (
+                        <g>
+                          {/* Signal label */}
+                          <text x={labelW - 6} y={y + 15} fill={h.color} font-size="9" font-family="monospace" text-anchor="end">{h.code}</text>
+                          {/* Track background */}
+                          <rect x={labelW} y={y + 4} width={stripW} height="14" rx="3" fill="#1a1a25" />
+                          {/* p33-p66 middle zone */}
+                          <rect x={toX(h.p33)} y={y + 4} width={Math.max(toX(h.p66) - toX(h.p33), 1)} height="14" rx="2" fill="#222230" />
+                          {/* Domain dots */}
+                          {rawVals.map((v, vi) => (
+                            <circle cx={toX(v)} cy={y + 11} r="3" fill={h.color} opacity="0.6">
+                              <title>{v.toFixed(2)}</title>
+                            </circle>
+                          ))}
+                          {/* p33 marker */}
+                          <line x1={toX(h.p33)} y1={y + 2} x2={toX(h.p33)} y2={y + 20} stroke="#f87171" stroke-width="1.5" stroke-dasharray="2,2" />
+                          {/* p66 marker */}
+                          <line x1={toX(h.p66)} y1={y + 2} x2={toX(h.p66)} y2={y + 20} stroke="#34d399" stroke-width="1.5" stroke-dasharray="2,2" />
+                          {/* Min/max labels */}
+                          <text x={labelW - 1} y={y + 22} fill="#444" font-size="6" font-family="monospace" text-anchor="end">{h.min.toFixed(1)}</text>
+                          <text x={labelW + stripW + 2} y={y + 15} fill="#444" font-size="6" font-family="monospace">{h.max.toFixed(1)}</text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              );
+            })()}
+            <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs); color: #555;">
+              <span><span style="color: #f87171;">┊</span> p33 cutoff (−)</span>
+              <span><span style="color: #34d399;">┊</span> p66 cutoff (+)</span>
+              <span style="color: #444;">■ middle third</span>
+              <span>● domain values</span>
             </div>
           </td>
         </tr>
