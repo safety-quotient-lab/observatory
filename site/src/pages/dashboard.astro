@@ -36,7 +36,14 @@ import {
   getDailyErrorCounts,
   getSignalOverview,
   getEvalsPerCycle,
+  getLatestRateLimitSnapshot,
+  getDlqStats,
+  getDlqMessages,
+  getMethodologyDistribution,
+  getModelDriftStats,
+  getLatestCalibrationRun,
 } from '../lib/db';
+import { CALIBRATION_SET } from '../lib/calibration';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -88,6 +95,16 @@ try {
   // events table may not exist yet
 }
 
+// Rate limit + measurement integrity data (graceful fallback if tables don't exist yet)
+const [rateLimitSnapshot, dlqStats, dlqMessages, methodologyDist, driftStats, lastCalibration] = await Promise.all([
+  getLatestRateLimitSnapshot(db),
+  getDlqStats(db),
+  getDlqMessages(db, 'pending', 10),
+  getMethodologyDistribution(db),
+  getModelDriftStats(db),
+  getLatestCalibrationRun(db),
+]);
+
 // Signal overview (graceful fallback if columns don't exist yet)
 let signalOverview: Awaited<ReturnType<typeof getSignalOverview>> = {
   total_with_signals: 0, avg_eq: null, avg_so: null, avg_sr: null, avg_td: null,
@@ -128,7 +145,8 @@ function storySetl(s: { hcb_json: string | null }): number | null {
 // Event type color map for Pipeline Events panel
 const EVENT_TYPE_COLORS: Record<string, string> = {
   eval_failure: '#dc2626', eval_retry: '#f97316', eval_skip: '#6b7280',
-  eval_success: '#16a34a', rate_limit: '#eab308', fetch_error: '#dc2626',
+  eval_success: '#16a34a', rate_limit: '#eab308', self_throttle: '#818cf8',
+  credit_exhausted: '#ef4444', fetch_error: '#dc2626',
   parse_error: '#dc2626', cron_run: '#60a5fa', cron_error: '#f97316',
   crawl_error: '#f97316', r2_error: '#f97316', dlq: '#dc2626', trigger: '#a78bfa',
 };
@@ -1508,6 +1526,72 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
             </div>
           )}
 
+          {/* API Headroom */}
+          {rateLimitSnapshot && (
+            <div style="margin-bottom: 10px; padding: 8px; background: #0a0a12; border: 1px solid #1a1a25; border-radius: 4px;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 6px;">
+                API Headroom
+                <span style="text-transform: none; color: #444; margin-left: 6px;">
+                  {rateLimitSnapshot.model} · {rateLimitSnapshot.created_at.slice(0, 16)}
+                </span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: var(--font-xs);">
+                {/* Requests */}
+                <div style="flex: 1; min-width: 100px;">
+                  <div style="color: #555; margin-bottom: 2px;">Requests</div>
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <div style="flex: 1; height: 6px; background: #1a1a25; border-radius: 3px; overflow: hidden;">
+                      {rateLimitSnapshot.requests_remaining != null && rateLimitSnapshot.requests_limit != null && rateLimitSnapshot.requests_limit > 0 && (
+                        <div style={`width: ${Math.round((rateLimitSnapshot.requests_remaining / rateLimitSnapshot.requests_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
+                      )}
+                    </div>
+                    <span style={`color: ${rateLimitSnapshot.requests_remaining != null && rateLimitSnapshot.requests_limit != null && rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? '#dc2626' : '#888'};`}>
+                      {rateLimitSnapshot.requests_remaining ?? '?'}/{rateLimitSnapshot.requests_limit ?? '?'}
+                    </span>
+                  </div>
+                </div>
+                {/* Input tokens */}
+                <div style="flex: 1; min-width: 100px;">
+                  <div style="color: #555; margin-bottom: 2px;">Input Tokens</div>
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <div style="flex: 1; height: 6px; background: #1a1a25; border-radius: 3px; overflow: hidden;">
+                      {rateLimitSnapshot.input_tokens_remaining != null && rateLimitSnapshot.input_tokens_limit != null && rateLimitSnapshot.input_tokens_limit > 0 && (
+                        <div style={`width: ${Math.round((rateLimitSnapshot.input_tokens_remaining / rateLimitSnapshot.input_tokens_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
+                      )}
+                    </div>
+                    <span style={`color: ${rateLimitSnapshot.input_tokens_remaining != null && rateLimitSnapshot.input_tokens_limit != null && rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? '#dc2626' : '#888'}; white-space: nowrap;`}>
+                      {rateLimitSnapshot.input_tokens_remaining != null ? (rateLimitSnapshot.input_tokens_remaining > 999999 ? `${(rateLimitSnapshot.input_tokens_remaining / 1000000).toFixed(1)}M` : rateLimitSnapshot.input_tokens_remaining > 999 ? `${(rateLimitSnapshot.input_tokens_remaining / 1000).toFixed(0)}k` : rateLimitSnapshot.input_tokens_remaining) : '?'}
+                    </span>
+                  </div>
+                </div>
+                {/* Output tokens */}
+                <div style="flex: 1; min-width: 100px;">
+                  <div style="color: #555; margin-bottom: 2px;">Output Tokens</div>
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <div style="flex: 1; height: 6px; background: #1a1a25; border-radius: 3px; overflow: hidden;">
+                      {rateLimitSnapshot.output_tokens_remaining != null && rateLimitSnapshot.output_tokens_limit != null && rateLimitSnapshot.output_tokens_limit > 0 && (
+                        <div style={`width: ${Math.round((rateLimitSnapshot.output_tokens_remaining / rateLimitSnapshot.output_tokens_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
+                      )}
+                    </div>
+                    <span style={`color: ${rateLimitSnapshot.output_tokens_remaining != null && rateLimitSnapshot.output_tokens_limit != null && rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? '#dc2626' : '#888'}; white-space: nowrap;`}>
+                      {rateLimitSnapshot.output_tokens_remaining != null ? (rateLimitSnapshot.output_tokens_remaining > 999999 ? `${(rateLimitSnapshot.output_tokens_remaining / 1000000).toFixed(1)}M` : rateLimitSnapshot.output_tokens_remaining > 999 ? `${(rateLimitSnapshot.output_tokens_remaining / 1000).toFixed(0)}k` : rateLimitSnapshot.output_tokens_remaining) : '?'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs);">
+                {rateLimitSnapshot.cache_hit_rate != null && (
+                  <span style="color: #888;">
+                    Cache: <span style={`color: ${rateLimitSnapshot.cache_hit_rate > 0.5 ? '#16a34a' : rateLimitSnapshot.cache_hit_rate > 0.2 ? '#eab308' : '#888'};`}>{(rateLimitSnapshot.cache_hit_rate * 100).toFixed(0)}%</span>
+                  </span>
+                )}
+                <span style={`color: ${rateLimitSnapshot.consecutive_429s === 0 ? '#16a34a' : rateLimitSnapshot.consecutive_429s <= 2 ? '#eab308' : '#dc2626'};`}>
+                  429s: {rateLimitSnapshot.consecutive_429s}{rateLimitSnapshot.consecutive_429s >= 3 ? ' (circuit open)' : ''}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Event type breakdown */}
           {Object.keys(eventStats.by_type).length > 0 && (
             <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
@@ -1581,6 +1665,107 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
             </div>
           )}
 
+          {/* Measurement Integrity */}
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+            {/* DLQ Status */}
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${dlqStats.pending > 0 ? '#dc262640' : '#1a1a25'}; border-radius: 4px;`}>
+              <div style="color: #555; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Dead Letter Queue</div>
+              {dlqStats.total === 0 ? (
+                <div style="color: #555; font-size: var(--font-xs);">Empty</div>
+              ) : (
+                <div style="font-size: var(--font-xs);">
+                  <span style={`color: ${dlqStats.pending > 0 ? '#dc2626' : '#16a34a'}; font-weight: bold;`}>{dlqStats.pending}</span>
+                  <span style="color: #555;"> pending</span>
+                  {dlqStats.replayed > 0 && <span style="color: #555;"> · {dlqStats.replayed} replayed</span>}
+                  {dlqStats.discarded > 0 && <span style="color: #444;"> · {dlqStats.discarded} discarded</span>}
+                </div>
+              )}
+              {dlqMessages.length > 0 && (
+                <div style="margin-top: 4px; font-size: 9px;">
+                  {dlqMessages.slice(0, 3).map((m) => (
+                    <div style="color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;" title={`hn_id=${m.hn_id}: ${m.title}`}>
+                      <a href={`/item/${m.hn_id}`} style="color: #dc2626;">{m.hn_id}</a> {m.title.slice(0, 30)}...
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Methodology Versions */}
+            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid #1a1a25; border-radius: 4px;">
+              <div style="color: #555; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Methodology Versions</div>
+              {methodologyDist.length === 0 ? (
+                <div style="color: #555; font-size: var(--font-xs);">No data</div>
+              ) : (
+                <div style="font-size: var(--font-xs);">
+                  {methodologyDist.map((m, i) => {
+                    const hashDisplay = m.methodology_hash ? m.methodology_hash.slice(0, 8) : 'pre-v';
+                    const isLatest = i === 0 && m.methodology_hash !== null;
+                    return (
+                      <div style={`color: ${isLatest ? '#16a34a' : m.methodology_hash === null ? '#eab308' : '#888'};`}>
+                        <span style="font-family: monospace;">{hashDisplay}</span>
+                        <span style="color: #555;"> · {m.count} evals</span>
+                        {m.methodology_hash === null && <span style="color: #eab308;"> (stale)</span>}
+                      </div>
+                    );
+                  })}
+                  {methodologyDist.some(m => m.methodology_hash === null) && (
+                    <div style="color: #eab308; font-size: 9px; margin-top: 2px;">
+                      {methodologyDist.find(m => m.methodology_hash === null)?.count ?? 0} evals need reprocessing
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Model Drift */}
+            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid #1a1a25; border-radius: 4px;">
+              <div style="color: #555; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Model Drift</div>
+              {driftStats.models.length === 0 ? (
+                <div style="color: #555; font-size: var(--font-xs);">No data</div>
+              ) : (
+                <div style="font-size: var(--font-xs);">
+                  {driftStats.models.map((m) => (
+                    <div style="color: #888;">
+                      <span style="color: #60a5fa;">{m.eval_model.replace('claude-', '').replace('-20251001', '')}</span>
+                      <span style="color: #555;"> · {m.count} evals · avg </span>
+                      <span style={`color: ${m.avg_score > 0.05 ? '#16a34a' : m.avg_score < -0.05 ? '#dc2626' : '#888'};`}>{m.avg_score?.toFixed(3)}</span>
+                      <span style="color: #444;"> ±{m.stddev?.toFixed(3)}</span>
+                    </div>
+                  ))}
+                  {driftStats.overlapping > 0 && (
+                    <div style="margin-top: 2px; color: #555; font-size: 9px;">
+                      {driftStats.overlapping} overlapping
+                      {driftStats.meanDelta !== null && (
+                        <span> · mean |Δ| = <span style={`color: ${driftStats.meanDelta > 0.1 ? '#eab308' : '#888'};`}>{driftStats.meanDelta.toFixed(3)}</span></span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Calibration Status */}
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${lastCalibration?.status === 'fail' ? '#dc262640' : '#1a1a25'}; border-radius: 4px;`}>
+              <div style="color: #555; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Calibration</div>
+              {!lastCalibration ? (
+                <div style="font-size: var(--font-xs);">
+                  <div style="color: #eab308;">No runs yet</div>
+                  <div style="color: #444; font-size: 9px;">{CALIBRATION_SET.length} URLs defined</div>
+                </div>
+              ) : (
+                <div style="font-size: var(--font-xs);">
+                  <span style={`color: ${lastCalibration.status === 'pass' ? '#16a34a' : lastCalibration.status === 'fail' ? '#dc2626' : '#eab308'}; font-weight: bold; text-transform: uppercase;`}>{lastCalibration.status}</span>
+                  <span style="color: #555;"> · {lastCalibration.passed}/{lastCalibration.total_urls} passed</span>
+                  {lastCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastCalibration.failed} failed</span>}
+                  <div style="color: #444; font-size: 9px; margin-top: 2px;">
+                    {lastCalibration.model.replace('claude-', '').replace('-20251001', '')} · {lastCalibration.created_at.slice(0, 10)}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Recent events table */}
           {recentPipelineEvents.length > 0 && (
             <div>
@@ -1603,6 +1788,21 @@ function storyConfidence(s: { hcb_evidence_h: number | null; hcb_evidence_m: num
                         ) : (
                           ev.message
                         )}
+                      </td>
+                      <td style="width: 60px; text-align: center; white-space: nowrap;">
+                        {ev.investigated === 1
+                          ? <span style="color: #3b82f6;" title="Investigated">INV</span>
+                          : ev.investigated === 0
+                            ? <span style="color: #555;" title="Not investigated">--</span>
+                            : <span style="color: #333;" title="Not triaged">-</span>
+                        }
+                        {' '}
+                        {ev.resolved === 1
+                          ? <span style="color: #22c55e;" title="Resolved">RES</span>
+                          : ev.resolved === 0
+                            ? <span style="color: #555;" title="Not resolved">--</span>
+                            : <span style="color: #333;" title="Not triaged">-</span>
+                        }
                       </td>
                     </tr>
                   );

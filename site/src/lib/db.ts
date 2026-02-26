@@ -1912,8 +1912,17 @@ export {
   getCronRuns,
   getDailyErrorCounts,
   getEvalsPerCycle,
+  updateEventTriage,
+  getLatestRateLimitSnapshot,
+  getDlqStats,
+  getDlqMessages,
+  getMethodologyDistribution,
+  getStaleEvalCount,
+  getModelDriftStats,
+  getLatestCalibrationRun,
+  getCalibrationHistory,
 } from './events';
-export type { Event, EventStats, CycleStats } from './events';
+export type { Event, EventStats, CycleStats, RateLimitSnapshot, DlqMessage, DlqStats, MethodologyDistribution, ModelDriftPair, CalibrationRun } from './events';
 
 // --- Fair Witness cross-story stats ---
 

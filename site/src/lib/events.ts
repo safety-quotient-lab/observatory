@@ -9,6 +9,8 @@ export type EventType =
   | 'eval_skip'
   | 'eval_success'
   | 'rate_limit'
+  | 'self_throttle'
+  | 'credit_exhausted'
   | 'fetch_error'
   | 'parse_error'
   | 'cron_run'
@@ -28,6 +30,8 @@ export interface Event {
   message: string;
   details: Record<string, unknown> | null;
   created_at: string;
+  investigated: number | null;
+  resolved: number | null;
 }
 
 export interface EventStats {
@@ -74,7 +78,36 @@ export async function logEvent(
 }
 
 /**
+ * Update the investigated/resolved triage flags on an event.
+ */
+export async function updateEventTriage(
+  db: D1Database,
+  eventId: number,
+  fields: { investigated?: boolean | null; resolved?: boolean | null },
+): Promise<void> {
+  const sets: string[] = [];
+  const values: (number | null)[] = [];
+
+  if ('investigated' in fields) {
+    sets.push('investigated = ?');
+    values.push(fields.investigated === null ? null : fields.investigated ? 1 : 0);
+  }
+  if ('resolved' in fields) {
+    sets.push('resolved = ?');
+    values.push(fields.resolved === null ? null : fields.resolved ? 1 : 0);
+  }
+  if (sets.length === 0) return;
+
+  values.push(eventId);
+  await db
+    .prepare(`UPDATE events SET ${sets.join(', ')} WHERE id = ?`)
+    .bind(...values)
+    .run();
+}
+
+/**
  * Delete events older than `daysToKeep` days. Returns count of deleted rows.
+ * Also prunes old ratelimit_snapshots rows.
  */
 export async function pruneEvents(
   db: D1Database,
@@ -87,6 +120,19 @@ export async function pruneEvents(
       )
       .bind(daysToKeep)
       .run();
+
+    // Also prune ratelimit_snapshots (same retention)
+    try {
+      await db
+        .prepare(
+          `DELETE FROM ratelimit_snapshots WHERE created_at < datetime('now', '-' || ? || ' days')`,
+        )
+        .bind(daysToKeep)
+        .run();
+    } catch {
+      // Table may not exist yet
+    }
+
     return result.meta?.changes ?? 0;
   } catch (err) {
     console.error('[events] Failed to prune events:', err);
@@ -104,6 +150,8 @@ interface EventRow {
   message: string;
   details: string | null;
   created_at: string;
+  investigated: number | null;
+  resolved: number | null;
 }
 
 function rowToEvent(row: EventRow): Event {
@@ -324,4 +372,264 @@ export async function getDailyErrorCounts(
     .bind(days)
     .all<{ day: string; count: number }>();
   return results;
+}
+
+// --- Rate limit snapshot queries ---
+
+export interface RateLimitSnapshot {
+  id: number;
+  model: string;
+  requests_remaining: number | null;
+  requests_limit: number | null;
+  input_tokens_remaining: number | null;
+  input_tokens_limit: number | null;
+  output_tokens_remaining: number | null;
+  output_tokens_limit: number | null;
+  cache_hit_rate: number | null;
+  consecutive_429s: number;
+  created_at: string;
+}
+
+/**
+ * Get the latest rate limit snapshot, optionally filtered by model.
+ * Returns null if the table doesn't exist or no rows match.
+ */
+export async function getLatestRateLimitSnapshot(
+  db: D1Database,
+  model?: string,
+): Promise<RateLimitSnapshot | null> {
+  try {
+    if (model) {
+      return await db
+        .prepare(
+          `SELECT * FROM ratelimit_snapshots WHERE model = ? ORDER BY created_at DESC LIMIT 1`,
+        )
+        .bind(model)
+        .first<RateLimitSnapshot>();
+    }
+    return await db
+      .prepare(
+        `SELECT * FROM ratelimit_snapshots ORDER BY created_at DESC LIMIT 1`,
+      )
+      .first<RateLimitSnapshot>();
+  } catch {
+    // Table may not exist yet
+    return null;
+  }
+}
+
+// --- DLQ queries ---
+
+export interface DlqMessage {
+  id: number;
+  hn_id: number;
+  url: string | null;
+  title: string;
+  domain: string | null;
+  original_error: string | null;
+  retry_count: number;
+  status: string;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export interface DlqStats {
+  pending: number;
+  replayed: number;
+  discarded: number;
+  total: number;
+}
+
+export async function getDlqStats(db: D1Database): Promise<DlqStats> {
+  try {
+    const { results } = await db
+      .prepare(`SELECT status, COUNT(*) as cnt FROM dlq_messages GROUP BY status`)
+      .all<{ status: string; cnt: number }>();
+    const stats: DlqStats = { pending: 0, replayed: 0, discarded: 0, total: 0 };
+    for (const r of results) {
+      if (r.status === 'pending') stats.pending = r.cnt;
+      else if (r.status === 'replayed') stats.replayed = r.cnt;
+      else if (r.status === 'discarded') stats.discarded = r.cnt;
+      stats.total += r.cnt;
+    }
+    return stats;
+  } catch {
+    return { pending: 0, replayed: 0, discarded: 0, total: 0 };
+  }
+}
+
+export async function getDlqMessages(
+  db: D1Database,
+  status = 'pending',
+  limit = 20,
+): Promise<DlqMessage[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT * FROM dlq_messages WHERE status = ? ORDER BY created_at DESC LIMIT ?`,
+      )
+      .bind(status, limit)
+      .all<DlqMessage>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// --- Reprocessing / methodology queries ---
+
+export interface MethodologyDistribution {
+  methodology_hash: string | null;
+  count: number;
+  latest_eval: string | null;
+}
+
+export async function getMethodologyDistribution(
+  db: D1Database,
+): Promise<MethodologyDistribution[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT methodology_hash, COUNT(*) as count, MAX(evaluated_at) as latest_eval
+         FROM stories WHERE eval_status = 'done'
+         GROUP BY methodology_hash
+         ORDER BY count DESC`,
+      )
+      .all<MethodologyDistribution>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+export async function getStaleEvalCount(
+  db: D1Database,
+  currentHash: string,
+): Promise<number> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM stories
+         WHERE eval_status = 'done'
+           AND (methodology_hash IS NULL OR methodology_hash != ?)`,
+      )
+      .bind(currentHash)
+      .first<{ cnt: number }>();
+    return row?.cnt ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+// --- Model drift queries ---
+
+export interface ModelDriftPair {
+  eval_model: string;
+  count: number;
+  avg_score: number;
+  min_score: number;
+  max_score: number;
+  stddev: number;
+}
+
+export async function getModelDriftStats(
+  db: D1Database,
+): Promise<{ models: ModelDriftPair[]; overlapping: number; meanDelta: number | null }> {
+  try {
+    // Per-model stats
+    const { results: models } = await db
+      .prepare(
+        `SELECT eval_model,
+                COUNT(*) as count,
+                AVG(hcb_weighted_mean) as avg_score,
+                MIN(hcb_weighted_mean) as min_score,
+                MAX(hcb_weighted_mean) as max_score,
+                AVG(hcb_weighted_mean * hcb_weighted_mean) as avg_sq
+         FROM eval_history
+         GROUP BY eval_model
+         ORDER BY count DESC`,
+      )
+      .all<ModelDriftPair & { avg_sq: number }>();
+
+    const modelStats = models.map((m) => ({
+      ...m,
+      stddev: Math.sqrt(Math.max(0, (m.avg_sq ?? 0) - (m.avg_score ?? 0) ** 2)),
+    }));
+
+    // Overlapping stories (evaluated by 2+ models)
+    const overlapRow = await db
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM (
+           SELECT hn_id FROM eval_history GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+         )`,
+      )
+      .first<{ cnt: number }>();
+
+    // Mean delta between models on overlapping stories
+    let meanDelta: number | null = null;
+    if ((overlapRow?.cnt ?? 0) > 0 && modelStats.length >= 2) {
+      const deltaRow = await db
+        .prepare(
+          `SELECT AVG(ABS(a.hcb_weighted_mean - b.hcb_weighted_mean)) as mean_delta
+           FROM eval_history a
+           JOIN eval_history b ON a.hn_id = b.hn_id AND a.eval_model < b.eval_model`,
+        )
+        .first<{ mean_delta: number | null }>();
+      meanDelta = deltaRow?.mean_delta ?? null;
+    }
+
+    return {
+      models: modelStats,
+      overlapping: overlapRow?.cnt ?? 0,
+      meanDelta,
+    };
+  } catch {
+    return { models: [], overlapping: 0, meanDelta: null };
+  }
+}
+
+// --- Calibration queries ---
+
+export interface CalibrationRun {
+  id: number;
+  model: string;
+  methodology_hash: string;
+  total_urls: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  status: string;
+  details_json: string | null;
+  created_at: string;
+}
+
+export async function getLatestCalibrationRun(
+  db: D1Database,
+): Promise<CalibrationRun | null> {
+  try {
+    return await db
+      .prepare(
+        `SELECT * FROM calibration_runs ORDER BY created_at DESC LIMIT 1`,
+      )
+      .first<CalibrationRun>();
+  } catch {
+    return null;
+  }
+}
+
+export async function getCalibrationHistory(
+  db: D1Database,
+  limit = 10,
+): Promise<CalibrationRun[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT * FROM calibration_runs ORDER BY created_at DESC LIMIT ?`,
+      )
+      .bind(limit)
+      .all<CalibrationRun>();
+    return results;
+  } catch {
+    return [];
+  }
 }

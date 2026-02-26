@@ -1,0 +1,19 @@
+name = "hn-hrcb-dlq"
+main = "functions/dlq-consumer.ts"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hrcb-db"
+database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
+
+[[queues.producers]]
+binding = "EVAL_QUEUE"
+queue = "hrcb-eval-queue"
+
+[[queues.consumers]]
+queue = "hrcb-eval-dlq"
+max_batch_size = 5
+max_retries = 0
+
+# Secrets: none needed (no API calls)

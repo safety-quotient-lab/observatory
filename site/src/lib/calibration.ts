@@ -1,0 +1,165 @@
+/**
+ * Calibration regression infrastructure.
+ *
+ * Defines the expected score ranges for the 15-URL calibration set
+ * and provides comparison logic for automated drift detection.
+ */
+
+export interface CalibrationUrl {
+  slot: string;
+  url: string;
+  expectedClass: 'EP' | 'EN' | 'EX';
+  expectedMeanMin: number;
+  expectedMeanMax: number;
+  label: string;
+}
+
+/**
+ * The 15-URL calibration set with expected score ranges.
+ * Source: calibration-v3.1-set.txt
+ */
+export const CALIBRATION_SET: CalibrationUrl[] = [
+  { slot: 'EP-1', url: 'https://www.amnesty.org/en/what-we-do/', expectedClass: 'EP', expectedMeanMin: 0.55, expectedMeanMax: 0.70, label: 'Amnesty International' },
+  { slot: 'EP-2', url: 'https://www.eff.org/deeplinks', expectedClass: 'EP', expectedMeanMin: 0.52, expectedMeanMax: 0.68, label: 'EFF Deeplinks' },
+  { slot: 'EP-3', url: 'https://www.hrw.org', expectedClass: 'EP', expectedMeanMin: 0.50, expectedMeanMax: 0.65, label: 'Human Rights Watch' },
+  { slot: 'EP-4', url: 'https://www.propublica.org', expectedClass: 'EP', expectedMeanMin: 0.40, expectedMeanMax: 0.55, label: 'ProPublica' },
+  { slot: 'EP-5', url: 'https://archive.org', expectedClass: 'EP', expectedMeanMin: 0.35, expectedMeanMax: 0.50, label: 'Internet Archive' },
+  { slot: 'EN-1', url: 'https://www.weather.gov', expectedClass: 'EN', expectedMeanMin: 0.05, expectedMeanMax: 0.18, label: 'Weather.gov' },
+  { slot: 'EN-2', url: 'https://www.timeanddate.com', expectedClass: 'EN', expectedMeanMin: -0.08, expectedMeanMax: 0.08, label: 'Time and Date' },
+  { slot: 'EN-3', url: 'https://www.xe.com', expectedClass: 'EN', expectedMeanMin: -0.05, expectedMeanMax: 0.10, label: 'XE.com' },
+  { slot: 'EN-4', url: 'https://en.wikipedia.org/wiki/Oxygen', expectedClass: 'EN', expectedMeanMin: 0.00, expectedMeanMax: 0.15, label: 'Wikipedia (Oxygen)' },
+  { slot: 'EN-5', url: 'https://www.speedtest.net', expectedClass: 'EN', expectedMeanMin: -0.10, expectedMeanMax: 0.05, label: 'Speedtest.net' },
+  { slot: 'EX-1', url: 'https://www.temu.com', expectedClass: 'EX', expectedMeanMin: -0.25, expectedMeanMax: -0.10, label: 'Temu' },
+  { slot: 'EX-2', url: 'https://www.rt.com', expectedClass: 'EX', expectedMeanMin: -0.15, expectedMeanMax: -0.02, label: 'RT' },
+  { slot: 'EX-3', url: 'https://www.booking.com', expectedClass: 'EX', expectedMeanMin: -0.20, expectedMeanMax: -0.05, label: 'Booking.com' },
+  { slot: 'EX-4', url: 'https://gab.com', expectedClass: 'EX', expectedMeanMin: -0.20, expectedMeanMax: -0.05, label: 'Gab' },
+  { slot: 'EX-5', url: 'https://www.xinhuanet.com', expectedClass: 'EX', expectedMeanMin: -0.15, expectedMeanMax: -0.02, label: 'Xinhua' },
+];
+
+/**
+ * Drift thresholds from calibration-v3.1-set.txt §5
+ */
+export const DRIFT_THRESHOLDS = {
+  perUrl: { warning: 0.12, halt: 0.20 },
+  classMean: {
+    EP_min: 0.35,
+    EN_max: 0.12,
+    EX_max: 0.05,
+  },
+  pairs: {
+    EP1_EP3: 0.15,
+    EX2_EX5: 0.10,
+    EX1_EX3: 0.12,
+  },
+  classOrdering: true, // EP > EN > EX required
+};
+
+export interface CalibrationResult {
+  slot: string;
+  url: string;
+  label: string;
+  expectedClass: string;
+  expectedMeanMin: number;
+  expectedMeanMax: number;
+  actualMean: number | null;
+  inRange: boolean;
+  drift: number | null;
+  status: 'pass' | 'fail' | 'warn' | 'skip';
+}
+
+export interface CalibrationSummary {
+  results: CalibrationResult[];
+  passed: number;
+  failed: number;
+  warned: number;
+  skipped: number;
+  status: 'pass' | 'fail' | 'warn';
+  classOrderingOk: boolean;
+  pairChecks: { pair: string; delta: number; threshold: number; ok: boolean }[];
+}
+
+/**
+ * Compare actual scores against the calibration set.
+ * `scores` is a map from URL → actual weighted mean (null if not evaluated).
+ */
+export function runCalibrationCheck(
+  scores: Map<string, number | null>,
+): CalibrationSummary {
+  const results: CalibrationResult[] = [];
+
+  for (const cal of CALIBRATION_SET) {
+    const actual = scores.get(cal.url) ?? null;
+    if (actual === null) {
+      results.push({
+        slot: cal.slot, url: cal.url, label: cal.label,
+        expectedClass: cal.expectedClass,
+        expectedMeanMin: cal.expectedMeanMin, expectedMeanMax: cal.expectedMeanMax,
+        actualMean: null, inRange: false, drift: null, status: 'skip',
+      });
+      continue;
+    }
+
+    const midpoint = (cal.expectedMeanMin + cal.expectedMeanMax) / 2;
+    const drift = actual - midpoint;
+    const inRange = actual >= cal.expectedMeanMin && actual <= cal.expectedMeanMax;
+    const absDrift = Math.abs(drift);
+
+    let status: 'pass' | 'fail' | 'warn' = 'pass';
+    if (!inRange) {
+      status = absDrift > DRIFT_THRESHOLDS.perUrl.halt ? 'fail' : 'warn';
+    }
+
+    results.push({
+      slot: cal.slot, url: cal.url, label: cal.label,
+      expectedClass: cal.expectedClass,
+      expectedMeanMin: cal.expectedMeanMin, expectedMeanMax: cal.expectedMeanMax,
+      actualMean: actual, inRange, drift, status,
+    });
+  }
+
+  // Class ordering check
+  const classMeans = new Map<string, number[]>();
+  for (const r of results) {
+    if (r.actualMean !== null) {
+      const arr = classMeans.get(r.expectedClass) || [];
+      arr.push(r.actualMean);
+      classMeans.set(r.expectedClass, arr);
+    }
+  }
+  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+  const epMean = avg(classMeans.get('EP') || []);
+  const enMean = avg(classMeans.get('EN') || []);
+  const exMean = avg(classMeans.get('EX') || []);
+  const classOrderingOk = (epMean === null || enMean === null || epMean > enMean)
+    && (enMean === null || exMean === null || enMean > exMean);
+
+  // Pair consistency checks
+  const scoreBySlot = new Map<string, number>();
+  for (const r of results) {
+    if (r.actualMean !== null) scoreBySlot.set(r.slot, r.actualMean);
+  }
+  const pairChecks: CalibrationSummary['pairChecks'] = [];
+  const checkPair = (a: string, b: string, threshold: number) => {
+    const va = scoreBySlot.get(a);
+    const vb = scoreBySlot.get(b);
+    if (va !== undefined && vb !== undefined) {
+      const delta = Math.abs(va - vb);
+      pairChecks.push({ pair: `${a}/${b}`, delta, threshold, ok: delta <= threshold });
+    }
+  };
+  checkPair('EP-1', 'EP-3', DRIFT_THRESHOLDS.pairs.EP1_EP3);
+  checkPair('EX-2', 'EX-5', DRIFT_THRESHOLDS.pairs.EX2_EX5);
+  checkPair('EX-1', 'EX-3', DRIFT_THRESHOLDS.pairs.EX1_EX3);
+
+  const passed = results.filter(r => r.status === 'pass').length;
+  const failed = results.filter(r => r.status === 'fail').length;
+  const warned = results.filter(r => r.status === 'warn').length;
+  const skipped = results.filter(r => r.status === 'skip').length;
+
+  const pairsFailed = pairChecks.some(p => !p.ok);
+  let status: 'pass' | 'fail' | 'warn' = 'pass';
+  if (failed > 0 || !classOrderingOk) status = 'fail';
+  else if (warned > 0 || pairsFailed) status = 'warn';
+
+  return { results, passed, failed, warned, skipped, status, classOrderingOk, pairChecks };
+}
