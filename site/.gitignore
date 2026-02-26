@@ -17,6 +17,9 @@ pnpm-debug.log*
 .env
 .env.production
 
+# secrets
+.cron-secret
+
 # wrangler local state
 .wrangler/
 

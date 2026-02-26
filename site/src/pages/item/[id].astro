@@ -877,6 +877,21 @@ function timeAgo(unixTime: number): string {
                     </span>
                   </td>
                   <td style={`color: ${sevColor};`}>{ev.message}</td>
+                  <td style="width: 60px; text-align: center; white-space: nowrap;">
+                    {ev.investigated === 1
+                      ? <span style="color: #3b82f6;" title="Investigated">INV</span>
+                      : ev.investigated === 0
+                        ? <span style="color: #555;" title="Not investigated">--</span>
+                        : <span style="color: #333;" title="Not triaged">-</span>
+                    }
+                    {' '}
+                    {ev.resolved === 1
+                      ? <span style="color: #22c55e;" title="Resolved">RES</span>
+                      : ev.resolved === 0
+                        ? <span style="color: #555;" title="Not resolved">--</span>
+                        : <span style="color: #333;" title="Not triaged">-</span>
+                    }
+                  </td>
                 </tr>
               );
             })}

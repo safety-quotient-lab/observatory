@@ -22,6 +22,18 @@ const {
 } = Astro.props;
 
 const triggerSecret = Astro.locals.runtime?.env?.TRIGGER_SECRET || '';
+
+// Last evaluation timestamp for footer
+let lastEvaluatedAt: string | null = null;
+try {
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db) {
+    const row = await db
+      .prepare(`SELECT MAX(evaluated_at) as last_eval FROM stories WHERE eval_status = 'done'`)
+      .first<{ last_eval: string | null }>();
+    lastEvaluatedAt = row?.last_eval ?? null;
+  }
+} catch { /* graceful fallback */ }
 ---
 
 <!doctype html>
@@ -61,7 +73,7 @@ const triggerSecret = Astro.locals.runtime?.env?.TRIGGER_SECRET || '';
         </tr>
         <tr>
           <td>
-            <Footer />
+            <Footer lastEvaluatedAt={lastEvaluatedAt} />
           </td>
         </tr>
       </table>

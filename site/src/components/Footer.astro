@@ -3,6 +3,11 @@ declare const __BUILD_HASH__: string;
 declare const __BUILD_TIME__: string;
 const buildHash = typeof __BUILD_HASH__ !== 'undefined' ? __BUILD_HASH__ : 'dev';
 const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '';
+
+interface Props {
+  lastEvaluatedAt?: string | null;
+}
+const { lastEvaluatedAt } = Astro.props;
 ---
 
 <table width="100%" cellpadding="0" cellspacing="0">
@@ -21,7 +26,7 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '';
               <a href="/feed.xml">RSS</a>
             </span>
             <div style="color: #444; font-size: var(--font-xs); margin-top: 6px;">
-              build {buildHash}{buildTime ? ` · ${buildTime} UTC` : ''}
+              <span title="Build version">build {buildHash}</span>{buildTime ? <span title="Deployed"> · deployed {buildTime} UTC</span> : ''}{lastEvaluatedAt ? <span title="Last evaluation completed"> · evaluated {lastEvaluatedAt} UTC</span> : ''}
             </div>
           </td>
         </tr>
