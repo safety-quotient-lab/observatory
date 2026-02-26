@@ -11,11 +11,8 @@ database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
 binding = "CONTENT_CACHE"
 id = "ffe31e8bd21f43169e81f6d6137772bf"
 
-[vars]
-DAILY_EVAL_BUDGET = "50"
-
 [triggers]
-crons = ["*/5 * * * *"]
+crons = ["* * * * *"]
 
 [[queues.producers]]
 queue = "hrcb-eval-queue"

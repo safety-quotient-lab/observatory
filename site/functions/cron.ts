@@ -346,7 +346,7 @@ async function enqueueForEvaluation(
   queue: Queue,
   kv: KVNamespace,
 ): Promise<void> {
-  const limit = 25; // Queue.sendBatch limit
+  const limit = 100; // CF Queue sendBatch max; consumer rate-limits via 429/529 backoff
   console.log(`[queue] Dispatching up to ${limit} pending stories`);
 
   // Priority: HN top stories rank first (lower rank = higher priority),
