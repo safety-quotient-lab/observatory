@@ -4,47 +4,106 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This repository contains the UN Universal Declaration of Human Rights (UDHR) text and an evolving methodology for evaluating websites' compatibility with it. The methodology has progressed through three major versions (v1 → v2 → v3) and includes calibration data.
+This repository contains the UN Universal Declaration of Human Rights (UDHR) text, an evolving methodology for evaluating websites' compatibility with it, and **a live Cloudflare-based pipeline** that automatically evaluates Hacker News stories. The methodology has progressed through three major versions (v1 → v2 → v3).
 
 ## Key Concepts
 
-- **HCB (HR Compatibility Bias)**: The core measured construct (v3+). Measures the directional lean of web content relative to UDHR provisions.
+- **HCB (HR Compatibility Bias)**: The core measured construct (v3+). Measures the directional lean of web content relative to UDHR provisions. Scale: [-1.0, +1.0].
 - **Signal Channels**: Editorial (E) = what content says; Structural (S) = what the site does. Scored independently, combined with content-type-specific weights.
 - **Domain Context Profile (DCP)**: Inherited modifiers from domain-level policies (privacy, ToS, accessibility, mission, ownership, access model, ad/tracking).
-- **Off-domain toggle**: Controls whether linked off-domain content is evaluated. Default: OFF.
+- **SETL (Structural-Editorial Tension Level)**: Measures divergence between E and S channel scores. High SETL = "says one thing, does another."
+- **Fair Witness**: Each scored section includes `witness_facts` (observable) and `witness_inferences` (interpretive), enforcing evidence transparency.
+- **Supplementary Signals**: 9 additional dimensions beyond HRCB — epistemic quality, propaganda flags, solution orientation, emotional tone, stakeholder representation, temporal framing, geographic scope, complexity level, transparency/disclosure.
 
-## File Structure
+## Architecture
+
+### Pipeline (Cloudflare Workers + D1 + KV + R2 + Queues)
+
+All infrastructure code lives under `site/`.
+
+```
+Cron Worker (1min) → Queue (hrcb-eval-queue) → Consumer Worker → D1 + R2
+                                                      ↓ (on failure)
+                                                DLQ Worker (hrcb-eval-dlq) → dlq_messages table
+```
+
+**Workers:**
+- `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Also serves `/trigger`, `/calibrate`, `/calibrate/check`, `/health`.
+- `site/functions/consumer.ts` — Fetches URL content, calls Claude API (Haiku), computes aggregates on CPU, writes to D1/R2. Proactive rate limit awareness via KV.
+- `site/functions/dlq-consumer.ts` — Captures dead-lettered messages. Also serves `/replay` and `/replay/:id`.
+
+**Wrangler configs:** `site/wrangler.cron.toml`, `site/wrangler.consumer.toml`, `site/wrangler.dlq.toml`
+
+**Storage:**
+- **D1** (`hrcb-db`): stories, scores, events, eval_history, fair_witness, domain_dcp, dlq_messages, calibration_runs, ratelimit_snapshots
+- **KV** (`CONTENT_CACHE`): content cache, DCP cache, rate limit state per model
+- **R2** (`hrcb-content-snapshots`): content snapshots for audit trail
+
+### Site (Astro + Cloudflare Pages)
+
+- `site/src/pages/` — Astro SSR pages: dashboard, front page, domains, articles, velocity, network, factions, seldon, item/[id], domain/[domain], article/[n], user/[username]
+- `site/src/lib/db.ts` — All D1 query functions (~2200 lines)
+- `site/src/lib/events.ts` — Structured event logger with typed event taxonomy
+- `site/src/lib/shared-eval.ts` — Shared evaluation primitives (prompts, parsing, schema)
+- `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
+- `site/src/lib/calibration.ts` — 15-URL calibration set + drift detection
+- `site/src/lib/colors.ts` — Score/SETL/confidence color mapping
+- `site/src/components/` — Reusable Astro components (EvalCard, DcpTable, etc.)
+
+## Build & Deploy
+
+All commands run from `site/`:
+
+```bash
+# Build site
+npx astro build
+
+# Deploy
+npx wrangler pages deploy dist --project-name hn-hrcb     # site
+npx wrangler deploy --config wrangler.cron.toml            # cron worker
+npx wrangler deploy --config wrangler.consumer.toml        # consumer worker
+npx wrangler deploy --config wrangler.dlq.toml             # DLQ worker
+
+# Migrations
+npx wrangler d1 migrations apply hrcb-db --remote
+
+# Manual triggers (auth via .cron-secret)
+curl -s -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-cron.kashifshah.workers.dev/trigger
+curl -s -X POST -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-cron.kashifshah.workers.dev/calibrate
+curl -s -X POST -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-dlq.kashifshah.workers.dev/replay
+
+# Health check (no auth)
+curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health
+
+# Query D1 directly
+npx wrangler d1 execute hrcb-db --remote --command "SELECT ..."
+
+# Tail logs
+npx wrangler tail --config wrangler.consumer.toml --format pretty
+```
+
+## Event Types
+
+The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `trigger`.
+
+## Methodology Files
 
 ### Source Text
 - `unudhr.txt` — Full UDHR text (Preamble + Articles 1-30)
 
-### Website Lists
-- `top-100-websites-2026-sfw.txt` — 90 SFW sites from Similarweb Jan 2026
-- `top-100-websites-2026-nsfw.txt` — Full 100 sites including adult
-
 ### Methodology (version chain: v1 → v2 → v3 → v3.3 → v3.4)
-- `methodology-v1.txt` — External-source methodology (finalized, used for v1 evals)
-- `methodology-v2.txt` — On-domain-only methodology (superseded)
-- `methodology-v3.txt` — Full HCB methodology spec (superseded by v3.3)
+- `methodology-v3.4.txt` — **Current canonical reference**
 - `methodology-v3.1.prompt.md` — Self-contained LLM prompt for running evaluations
-- `methodology-v3.3.txt` — Consolidation + roadmap (superseded by v3.4)
-- `methodology-v3.4.txt` — **Current canonical reference**: adds batch protocol (B1), adversarial robustness (A5), machine-readable output (B8)
+- Earlier versions: `methodology-v1.txt`, `methodology-v2.txt`, `methodology-v3.txt`, `methodology-v3.3.txt`
 
 ### Calibration
 - `calibration-v3.1-set.txt` — 15-URL calibration set with expected score ranges
 - `calibration-v3.1-baselines.txt` — Actual baseline evaluations for 9 calibration URLs
 
-### Evaluations
-- `kashifshah-net.txt` — v1 evaluation (external sources, single composite per article)
-- `kashifshah-net.md` — Same in markdown
-- `kashifshah-net-v2.txt` — v2 evaluation (on-domain only, off-domain toggle OFF)
-- `top-100-sfw-udhr-evaluation.txt` — v1 evaluation of all 90 SFW sites
+## Key Patterns
 
-## Methodology Version Summary
-
-| Version | Unit | Sources | Key Innovation |
-|---------|------|---------|---------------|
-| v1 | Domain | External reports | First evaluation framework |
-| v2 | Domain | On-domain only | ND vs 0.0, evidence strength, off-domain toggle |
-| v3 | URL | On-domain + context | HCB construct, E/S channels, content types, rubrics, calibration |
-| v3.4 | URL | On-domain + optional external | Batch protocol, adversarial robustness layer, JSON/CSV output |
+- **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.
+- **Consumer hash functions**: `hashString()` = SHA-256 first 16 bytes as hex (32 chars). Used for methodology_hash (system prompt only) and prompt_hash (system + user).
+- **Rate limiting**: Consumer reads `anthropic-ratelimit-*` headers proactively, self-throttles via KV state before hitting 429s. Circuit breaker at 3+ consecutive 429s.
+- **Calibration IDs**: Synthetic hn_ids -1001 to -1015 for the 15 calibration URLs.
+- **DCP caching**: 7-day TTL in KV per domain, also persisted to `domain_dcp` table in D1.
