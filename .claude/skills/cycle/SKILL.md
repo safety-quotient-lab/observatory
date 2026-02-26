@@ -42,18 +42,27 @@ Work through each step. Skip any that don't apply to the changes described in $A
 - Update existing entries if they're now wrong
 - Don't duplicate what's already in CLAUDE.md — memory is for cross-session insights
 
-### 5. Check for orphaned references
+### 5. Update todo.md
+
+- Read `todo.md` (operational backlog) and `TODO.md` (feature tracking)
+- Check off any items that were completed by the changes in this session
+- Add any new TODO items that surfaced during development (bugs found, follow-up work needed, ideas)
+- Move items between Active/In Progress sections if their status changed
+- Remove items that are no longer relevant
+- If a completed item has sub-items, check those off too
+
+### 6. Check for orphaned references
 
 - Grep for any references to removed functions, renamed variables, or old section names
 - Check imports in modified files still resolve
 - Verify no dead code was left behind
 
-### 6. Build verification
+### 7. Build verification
 
 - Run `npx astro build` from `site/` to confirm everything compiles
 - Report any warnings or errors — fix before proceeding
 
-### 7. Git commit
+### 8. Git commit
 
 - Run `git status` and `git diff --stat` to review all staged and unstaged changes
 - Stage all relevant files (prefer naming specific files over `git add -A`; never stage secrets like `.env`, `.cron-secret`, credentials)
@@ -61,13 +70,13 @@ Work through each step. Skip any that don't apply to the changes described in $A
 - Commit using the standard Co-Authored-By trailer
 - Run `git status` after to verify clean working tree
 
-### 8. Cleanup
+### 9. Cleanup
 
 - Remove any scratch/temp files created during development (e.g., `*.tmp`, `*.bak`, test outputs)
 - Check for any `console.log` or debug statements that should be removed from production code
 - Verify `.gitignore` covers any new generated directories (e.g., `.astro/`, `dist/`)
 - If new untracked files remain after commit, flag them — they may be intentionally untracked or accidentally missed
 
-### 9. Summary
+### 10. Summary
 
 Report what was updated, what was committed, and what was skipped (with reason).
