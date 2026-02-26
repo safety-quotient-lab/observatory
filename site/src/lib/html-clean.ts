@@ -20,11 +20,38 @@ const MULTI_WHITESPACE = /[ \t]+/g;
 /** Collapse 3+ newlines into 2 */
 const MULTI_NEWLINES = /\n{3,}/g;
 
+/** Script/style blocks and their content */
+const SCRIPT_STYLE_BLOCKS = /<(script|style)[\s>][\s\S]*?<\/\1>/gi;
+
+/**
+ * Minimum readable (non-script/style) text chars for a page to be worth evaluating.
+ * Pages below this are likely JS-rendered SPAs with no server-side content.
+ */
+export const MIN_READABLE_CHARS = 100;
+
 /**
  * Default max output chars. Can be overridden per call.
  * ~20K chars ≈ ~5K tokens for Claude, leaving room for system + output tokens.
  */
 export const DEFAULT_MAX_CHARS = 20_000;
+
+/**
+ * Check if raw HTML contains meaningful human-readable text (not just JS/CSS).
+ * Used as a pre-eval gate: if a page is a JS-rendered SPA with no server-side
+ * content, there's nothing for Claude to evaluate.
+ *
+ * This does NOT affect what gets sent to Claude — cleanHtml still preserves
+ * scripts for structural analysis. This only decides whether to evaluate at all.
+ */
+export function hasReadableText(raw: string, minChars: number = MIN_READABLE_CHARS): boolean {
+  let text = raw;
+  text = text.replace(SCRIPT_STYLE_BLOCKS, ' ');
+  text = text.replace(STRIP_TAGS_WITH_CONTENT, ' ');
+  text = text.replace(HTML_COMMENTS, '');
+  text = text.replace(ALL_TAGS, ' ');
+  text = text.replace(MULTI_WHITESPACE, ' ').trim();
+  return text.length >= minChars;
+}
 
 export function cleanHtml(raw: string, maxChars: number = DEFAULT_MAX_CHARS): string {
   let text = raw;

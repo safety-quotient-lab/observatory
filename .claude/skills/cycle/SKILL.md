@@ -51,11 +51,16 @@ Work through each step. Skip any that don't apply to the changes described in $A
 - Remove items that are no longer relevant
 - If a completed item has sub-items, check those off too
 
-### 6. Check for orphaned references
+### 6. Check for orphaned references and files
 
 - Grep for any references to removed functions, renamed variables, or old section names
 - Check imports in modified files still resolve
 - Verify no dead code was left behind
+- **Check for orphaned files**: if this session created a new file that replaces or supersedes an older file (e.g., a new unified script replacing two old scripts), identify the old files and `git rm` them. Look for:
+  - Old scripts/tools that the new code replaces
+  - Old config files made redundant by new ones
+  - Stale test fixtures or data files no longer referenced by any code
+- When in doubt, grep the codebase for imports/references to the candidate file — if nothing references it (other than comments about it being replaced), it's safe to remove
 
 ### 7. Build verification
 

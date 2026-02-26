@@ -48,7 +48,7 @@ import {
 } from '../src/lib/shared-eval';
 
 import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
-import { cleanHtml } from '../src/lib/html-clean';
+import { cleanHtml, hasReadableText } from '../src/lib/html-clean';
 import { logEvent } from '../src/lib/events';
 
 interface Env {
@@ -499,6 +499,19 @@ export default {
             console.log(`[consumer] KV cache hit for hn_id=${story.hn_id}`);
           } else {
             const rawHtml = await fetchUrlContent(story.url!);
+
+            // Pre-check: does the page have any human-readable text?
+            // JS-rendered SPAs return script bundles but no server-side prose.
+            if (!hasReadableText(rawHtml)) {
+              if (isPrimary) {
+                await markSkipped(db, story.hn_id, 'No readable content (JavaScript-only page)');
+              }
+              await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: no readable content').catch(() => {});
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: no readable text in HTML (likely JS-rendered SPA)`, details: { reason: 'no_readable_text', raw_length: rawHtml.length, model: msgModelId } });
+              msg.ack();
+              continue;
+            }
+
             content = cleanHtml(rawHtml, CONTENT_MAX_CHARS);
             // Cache for subsequent model evaluations (1-hour TTL)
             try {
