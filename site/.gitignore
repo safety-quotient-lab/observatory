@@ -19,6 +19,7 @@ pnpm-debug.log*
 
 # secrets
 .cron-secret
+.dev.vars
 
 # wrangler local state
 .wrangler/

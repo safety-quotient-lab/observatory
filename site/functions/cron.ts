@@ -27,7 +27,7 @@ import { cleanHtml } from '../src/lib/html-clean';
 import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, runCalibrationCheck } from '../src/lib/calibration';
 import { getPipelineHealth } from '../src/lib/db';
-import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName } from '../src/lib/coverage-crawl';
+import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions } from '../src/lib/coverage-crawl';
 
 interface Env {
   DB: D1Database;
@@ -851,8 +851,7 @@ export default {
 
     try {
       const minute = new Date(event.scheduledTime).getMinutes();
-      const dailyBudget = env.DAILY_EVAL_BUDGET ? parseInt(env.DAILY_EVAL_BUDGET, 10) || 100 : 100;
-      const coverageResult = await runScheduledCoverageStrategy(minute, db, env.CONTENT_CACHE, dailyBudget);
+      const coverageResult = await runScheduledCoverageStrategy(minute, db);
       if (coverageResult && coverageResult.inserted > 0) {
         console.log(`[coverage] ${coverageResult.strategy}: inserted ${coverageResult.inserted} stories`);
         await logEvent(db, {
@@ -1065,12 +1064,15 @@ export default {
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        const dailyBudget = env.DAILY_EVAL_BUDGET ? parseInt(env.DAILY_EVAL_BUDGET, 10) || 100 : 100;
+        // Build strategy options from query params
+        const articleParam = url.searchParams.get('article');
+        const strategyOptions: StrategyOptions = {};
+        if (articleParam) strategyOptions.article = articleParam;
+
         const results = await runCoverageStrategy(
           strategyParam as StrategyName | 'all',
           db,
-          env.CONTENT_CACHE,
-          dailyBudget,
+          strategyOptions,
         );
 
         const totalInserted = results.reduce((sum, r) => sum + r.inserted, 0);
