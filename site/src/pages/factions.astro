@@ -57,7 +57,7 @@ interface Cluster {
 
 const clusters: Cluster[] = [];
 const assigned = new Set<string>();
-const threshold = 0.7;
+const threshold = 0.85;
 
 for (const pair of [...pairs].sort((a, b) => b.similarity - a.similarity)) {
   if (pair.similarity < threshold) break;
