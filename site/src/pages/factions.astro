@@ -166,53 +166,68 @@ const SIGNAL_DIMS: { code: string; fullLabel: string; label: string; color: stri
   { code: 'FW', fullLabel: 'Fair Witness (FW)', label: 'fair witness', color: '#22d3ee', extract: s => s.fw },
 ];
 
-// Compute medians from all domain signal profiles
-function computeMedians(profiles: Map<string, import('../lib/db').DomainSignalProfile>) {
+// Compute p33/p66 percentile thresholds for typecode assignment
+function computePercentiles(profiles: Map<string, import('../lib/db').DomainSignalProfile>) {
   const vals = [...profiles.values()];
-  function median(arr: number[]): number {
+  function percentile(arr: number[], p: number): number {
     const sorted = [...arr].sort((a, b) => a - b);
     if (sorted.length === 0) return 0;
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    const idx = (p / 100) * (sorted.length - 1);
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    if (lo === hi) return sorted[lo];
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
   }
   function extract(fn: (p: import('../lib/db').DomainSignalProfile) => number | null): number[] {
     return vals.map(fn).filter((n): n is number => n !== null);
   }
   return {
-    eq: median(extract(p => p.avg_eq)),
-    so: median(extract(p => p.avg_so)),
-    sr: median(extract(p => p.avg_sr)),
-    td: median(extract(p => p.avg_td)),
-    pt: median(extract(p => p.avg_pt_count)),
-    arousal: median(extract(p => p.avg_arousal)),
-    valence: median(extract(p => p.avg_valence)),
-    fw: median(extract(p => p.avg_fw_ratio)),
+    eq:      { p33: percentile(extract(p => p.avg_eq), 33),      p66: percentile(extract(p => p.avg_eq), 66) },
+    so:      { p33: percentile(extract(p => p.avg_so), 33),      p66: percentile(extract(p => p.avg_so), 66) },
+    sr:      { p33: percentile(extract(p => p.avg_sr), 33),      p66: percentile(extract(p => p.avg_sr), 66) },
+    td:      { p33: percentile(extract(p => p.avg_td), 33),      p66: percentile(extract(p => p.avg_td), 66) },
+    pt:      { p33: percentile(extract(p => p.avg_pt_count), 33),p66: percentile(extract(p => p.avg_pt_count), 66) },
+    arousal: { p33: percentile(extract(p => p.avg_arousal), 33), p66: percentile(extract(p => p.avg_arousal), 66) },
+    valence: { p33: percentile(extract(p => p.avg_valence), 33), p66: percentile(extract(p => p.avg_valence), 66) },
+    fw:      { p33: percentile(extract(p => p.avg_fw_ratio), 33),p66: percentile(extract(p => p.avg_fw_ratio), 66) },
   };
 }
 
-type Medians = ReturnType<typeof computeMedians>;
+type Percentiles = ReturnType<typeof computePercentiles>;
 
-function assignTypecode(sig: FactionSignals, med: Medians): Archetype {
-  const medVals: Record<string, number> = {
-    EQ: med.eq, SO: med.so, SR: med.sr, TD: med.td,
-    PT: med.pt, AR: med.arousal, VA: med.valence, FW: med.fw,
-  };
+// Map signal codes to percentile keys
+const SIGNAL_PCTL_KEY: Record<string, keyof Percentiles> = {
+  EQ: 'eq', SO: 'so', SR: 'sr', TD: 'td',
+  PT: 'pt', AR: 'arousal', VA: 'valence', FW: 'fw',
+};
 
-  const above: { code: string; label: string; color: string }[] = [];
+function assignTypecode(sig: FactionSignals, pctl: Percentiles): Archetype {
+  const markers: { code: string; sign: '+' | '-'; label: string; color: string }[] = [];
+
   for (const dim of SIGNAL_DIMS) {
-    if (dim.extract(sig) > medVals[dim.code]) {
-      above.push(dim);
+    const val = dim.extract(sig);
+    const key = SIGNAL_PCTL_KEY[dim.code];
+    const { p33, p66 } = pctl[key];
+    if (val >= p66) {
+      markers.push({ code: dim.code, sign: '+', label: dim.label, color: dim.color });
+    } else if (val <= p33) {
+      markers.push({ code: dim.code, sign: '-', label: dim.label, color: dim.color });
     }
   }
 
-  if (above.length === 0) {
-    return { name: '(baseline)', tagline: 'No signal above population median', color: '#818cf8' };
+  if (markers.length === 0) {
+    return { name: '(baseline)', tagline: 'All signals in the middle third of the population', color: '#818cf8' };
   }
 
-  const name = above.map(d => d.code).join('\u00b7');
-  const tagline = 'Above-median ' + above.map(d => d.label).join(', ');
-  // Color from the first (dominant) above-median signal
-  const color = above[0].color;
+  const name = markers.map(m => `${m.code}${m.sign}`).join('\u00b7');
+  const highItems = markers.filter(m => m.sign === '+');
+  const lowItems = markers.filter(m => m.sign === '-');
+  const parts: string[] = [];
+  if (highItems.length > 0) parts.push('High ' + highItems.map(m => m.label).join(', '));
+  if (lowItems.length > 0) parts.push('Low ' + lowItems.map(m => m.label).join(', '));
+  const tagline = parts.join(' · ');
+  // Color from first marker (prioritize + signals)
+  const primary = highItems[0] || lowItems[0];
+  const color = primary.color;
 
   return { name, tagline, color };
 }
@@ -226,14 +241,14 @@ interface EnrichedFaction {
   avgFingerprint: (number | null)[];
 }
 
-const medians = computeMedians(signalProfiles);
+const percentiles = computePercentiles(signalProfiles);
 
 const multiFactions: EnrichedFaction[] = [];
 const loneWolves: { domain: string; score: number | null; signals: FactionSignals; nearestFaction: string; nearestSim: number }[] = [];
 
 for (const c of clusters) {
   const signals = avgSignals(c.members);
-  const archetype = assignTypecode(signals, medians);
+  const archetype = assignTypecode(signals, percentiles);
 
   // Compute average fingerprint
   const avgFp: (number | null)[] = new Array(31).fill(null);
