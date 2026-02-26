@@ -28,7 +28,7 @@ Cron Worker (1min) → Queue (hrcb-eval-queue) → Consumer Worker → D1 + R2
 ```
 
 **Workers:**
-- `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Also serves `/trigger`, `/calibrate`, `/calibrate/check`, `/health`.
+- `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Also serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`.
 - `site/functions/consumer.ts` — Fetches URL content, calls Claude API (Haiku), computes aggregates on CPU, writes to D1/R2. Proactive rate limit awareness via KV.
 - `site/functions/dlq-consumer.ts` — Captures dead-lettered messages. Also serves `/replay` and `/replay/:id`.
 
@@ -71,6 +71,14 @@ npx wrangler d1 migrations apply hrcb-db --remote
 curl -s -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-cron.kashifshah.workers.dev/trigger
 curl -s -X POST -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-cron.kashifshah.workers.dev/calibrate
 curl -s -X POST -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-dlq.kashifshah.workers.dev/replay
+
+# Sweep: retry failed evaluations (default limit 50, max 200)
+curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=failed"
+
+# Sweep: backfill skipped stories with score >= 100 (default min_score 50, default limit 50)
+curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=skipped&min_score=100&limit=30"
 
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health

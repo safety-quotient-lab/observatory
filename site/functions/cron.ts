@@ -948,10 +948,96 @@ export default {
     if (path === '/trigger') {
       const authErr = checkAuth();
       if (authErr) return authErr;
-      ctx.waitUntil(
-        this.scheduled({ scheduledTime: Date.now(), cron: '*/5 * * * *' } as ScheduledEvent, env, ctx)
-      );
-      return new Response('Cron triggered', { status: 200 });
+
+      const sweep = url.searchParams.get('sweep');
+
+      // No sweep param → full cron cycle (unchanged behavior)
+      if (!sweep) {
+        ctx.waitUntil(
+          this.scheduled({ scheduledTime: Date.now(), cron: '*/5 * * * *' } as ScheduledEvent, env, ctx)
+        );
+        return new Response('Cron triggered', { status: 200 });
+      }
+
+      const db = env.DB;
+      const rawLimit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 200);
+
+      if (sweep === 'failed') {
+        // Reset failed evals back to pending so queue dispatch picks them up
+        const { meta } = await db
+          .prepare(
+            `UPDATE stories SET eval_status = 'pending', eval_error = NULL
+             WHERE hn_id IN (
+               SELECT hn_id FROM stories
+               WHERE eval_status = 'failed'
+               ORDER BY hn_time DESC
+               LIMIT ?
+             )`
+          )
+          .bind(rawLimit)
+          .run();
+        const promoted = meta?.changes ?? 0;
+
+        if (promoted > 0) {
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+        }
+
+        await logEvent(db, {
+          event_type: 'trigger',
+          severity: 'info',
+          message: `Sweep: reset ${promoted} failed stories to pending`,
+          details: { sweep: 'failed', promoted, limit: rawLimit },
+        });
+
+        return new Response(JSON.stringify({ sweep: 'failed', promoted, description: `Reset ${promoted} failed stories to pending` }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (sweep === 'skipped') {
+        const minScore = parseInt(url.searchParams.get('min_score') || '50', 10) || 50;
+
+        // Promote high-value skipped stories (only "Not in top 5 pages") to pending
+        const { meta } = await db
+          .prepare(
+            `UPDATE stories SET eval_status = 'pending', eval_error = NULL
+             WHERE hn_id IN (
+               SELECT hn_id FROM stories
+               WHERE eval_status = 'skipped'
+                 AND eval_error = 'Not in top 5 pages'
+                 AND url IS NOT NULL
+                 AND hn_score >= ?
+               ORDER BY hn_score DESC
+               LIMIT ?
+             )`
+          )
+          .bind(minScore, rawLimit)
+          .run();
+        const promoted = meta?.changes ?? 0;
+
+        if (promoted > 0) {
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+        }
+
+        await logEvent(db, {
+          event_type: 'trigger',
+          severity: 'info',
+          message: `Sweep: promoted ${promoted} skipped stories to pending (min_score=${minScore})`,
+          details: { sweep: 'skipped', promoted, limit: rawLimit, min_score: minScore },
+        });
+
+        return new Response(JSON.stringify({ sweep: 'skipped', promoted, description: `Promoted ${promoted} skipped stories with hn_score >= ${minScore} to pending` }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Unknown sweep type
+      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped'] }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // POST /calibrate — enqueue 15 calibration URLs for evaluation
@@ -961,7 +1047,6 @@ export default {
 
       const db = env.DB;
       let enqueued = 0;
-      let skipped = 0;
 
       for (let i = 0; i < CALIBRATION_SET.length; i++) {
         const cal = CALIBRATION_SET[i];
@@ -994,10 +1079,10 @@ export default {
         event_type: 'calibration',
         severity: 'info',
         message: `Calibration run started: ${enqueued} URLs enqueued`,
-        details: { enqueued, skipped },
+        details: { enqueued },
       });
 
-      return new Response(JSON.stringify({ enqueued, skipped, calibration_ids: CALIBRATION_SET.map((_, i) => -(1000 + i + 1)) }), {
+      return new Response(JSON.stringify({ enqueued, calibration_ids: CALIBRATION_SET.map((_, i) => -(1000 + i + 1)) }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
