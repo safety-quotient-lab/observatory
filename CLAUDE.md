@@ -80,6 +80,12 @@ curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
 curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=skipped&min_score=100&limit=30"
 
+# Sweep: coverage-driven crawl (all strategies or a specific one)
+curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=coverage"
+curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=coverage&strategy=domain_min_coverage"
+
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health
 
@@ -92,7 +98,7 @@ npx wrangler tail --config wrangler.consumer.toml --format pretty
 
 ## Event Types
 
-The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `trigger`.
+The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`.
 
 ## Methodology Files
 

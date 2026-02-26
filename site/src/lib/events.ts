@@ -12,7 +12,6 @@ export type EventType =
   | 'self_throttle'
   | 'credit_exhausted'
   | 'fetch_error'
-  | 'parse_error'
   | 'cron_run'
   | 'cron_error'
   | 'crawl_error'
@@ -20,6 +19,7 @@ export type EventType =
   | 'dlq'
   | 'dlq_replay'
   | 'calibration'
+  | 'coverage_crawl'
   | 'trigger';
 
 export type Severity = 'info' | 'warn' | 'error';

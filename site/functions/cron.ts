@@ -27,6 +27,7 @@ import { cleanHtml } from '../src/lib/html-clean';
 import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, runCalibrationCheck } from '../src/lib/calibration';
 import { getPipelineHealth } from '../src/lib/db';
+import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName } from '../src/lib/coverage-crawl';
 
 interface Env {
   DB: D1Database;
@@ -846,6 +847,26 @@ export default {
       await logEvent(db, { event_type: 'crawl_error', severity: 'warn', message: `User profile crawling failed`, details: { phase: 'users', error: String(err) } });
     }
 
+    // ─── STEP 4.75: Coverage-driven crawl strategies ───
+
+    try {
+      const minute = new Date(event.scheduledTime).getMinutes();
+      const dailyBudget = env.DAILY_EVAL_BUDGET ? parseInt(env.DAILY_EVAL_BUDGET, 10) || 100 : 100;
+      const coverageResult = await runScheduledCoverageStrategy(minute, db, env.CONTENT_CACHE, dailyBudget);
+      if (coverageResult && coverageResult.inserted > 0) {
+        console.log(`[coverage] ${coverageResult.strategy}: inserted ${coverageResult.inserted} stories`);
+        await logEvent(db, {
+          event_type: 'coverage_crawl',
+          severity: 'info',
+          message: `Coverage crawl: ${coverageResult.strategy} inserted ${coverageResult.inserted} stories`,
+          details: coverageResult,
+        });
+      }
+    } catch (err) {
+      console.error('Coverage crawl failed (non-fatal):', err);
+      await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Coverage crawl failed`, details: { phase: 'coverage_crawl', error: String(err) } });
+    }
+
     // ─── STEP 4.8: Re-evaluate viral stories ───
     // Stories that gained significant score after initial evaluation may have
     // changed content or deserve a fresh look. Trigger re-eval if:
@@ -1033,8 +1054,46 @@ export default {
         });
       }
 
+      if (sweep === 'coverage') {
+        const strategyParam = url.searchParams.get('strategy') || 'all';
+
+        // Validate strategy name
+        if (strategyParam !== 'all' && !STRATEGY_NAMES.includes(strategyParam as StrategyName)) {
+          return new Response(JSON.stringify({
+            error: `Unknown strategy: ${strategyParam}`,
+            valid_strategies: ['all', ...STRATEGY_NAMES],
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const dailyBudget = env.DAILY_EVAL_BUDGET ? parseInt(env.DAILY_EVAL_BUDGET, 10) || 100 : 100;
+        const results = await runCoverageStrategy(
+          strategyParam as StrategyName | 'all',
+          db,
+          env.CONTENT_CACHE,
+          dailyBudget,
+        );
+
+        const totalInserted = results.reduce((sum, r) => sum + r.inserted, 0);
+
+        if (totalInserted > 0) {
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+        }
+
+        await logEvent(db, {
+          event_type: 'coverage_crawl',
+          severity: 'info',
+          message: `Coverage sweep: ${strategyParam}, ${totalInserted} stories inserted`,
+          details: { sweep: 'coverage', strategy: strategyParam, total_inserted: totalInserted, results },
+        });
+
+        return new Response(JSON.stringify({ sweep: 'coverage', strategy: strategyParam, results }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       // Unknown sweep type
-      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped'] }), {
+      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage'] }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
