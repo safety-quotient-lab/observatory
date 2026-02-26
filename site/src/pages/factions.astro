@@ -373,6 +373,60 @@ const unalignedCount = loneWolves.length;
 
 // Signal bar helper: clamp to [0,1]
 function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
+
+// --- 9. Signal distribution histograms ---
+interface SignalHistogram {
+  code: string;
+  fullLabel: string;
+  color: string;
+  bins: { x0: number; x1: number; count: number }[];
+  p33: number;
+  p66: number;
+  min: number;
+  max: number;
+  maxCount: number;
+}
+
+function buildHistograms(profiles: Map<string, import('../lib/db').DomainSignalProfile>, pctl: Percentiles): SignalHistogram[] {
+  const vals = [...profiles.values()];
+  const extractors: { code: string; fullLabel: string; color: string; fn: (p: import('../lib/db').DomainSignalProfile) => number | null; pctlKey: keyof Percentiles }[] = [
+    { code: 'EQ', fullLabel: 'Epistemic Quality (EQ)', color: '#60a5fa', fn: p => p.avg_eq, pctlKey: 'eq' },
+    { code: 'SO', fullLabel: 'Solution Orientation (SO)', color: '#4ade80', fn: p => p.avg_so, pctlKey: 'so' },
+    { code: 'SR', fullLabel: 'Stakeholder Representation (SR)', color: '#a78bfa', fn: p => p.avg_sr, pctlKey: 'sr' },
+    { code: 'TD', fullLabel: 'Transparency & Disclosure (TD)', color: '#34d399', fn: p => p.avg_td, pctlKey: 'td' },
+    { code: 'PT', fullLabel: 'Propaganda Techniques (PT)', color: '#f87171', fn: p => p.avg_pt_count, pctlKey: 'pt' },
+    { code: 'AR', fullLabel: 'Arousal (AR)', color: '#fb923c', fn: p => p.avg_arousal, pctlKey: 'arousal' },
+    { code: 'VA', fullLabel: 'Valence (VA)', color: '#fbbf24', fn: p => p.avg_valence, pctlKey: 'valence' },
+    { code: 'FW', fullLabel: 'Fair Witness (FW)', color: '#22d3ee', fn: p => p.avg_fw_ratio, pctlKey: 'fw' },
+  ];
+
+  return extractors.map(ext => {
+    const raw = vals.map(ext.fn).filter((n): n is number => n !== null);
+    if (raw.length === 0) return { code: ext.code, fullLabel: ext.fullLabel, color: ext.color, bins: [], p33: 0, p66: 0, min: 0, max: 0, maxCount: 0 };
+
+    const min = Math.min(...raw);
+    const max = Math.max(...raw);
+    const numBins = 12;
+    const range = max - min || 1;
+    const binWidth = range / numBins;
+
+    const bins: { x0: number; x1: number; count: number }[] = [];
+    for (let i = 0; i < numBins; i++) {
+      bins.push({ x0: min + i * binWidth, x1: min + (i + 1) * binWidth, count: 0 });
+    }
+    for (const v of raw) {
+      const idx = Math.min(Math.floor((v - min) / binWidth), numBins - 1);
+      bins[idx].count++;
+    }
+
+    const maxCount = Math.max(...bins.map(b => b.count), 1);
+    const { p33, p66 } = pctl[ext.pctlKey];
+
+    return { code: ext.code, fullLabel: ext.fullLabel, color: ext.color, bins, p33, p66, min, max, maxCount };
+  });
+}
+
+const histograms = buildHistograms(signalProfiles, percentiles);
 ---
 
 <Base title="Domain Factions — HN HRCB">
@@ -424,6 +478,86 @@ function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
     </table>
   ) : (
     <>
+      {/* --- Signal Distributions --- */}
+      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+        <tr>
+          <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              Signal Distributions
+              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                across {signalProfiles.size} domains with 3+ evaluations
+              </span>
+            </div>
+            <div style="color: #555; font-size: var(--font-xs); margin-bottom: 10px;">
+              Dashed lines mark p33 / p66 percentile cutoffs used for typecode assignment.
+              Values left of p33 get <span style="color: #f87171;">−</span>, right of p66 get <span style="color: #34d399;">+</span>, middle third omitted.
+            </div>
+
+            {/* Percentile threshold table */}
+            <table cellpadding="3" cellspacing="0" style="font-size: var(--font-xs); margin-bottom: 12px; border-collapse: collapse;">
+              <tr style="color: #555;">
+                <td style="padding-right: 12px;">Signal</td>
+                <td style="text-align: right; padding-right: 12px;">p33</td>
+                <td style="text-align: right; padding-right: 12px;">p66</td>
+                <td style="text-align: right; padding-right: 12px;">Range</td>
+              </tr>
+              {histograms.map(h => (
+                <tr style="border-top: 1px solid #1a1a25;">
+                  <td style={`color: ${h.color}; padding-right: 12px;`}>{h.fullLabel}</td>
+                  <td style="text-align: right; color: #f87171; padding-right: 12px;" class="score-font">{h.p33.toFixed(2)}</td>
+                  <td style="text-align: right; color: #34d399; padding-right: 12px;" class="score-font">{h.p66.toFixed(2)}</td>
+                  <td style="text-align: right; color: #666; padding-right: 12px;" class="score-font">{h.min.toFixed(2)} – {h.max.toFixed(2)}</td>
+                </tr>
+              ))}
+            </table>
+
+            {/* Histogram grid */}
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+              {histograms.map(h => {
+                if (h.bins.length === 0) return null;
+                const chartW = 220;
+                const chartH = 60;
+                const barW = chartW / h.bins.length;
+                const range = h.max - h.min || 1;
+                // Map a value to x position
+                const toX = (v: number) => ((v - h.min) / range) * chartW;
+                return (
+                  <div>
+                    <div style={`color: ${h.color}; font-size: var(--font-xs); margin-bottom: 2px;`}>{h.fullLabel}</div>
+                    <svg width={chartW + 2} height={chartH + 16} xmlns="http://www.w3.org/2000/svg">
+                      {/* Bars */}
+                      {h.bins.map((bin, bi) => {
+                        const barH = (bin.count / h.maxCount) * chartH;
+                        return (
+                          <rect x={bi * barW + 1} y={chartH - barH} width={Math.max(barW - 1, 1)} height={barH}
+                                fill={h.color} opacity="0.5" rx="1">
+                            <title>{bin.x0.toFixed(2)} – {bin.x1.toFixed(2)}: {bin.count} domains</title>
+                          </rect>
+                        );
+                      })}
+                      {/* p33 line */}
+                      <line x1={toX(h.p33) + 1} y1="0" x2={toX(h.p33) + 1} y2={chartH}
+                            stroke="#f87171" stroke-width="1.5" stroke-dasharray="3,2" />
+                      <text x={toX(h.p33) + 1} y={chartH + 10} fill="#f87171" font-size="7" font-family="monospace" text-anchor="middle">
+                        p33: {h.p33.toFixed(2)}
+                      </text>
+                      {/* p66 line */}
+                      <line x1={toX(h.p66) + 1} y1="0" x2={toX(h.p66) + 1} y2={chartH}
+                            stroke="#34d399" stroke-width="1.5" stroke-dasharray="3,2" />
+                      <text x={toX(h.p66) + 1} y={chartH + 10} fill="#34d399" font-size="7" font-family="monospace" text-anchor="middle">
+                        p66: {h.p66.toFixed(2)}
+                      </text>
+                      {/* Axis line */}
+                      <line x1="1" y1={chartH} x2={chartW + 1} y2={chartH} stroke="#333" stroke-width="0.5" />
+                    </svg>
+                  </div>
+                );
+              })}
+            </div>
+          </td>
+        </tr>
+      </table>
+
       {/* --- Faction Cards --- */}
       {multiFactions.map((f, fi) => {
         const sig = f.signals;
