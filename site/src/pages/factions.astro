@@ -57,7 +57,18 @@ interface Cluster {
 
 const clusters: Cluster[] = [];
 const assigned = new Set<string>();
-const threshold = 0.85;
+
+// Golden ratio tier system: φ = (1+√5)/2, thresholds at powers of 1/φ
+// Each tier relates to the next by the same ratio (φ), giving self-similar structure:
+//   Faction:      sim >= 1/φ   (0.618)  — core ideological alignment
+//   Alliance:     sim in [1/φ², 1/φ)    — sympathetic but distinct
+//   Acquaintance: sim in [1/φ³, 1/φ²)   — occasional overlap
+//   Neutral:      sim in [0, 1/φ³)      — no meaningful relationship
+//   Rival:        sim < 0               — oppositional fingerprints
+const PHI = (1 + Math.sqrt(5)) / 2;
+const threshold = 1 / PHI;           // ≈ 0.618
+const allianceThreshold = 1 / (PHI * PHI);  // ≈ 0.382
+const acquaintanceThreshold = 1 / (PHI * PHI * PHI); // ≈ 0.236
 
 for (const pair of [...pairs].sort((a, b) => b.similarity - a.similarity)) {
   if (pair.similarity < threshold) break;
@@ -341,7 +352,16 @@ function getSignalDivergence(a: string, b: string): string {
 }
 
 const top20Alliances = sortedPairsDesc.slice(0, 20);
-const rivalPairs = sortedPairsAsc.filter(p => p.similarity < 0.3).slice(0, 20);
+const rivalPairs = sortedPairsAsc.filter(p => p.similarity < 0).slice(0, 20);
+
+// Classify each pair into a tier
+function tierLabel(sim: number): { label: string; color: string } {
+  if (sim >= threshold) return { label: 'Faction', color: '#a78bfa' };
+  if (sim >= allianceThreshold) return { label: 'Alliance', color: '#34d399' };
+  if (sim >= acquaintanceThreshold) return { label: 'Acquaintance', color: '#fbbf24' };
+  if (sim >= 0) return { label: 'Neutral', color: '#555' };
+  return { label: 'Rival', color: '#f87171' };
+}
 
 // --- 8. Group colors for heatmap ---
 const groupColors: Record<string, string> = {
@@ -443,7 +463,7 @@ const histograms = buildHistograms(signalProfiles, percentiles);
     </tr>
     <tr>
       <td style="color: #666; font-size: var(--font-xs); padding: 4px 0 8px 0;">
-        Domains clustered by cosine similarity on 31-dimension UDHR fingerprints, characterized by supplementary signal profile.
+        Domains clustered by cosine similarity on 31-dimension UDHR fingerprints using golden ratio (&#x3C6;) tier thresholds.
       </td>
     </tr>
   </table>
@@ -461,8 +481,14 @@ const histograms = buildHistograms(signalProfiles, percentiles);
         <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #888;">
           {unalignedCount} unaligned
         </span>
-        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #555;">
-          threshold &ge; {threshold}
+        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
+          Faction &ge; 1/&#x3C6; ({threshold.toFixed(3)})
+        </span>
+        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #34d399;">
+          Alliance &ge; 1/&#x3C6;&sup2; ({allianceThreshold.toFixed(3)})
+        </span>
+        <span style="background: #1a1a25; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #fbbf24;">
+          Acquaintance &ge; 1/&#x3C6;&sup3; ({acquaintanceThreshold.toFixed(3)})
         </span>
       </td>
     </tr>
@@ -811,17 +837,21 @@ const histograms = buildHistograms(signalProfiles, percentiles);
             </div>
             <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
               <tr style="color: #555;">
-                <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td><td>Shared Faction</td><td>Key Overlap</td>
+                <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Similarity</td><td>Tier</td><td>Shared Faction</td><td>Key Overlap</td>
               </tr>
-              {top20Alliances.map(p => (
-                <tr style="border-top: 1px solid #1a1a25;">
-                  <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
-                  <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
-                  <td style="text-align: right; color: #34d399;" class="score-font">{p.similarity.toFixed(3)}</td>
-                  <td style="color: #888;">{findSharedFaction(p.a, p.b) || '—'}</td>
-                  <td style="color: #888;">{getSignalOverlap(p.a, p.b)}</td>
-                </tr>
-              ))}
+              {top20Alliances.map(p => {
+                const tier = tierLabel(p.similarity);
+                return (
+                  <tr style="border-top: 1px solid #1a1a25;">
+                    <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
+                    <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
+                    <td style="text-align: right; color: #34d399;" class="score-font">{p.similarity.toFixed(3)}</td>
+                    <td style={`color: ${tier.color};`}>{tier.label}</td>
+                    <td style="color: #888;">{findSharedFaction(p.a, p.b) || '—'}</td>
+                    <td style="color: #888;">{getSignalOverlap(p.a, p.b)}</td>
+                  </tr>
+                );
+              })}
             </table>
           </td>
         </tr>
@@ -835,7 +865,7 @@ const histograms = buildHistograms(signalProfiles, percentiles);
               <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
                 Strongest Rivals
                 <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
-                  pairs with similarity &lt; 0.3
+                  pairs with negative cosine similarity (oppositional fingerprints)
                 </span>
               </div>
               <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
