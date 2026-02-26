@@ -3,9 +3,9 @@
 ## Active / In Progress
 
 - [x] **Fix 5 stuck 2-eval domains** *(done)* — archive.org (imported hn_id 19627885 via Algolia), hackaday.com, paultendo.github.io, pnas.org, www.xda-developers.com — all now have 3 done stories, qualifying for factions.
-- [ ] **Run bigger backfill batch** — pending stories in D1, run `./scripts/backfill-eval.sh 50` then `/recalc`
-- [ ] **Commit new scripts + cron changes** — backfill-eval.sh, eval-to-sql.py, system-prompt.txt, cron.ts (/recalc), consumer.ts, compute-aggregates.ts, db.ts, shared-eval.ts
-- [ ] **Factor out hn-bot** — extract HN crawling/fetching/story mgmt from cron.ts into `src/lib/hn-bot.ts` (API fetching, story upsert, score refresh, comment crawl, user profile crawl, feed mgmt, domain circuit breaker). cron.ts becomes thin orchestrator.
+- [x] **Commit new scripts + cron changes** *(done)* — backfill-eval.sh, eval-to-sql.py, system-prompt.txt, cron.ts (/recalc), consumer.ts, compute-aggregates.ts, db.ts, shared-eval.ts
+- [x] **Factor out hn-bot** *(done)* — extracted HN crawling/fetching/story mgmt from cron.ts into `src/lib/hn-bot.ts` (1114 lines). cron.ts is now a thin orchestrator.
+- [x] **Unified CLI eval tool** *(done)* — `scripts/hn-hrcb-evaluate` replaces backfill-eval.sh + backfill-targeted.sh with flags: `--pending`, `--failed`, `--domain`, `--min-score`, `--dry-run`, `--recalc`, `--status`, positional IDs
 
 ## Data Sources
 
