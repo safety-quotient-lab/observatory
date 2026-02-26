@@ -522,8 +522,8 @@ const histograms = buildHistograms(signalProfiles, percentiles);
                 // Map a value to x position
                 const toX = (v: number) => ((v - h.min) / range) * chartW;
                 return (
-                  <div>
-                    <div style={`color: ${h.color}; font-size: var(--font-xs); margin-bottom: 2px;`}>{h.fullLabel}</div>
+                  <div style={`width: ${chartW + 2}px; flex-shrink: 0;`}>
+                    <div style={`color: ${h.color}; font-size: 8px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;`}>{h.fullLabel}</div>
                     <svg width={chartW + 2} height={chartH + 16} xmlns="http://www.w3.org/2000/svg">
                       {/* Bars */}
                       {h.bins.map((bin, bi) => {
