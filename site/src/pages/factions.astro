@@ -147,66 +147,74 @@ function avgSignals(members: string[]): FactionSignals {
   };
 }
 
-// --- 5. Archetype assignment (percentile-based) ---
+// --- 5. Signal typecode assignment ---
 interface Archetype {
   name: string;
   tagline: string;
   color: string;
 }
 
-// Compute percentile thresholds from all domain signal profiles
-function computeThresholds(profiles: Map<string, import('../lib/db').DomainSignalProfile>) {
+// Signal dimension definitions for typecodes
+const SIGNAL_DIMS: { code: string; label: string; color: string; extract: (s: FactionSignals) => number }[] = [
+  { code: 'EQ', label: 'epistemic quality', color: '#60a5fa', extract: s => s.eq },
+  { code: 'SO', label: 'solution orientation', color: '#4ade80', extract: s => s.so },
+  { code: 'SR', label: 'stakeholder representation', color: '#a78bfa', extract: s => s.sr },
+  { code: 'TD', label: 'transparency', color: '#34d399', extract: s => s.td },
+  { code: 'PT', label: 'propaganda density', color: '#f87171', extract: s => s.pt },
+  { code: 'AR', label: 'arousal', color: '#fb923c', extract: s => s.arousal },
+  { code: 'VA', label: 'valence', color: '#fbbf24', extract: s => s.valence },
+  { code: 'FW', label: 'fair witness', color: '#22d3ee', extract: s => s.fw },
+];
+
+// Compute medians from all domain signal profiles
+function computeMedians(profiles: Map<string, import('../lib/db').DomainSignalProfile>) {
   const vals = [...profiles.values()];
-  function percentile(arr: number[], p: number): number {
+  function median(arr: number[]): number {
     const sorted = [...arr].sort((a, b) => a - b);
     if (sorted.length === 0) return 0;
-    const idx = (p / 100) * (sorted.length - 1);
-    const lo = Math.floor(idx), hi = Math.ceil(idx);
-    if (lo === hi) return sorted[lo];
-    return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
   }
   function extract(fn: (p: import('../lib/db').DomainSignalProfile) => number | null): number[] {
     return vals.map(fn).filter((n): n is number => n !== null);
   }
   return {
-    eq_hi: percentile(extract(p => p.avg_eq), 66),
-    eq_lo: percentile(extract(p => p.avg_eq), 33),
-    so_hi: percentile(extract(p => p.avg_so), 66),
-    sr_hi: percentile(extract(p => p.avg_sr), 66),
-    td_hi: percentile(extract(p => p.avg_td), 66),
-    pt_hi: percentile(extract(p => p.avg_pt_count), 66),
-    pt_lo: percentile(extract(p => p.avg_pt_count), 33),
-    fw_hi: percentile(extract(p => p.avg_fw_ratio), 66),
-    fw_lo: percentile(extract(p => p.avg_fw_ratio), 33),
-    arousal_hi: percentile(extract(p => p.avg_arousal), 66),
-    arousal_lo: percentile(extract(p => p.avg_arousal), 33),
-    valence_pos: percentile(extract(p => p.avg_valence), 66),
-    valence_neg: percentile(extract(p => p.avg_valence), 33),
+    eq: median(extract(p => p.avg_eq)),
+    so: median(extract(p => p.avg_so)),
+    sr: median(extract(p => p.avg_sr)),
+    td: median(extract(p => p.avg_td)),
+    pt: median(extract(p => p.avg_pt_count)),
+    arousal: median(extract(p => p.avg_arousal)),
+    valence: median(extract(p => p.avg_valence)),
+    fw: median(extract(p => p.avg_fw_ratio)),
   };
 }
 
-type Thresholds = ReturnType<typeof computeThresholds>;
+type Medians = ReturnType<typeof computeMedians>;
 
-function assignArchetype(sig: FactionSignals, t: Thresholds): Archetype {
-  if (sig.pt >= t.pt_hi && sig.arousal >= t.arousal_hi)
-    return { name: 'The Agitators', tagline: 'High propaganda density meets high emotional arousal', color: '#f87171' };
-  if (sig.eq >= t.eq_hi && sig.td >= t.td_hi && sig.pt <= t.pt_lo)
-    return { name: 'The Transparents', tagline: 'Epistemic rigor with full disclosure and minimal propaganda', color: '#34d399' };
-  if (sig.eq >= t.eq_hi && sig.pt <= t.pt_lo && sig.fw >= t.fw_hi)
-    return { name: 'The Chroniclers', tagline: 'Fact-forward reporting grounded in observable evidence', color: '#60a5fa' };
-  if (sig.so >= t.so_hi && sig.sr >= t.sr_hi)
-    return { name: 'The Bridge Builders', tagline: 'Solution-oriented with broad stakeholder representation', color: '#a78bfa' };
-  if (sig.eq <= t.eq_lo && sig.arousal >= t.arousal_hi)
-    return { name: 'The Firebrands', tagline: 'Emotionally charged with low epistemic quality', color: '#fb923c' };
-  if (sig.eq >= t.eq_hi && sig.arousal <= t.arousal_lo)
-    return { name: 'The Analysts', tagline: 'High epistemic quality delivered with measured restraint', color: '#22d3ee' };
-  if (sig.sr >= t.sr_hi && sig.valence >= t.valence_pos)
-    return { name: 'The Amplifiers', tagline: 'Positive-valence content with diverse stakeholder voices', color: '#fbbf24' };
-  if (sig.fw <= t.fw_lo && sig.valence <= t.valence_neg)
-    return { name: 'The Speculators', tagline: 'Inference-heavy coverage with negative emotional lean', color: '#c084fc' };
-  if (sig.so >= t.so_hi && sig.arousal <= t.arousal_lo)
-    return { name: 'The Pragmatists', tagline: 'Solution-focused with low emotional intensity', color: '#4ade80' };
-  return { name: 'The Moderates', tagline: 'Balanced signal profile without strong extremes', color: '#818cf8' };
+function assignTypecode(sig: FactionSignals, med: Medians): Archetype {
+  const medVals: Record<string, number> = {
+    EQ: med.eq, SO: med.so, SR: med.sr, TD: med.td,
+    PT: med.pt, AR: med.arousal, VA: med.valence, FW: med.fw,
+  };
+
+  const above: { code: string; label: string; color: string }[] = [];
+  for (const dim of SIGNAL_DIMS) {
+    if (dim.extract(sig) > medVals[dim.code]) {
+      above.push(dim);
+    }
+  }
+
+  if (above.length === 0) {
+    return { name: '(baseline)', tagline: 'No signal above population median', color: '#818cf8' };
+  }
+
+  const name = above.map(d => d.code).join('\u00b7');
+  const tagline = 'Above-median ' + above.map(d => d.label).join(', ');
+  // Color from the first (dominant) above-median signal
+  const color = above[0].color;
+
+  return { name, tagline, color };
 }
 
 // --- 6. Build enriched faction data ---
@@ -218,14 +226,14 @@ interface EnrichedFaction {
   avgFingerprint: (number | null)[];
 }
 
-const thresholds = computeThresholds(signalProfiles);
+const medians = computeMedians(signalProfiles);
 
 const multiFactions: EnrichedFaction[] = [];
 const loneWolves: { domain: string; score: number | null; signals: FactionSignals; nearestFaction: string; nearestSim: number }[] = [];
 
 for (const c of clusters) {
   const signals = avgSignals(c.members);
-  const archetype = assignArchetype(signals, thresholds);
+  const archetype = assignTypecode(signals, medians);
 
   // Compute average fingerprint
   const avgFp: (number | null)[] = new Array(31).fill(null);
@@ -539,7 +547,7 @@ function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
                   {multiFactions.map((f, fi) => (
                     <g>
                       <text x="0" y={24 + fi * 20 + 13} fill={f.archetype.color} font-size="9" font-family="monospace">
-                        {f.archetype.name.replace('The ', '').slice(0, 14)}
+                        {f.archetype.name.slice(0, 16)}
                       </text>
                       {f.avgFingerprint.map((v, vi) => (
                         <rect x={140 + vi * 16} y={24 + fi * 20 + 2} width="15" height="16" rx="2"
@@ -614,7 +622,7 @@ function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
                 {multiFactions.map(f => (
                   <span style={`display: inline-flex; align-items: center; gap: 4px; font-size: var(--font-xs);`}>
                     <span style={`display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: ${f.archetype.color};`}></span>
-                    <span style={`color: ${f.archetype.color};`}>{f.archetype.name.replace('The ', '')}</span>
+                    <span style={`color: ${f.archetype.color};`}>{f.archetype.name}</span>
                   </span>
                 ))}
               </div>
