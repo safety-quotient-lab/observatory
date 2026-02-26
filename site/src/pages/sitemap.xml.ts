@@ -8,15 +8,22 @@ export const GET: APIRoute = async ({ locals }) => {
   const staticPages = [
     { loc: '/', priority: '1.0', changefreq: 'hourly' },
     { loc: '/about', priority: '0.5', changefreq: 'monthly' },
-    { loc: '/dashboard', priority: '0.7', changefreq: 'hourly' },
+    { loc: '/rights', priority: '0.8', changefreq: 'daily' },
+    { loc: '/rights/observatory', priority: '0.7', changefreq: 'daily' },
+    { loc: '/rights/articles', priority: '0.7', changefreq: 'daily' },
+    { loc: '/rights/network', priority: '0.6', changefreq: 'daily' },
+    { loc: '/sources', priority: '0.7', changefreq: 'daily' },
     { loc: '/domains', priority: '0.7', changefreq: 'daily' },
-    { loc: '/articles', priority: '0.7', changefreq: 'daily' },
-    { loc: '/front', priority: '0.6', changefreq: 'daily' },
-    { loc: '/feed.xml', priority: '0.3', changefreq: 'hourly' },
-    { loc: '/seldon', priority: '0.6', changefreq: 'daily' },
-    { loc: '/network', priority: '0.6', changefreq: 'daily' },
+    { loc: '/users', priority: '0.6', changefreq: 'daily' },
     { loc: '/factions', priority: '0.6', changefreq: 'daily' },
+    { loc: '/trends', priority: '0.7', changefreq: 'daily' },
+    { loc: '/seldon', priority: '0.6', changefreq: 'daily' },
+    { loc: '/system', priority: '0.6', changefreq: 'hourly' },
+    { loc: '/models', priority: '0.5', changefreq: 'daily' },
+    { loc: '/past', priority: '0.6', changefreq: 'daily' },
     { loc: '/velocity', priority: '0.6', changefreq: 'hourly' },
+    { loc: '/dynamics', priority: '0.6', changefreq: 'daily' },
+    { loc: '/feed.xml', priority: '0.3', changefreq: 'hourly' },
   ];
 
   // Article pages (0-30)

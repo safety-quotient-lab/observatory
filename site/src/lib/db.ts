@@ -603,6 +603,7 @@ export async function getRecentEvaluations(db: D1Database, limit = 10): Promise<
 export interface DomainStat {
   domain: string;
   count: number;
+  evaluated: number;
   avg_score: number;
   avg_setl: number | null;
   avg_conf: number | null;
@@ -611,7 +612,7 @@ export interface DomainStat {
 export async function getDomainStats(db: D1Database, limit = 10): Promise<DomainStat[]> {
   const { results } = await db
     .prepare(
-      `SELECT s.domain, COUNT(*) as count, AVG(s.hcb_weighted_mean) as avg_score,
+      `SELECT s.domain, COUNT(*) as count, COUNT(*) as evaluated, AVG(s.hcb_weighted_mean) as avg_score,
               (SELECT AVG(
                 CASE WHEN sc.editorial >= sc.structural
                   THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
@@ -869,6 +870,7 @@ export async function getAllDomainStats(
   const { results } = await db
     .prepare(
       `SELECT s.domain, COUNT(*) as count,
+              SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
               AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
               (SELECT AVG(
                 CASE WHEN sc.editorial >= sc.structural
@@ -1477,6 +1479,10 @@ export interface DomainSignalProfile {
   avg_hn_comments: number | null;
   avg_poster_karma: number | null;
   avg_setl: number | null;
+  avg_hrcb: number | null;
+  avg_editorial: number | null;
+  avg_structural: number | null;
+  avg_confidence: number | null;
   dominant_tone: string | null;
   dominant_scope: string | null;
   dominant_reading_level: string | null;
@@ -1513,6 +1519,14 @@ export async function getDomainSignalProfiles(db: D1Database): Promise<Map<strin
             AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
             AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
          ) as avg_setl,
+         AVG(s.hcb_weighted_mean) as avg_hrcb,
+         (SELECT AVG(sc2.editorial) FROM scores sc2
+          JOIN stories s4 ON s4.hn_id = sc2.hn_id
+          WHERE s4.domain = s.domain AND sc2.editorial IS NOT NULL) as avg_editorial,
+         (SELECT AVG(sc2.structural) FROM scores sc2
+          JOIN stories s4 ON s4.hn_id = sc2.hn_id
+          WHERE s4.domain = s.domain AND sc2.structural IS NOT NULL) as avg_structural,
+         AVG(s.hcb_confidence) as avg_confidence,
          (SELECT s2.et_primary_tone FROM stories s2
           WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.et_primary_tone IS NOT NULL
           GROUP BY s2.et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1) as dominant_tone,
@@ -1959,6 +1973,7 @@ export interface SignalOverview {
   avg_td: number | null;
   avg_pt_count: number | null;
   top_pt_technique: string | null;
+  technique_distribution: Record<string, number>;
   tone_distribution: Record<string, number>;
   scope_distribution: Record<string, number>;
   reading_level_distribution: Record<string, number>;
@@ -2185,8 +2200,9 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
       readingLevelDistribution[r.level] = r.cnt;
     }
 
-    // Most common propaganda technique
+    // Propaganda technique distribution
     let topPtTechnique: string | null = null;
+    const techCounts: Record<string, number> = {};
     try {
       const ptRows = await db
         .prepare(
@@ -2194,7 +2210,6 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
            WHERE eval_status = 'done' AND pt_flags_json IS NOT NULL AND pt_flag_count > 0`
         )
         .all<{ pt_flags_json: string }>();
-      const techCounts: Record<string, number> = {};
       for (const row of ptRows.results) {
         try {
           const flags = JSON.parse(row.pt_flags_json) as Array<{ technique: string }>;
@@ -2217,6 +2232,7 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
       avg_td: agg?.avg_td ?? null,
       avg_pt_count: agg?.avg_pt_count ?? null,
       top_pt_technique: topPtTechnique,
+      technique_distribution: techCounts,
       tone_distribution: toneDistribution,
       scope_distribution: scopeDistribution,
       reading_level_distribution: readingLevelDistribution,
@@ -2226,9 +2242,87 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
       total_with_signals: 0,
       avg_eq: null, avg_so: null, avg_sr: null, avg_td: null,
       avg_pt_count: null, top_pt_technique: null,
+      technique_distribution: {},
       tone_distribution: {}, scope_distribution: {}, reading_level_distribution: {},
     };
   }
+}
+
+// --- Model Agreement ---
+
+export interface ModelAgreementPair {
+  model_a: string;
+  model_b: string;
+  pairs: number;
+  avg_diff: number;
+  class_agree: number;
+  pearson_r: number | null;
+}
+
+export async function getModelAgreement(db: D1Database): Promise<ModelAgreementPair[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+        a.eval_model as model_a, b.eval_model as model_b,
+        COUNT(*) as pairs,
+        AVG(ABS(a.hcb_weighted_mean - b.hcb_weighted_mean)) as avg_diff,
+        AVG(CASE WHEN a.hcb_classification = b.hcb_classification THEN 1.0 ELSE 0.0 END) as class_agree,
+        CASE WHEN COUNT(*) >= 10 THEN
+          (COUNT(*) * SUM(a.hcb_weighted_mean * b.hcb_weighted_mean)
+           - SUM(a.hcb_weighted_mean) * SUM(b.hcb_weighted_mean))
+          / NULLIF(
+            SQRT(
+              (COUNT(*) * SUM(a.hcb_weighted_mean * a.hcb_weighted_mean) - SUM(a.hcb_weighted_mean) * SUM(a.hcb_weighted_mean))
+              * (COUNT(*) * SUM(b.hcb_weighted_mean * b.hcb_weighted_mean) - SUM(b.hcb_weighted_mean) * SUM(b.hcb_weighted_mean))
+            ), 0)
+        ELSE NULL END as pearson_r
+       FROM rater_evals a
+       JOIN rater_evals b ON a.hn_id = b.hn_id AND a.eval_model < b.eval_model
+       WHERE a.eval_status = 'done' AND b.eval_status = 'done'
+         AND a.hcb_weighted_mean IS NOT NULL AND b.hcb_weighted_mean IS NOT NULL
+       GROUP BY a.eval_model, b.eval_model
+       ORDER BY pairs DESC`
+    )
+    .all<ModelAgreementPair>();
+  return results;
+}
+
+// --- Top Movers (biggest model disagreement per story) ---
+
+export interface ModelMover {
+  hn_id: number;
+  title: string;
+  domain: string | null;
+  model_count: number;
+  min_score: number;
+  max_score: number;
+  spread: number;
+  primary_score: number | null;
+}
+
+export async function getTopModelMovers(db: D1Database, limit = 10): Promise<ModelMover[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+        r.hn_id,
+        s.title,
+        s.domain,
+        COUNT(DISTINCT r.eval_model) as model_count,
+        MIN(r.hcb_weighted_mean) as min_score,
+        MAX(r.hcb_weighted_mean) as max_score,
+        MAX(r.hcb_weighted_mean) - MIN(r.hcb_weighted_mean) as spread,
+        s.hcb_weighted_mean as primary_score
+       FROM rater_evals r
+       JOIN stories s ON s.hn_id = r.hn_id
+       WHERE r.eval_status = 'done' AND r.hcb_weighted_mean IS NOT NULL
+       GROUP BY r.hn_id
+       HAVING COUNT(DISTINCT r.eval_model) >= 2
+       ORDER BY spread DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<ModelMover>();
+  return results;
 }
 
 // --- Multi-model (rater) query functions ---
@@ -2683,4 +2777,117 @@ export async function getDayOfWeekPatterns(db: D1Database): Promise<DayOfWeekPat
     )
     .all<{ day: number; stories: number; avg_hn_score: number; avg_comments: number; avg_hrcb: number | null }>();
   return results.map(r => ({ ...r, day_name: dayNames[r.day] || `Day ${r.day}` }));
+}
+
+// --- Observatory Queries ---
+
+export interface PropagandaStory {
+  hn_id: number;
+  title: string;
+  url: string | null;
+  domain: string | null;
+  pt_flag_count: number;
+  pt_flags_json: string | null;
+  hcb_weighted_mean: number | null;
+}
+
+export async function getTopPropagandaStories(db: D1Database, limit = 10): Promise<PropagandaStory[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT hn_id, title, url, domain, pt_flag_count, pt_flags_json, hcb_weighted_mean
+       FROM stories
+       WHERE eval_status = 'done' AND pt_flag_count > 0
+       ORDER BY pt_flag_count DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<PropagandaStory>();
+  return results;
+}
+
+export interface StakeholderOverview {
+  who_speaks: Record<string, number>;
+  who_spoken_about: Record<string, number>;
+  total: number;
+}
+
+export async function getStakeholderOverview(db: D1Database): Promise<StakeholderOverview> {
+  const { results } = await db
+    .prepare(
+      `SELECT sr_who_speaks, sr_who_spoken_about
+       FROM stories
+       WHERE eval_status = 'done' AND (sr_who_speaks IS NOT NULL OR sr_who_spoken_about IS NOT NULL)`
+    )
+    .all<{ sr_who_speaks: string | null; sr_who_spoken_about: string | null }>();
+
+  const speaksCounts: Record<string, number> = {};
+  const aboutCounts: Record<string, number> = {};
+
+  for (const r of results) {
+    if (r.sr_who_speaks) {
+      for (const s of r.sr_who_speaks.split(',').map(s => s.trim()).filter(Boolean)) {
+        speaksCounts[s] = (speaksCounts[s] || 0) + 1;
+      }
+    }
+    if (r.sr_who_spoken_about) {
+      for (const s of r.sr_who_spoken_about.split(',').map(s => s.trim()).filter(Boolean)) {
+        aboutCounts[s] = (aboutCounts[s] || 0) + 1;
+      }
+    }
+  }
+
+  return { who_speaks: speaksCounts, who_spoken_about: aboutCounts, total: results.length };
+}
+
+export interface RegionCount {
+  region: string;
+  count: number;
+}
+
+export async function getRegionDistribution(db: D1Database): Promise<{ regions: RegionCount[]; scopes: Record<string, number>; total: number }> {
+  // Scope distribution
+  const { results: scopeRows } = await db
+    .prepare(
+      `SELECT gs_scope as scope, COUNT(*) as cnt
+       FROM stories
+       WHERE eval_status = 'done' AND gs_scope IS NOT NULL
+       GROUP BY gs_scope
+       ORDER BY cnt DESC`
+    )
+    .all<{ scope: string; cnt: number }>();
+
+  const scopes: Record<string, number> = {};
+  for (const r of scopeRows) {
+    scopes[r.scope] = r.cnt;
+  }
+
+  // Region distribution from JSON arrays
+  const { results: regionRows } = await db
+    .prepare(
+      `SELECT gs_regions_json
+       FROM stories
+       WHERE eval_status = 'done' AND gs_regions_json IS NOT NULL`
+    )
+    .all<{ gs_regions_json: string }>();
+
+  const regionCounts: Record<string, number> = {};
+  for (const r of regionRows) {
+    try {
+      const regions = JSON.parse(r.gs_regions_json);
+      if (Array.isArray(regions)) {
+        for (const region of regions) {
+          if (typeof region === 'string' && region.trim()) {
+            const key = region.trim();
+            regionCounts[key] = (regionCounts[key] || 0) + 1;
+          }
+        }
+      }
+    } catch { /* skip malformed json */ }
+  }
+
+  const regions = Object.entries(regionCounts)
+    .map(([region, count]) => ({ region, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { regions, scopes, total: regionRows.length };
 }

@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getAllDomainStats } from '../lib/db';
+import { getAllDomainStats, getDomainIntelligence } from '../lib/db';
 import type { DomainSortOption } from '../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../lib/colors';
 
@@ -16,7 +16,18 @@ const validClassify = ['all', 'positive', 'negative', 'neutral', 'contested'];
 const safeClassify = validClassify.includes(classify) ? classify : 'all';
 
 // Fetch more to allow filtering
-const allDomains = await getAllDomainStats(db, safeSort, 500);
+const [allDomains, intelDomains] = await Promise.all([
+  getAllDomainStats(db, safeSort, 500),
+  getDomainIntelligence(db, 'stories', 3, 150),
+]);
+
+// Insight cards from domain-intel
+const hrcbDomains = intelDomains.filter(d => d.evaluated >= 3 && d.avg_hrcb !== null);
+const topHrcb = [...hrcbDomains].sort((a, b) => (b.avg_hrcb || 0) - (a.avg_hrcb || 0)).slice(0, 5);
+const bottomHrcb = [...hrcbDomains].sort((a, b) => (a.avg_hrcb || 0) - (b.avg_hrcb || 0)).slice(0, 5);
+const controversial = [...hrcbDomains].filter(d => d.hrcb_range !== null).sort((a, b) => (b.hrcb_range || 0) - (a.hrcb_range || 0)).slice(0, 5);
+const highEngagement = intelDomains.filter(d => d.stories >= 3 && d.comment_per_point !== null).sort((a, b) => (b.comment_per_point || 0) - (a.comment_per_point || 0)).slice(0, 5);
+const diverse = intelDomains.filter(d => d.stories >= 3).sort((a, b) => b.unique_submitters - a.unique_submitters).slice(0, 5);
 
 // Filter by classification
 const domains = safeClassify === 'all' ? allDomains.slice(0, 100) : allDomains.filter(d => {
@@ -41,7 +52,7 @@ function buildDomainUrl(params: Record<string, string>): string {
 }
 ---
 
-<Base title="Domains — HN HRCB">
+<Base title="Domains">
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
@@ -79,6 +90,69 @@ function buildDomainUrl(params: Record<string, string>): string {
     </tr>
   </table>
 
+  {/* Domain insight cards */}
+  {hrcbDomains.length > 0 && (
+    <div class="table-wrap" style="margin-bottom: 10px;">
+    <table cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 700px;">
+            <tr>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px;">
+                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
+                {topHrcb.map(d => (
+                  <div style="margin-bottom: 3px;">
+                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
+                  </div>
+                ))}
+              </td>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
+                {bottomHrcb.map(d => (
+                  <div style="margin-bottom: 3px;">
+                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
+                  </div>
+                ))}
+              </td>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
+                {controversial.map(d => (
+                  <div style="margin-bottom: 3px;">
+                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <span class="score-font" style="color: #e2b340; font-size: var(--font-sm); margin-left: 4px;">{d.hrcb_range !== null ? d.hrcb_range.toFixed(2) : '--'}</span>
+                  </div>
+                ))}
+              </td>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Engaging</div>
+                {highEngagement.map(d => (
+                  <div style="margin-bottom: 3px;">
+                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <span class="score-font" style="color: #60a5fa; font-size: var(--font-sm); margin-left: 4px;">{d.comment_per_point !== null ? d.comment_per_point.toFixed(2) : '--'}</span>
+                    <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">c/pt</span>
+                  </div>
+                ))}
+              </td>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
+                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
+                {diverse.map(d => (
+                  <div style="margin-bottom: 3px;">
+                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <span class="score-font" style="color: #a78bfa; font-size: var(--font-sm); margin-left: 4px;">{d.unique_submitters}</span>
+                    <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">users</span>
+                  </div>
+                ))}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    </div>
+  )}
+
   <div class="table-wrap">
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
     <tr>
@@ -89,17 +163,24 @@ function buildDomainUrl(params: Record<string, string>): string {
               <td width="24">#</td>
               <td>Domain</td>
               <td width="70" align="center">Stories</td>
+              <td width="80" align="center" title="Evaluated / Total (percentage)">Coverage</td>
               <td width="80" align="center">Avg HRCB</td>
               <td width="60" align="center" title="Evidence-weighted confidence">Avg Conf</td>
               <td width="70" align="center" title="Structural-Editorial Tension Level">Avg SETL</td>
             </tr>
-            {domains.map((d, i) => (
+            {domains.map((d, i) => {
+              const pct = d.count > 0 ? Math.round((d.evaluated / d.count) * 100) : 0;
+              const coverageColor = pct === 100 ? '#4ade80' : pct >= 50 ? '#eab308' : '#666';
+              return (
               <tr style="border-top: 1px solid #1a1a25;">
                 <td style="color: #555;" class="score-font">{i + 1}</td>
                 <td>
                   <a href={`/domain/${d.domain}`} style="color: #c9c9c9;">{d.domain}</a>
                 </td>
                 <td align="center" class="score-font" style="color: #888;">{d.count}</td>
+                <td align="center" class="score-font" style={`color: ${coverageColor};`}>
+                  {d.evaluated}/{d.count} <span style="color: #555;">({pct}%)</span>
+                </td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
                   {d.avg_score !== null ? formatScore(d.avg_score) : <span style="color: #555;">—</span>}
                 </td>
@@ -110,7 +191,8 @@ function buildDomainUrl(params: Record<string, string>): string {
                   {d.avg_setl !== null ? formatSetl(d.avg_setl) : <span style="color: #555;">—</span>}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </table>
         ) : (
           <div style="color: #555; font-size: var(--font-sm); padding: 10px;">

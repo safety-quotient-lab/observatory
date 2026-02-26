@@ -1,0 +1,218 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDailyHrcb, getSignalOverview } from '../lib/db';
+import { scoreToColor } from '../lib/colors';
+
+const db = Astro.locals.runtime.env.DB;
+
+const dailyHrcb = await getDailyHrcb(db, 30);
+
+let signals: { total_with_signals: number; avg_eq: number | null; avg_so: number | null; avg_sr: number | null; avg_td: number | null; avg_pt_count: number | null } | null = null;
+try {
+  const overview = await getSignalOverview(db);
+  signals = overview;
+} catch { /* graceful fallback */ }
+
+// SVG sparkline helpers
+const chartW = 300;
+const chartH = 80;
+const padX = 2;
+const padY = 6;
+
+function buildSparkline(data: { day: string; avg: number }[]): { path: string; zeroY: number; points: { x: number; y: number; avg: number; day: string }[] } {
+  if (data.length === 0) return { path: '', zeroY: chartH / 2, points: [] };
+
+  const vals = data.map(d => d.avg);
+  const minVal = Math.min(...vals, 0);
+  const maxVal = Math.max(...vals, 0);
+  const range = maxVal - minVal || 0.01;
+
+  function xPos(i: number): number {
+    return padX + (i / Math.max(data.length - 1, 1)) * (chartW - 2 * padX);
+  }
+  function yPos(v: number): number {
+    return padY + (1 - (v - minVal) / range) * (chartH - 2 * padY);
+  }
+
+  const points = data.map((d, i) => ({ x: xPos(i), y: yPos(d.avg), avg: d.avg, day: d.day }));
+  const pathParts = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`);
+
+  return {
+    path: pathParts.join(' '),
+    zeroY: yPos(0),
+    points,
+  };
+}
+
+const sparkline = buildSparkline(dailyHrcb);
+const latestDay = dailyHrcb.length > 0 ? dailyHrcb[dailyHrcb.length - 1] : null;
+const latestScore = latestDay ? latestDay.avg : null;
+const latestLabel = latestScore !== null ? (latestScore > 0 ? '+' : '') + latestScore.toFixed(3) : 'N/A';
+const latestColor = latestScore !== null ? scoreToColor(latestScore) : '#4b5563';
+
+// Signal stats formatting
+function fmtSig(v: number | null | undefined): string {
+  if (v == null) return 'N/A';
+  return v.toFixed(2);
+}
+---
+
+<Base title="Trends">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td>
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Trends</span>
+        <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
+          Temporal analysis and signal landscapes.
+        </span>
+      </td>
+    </tr>
+  </table>
+
+  {/* 30-day HRCB trend sparkline */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 14px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          30-Day HRCB Trend
+          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            {dailyHrcb.length} days of data
+          </span>
+        </div>
+
+        {dailyHrcb.length > 1 ? (
+          <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} style="background: #0a0a12; border-radius: 4px; flex-shrink: 0;">
+              {/* Zero line */}
+              <line
+                x1={padX} y1={sparkline.zeroY}
+                x2={chartW - padX} y2={sparkline.zeroY}
+                stroke="#333" stroke-width="0.5" stroke-dasharray="3,3"
+              />
+              {/* Zero label */}
+              <text x={chartW - padX - 1} y={sparkline.zeroY - 3} fill="#555" font-size="7" text-anchor="end">0</text>
+              {/* Trend line */}
+              <path
+                d={sparkline.path}
+                fill="none"
+                stroke={latestColor}
+                stroke-width="1.5"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+              />
+              {/* Latest point dot */}
+              {sparkline.points.length > 0 && (
+                <circle
+                  cx={sparkline.points[sparkline.points.length - 1].x}
+                  cy={sparkline.points[sparkline.points.length - 1].y}
+                  r="3"
+                  fill={latestColor}
+                />
+              )}
+            </svg>
+
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="color: #555; font-size: var(--font-xs);">Latest</span>
+              <span style={`color: ${latestColor}; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;`}>
+                {latestLabel}
+              </span>
+              {latestDay && (
+                <span style="color: #555; font-size: var(--font-xs);">
+                  {latestDay.day} &middot; {latestDay.count} evals
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style="color: #555; font-size: var(--font-sm);">
+            Not enough data for trend line.
+          </div>
+        )}
+      </td>
+    </tr>
+  </table>
+
+  {/* Signal overview */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 14px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+          Signal Overview
+          {signals && (
+            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              {signals.total_with_signals} stories with supplementary signals
+            </span>
+          )}
+        </div>
+
+        {signals ? (
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            {/* EQ */}
+            <div style="flex: 1; min-width: 100px; background: #0a0a12; border: 1px solid #1a1a28; border-radius: 4px; padding: 10px; text-align: center;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                Epistemic Quality
+              </div>
+              <div style="color: #60a5fa; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
+                {fmtSig(signals.avg_eq)}
+              </div>
+              <div style="color: #444; font-size: var(--font-xs);">avg EQ</div>
+            </div>
+
+            {/* SO */}
+            <div style="flex: 1; min-width: 100px; background: #0a0a12; border: 1px solid #1a1a28; border-radius: 4px; padding: 10px; text-align: center;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                Solution Orientation
+              </div>
+              <div style="color: #34d399; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
+                {fmtSig(signals.avg_so)}
+              </div>
+              <div style="color: #444; font-size: var(--font-xs);">avg SO</div>
+            </div>
+
+            {/* SR */}
+            <div style="flex: 1; min-width: 100px; background: #0a0a12; border: 1px solid #1a1a28; border-radius: 4px; padding: 10px; text-align: center;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                Stakeholder Rep
+              </div>
+              <div style="color: #fbbf24; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
+                {fmtSig(signals.avg_sr)}
+              </div>
+              <div style="color: #444; font-size: var(--font-xs);">avg SR</div>
+            </div>
+
+            {/* TD */}
+            <div style="flex: 1; min-width: 100px; background: #0a0a12; border: 1px solid #1a1a28; border-radius: 4px; padding: 10px; text-align: center;">
+              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                Temporal Depth
+              </div>
+              <div style="color: #a78bfa; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
+                {fmtSig(signals.avg_td)}
+              </div>
+              <div style="color: #444; font-size: var(--font-xs);">avg TD</div>
+            </div>
+          </div>
+        ) : (
+          <div style="color: #555; font-size: var(--font-sm);">
+            Signal data unavailable.
+          </div>
+        )}
+      </td>
+    </tr>
+  </table>
+
+  {/* Link to Seldon */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+    <tr>
+      <td style="padding: 14px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <a href="/seldon" style="text-decoration: none; display: block;">
+          <div style="color: #c9c9c9; font-size: var(--font-sm); font-weight: bold; margin-bottom: 4px;">
+            Seldon &rarr;
+          </div>
+          <div style="color: #828282; font-size: var(--font-xs); line-height: 1.5;">
+            Psychohistorical trends. Regime change detection, rolling averages, per-feed analysis, and SETL drift.
+          </div>
+        </a>
+      </td>
+    </tr>
+  </table>
+</Base>

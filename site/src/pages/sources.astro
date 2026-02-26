@@ -1,0 +1,141 @@
+---
+import Base from '../layouts/Base.astro';
+import { getDomainStats, getStatusCounts } from '../lib/db';
+import { scoreToColor, formatScore } from '../lib/colors';
+
+const db = Astro.locals.runtime.env.DB;
+
+const [topDomains, statusCounts] = await Promise.all([
+  getDomainStats(db, 5),
+  getStatusCounts(db),
+]);
+
+const totalDomains = await db
+  .prepare(`SELECT COUNT(DISTINCT domain) as cnt FROM stories WHERE eval_status = 'done' AND domain IS NOT NULL`)
+  .first<{ cnt: number }>();
+
+const domainCount = totalDomains?.cnt ?? 0;
+const topDomain = topDomains.length > 0 ? topDomains[0] : null;
+const coverage = statusCounts.total > 0
+  ? Math.round((statusCounts.done / statusCounts.total) * 100)
+  : 0;
+
+interface SectionCard {
+  title: string;
+  href: string;
+  description: string;
+  accent: string;
+}
+
+const sections: SectionCard[] = [
+  {
+    title: 'Domains',
+    href: '/domains',
+    description: 'Browse all domains by HRCB score, coverage, SETL, and confidence. Sorted directory with classification filters.',
+    accent: '#60a5fa',
+  },
+  {
+    title: 'Users',
+    href: '/users',
+    description: 'User submission patterns, behavioral analysis, and human rights alignment profiles.',
+    accent: '#a78bfa',
+  },
+  {
+    title: 'Factions',
+    href: '/factions',
+    description: 'Editorial character clustering. Which domains think alike? Archetype analysis and affinity mapping.',
+    accent: '#f59e0b',
+  },
+];
+---
+
+<Base title="Sources">
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
+    <tr>
+      <td>
+        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Sources</span>
+        <div style="color: #828282; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
+          Who publishes what. Domains, users, and editorial clustering.
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Summary stats -->
+  <div style="display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 18px 0;">
+    <div style="background: #12121a; border: 1px solid #222230; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+      <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Total Domains</div>
+      <div style="color: #c9c9c9; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{domainCount}</div>
+    </div>
+    <div style="background: #12121a; border: 1px solid #222230; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+      <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Top Domain</div>
+      <div style="margin-top: 2px;">
+        {topDomain ? (
+          <a href={`/domain/${topDomain.domain}`} style="color: #c9c9c9; font-size: var(--font-sm); font-weight: bold; text-decoration: none;">
+            {topDomain.domain}
+          </a>
+        ) : (
+          <span style="color: #555; font-size: var(--font-sm);">--</span>
+        )}
+        {topDomain && (
+          <span style="color: #666; font-size: var(--font-xs); margin-left: 4px;">({topDomain.count} stories)</span>
+        )}
+      </div>
+    </div>
+    <div style="background: #12121a; border: 1px solid #222230; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+      <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Eval Coverage</div>
+      <div style="color: #c9c9c9; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{coverage}%</div>
+    </div>
+  </div>
+
+  <!-- Section cards -->
+  <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+    {sections.map(card => (
+      <a href={card.href} style="text-decoration: none; display: block;">
+        <div style={`background: #12121a; border: 1px solid #222230; border-radius: 6px; padding: 14px; border-left: 3px solid ${card.accent}; transition: border-color 0.15s;`}>
+          <div style={`color: ${card.accent}; font-size: var(--font-md); font-weight: bold;`}>{card.title}</div>
+          <div style="color: #828282; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
+            {card.description}
+          </div>
+          <div style="color: #555; font-size: var(--font-xs); margin-top: 6px;">
+            {card.href} &rarr;
+          </div>
+        </div>
+      </a>
+    ))}
+  </div>
+
+  <!-- Top domains mini table -->
+  <div style="background: #12121a; border: 1px solid #222230; border-radius: 6px; padding: 14px; margin-bottom: 20px;">
+    <div style="color: #828282; font-size: var(--font-sm); font-weight: bold; margin-bottom: 8px;">
+      Top 5 Domains
+      <a href="/domains" style="color: #555; font-size: var(--font-xs); margin-left: 8px; font-weight: normal;">view all &rarr;</a>
+    </div>
+    <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid #222230;">
+          <td style="color: #555; font-size: var(--font-xs); padding: 4px 8px 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">Domain</td>
+          <td style="color: #555; font-size: var(--font-xs); padding: 4px 8px; text-align: right; text-transform: uppercase; letter-spacing: 0.5px;">Stories</td>
+          <td style="color: #555; font-size: var(--font-xs); padding: 4px 0 4px 8px; text-align: right; text-transform: uppercase; letter-spacing: 0.5px;">Avg HRCB</td>
+        </tr>
+      </thead>
+      <tbody>
+        {topDomains.map(d => (
+          <tr style="border-bottom: 1px solid #1a1a25;">
+            <td style="padding: 5px 8px 5px 0; font-size: var(--font-sm);">
+              <a href={`/domain/${d.domain}`} style="color: #c9c9c9; text-decoration: none;">{d.domain}</a>
+            </td>
+            <td style="padding: 5px 8px; text-align: right; color: #828282; font-size: var(--font-sm);">
+              {d.count}
+            </td>
+            <td style="padding: 5px 0 5px 8px; text-align: right; font-size: var(--font-sm);">
+              <span style={`color: ${scoreToColor(d.avg_score)}; font-weight: bold;`}>
+                {formatScore(d.avg_score)}
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Base>

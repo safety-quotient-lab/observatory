@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
 import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
 import type { SortOption, FilterOption, TypeOption, ModelOption } from '../lib/db';
-import { modelDisplayName } from '../lib/shared-eval';
+import { modelDisplayName, getModelDef } from '../lib/shared-eval';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -11,7 +11,7 @@ const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'top') as SortOption;
 const filter = (url.searchParams.get('filter') || 'all') as FilterOption;
 const type = (url.searchParams.get('type') || 'all') as TypeOption;
-const model = (url.searchParams.get('model') || 'all') as ModelOption;
+const model = (url.searchParams.get('model') || 'any') as ModelOption;
 const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
 const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'velocity'];
@@ -21,9 +21,13 @@ const safeSort = validSorts.includes(sort) ? sort : 'top';
 const safeFilter = validFilters.includes(filter) ? filter : 'all';
 const safeType = validTypes.includes(type) ? type : 'all';
 
-// Fetch distinct models for the selector
-const distinctModels = await getDistinctModels(db);
-const safeModel = model === 'all' || model === 'any' || distinctModels.includes(model) ? model : 'all';
+// Fetch distinct models for the selector — only show enabled models with evaluations
+const allDistinctModels = await getDistinctModels(db);
+const distinctModels = allDistinctModels.filter(m => {
+  const def = getModelDef(m);
+  return def ? def.enabled : false;
+});
+const safeModel = model === 'all' || model === 'any' || allDistinctModels.includes(model) ? model : 'any';
 
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
@@ -45,7 +49,7 @@ function buildUrl(params: Record<string, string>): string {
   if (s !== 'top') p.set('sort', s);
   if (f !== 'all') p.set('filter', f);
   if (t !== 'all') p.set('type', t);
-  if (m !== 'all') p.set('model', m);
+  if (m !== 'any') p.set('model', m);
   if (pg !== '1') p.set('p', pg);
   const qs = p.toString();
   return qs ? `/?${qs}` : '/';
@@ -58,7 +62,7 @@ const canonicalParams = new URLSearchParams();
 if (safeSort !== 'top') canonicalParams.set('sort', safeSort);
 if (safeFilter !== 'all') canonicalParams.set('filter', safeFilter);
 if (safeType !== 'all') canonicalParams.set('type', safeType);
-if (safeModel !== 'all') canonicalParams.set('model', safeModel);
+if (safeModel !== 'any') canonicalParams.set('model', safeModel);
 const canonicalQs = canonicalParams.toString();
 const canonicalUrl = `${url.origin}${canonicalQs ? `/?${canonicalQs}` : '/'}`;
 
@@ -120,14 +124,14 @@ function modelLabel(id: string): string {
             <>
               <br />
               <span style="color: #666;">model:</span>
-              {safeModel === 'all'
-                ? <span style="color: #ff6600; font-weight: bold;"> all</span>
-                : <a href={buildUrl({ model: 'all', p: '1' })}> all</a>
+              {safeModel === 'any'
+                ? <span style="color: #ff6600; font-weight: bold;"> any</span>
+                : <a href={buildUrl({ model: 'any', p: '1' })}> any</a>
               }
               <span style="color: #444;"> | </span>
-              {safeModel === 'any'
-                ? <span style="color: #ff6600; font-weight: bold;">any</span>
-                : <a href={buildUrl({ model: 'any', p: '1' })}>any</a>
+              {safeModel === 'all'
+                ? <span style="color: #ff6600; font-weight: bold;">all</span>
+                : <a href={buildUrl({ model: 'all', p: '1' })}>all</a>
               }
               {distinctModels.map((m) => (
                 <>
@@ -144,6 +148,12 @@ function modelLabel(id: string): string {
           <span style="color: #555;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
           {evaluatedCount > 0 && <span style="color: #555;"> ({evaluatedCount} evaluated)</span>}
           {page > 1 && <span style="color: #555;"> · page {page}</span>}
+          <span style="color: #555;"> · </span>
+          <a href="/past">past</a>
+          <span style="color: #555;"> · </span>
+          <a href="/velocity">velocity</a>
+          <span style="color: #555;"> · </span>
+          <a href="/dynamics">dynamics</a>
         </span>
       </td>
     </tr>
