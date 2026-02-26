@@ -17,11 +17,10 @@
   - Third DLQ entry: mark `manual_review_required`, stop auto-replay
   - Implement as cron job checking `auto_replay_at` column on dlq_messages
 
-- [ ] **Domain-level circuit breaker**
-  - Track consecutive fetch failures per domain
-  - After 10 consecutive failures, auto-skip new stories from that domain with reason `domain_unreachable`
-  - Reset counter on any successful fetch
-  - Prevents wasting queue slots on permanently-down sites
+- [x] **Domain-level circuit breaker** *(done)*
+  - KV-backed failure tracking per domain (5 consecutive failures → circuit open, 24h TTL auto-reset)
+  - Pre-fetch skips circuit-broken domains, logs `fetch_error` event when breaker opens
+  - Clears on successful fetch
 
 - [ ] **Configurable rate limit max backoff**
   - Current hard-coded 120s cap may be too low under heavy rate limiting
@@ -74,10 +73,9 @@
   - Section-by-section score differences
   - E vs S channel divergence visualization
 
-- [ ] **Domain reputation card**
-  - Aggregate: avg score, avg confidence, avg SETL, total stories evaluated
-  - DCP elements displayed as tags
-  - 7d vs 30d trend comparison
+- [x] **Domain reputation card** *(done)*
+  - Supplementary signal averages, dominant tone/sentiment, geographic scope tags
+  - 7d vs 8-30d trend indicator, propaganda flag density
 
 - [ ] **Story audit trail in UI**
   - Show full event chain on `/item/[id]` (created → queued → evaluating → done)
@@ -120,12 +118,54 @@
   - Dashboard view comparing outcome distributions between variants
   - Enables safe prompt/methodology iteration
 
+## HN Crawler Expansion
+
+- [x] **Re-evaluation trigger for viral stories** *(done)*
+  - Stories ranked top-30 or hn_score >= 300, evaluated >6h ago, with <2 evals
+  - Capped at 5/cycle to avoid queue flooding
+
+- [x] **Dead/deleted story cleanup** *(done)*
+  - During score refresh, stories returned as dead/deleted by HN API are marked skipped
+
+- [x] **Pre-fetch failure logging** *(done)*
+  - Logged as events with domain and error details, feeds into domain circuit breaker
+
+- [ ] **Comment sentiment analysis**
+  - We crawl comments (depth 0+1) but don't analyze them
+  - Run lightweight sentiment classification on top comments
+  - Use comment sentiment as a validation signal for HRCB score
+  - Flag stories where comments strongly disagree with HRCB assessment
+
+- [ ] **Best-of feed auto-evaluation**
+  - Currently only top 5 pages of topstories get auto-evaluated
+  - beststories contains high-quality content that may never reach top 5 pages
+  - Add configurable threshold: auto-eval if story is in beststories AND hn_score >= N
+
+- [ ] **Algolia historical backfill**
+  - HN Algolia API (`hn.algolia.com/api/v1/search`) allows searching by date/score
+  - Backfill high-scoring historical stories (e.g., score >= 500 from past year)
+  - One-time or periodic: daily fetch of yesterday's top stories via Algolia
+
+- [ ] **Story velocity tracking**
+  - Compute score acceleration from rank snapshots (delta score / delta time)
+  - Fast-rising stories may be more interesting to evaluate earlier
+  - Factor into eval priority score
+
+- [ ] **User karma-weighted priority**
+  - We already crawl user profiles and store karma
+  - Factor submitter karma into eval priority (high-karma users' stories tend to be higher quality)
+  - Simple: `priority += log10(karma) * 0.1`
+
+- [ ] **Content change detection**
+  - Compare R2 content snapshot with fresh fetch for stories evaluated >7d ago
+  - If content changed significantly (>30% diff), trigger re-evaluation
+  - Run as periodic cron step (e.g., weekly, 20 stories per cycle)
+
 ## Operational Endpoints
 
-- [ ] **Health check endpoint** (`/health`)
-  - Report: last cron run age, queue depth, DLQ backlog, latest eval age, rate limit headroom
-  - Return 200/503 based on thresholds
-  - Usable by external uptime monitors
+- [x] **Health check endpoint** (`/health`) *(done)*
+  - Returns pipeline vitals: cron age, eval age, queue depth, DLQ backlog, rate limit headroom
+  - 200/503 based on thresholds, no auth required
 
 - [ ] **Bulk re-evaluation endpoint**
   - Re-enqueue stories matching criteria (domain, date range, model, methodology_hash)

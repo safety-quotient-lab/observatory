@@ -67,6 +67,44 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+// --- Domain circuit breaker ---
+// Tracks consecutive fetch failures per domain in KV.
+// After DOMAIN_FAIL_THRESHOLD failures, new stories from that domain are auto-skipped.
+
+const DOMAIN_FAIL_THRESHOLD = 5;
+const DOMAIN_FAIL_TTL = 86400; // 24h — auto-resets if we stop seeing the domain
+
+interface DomainHealth {
+  failures: number;
+  lastFailure: string;
+  lastError: string;
+}
+
+async function getDomainHealth(kv: KVNamespace, domain: string): Promise<DomainHealth | null> {
+  try {
+    return await kv.get(`domain-health:${domain}`, 'json') as DomainHealth | null;
+  } catch { return null; }
+}
+
+async function recordDomainFailure(kv: KVNamespace, domain: string, error: string): Promise<DomainHealth> {
+  const existing = await getDomainHealth(kv, domain);
+  const state: DomainHealth = {
+    failures: (existing?.failures ?? 0) + 1,
+    lastFailure: new Date().toISOString(),
+    lastError: error.slice(0, 200),
+  };
+  await kv.put(`domain-health:${domain}`, JSON.stringify(state), { expirationTtl: DOMAIN_FAIL_TTL });
+  return state;
+}
+
+async function clearDomainFailures(kv: KVNamespace, domain: string): Promise<void> {
+  try { await kv.delete(`domain-health:${domain}`); } catch { /* ignore */ }
+}
+
+function isDomainCircuitOpen(health: DomainHealth | null): boolean {
+  return health !== null && health.failures >= DOMAIN_FAIL_THRESHOLD;
+}
+
 /**
  * Fetch item details in parallel batches.
  * ~18 concurrent requests per batch ≈ 60% of ~30 req/s safe limit.
@@ -127,13 +165,34 @@ async function refreshFromUpdates(db: D1Database): Promise<number> {
 
   const items = await fetchItemsBatched(ourIds);
 
-  const stmts = items
-    .filter(item => item.score !== undefined || item.descendants !== undefined)
-    .map(item =>
-      db
-        .prepare(`UPDATE stories SET hn_score = ?, hn_comments = ? WHERE hn_id = ?`)
-        .bind(item.score ?? null, item.descendants ?? null, item.id)
+  // Separate dead/deleted items from live ones
+  const deadIds = items.filter(item => item.dead || item.deleted).map(item => item.id);
+  const liveItems = items.filter(item => !item.dead && !item.deleted);
+
+  const stmts: D1PreparedStatement[] = [];
+
+  // Mark dead/deleted stories as skipped
+  for (const id of deadIds) {
+    stmts.push(
+      db.prepare(
+        `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story dead/deleted on HN'
+         WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'skipped')`
+      ).bind(id)
     );
+  }
+  if (deadIds.length > 0) {
+    console.log(`[score-refresh] ${deadIds.length} stories now dead/deleted on HN`);
+  }
+
+  // Update scores for live items
+  for (const item of liveItems) {
+    if (item.score !== undefined || item.descendants !== undefined) {
+      stmts.push(
+        db.prepare(`UPDATE stories SET hn_score = ?, hn_comments = ? WHERE hn_id = ?`)
+          .bind(item.score ?? null, item.descendants ?? null, item.id)
+      );
+    }
+  }
 
   if (stmts.length > 0) {
     for (let i = 0; i < stmts.length; i += 100) {
@@ -141,7 +200,7 @@ async function refreshFromUpdates(db: D1Database): Promise<number> {
     }
   }
 
-  return stmts.length;
+  return liveItems.filter(item => item.score !== undefined || item.descendants !== undefined).length;
 }
 
 async function refreshRecentStories(db: D1Database): Promise<number> {
@@ -422,8 +481,21 @@ async function enqueueForEvaluation(
 
   // Pre-fetch URL content and store in KV for consumer to use
   let prefetchedCount = 0;
+  let prefetchFailed = 0;
+  let circuitBroken = 0;
   for (const msg of messages) {
     if (!msg.body.url) continue; // Self-posts don't need pre-fetching
+    const domain = msg.body.domain;
+
+    // Check domain circuit breaker before fetching
+    if (domain) {
+      const health = await getDomainHealth(kv, domain);
+      if (isDomainCircuitOpen(health)) {
+        circuitBroken++;
+        continue; // Skip pre-fetch, consumer will also fail but that's fine — it'll DLQ and we'll notice
+      }
+    }
+
     const kvKey = `content:${msg.body.hn_id}`;
     try {
       const existing = await kv.get(kvKey);
@@ -433,13 +505,22 @@ async function enqueueForEvaluation(
       if (cleaned.length >= 50) {
         await kv.put(kvKey, cleaned, { expirationTtl: 86400 }); // 24h TTL
         prefetchedCount++;
+        // Clear domain failures on success
+        if (domain) await clearDomainFailures(kv, domain);
       }
-    } catch {
-      // Non-fatal — consumer will fetch if cache miss
+    } catch (err) {
+      prefetchFailed++;
+      if (domain) {
+        const health = await recordDomainFailure(kv, domain, String(err));
+        if (health.failures === DOMAIN_FAIL_THRESHOLD) {
+          console.warn(`[queue] Domain circuit breaker opened for ${domain} (${health.failures} consecutive failures)`);
+          await logEvent(db, { event_type: 'fetch_error', severity: 'warn', message: `Domain circuit breaker opened: ${domain}`, details: { domain, failures: health.failures, last_error: health.lastError } });
+        }
+      }
     }
   }
-  if (prefetchedCount > 0) {
-    console.log(`[queue] Pre-fetched content for ${prefetchedCount} stories`);
+  if (prefetchedCount > 0 || prefetchFailed > 0) {
+    console.log(`[queue] Pre-fetch: ${prefetchedCount} ok, ${prefetchFailed} failed, ${circuitBroken} circuit-broken`);
   }
 
   // Send to queue in batches of 25 (Queue.sendBatch limit)
@@ -763,6 +844,44 @@ export default {
     } catch (err) {
       console.error('User profile crawling failed (non-fatal):', err);
       await logEvent(db, { event_type: 'crawl_error', severity: 'warn', message: `User profile crawling failed`, details: { phase: 'users', error: String(err) } });
+    }
+
+    // ─── STEP 4.8: Re-evaluate viral stories ───
+    // Stories that gained significant score after initial evaluation may have
+    // changed content or deserve a fresh look. Trigger re-eval if:
+    // - hn_score now >= 5x what it was at eval time, OR
+    // - hn_score increased by >= 200 since eval
+    // Only re-evaluate stories done >6h ago (avoid churn on fresh evals).
+    // Cap at 10 re-evals per cycle to avoid flooding the queue.
+
+    try {
+      // Find stories that are currently ranked on HN front page, were evaluated >6h ago,
+      // and have only been evaluated once — these are worth a fresh look.
+      // Also catch stories with hn_score >= 300 that were evaluated early.
+      // Cap at 5 per cycle to avoid flooding the queue.
+      const { results: reEvalCandidates } = await db
+        .prepare(
+          `SELECT s.hn_id, s.hn_score, s.hn_rank FROM stories s
+           WHERE s.eval_status = 'done'
+             AND s.evaluated_at < datetime('now', '-6 hours')
+             AND s.hcb_weighted_mean IS NOT NULL
+             AND (s.hn_rank <= 30 OR s.hn_score >= 300)
+             AND (SELECT COUNT(*) FROM eval_history WHERE hn_id = s.hn_id) < 2
+           ORDER BY COALESCE(s.hn_rank, 999) ASC, s.hn_score DESC
+           LIMIT 5`
+        )
+        .all<{ hn_id: number; hn_score: number | null; hn_rank: number | null }>();
+
+      if (reEvalCandidates.length > 0) {
+        const reEvalIds = reEvalCandidates.map(r => r.hn_id);
+        for (const id of reEvalIds) {
+          await db.prepare(`UPDATE stories SET eval_status = 'pending', eval_error = NULL WHERE hn_id = ?`).bind(id).run();
+        }
+        console.log(`[re-eval] Triggered re-evaluation for ${reEvalIds.length} high-value stories: ${reEvalIds.join(', ')}`);
+        await logEvent(db, { event_type: 'cron_run', severity: 'info', message: `Re-eval triggered for ${reEvalIds.length} viral stories`, details: { phase: 're_eval', count: reEvalIds.length, hn_ids: reEvalIds } });
+      }
+    } catch (err) {
+      console.error('Re-eval trigger failed (non-fatal):', err);
     }
 
     // ─── STEP 5: Enqueue pending stories for evaluation ───
