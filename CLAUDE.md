@@ -52,13 +52,25 @@ Cron Worker (1min) → Queue (hrcb-eval-queue) → Consumer Worker → D1 + R2
 - **About** (`/about`)
 - **Redirects** (301): `/dashboard`→`/system`, `/front`→`/past`, `/articles`→`/rights/articles`, `/network`→`/rights/network`, `/user-intel`→`/users`, `/domain-intel`→`/domains`
 
-- `site/src/lib/db.ts` — All D1 query functions (~2900 lines)
+- `site/src/lib/db.ts` — Barrel re-export from `db-stories.ts`, `db-entities.ts`, `db-analytics.ts`, `db-multi-model.ts`
+- `site/src/lib/db-stories.ts` — Story types, feed queries, dashboard stats, queue/failed stories
+- `site/src/lib/db-entities.ts` — Domain/user queries, signal profiles, DCP, pipeline health, events re-exports
+- `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory
+- `site/src/lib/db-multi-model.ts` — Rater evals/scores/witness, model agreement, multi-model stories
+- `site/src/lib/shared-eval.ts` — Barrel re-export from `eval-types.ts`, `models.ts`, `prompts.ts`, `eval-parse.ts`, `eval-write.ts`, `rater-health.ts`
+- `site/src/lib/eval-types.ts` — Type definitions, interfaces, ALL_SECTIONS constant
+- `site/src/lib/models.ts` — Model registry, provider types, queue bindings
+- `site/src/lib/prompts.ts` — System prompts (full, slim, light)
+- `site/src/lib/eval-parse.ts` — Response parsing, validation, content fetching
+- `site/src/lib/eval-write.ts` — D1 write functions (eval results, DCP cache)
+- `site/src/lib/rater-health.ts` — Per-model health tracking, auto-disable/re-enable
 - `site/src/lib/events.ts` — Structured event logger with typed event taxonomy
-- `site/src/lib/shared-eval.ts` — Shared evaluation primitives (prompts, parsing, schema)
 - `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
 - `site/src/lib/calibration.ts` — 15-URL calibration set + drift detection
 - `site/src/lib/colors.ts` — Score/SETL/confidence color mapping
 - `site/src/components/` — Reusable Astro components (EvalCard, DcpTable, etc.)
+- `site/functions/rate-limit.ts` — Rate limit state, capacity checks, credit pause
+- `site/functions/providers.ts` — API call adapters (Anthropic, OpenRouter, Workers AI)
 
 ## Build & Deploy
 

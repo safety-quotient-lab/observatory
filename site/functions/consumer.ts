@@ -58,6 +58,24 @@ import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type
 import { cleanHtml, hasReadableText } from '../src/lib/html-clean';
 import { logEvent } from '../src/lib/events';
 
+import {
+  type RateLimitState,
+  type RateLimitHeaders,
+  readRateLimitHeaders,
+  updateRateLimitState,
+  writeRateLimitSnapshot,
+  checkCreditPause,
+  setCreditPause,
+  checkRateLimitCapacity,
+  addJitter,
+} from './rate-limit';
+
+import {
+  callAnthropicApi,
+  callOpenRouterApi,
+  callWorkersAi,
+} from './providers';
+
 interface Env {
   DB: D1Database;
   ANTHROPIC_API_KEY: string;
@@ -78,327 +96,6 @@ interface QueueMessage {
   eval_provider?: string;
 }
 
-// --- Rate Limit State ---
-
-interface RateLimitState {
-  requests_remaining: number | null;
-  requests_limit: number | null;
-  input_tokens_remaining: number | null;
-  input_tokens_limit: number | null;
-  output_tokens_remaining: number | null;
-  output_tokens_limit: number | null;
-  requests_reset: string | null;
-  tokens_reset: string | null;
-  consecutive_429s: number;
-  cache_hit_rate: number | null;
-  updated_at: string;
-}
-
-interface RateLimitHeaders {
-  requests_remaining: number | null;
-  requests_limit: number | null;
-  input_tokens_remaining: number | null;
-  input_tokens_limit: number | null;
-  output_tokens_remaining: number | null;
-  output_tokens_limit: number | null;
-  requests_reset: string | null;
-  tokens_reset: string | null;
-}
-
-function readRateLimitHeaders(res: Response): RateLimitHeaders {
-  const getInt = (name: string) => {
-    const v = res.headers.get(name);
-    return v !== null ? parseInt(v, 10) : null;
-  };
-  return {
-    requests_remaining: getInt('anthropic-ratelimit-requests-remaining'),
-    requests_limit: getInt('anthropic-ratelimit-requests-limit'),
-    input_tokens_remaining: getInt('anthropic-ratelimit-input-tokens-remaining'),
-    input_tokens_limit: getInt('anthropic-ratelimit-input-tokens-limit'),
-    output_tokens_remaining: getInt('anthropic-ratelimit-output-tokens-remaining'),
-    output_tokens_limit: getInt('anthropic-ratelimit-output-tokens-limit'),
-    requests_reset: res.headers.get('anthropic-ratelimit-requests-reset'),
-    tokens_reset: res.headers.get('anthropic-ratelimit-tokens-reset'),
-  };
-}
-
-async function updateRateLimitState(
-  kv: KVNamespace,
-  model: string,
-  headers: RateLimitHeaders,
-  is429: boolean,
-  cacheHitRate?: number | null,
-): Promise<RateLimitState> {
-  const key = `ratelimit:${model}`;
-  let existing: RateLimitState | null = null;
-  try {
-    existing = await kv.get(key, 'json') as RateLimitState | null;
-  } catch { /* KV miss */ }
-
-  const now = new Date().toISOString();
-  const prevConsecutive = existing?.consecutive_429s ?? 0;
-
-  // Exponential moving average for cache hit rate (alpha = 0.3)
-  let newCacheHitRate = existing?.cache_hit_rate ?? null;
-  if (cacheHitRate != null) {
-    newCacheHitRate = newCacheHitRate != null
-      ? newCacheHitRate * 0.7 + cacheHitRate * 0.3
-      : cacheHitRate;
-  }
-
-  const state: RateLimitState = {
-    requests_remaining: headers.requests_remaining ?? existing?.requests_remaining ?? null,
-    requests_limit: headers.requests_limit ?? existing?.requests_limit ?? null,
-    input_tokens_remaining: headers.input_tokens_remaining ?? existing?.input_tokens_remaining ?? null,
-    input_tokens_limit: headers.input_tokens_limit ?? existing?.input_tokens_limit ?? null,
-    output_tokens_remaining: headers.output_tokens_remaining ?? existing?.output_tokens_remaining ?? null,
-    output_tokens_limit: headers.output_tokens_limit ?? existing?.output_tokens_limit ?? null,
-    requests_reset: headers.requests_reset ?? existing?.requests_reset ?? null,
-    tokens_reset: headers.tokens_reset ?? existing?.tokens_reset ?? null,
-    consecutive_429s: is429 ? prevConsecutive + 1 : 0,
-    cache_hit_rate: newCacheHitRate,
-    updated_at: now,
-  };
-
-  try {
-    await kv.put(key, JSON.stringify(state), { expirationTtl: 120 });
-  } catch (err) {
-    console.error(`[consumer] KV ratelimit write failed: ${err}`);
-  }
-
-  return state;
-}
-
-async function writeRateLimitSnapshot(
-  db: D1Database,
-  model: string,
-  state: RateLimitState,
-): Promise<void> {
-  try {
-    await db
-      .prepare(
-        `INSERT INTO ratelimit_snapshots (model, requests_remaining, requests_limit, input_tokens_remaining, input_tokens_limit, output_tokens_remaining, output_tokens_limit, cache_hit_rate, consecutive_429s)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(
-        model,
-        state.requests_remaining,
-        state.requests_limit,
-        state.input_tokens_remaining,
-        state.input_tokens_limit,
-        state.output_tokens_remaining,
-        state.output_tokens_limit,
-        state.cache_hit_rate,
-        state.consecutive_429s,
-      )
-      .run();
-
-    // Prune: keep only latest 100 rows per model
-    await db
-      .prepare(
-        `DELETE FROM ratelimit_snapshots WHERE model = ? AND id NOT IN (
-           SELECT id FROM ratelimit_snapshots WHERE model = ? ORDER BY created_at DESC LIMIT 100
-         )`
-      )
-      .bind(model, model)
-      .run();
-  } catch (err) {
-    // Non-throwing — table may not exist yet
-    console.error(`[consumer] D1 ratelimit snapshot failed: ${err}`);
-  }
-}
-
-interface CapacityResult {
-  ok: boolean;
-  delaySeconds?: number;
-  reason?: string;
-}
-
-function secondsUntilReset(resetTime: string | null): number {
-  if (!resetTime) return 30;
-  try {
-    const resetMs = new Date(resetTime).getTime();
-    const nowMs = Date.now();
-    return Math.max(1, Math.ceil((resetMs - nowMs) / 1000));
-  } catch {
-    return 30;
-  }
-}
-
-async function checkCreditPause(kv: KVNamespace, provider: string): Promise<boolean> {
-  try {
-    const v = await kv.get(`credit_pause:${provider}`);
-    return v !== null;
-  } catch { return false; }
-}
-
-async function setCreditPause(kv: KVNamespace, provider: string): Promise<void> {
-  try {
-    await kv.put(`credit_pause:${provider}`, new Date().toISOString(), { expirationTtl: 1800 }); // 30 min
-  } catch {}
-}
-
-async function checkRateLimitCapacity(kv: KVNamespace, model: string): Promise<CapacityResult> {
-  const key = `ratelimit:${model}`;
-  let state: RateLimitState | null = null;
-  try {
-    state = await kv.get(key, 'json') as RateLimitState | null;
-  } catch { /* KV miss */ }
-
-  // No data — don't block
-  if (!state) return { ok: true };
-
-  // Circuit breaker: 3+ consecutive 429s → wait for reset
-  if (state.consecutive_429s >= 3) {
-    const delay = Math.min(Math.max(secondsUntilReset(state.requests_reset), 10), 120);
-    return { ok: false, delaySeconds: delay, reason: `circuit-breaker: ${state.consecutive_429s} consecutive 429s` };
-  }
-
-  // Low request capacity
-  if (state.requests_remaining !== null && state.requests_remaining < 3) {
-    const delay = Math.min(Math.max(secondsUntilReset(state.requests_reset), 5), 60);
-    return { ok: false, delaySeconds: delay, reason: `low requests remaining: ${state.requests_remaining}` };
-  }
-
-  // Low input token capacity (<10% of limit)
-  if (state.input_tokens_remaining !== null && state.input_tokens_limit !== null && state.input_tokens_limit > 0) {
-    if (state.input_tokens_remaining < state.input_tokens_limit * 0.1) {
-      const delay = Math.min(Math.max(secondsUntilReset(state.tokens_reset), 5), 60);
-      return { ok: false, delaySeconds: delay, reason: `low input tokens: ${state.input_tokens_remaining}/${state.input_tokens_limit}` };
-    }
-  }
-
-  // Low output token capacity (<10% of limit)
-  if (state.output_tokens_remaining !== null && state.output_tokens_limit !== null && state.output_tokens_limit > 0) {
-    if (state.output_tokens_remaining < state.output_tokens_limit * 0.1) {
-      const delay = Math.min(Math.max(secondsUntilReset(state.tokens_reset), 5), 60);
-      return { ok: false, delaySeconds: delay, reason: `low output tokens: ${state.output_tokens_remaining}/${state.output_tokens_limit}` };
-    }
-  }
-
-  // Ramp-up guard: if no recent 429s but state is stale (>60s), add small delay
-  if (state.consecutive_429s === 0 && state.updated_at) {
-    const staleSec = (Date.now() - new Date(state.updated_at).getTime()) / 1000;
-    if (staleSec > 60) {
-      return { ok: false, delaySeconds: 3, reason: `ramp-up guard: state ${Math.round(staleSec)}s stale` };
-    }
-  }
-
-  return { ok: true };
-}
-
-function addJitter(delaySec: number): number {
-  return Math.round(delaySec * (0.8 + Math.random() * 0.4));
-}
-
-// --- End Rate Limit ---
-
-// --- API Routing ---
-
-interface ApiCallResult {
-  slim: SlimEvalResponse;
-  inputTokens: number;
-  outputTokens: number;
-  rateLimitHeaders: RateLimitHeaders | null;
-  cacheHitRate: number | null;
-}
-
-async function callAnthropicApi(
-  apiKey: string,
-  modelId: string,
-  systemPrompt: string,
-  userMessage: string,
-  maxTokens: number,
-  supportsCacheControl: boolean,
-): Promise<{ response: Response; data: any }> {
-  const system = supportsCacheControl
-    ? [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }]
-    : systemPrompt;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: modelId,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
-  });
-  return { response: res, data: null };
-}
-
-async function callOpenRouterApi(
-  apiKey: string,
-  modelDef: ModelDefinition,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<{ response: Response; data: any }> {
-  const body: Record<string, unknown> = {
-    model: modelDef.api_model_id,
-    max_tokens: modelDef.max_tokens,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage },
-    ],
-  };
-  if (modelDef.supports_json_mode) {
-    body.response_format = { type: 'json_object' };
-  }
-
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://hn-hrcb.pages.dev',
-      'X-Title': 'HN HRCB Evaluator',
-    },
-    body: JSON.stringify(body),
-  });
-  return { response: res, data: null };
-}
-
-async function callWorkersAi(
-  ai: any,
-  modelDef: ModelDefinition,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<{ text: string }> {
-  const result = await ai.run(modelDef.api_model_id, {
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage },
-    ],
-    max_tokens: modelDef.max_tokens,
-    temperature: 0.0,
-  });
-  // Workers AI text generation returns { response: "..." } or { response: {...} }
-  let text: string;
-  if (typeof result === 'string') {
-    text = result;
-  } else if (result && typeof result.response === 'string') {
-    text = result.response;
-  } else if (result && typeof result.response === 'object' && result.response !== null) {
-    // Some models return parsed JSON object directly instead of string
-    text = JSON.stringify(result.response);
-  } else {
-    // Unexpected format — stringify for debugging
-    text = JSON.stringify(result) || '';
-    console.warn(`[consumer] Workers AI unexpected result format: ${text.slice(0, 200)}`);
-  }
-  if (!text) {
-    throw new Error('Workers AI returned empty response');
-  }
-  return { text };
-}
-
-// --- End API Routing ---
-
 async function hashString(input: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(input);
@@ -410,6 +107,113 @@ async function hashString(input: string): Promise<string> {
 async function hashPrompt(system: string, user: string): Promise<string> {
   return hashString(system + '\n---\n' + user);
 }
+
+// --- Consolidated error handlers ---
+
+async function handleParseFailure(
+  env: Env,
+  db: D1Database,
+  story: QueueMessage,
+  modelId: string,
+  provider: string,
+  rawText: string,
+  error: unknown,
+  promptMode: 'full' | 'light',
+): Promise<void> {
+  // Store raw response for debugging
+  try {
+    await env.CONTENT_SNAPSHOTS.put(
+      `rater-debug/${modelId}/${story.hn_id}-${Date.now()}.txt`,
+      rawText,
+      { customMetadata: { model: modelId, hn_id: String(story.hn_id), error: String(error).slice(0, 500), prompt_mode: promptMode } }
+    );
+  } catch {}
+
+  // Update rater health
+  const healthKey = raterHealthKvKey(modelId);
+  let health = emptyRaterHealth();
+  try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+  health = updateRaterHealthOnParseFailure(health);
+  await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+  if (health.disabled_at) {
+    await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${modelId} auto-disabled: ${health.disabled_reason}`, details: { model: modelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
+  }
+
+  await markRaterFailed(db, story.hn_id, modelId, provider, `${promptMode === 'light' ? 'Light p' : 'P'}arse failure: ${error}`);
+  await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `${promptMode === 'light' ? 'Light p' : 'P'}arse failure for model ${modelId}: ${String(error).slice(0, 200)}`, details: { model: modelId, error: String(error).slice(0, 500), prompt_mode: promptMode } });
+}
+
+async function handleValidationFailure(
+  env: Env,
+  db: D1Database,
+  story: QueueMessage,
+  modelId: string,
+  provider: string,
+  rawText: string,
+  validation: { errors: string[]; warnings: string[] },
+  promptMode: 'full' | 'light',
+): Promise<void> {
+  // Store raw response for debugging
+  try {
+    await env.CONTENT_SNAPSHOTS.put(
+      `rater-debug/${modelId}/${story.hn_id}-${Date.now()}.txt`,
+      rawText,
+      { customMetadata: { model: modelId, hn_id: String(story.hn_id), error: validation.errors.join('; ').slice(0, 500), prompt_mode: promptMode } }
+    );
+  } catch {}
+
+  // Update rater health
+  const healthKey = raterHealthKvKey(modelId);
+  let health = emptyRaterHealth();
+  try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+  health = updateRaterHealthOnParseFailure(health);
+  await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+  if (health.disabled_at) {
+    await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${modelId} auto-disabled: ${health.disabled_reason}`, details: { model: modelId, reason: health.disabled_reason } });
+  }
+
+  await markRaterFailed(db, story.hn_id, modelId, provider, `${promptMode === 'light' ? 'Light v' : 'V'}alidation failed: ${validation.errors.join('; ')}`);
+  await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `${promptMode === 'light' ? 'Light v' : 'V'}alidation failed for model ${modelId}`, details: { model: modelId, errors: validation.errors, warnings: validation.warnings, prompt_mode: promptMode } });
+}
+
+async function handleApiFailure(
+  env: Env,
+  db: D1Database,
+  story: QueueMessage,
+  modelId: string,
+  provider: string,
+  status: number,
+  body: string,
+): Promise<void> {
+  const healthKey = raterHealthKvKey(modelId);
+  let health = emptyRaterHealth();
+  try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+  health = updateRaterHealthOnApiFailure(health);
+  await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+  await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `${provider === 'openrouter' ? 'OpenRouter' : 'API'} error ${status} model=${modelId}`, details: { status, body_preview: body.slice(0, 500), model: modelId } });
+}
+
+async function handleRaterHealthSuccess(
+  env: Env,
+  db: D1Database,
+  story: QueueMessage,
+  modelId: string,
+): Promise<void> {
+  const healthKey = raterHealthKvKey(modelId);
+  let health = emptyRaterHealth();
+  try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+  const wasDisabled = !!health.disabled_at;
+  health = updateRaterHealthOnSuccess(health);
+  await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+  if (wasDisabled) {
+    await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_enable', severity: 'info', message: `Model ${modelId} auto-re-enabled after successful probe`, details: { model: modelId } });
+  }
+}
+
+// --- Queue handler ---
 
 export default {
   async queue(
@@ -560,7 +364,6 @@ export default {
             rawText = text;
           } else if (provider === 'openrouter') {
             if (!modelDef) throw new Error(`Unknown model in registry: ${msgModelId}`);
-            // Override max_tokens for light mode
             const lightModelDef = { ...modelDef, max_tokens: EVAL_MAX_TOKENS_LIGHT };
             const { response: res } = await callOpenRouterApi(apiKey!, lightModelDef, METHODOLOGY_SYSTEM_PROMPT_LIGHT, lightUserMessage);
             if (!res.ok) {
@@ -571,12 +374,7 @@ export default {
                 msg.retry({ delaySeconds: delaySec });
                 continue;
               }
-              const healthKey = raterHealthKvKey(msgModelId);
-              let health = emptyRaterHealth();
-              try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-              health = updateRaterHealthOnApiFailure(health);
-              await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-              await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `OpenRouter API error ${res.status} model=${msgModelId}`, details: { status: res.status, body_preview: body.slice(0, 500), model: msgModelId } });
+              await handleApiFailure(env, db, story, msgModelId, provider, res.status, body);
               throw new Error(`OpenRouter API error ${res.status}: ${body}`);
             }
             const rawData = await res.json() as any;
@@ -593,26 +391,7 @@ export default {
             const extracted = extractJsonFromResponse(rawText);
             lightParsed = JSON.parse(extracted) as LightEvalResponse;
           } catch (parseErr) {
-            try {
-              await env.CONTENT_SNAPSHOTS.put(
-                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
-                rawText,
-                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: String(parseErr).slice(0, 500), prompt_mode: 'light' } }
-              );
-            } catch {}
-
-            const healthKey = raterHealthKvKey(msgModelId);
-            let health = emptyRaterHealth();
-            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-            health = updateRaterHealthOnParseFailure(health);
-            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-            if (health.disabled_at) {
-              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
-            }
-
-            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Light parse failure: ${parseErr}`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Light parse failure for model ${msgModelId}: ${String(parseErr).slice(0, 200)}`, details: { model: msgModelId, error: String(parseErr).slice(0, 500), prompt_mode: 'light' } });
+            await handleParseFailure(env, db, story, msgModelId, provider, rawText, parseErr, 'light');
             msg.ack();
             continue;
           }
@@ -620,26 +399,7 @@ export default {
           // Validate light response
           const lightValidation = validateLightEvalResponse(lightParsed);
           if (!lightValidation.valid) {
-            try {
-              await env.CONTENT_SNAPSHOTS.put(
-                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
-                rawText,
-                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: lightValidation.errors.join('; ').slice(0, 500), prompt_mode: 'light' } }
-              );
-            } catch {}
-
-            const healthKey = raterHealthKvKey(msgModelId);
-            let health = emptyRaterHealth();
-            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-            health = updateRaterHealthOnParseFailure(health);
-            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-            if (health.disabled_at) {
-              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason } });
-            }
-
-            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Light validation failed: ${lightValidation.errors.join('; ')}`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Light validation failed for model ${msgModelId}`, details: { model: msgModelId, errors: lightValidation.errors, warnings: lightValidation.warnings, prompt_mode: 'light' } });
+            await handleValidationFailure(env, db, story, msgModelId, provider, rawText, lightValidation, 'light');
             msg.ack();
             continue;
           }
@@ -652,16 +412,7 @@ export default {
           await writeLightRaterEvalResult(db, story.hn_id, lightParsed, msgModelId, provider, lightPromptHash, lightMethodologyHash, lightInputTokens, lightOutputTokens);
 
           // Update rater health on success
-          const healthKey = raterHealthKvKey(msgModelId);
-          let health = emptyRaterHealth();
-          try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-          const wasDisabled = !!health.disabled_at;
-          health = updateRaterHealthOnSuccess(health);
-          await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-          if (wasDisabled) {
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_enable', severity: 'info', message: `Model ${msgModelId} auto-re-enabled after successful probe`, details: { model: msgModelId } });
-          }
+          await handleRaterHealthSuccess(env, db, story, msgModelId);
 
           const { weighted_mean, classification } = computeLightAggregates(lightParsed);
           const evalDurationMs = Date.now() - evalStartMs;
@@ -723,91 +474,39 @@ export default {
               msg.retry({ delaySeconds: delaySec });
               continue;
             }
-            // Update rater health on API failure
-            const healthKey = raterHealthKvKey(msgModelId);
-            let health = emptyRaterHealth();
-            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-            health = updateRaterHealthOnApiFailure(health);
-            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `OpenRouter API error ${res.status} model=${msgModelId}`, details: { status: res.status, body_preview: body.slice(0, 500), model: msgModelId } });
+            await handleApiFailure(env, db, story, msgModelId, provider, res.status, body);
             throw new Error(`OpenRouter API error ${res.status}: ${body}`);
           }
 
           const rawData = await res.json() as any;
           const rawText = rawData.choices?.[0]?.message?.content || '';
 
-          // Extract tokens (OpenAI-compatible format)
           inputTokens = rawData.usage?.prompt_tokens ?? 0;
           outputTokens = rawData.usage?.completion_tokens ?? 0;
 
-          // Detect output truncation (OpenRouter uses 'length' as finish_reason for truncation)
+          // Detect output truncation
           const finishReason = rawData.choices?.[0]?.finish_reason;
           if (finishReason === 'length') {
             console.warn(`[consumer] OpenRouter output truncated for hn_id=${story.hn_id} model=${msgModelId} at ${outputTokens} tokens`);
             await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'warn', message: `OpenRouter output truncated at ${outputTokens} tokens`, details: { model: msgModelId, output_tokens: outputTokens, finish_reason: finishReason } });
-            // Don't retry — OpenRouter free models don't support higher max_tokens
-            // Fall through to parse what we have; if it's incomplete, parse will fail gracefully
           }
 
-          // M10: Validation pipeline
+          // Parse + validate
           try {
             slim = parseOpenRouterResponse(rawData);
           } catch (parseErr) {
-            // M9: Store raw response for debugging
-            try {
-              await env.CONTENT_SNAPSHOTS.put(
-                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
-                rawText,
-                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: String(parseErr).slice(0, 500) } }
-              );
-            } catch {}
-
-            // Update rater health (parse failure)
-            const healthKey = raterHealthKvKey(msgModelId);
-            let health = emptyRaterHealth();
-            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-            health = updateRaterHealthOnParseFailure(health);
-            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-            if (health.disabled_at) {
-              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
-            }
-
-            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Parse failure: ${parseErr}`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Parse failure for model ${msgModelId}: ${String(parseErr).slice(0, 200)}`, details: { model: msgModelId, error: String(parseErr).slice(0, 500) } });
-            msg.ack(); // Don't retry parse failures
-            continue;
-          }
-
-          // M2: Schema validation
-          const validation = validateSlimEvalResponse(slim);
-          if (!validation.valid) {
-            try {
-              await env.CONTENT_SNAPSHOTS.put(
-                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
-                rawText,
-                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: validation.errors.join('; ').slice(0, 500) } }
-              );
-            } catch {}
-
-            const healthKey = raterHealthKvKey(msgModelId);
-            let health = emptyRaterHealth();
-            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-            health = updateRaterHealthOnParseFailure(health);
-            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-            if (health.disabled_at) {
-              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason } });
-            }
-
-            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Validation failed: ${validation.errors.join('; ')}`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Validation failed for model ${msgModelId}`, details: { model: msgModelId, errors: validation.errors, warnings: validation.warnings } });
+            await handleParseFailure(env, db, story, msgModelId, provider, rawText, parseErr, 'full');
             msg.ack();
             continue;
           }
 
-          // Log warnings/repairs
+          const validation = validateSlimEvalResponse(slim);
+          if (!validation.valid) {
+            await handleValidationFailure(env, db, story, msgModelId, provider, rawText, validation, 'full');
+            msg.ack();
+            continue;
+          }
+
           if (validation.warnings.length > 0 || validation.repairs.length > 0) {
             await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Validation warnings for model ${msgModelId}: ${validation.warnings.length}W ${validation.repairs.length}R`, details: { model: msgModelId, warnings: validation.warnings, repairs: validation.repairs } });
           }
@@ -819,62 +518,22 @@ export default {
           }
           const { text: rawText } = await callWorkersAi(env.AI, modelDef, METHODOLOGY_SYSTEM_PROMPT_SLIM, userMessage);
 
-          // Workers AI doesn't provide token counts
           inputTokens = 0;
           outputTokens = 0;
 
-          // M10: Validation pipeline — parse raw text to JSON
+          // Parse + validate
           try {
             const extracted = extractJsonFromResponse(rawText);
             slim = JSON.parse(extracted) as SlimEvalResponse;
           } catch (parseErr) {
-            try {
-              await env.CONTENT_SNAPSHOTS.put(
-                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
-                rawText,
-                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: String(parseErr).slice(0, 500) } }
-              );
-            } catch {}
-
-            const healthKey = raterHealthKvKey(msgModelId);
-            let health = emptyRaterHealth();
-            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-            health = updateRaterHealthOnParseFailure(health);
-            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-            if (health.disabled_at) {
-              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
-            }
-
-            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Parse failure: ${parseErr}`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Parse failure for model ${msgModelId}: ${String(parseErr).slice(0, 200)}`, details: { model: msgModelId, error: String(parseErr).slice(0, 500) } });
+            await handleParseFailure(env, db, story, msgModelId, provider, rawText, parseErr, 'full');
             msg.ack();
             continue;
           }
 
-          // M2: Schema validation
           const validation = validateSlimEvalResponse(slim);
           if (!validation.valid) {
-            try {
-              await env.CONTENT_SNAPSHOTS.put(
-                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
-                rawText,
-                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: validation.errors.join('; ').slice(0, 500) } }
-              );
-            } catch {}
-
-            const healthKey = raterHealthKvKey(msgModelId);
-            let health = emptyRaterHealth();
-            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-            health = updateRaterHealthOnParseFailure(health);
-            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-            if (health.disabled_at) {
-              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason } });
-            }
-
-            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Validation failed: ${validation.errors.join('; ')}`);
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Validation failed for model ${msgModelId}`, details: { model: msgModelId, errors: validation.errors, warnings: validation.warnings } });
+            await handleValidationFailure(env, db, story, msgModelId, provider, rawText, validation, 'full');
             msg.ack();
             continue;
           }
@@ -1109,16 +768,7 @@ export default {
 
         // Update rater health on success (non-primary)
         if (!isPrimary) {
-          const healthKey = raterHealthKvKey(msgModelId);
-          let health = emptyRaterHealth();
-          try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
-          const wasDisabled = !!health.disabled_at;
-          health = updateRaterHealthOnSuccess(health);
-          await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
-
-          if (wasDisabled) {
-            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_enable', severity: 'info', message: `Model ${msgModelId} auto-re-enabled after successful probe`, details: { model: msgModelId } });
-          }
+          await handleRaterHealthSuccess(env, db, story, msgModelId);
         }
 
         const evalDurationMs = Date.now() - evalStartMs;
