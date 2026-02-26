@@ -281,8 +281,8 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                     : <span style="color: #666;">off</span>
                   }
                 </td>
-                <td align="center" class="score-font" style={`color: ${reg.provider === 'anthropic' ? '#c084fc' : '#60a5fa'};`}>
-                  {reg.provider === 'anthropic' ? 'anth' : 'OR'}{reg.is_free ? '' : ''}
+                <td align="center" class="score-font" style={`color: ${reg.provider === 'anthropic' ? '#c084fc' : reg.provider === 'workers-ai' ? '#f59e0b' : '#60a5fa'};`}>
+                  {reg.provider === 'anthropic' ? 'anth' : reg.provider === 'workers-ai' ? 'CF' : 'OR'}{reg.is_free ? '' : ''}
                 </td>
                 <td align="center" class="score-font" style="color: #888;">
                   {evalCount > 0 ? evalCount : '---'}

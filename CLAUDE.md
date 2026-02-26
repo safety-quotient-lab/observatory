@@ -143,3 +143,5 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 - **Rate limiting**: Consumer reads `anthropic-ratelimit-*` headers proactively, self-throttles via KV state before hitting 429s. Circuit breaker at 3+ consecutive 429s.
 - **Calibration IDs**: Synthetic hn_ids -1001 to -1015 for the 15 calibration URLs.
 - **DCP caching**: 7-day TTL in KV per domain, also persisted to `domain_dcp` table in D1.
+- **Light prompt mode**: Small/free models (Workers AI Llama 4 Scout 17B, Nemotron Nano 30B) use `METHODOLOGY_SYSTEM_PROMPT_LIGHT` — single E/S score pair + 4 supplementary scores (~200-400 output tokens vs ~4-5K for full). Controlled by `ModelDefinition.prompt_mode: 'full' | 'light'`. No per-section scores, no DCP, no Fair Witness evidence. Results written to `rater_evals` only (no `rater_scores`/`rater_witness`).
+- **Workers AI response format**: `ai.run()` may return `{ response: "string" }` or `{ response: { ...object } }` — consumer handles both.

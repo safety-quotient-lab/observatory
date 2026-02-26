@@ -16,14 +16,20 @@ import {
   EVAL_MODEL,
   EVAL_MAX_TOKENS,
   EVAL_MAX_TOKENS_EXTENDED,
+  EVAL_MAX_TOKENS_LIGHT,
   CONTENT_MAX_CHARS,
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
+  METHODOLOGY_SYSTEM_PROMPT_LIGHT,
   extractDomain,
   buildUserMessageWithDcp,
+  buildLightUserMessage,
   parseSlimEvalResponse,
   parseOpenRouterResponse,
   extractJsonFromResponse,
   validateSlimEvalResponse,
+  validateLightEvalResponse,
+  computeLightAggregates,
+  writeLightRaterEvalResult,
   fetchUrlContent,
   writeEvalResult,
   writeRaterEvalResult,
@@ -45,6 +51,7 @@ import {
   type ModelDefinition,
   type RaterHealthState,
   type SlimEvalResponse,
+  type LightEvalResponse,
 } from '../src/lib/shared-eval';
 
 import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
@@ -370,12 +377,15 @@ async function callWorkersAi(
     max_tokens: modelDef.max_tokens,
     temperature: 0.0,
   });
-  // Workers AI text generation returns { response: "..." }
+  // Workers AI text generation returns { response: "..." } or { response: {...} }
   let text: string;
   if (typeof result === 'string') {
     text = result;
   } else if (result && typeof result.response === 'string') {
     text = result.response;
+  } else if (result && typeof result.response === 'object' && result.response !== null) {
+    // Some models return parsed JSON object directly instead of string
+    text = JSON.stringify(result.response);
   } else {
     // Unexpected format — stringify for debugging
     text = JSON.stringify(result) || '';
@@ -529,6 +539,139 @@ export default {
           msg.ack();
           continue;
         }
+
+        // --- Light prompt mode branch ---
+        const isLightMode = modelDef?.prompt_mode === 'light';
+
+        if (isLightMode) {
+          // Light mode: simplified prompt, no DCP, no per-section scores
+          const lightUserMessage = buildLightUserMessage(evalUrl, story.title, content);
+          const lightPromptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT_LIGHT, lightUserMessage);
+          const lightMethodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_LIGHT);
+
+          evalStartMs = Date.now();
+          let rawText: string;
+          let lightInputTokens = 0;
+          let lightOutputTokens = 0;
+
+          if (provider === 'workers-ai') {
+            if (!modelDef) throw new Error(`Unknown model in registry: ${msgModelId}`);
+            const { text } = await callWorkersAi(env.AI, modelDef, METHODOLOGY_SYSTEM_PROMPT_LIGHT, lightUserMessage);
+            rawText = text;
+          } else if (provider === 'openrouter') {
+            if (!modelDef) throw new Error(`Unknown model in registry: ${msgModelId}`);
+            // Override max_tokens for light mode
+            const lightModelDef = { ...modelDef, max_tokens: EVAL_MAX_TOKENS_LIGHT };
+            const { response: res } = await callOpenRouterApi(apiKey!, lightModelDef, METHODOLOGY_SYSTEM_PROMPT_LIGHT, lightUserMessage);
+            if (!res.ok) {
+              const body = await res.text();
+              if (res.status === 429) {
+                const delaySec = addJitter(60);
+                await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `OpenRouter rate limited (429) model=${msgModelId}`, details: { status: 429, delay_seconds: delaySec, model: msgModelId } });
+                msg.retry({ delaySeconds: delaySec });
+                continue;
+              }
+              const healthKey = raterHealthKvKey(msgModelId);
+              let health = emptyRaterHealth();
+              try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+              health = updateRaterHealthOnApiFailure(health);
+              await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `OpenRouter API error ${res.status} model=${msgModelId}`, details: { status: res.status, body_preview: body.slice(0, 500), model: msgModelId } });
+              throw new Error(`OpenRouter API error ${res.status}: ${body}`);
+            }
+            const rawData = await res.json() as any;
+            rawText = rawData.choices?.[0]?.message?.content || '';
+            lightInputTokens = rawData.usage?.prompt_tokens ?? 0;
+            lightOutputTokens = rawData.usage?.completion_tokens ?? 0;
+          } else {
+            throw new Error(`Light mode not supported for provider=${provider}`);
+          }
+
+          // Parse light response
+          let lightParsed: LightEvalResponse;
+          try {
+            const extracted = extractJsonFromResponse(rawText);
+            lightParsed = JSON.parse(extracted) as LightEvalResponse;
+          } catch (parseErr) {
+            try {
+              await env.CONTENT_SNAPSHOTS.put(
+                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
+                rawText,
+                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: String(parseErr).slice(0, 500), prompt_mode: 'light' } }
+              );
+            } catch {}
+
+            const healthKey = raterHealthKvKey(msgModelId);
+            let health = emptyRaterHealth();
+            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+            health = updateRaterHealthOnParseFailure(health);
+            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+            if (health.disabled_at) {
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
+            }
+
+            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Light parse failure: ${parseErr}`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Light parse failure for model ${msgModelId}: ${String(parseErr).slice(0, 200)}`, details: { model: msgModelId, error: String(parseErr).slice(0, 500), prompt_mode: 'light' } });
+            msg.ack();
+            continue;
+          }
+
+          // Validate light response
+          const lightValidation = validateLightEvalResponse(lightParsed);
+          if (!lightValidation.valid) {
+            try {
+              await env.CONTENT_SNAPSHOTS.put(
+                `rater-debug/${msgModelId}/${story.hn_id}-${Date.now()}.txt`,
+                rawText,
+                { customMetadata: { model: msgModelId, hn_id: String(story.hn_id), error: lightValidation.errors.join('; ').slice(0, 500), prompt_mode: 'light' } }
+              );
+            } catch {}
+
+            const healthKey = raterHealthKvKey(msgModelId);
+            let health = emptyRaterHealth();
+            try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+            health = updateRaterHealthOnParseFailure(health);
+            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+            if (health.disabled_at) {
+              await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${msgModelId} auto-disabled: ${health.disabled_reason}`, details: { model: msgModelId, reason: health.disabled_reason } });
+            }
+
+            await markRaterFailed(db, story.hn_id, msgModelId, provider, `Light validation failed: ${lightValidation.errors.join('; ')}`);
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `Light validation failed for model ${msgModelId}`, details: { model: msgModelId, errors: lightValidation.errors, warnings: lightValidation.warnings, prompt_mode: 'light' } });
+            msg.ack();
+            continue;
+          }
+
+          if (lightValidation.warnings.length > 0 || lightValidation.repairs.length > 0) {
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Light validation warnings for model ${msgModelId}: ${lightValidation.warnings.length}W ${lightValidation.repairs.length}R`, details: { model: msgModelId, warnings: lightValidation.warnings, repairs: lightValidation.repairs, prompt_mode: 'light' } });
+          }
+
+          // Write light results
+          await writeLightRaterEvalResult(db, story.hn_id, lightParsed, msgModelId, provider, lightPromptHash, lightMethodologyHash, lightInputTokens, lightOutputTokens);
+
+          // Update rater health on success
+          const healthKey = raterHealthKvKey(msgModelId);
+          let health = emptyRaterHealth();
+          try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
+          const wasDisabled = !!health.disabled_at;
+          health = updateRaterHealthOnSuccess(health);
+          await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+
+          if (wasDisabled) {
+            await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_enable', severity: 'info', message: `Model ${msgModelId} auto-re-enabled after successful probe`, details: { model: msgModelId } });
+          }
+
+          const { weighted_mean, classification } = computeLightAggregates(lightParsed);
+          const evalDurationMs = Date.now() - evalStartMs;
+          console.log(`[consumer] Done (light): hn_id=${story.hn_id} → ${classification} (${weighted_mean}) [${msgModelId}] ${evalDurationMs}ms`);
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_success', severity: 'info', message: `Light evaluated: ${classification} (${weighted_mean.toFixed(2)})`, details: { classification, weighted_mean, model: msgModelId, provider, prompt_mode: 'light', input_tokens: lightInputTokens, output_tokens: lightOutputTokens, duration_ms: evalDurationMs } });
+          msg.ack();
+          continue;
+        }
+
+        // --- Full prompt mode (existing logic) ---
 
         // Look up cached DCP for domain (KV first, then D1 fallback)
         const domain = story.domain || (story.url ? extractDomain(story.url) : null);

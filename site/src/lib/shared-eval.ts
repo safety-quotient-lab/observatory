@@ -3,7 +3,7 @@
  * Imported by src/lib/evaluate.ts (trigger endpoint), functions/cron.ts, and functions/consumer.ts.
  */
 
-import { errorSlugFromStatus, errorSlugFromException, ERROR_TYPES } from './types';
+import { errorSlugFromStatus, errorSlugFromException, ERROR_TYPES, CLASSIFICATIONS } from './types';
 import { computeSetl } from './compute-aggregates';
 
 // --- Constants ---
@@ -19,6 +19,8 @@ export const EVAL_MODEL = 'claude-haiku-4-5-20251001';
 
 export type ModelProvider = 'anthropic' | 'openrouter' | 'workers-ai';
 
+export type PromptMode = 'full' | 'light';
+
 export interface ModelDefinition {
   id: string;                    // DB identifier (eval_model column)
   display_name: string;          // UI label
@@ -30,6 +32,7 @@ export interface ModelDefinition {
   max_tokens: number;
   supports_cache_control: boolean;
   supports_json_mode: boolean;
+  prompt_mode: PromptMode;       // 'full' = 31-section eval, 'light' = aggregate-only
 }
 
 export const MODEL_REGISTRY: ModelDefinition[] = [
@@ -44,6 +47,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 10240,
     supports_cache_control: true,
     supports_json_mode: false,
+    prompt_mode: 'full',
   },
   {
     id: 'deepseek-v3.2',
@@ -56,6 +60,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
+    prompt_mode: 'full',
   },
   {
     id: 'trinity-large',
@@ -68,6 +73,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
+    prompt_mode: 'full',
   },
   {
     id: 'nemotron-nano-30b',
@@ -76,10 +82,11 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'nvidia/nemotron-3-nano-30b-a3b:free',
     is_free: true,
-    enabled: false,  // disabled: 97% parse failure rate, can't follow HRCB schema
+    enabled: true,   // re-enabled with light prompt mode (97% fail on full)
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
+    prompt_mode: 'light',
   },
   {
     id: 'step-3.5-flash',
@@ -92,6 +99,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: false,
+    prompt_mode: 'full',
   },
   {
     id: 'qwen3-next-80b',
@@ -104,6 +112,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
+    prompt_mode: 'full',
   },
   {
     id: 'llama-3.3-70b',
@@ -116,6 +125,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
+    prompt_mode: 'full',
   },
   {
     id: 'mistral-small-3.1',
@@ -128,6 +138,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
+    prompt_mode: 'full',
   },
   {
     id: 'hermes-3-405b',
@@ -140,6 +151,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
+    prompt_mode: 'full',
   },
   {
     id: 'llama-3.3-70b-wai',
@@ -152,6 +164,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
+    prompt_mode: 'full',
   },
   {
     id: 'llama-4-scout-wai',
@@ -164,6 +177,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
+    prompt_mode: 'light',
   },
 ];
 
@@ -201,6 +215,7 @@ export const MODEL_QUEUE_BINDINGS: Record<string, string> = {
   'mistral-small-3.1': 'MISTRAL_QUEUE',
   'hermes-3-405b': 'HERMES_QUEUE',
   'llama-3.3-70b-wai': 'WORKERS_AI_QUEUE',
+  'llama-4-scout-wai': 'WORKERS_AI_QUEUE',
 };
 
 /** Get the queue for a given model from the env bindings. Falls back to EVAL_QUEUE. */
@@ -778,6 +793,88 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "td_score": <0.0-1.0>
   }
 }`;
+
+/**
+ * Light system prompt for small/free models that can't produce full 31-section output.
+ * Asks for a single editorial + structural score pair plus basic metadata (~200-400 output tokens).
+ * No per-article breakdown, no DCP, no Fair Witness evidence, no full supplementary signals.
+ */
+export const METHODOLOGY_SYSTEM_PROMPT_LIGHT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Assess web content against the Universal Declaration of Human Rights (UDHR). Report only what you directly observe.
+
+## CONSTRUCT DEFINITION
+
+HRCB measures the directional lean of content relative to the UDHR's 30 Articles and Preamble. It is NOT a compliance audit, truth check, or moral judgment. Score scale: [-1.0, +1.0].
+
+| Range | Label |
+|---|---|
+| +0.7 to +1.0 | Strong positive |
+| +0.4 to +0.6 | Moderate positive |
+| +0.1 to +0.3 | Mild positive |
+| -0.1 to +0.1 | Neutral |
+| -0.3 to -0.1 | Mild negative |
+| -0.6 to -0.4 | Moderate negative |
+| -1.0 to -0.7 | Strong negative |
+| null | No data |
+
+Principles: (1) Score only what is observable on-domain. (2) Score editorial and structural channels independently. (3) When evidence is ambiguous, regress toward zero. (4) Be equally willing to assign negative and positive scores.
+
+## CONTENT TYPE
+
+Classify the page into one of these types (determines channel weights):
+
+| Code | Type | E Weight | S Weight |
+|---|---|---|---|
+| ED | Editorial / Article | 0.6 | 0.4 |
+| PO | Policy / Legal | 0.3 | 0.7 |
+| LP | Landing Page | 0.3 | 0.7 |
+| PR | Product / Feature | 0.5 | 0.5 |
+| AC | Account / Profile | 0.4 | 0.6 |
+| MI | Mission / Values | 0.7 | 0.3 |
+| AD | Advertising / Commerce | 0.2 | 0.8 |
+| HR | Human Rights Specific | 0.5 | 0.5 |
+| CO | Community | 0.4 | 0.6 |
+| ME | Media (video/audio) | 0.5 | 0.5 |
+| MX | Mixed (default) | 0.5 | 0.5 |
+
+## SIGNAL CHANNELS
+
+- **Editorial (E)**: What the content says about human rights themes. Consider overall tone, framing, advocacy, and coverage across all UDHR provisions.
+- **Structural (S)**: What the site does — privacy practices, accessibility, paywalls, tracking, consent mechanisms, data collection.
+
+Provide a single overall score for each channel considering the content holistically.
+
+## EVIDENCE STRENGTH
+
+- H (High): Clear, direct evidence for the score.
+- M (Medium): Indirect or moderate evidence.
+- L (Low): Minimal or weak evidence.
+
+## OUTPUT FORMAT
+
+Output a single JSON object. No markdown fences, no explanation before or after.
+
+{
+  "schema_version": "light-1.0",
+  "evaluation": {
+    "url": "<url>",
+    "domain": "<domain>",
+    "content_type": "<CODE>",
+    "editorial": <-1.0 to +1.0 or null>,
+    "structural": <-1.0 to +1.0 or null>,
+    "evidence_strength": "<H|M|L>",
+    "confidence": <0.0 to 1.0>
+  },
+  "theme_tag": "<2-4 word theme>",
+  "sentiment_tag": "<Champions|Advocates|Acknowledges|Neutral|Neglects|Undermines|Hostile>",
+  "executive_summary": "<1-2 sentences>",
+  "eq_score": <0.0 to 1.0>,
+  "so_score": <0.0 to 1.0>,
+  "td_score": <0.0 to 1.0>,
+  "primary_tone": "<measured|urgent|alarmist|hopeful|cynical|detached|empathetic|confrontational|celebratory|solemn>"
+}`;
+
+/** Max output tokens for light prompt (single E/S pair + metadata). */
+export const EVAL_MAX_TOKENS_LIGHT = 1024;
 
 // --- Supplementary Signal Interfaces ---
 
@@ -1910,5 +2007,351 @@ export async function markRaterFailed(
          eval_error = excluded.eval_error`
     )
     .bind(hnId, modelId, provider, error.slice(0, 500))
+    .run();
+}
+
+// --- Light Eval Types & Functions ---
+
+export interface LightEvalResponse {
+  schema_version: string;
+  evaluation: {
+    url: string;
+    domain: string;
+    content_type: string;
+    editorial: number | null;
+    structural: number | null;
+    evidence_strength: string;
+    confidence: number;
+  };
+  theme_tag: string;
+  sentiment_tag: string;
+  executive_summary: string;
+  eq_score: number | null;
+  so_score: number | null;
+  td_score: number | null;
+  primary_tone: string | null;
+}
+
+/** Content type → channel weights (matches Section 2 of methodology). */
+const CONTENT_TYPE_WEIGHTS: Record<string, { e: number; s: number }> = {
+  ED: { e: 0.6, s: 0.4 },
+  PO: { e: 0.3, s: 0.7 },
+  LP: { e: 0.3, s: 0.7 },
+  PR: { e: 0.5, s: 0.5 },
+  AC: { e: 0.4, s: 0.6 },
+  MI: { e: 0.7, s: 0.3 },
+  AD: { e: 0.2, s: 0.8 },
+  HR: { e: 0.5, s: 0.5 },
+  CO: { e: 0.4, s: 0.6 },
+  ME: { e: 0.5, s: 0.5 },
+  MX: { e: 0.5, s: 0.5 },
+};
+
+const VALID_SENTIMENT_TAGS = ['Champions', 'Advocates', 'Acknowledges', 'Neutral', 'Neglects', 'Undermines', 'Hostile'];
+const VALID_EVIDENCE_STRENGTHS = ['H', 'M', 'L'];
+const VALID_CONTENT_TYPES = new Set(Object.keys(CONTENT_TYPE_WEIGHTS));
+
+export function validateLightEvalResponse(parsed: any): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const repairs: string[] = [];
+
+  if (!parsed.evaluation || typeof parsed.evaluation !== 'object') {
+    errors.push('Missing "evaluation" object');
+    return { valid: false, errors, warnings, repairs };
+  }
+
+  const ev = parsed.evaluation;
+
+  // Content type
+  if (!ev.content_type || !VALID_CONTENT_TYPES.has(ev.content_type)) {
+    if (ev.content_type) {
+      // Try uppercase
+      const upper = String(ev.content_type).toUpperCase();
+      if (VALID_CONTENT_TYPES.has(upper)) {
+        ev.content_type = upper;
+        repairs.push(`Normalized content_type to "${upper}"`);
+      } else {
+        warnings.push(`Invalid content_type "${ev.content_type}", defaulting to MX`);
+        ev.content_type = 'MX';
+        repairs.push('Set content_type to MX (was invalid)');
+      }
+    } else {
+      ev.content_type = 'MX';
+      repairs.push('Set content_type to MX (was missing)');
+    }
+  }
+
+  // Editorial score
+  if (ev.editorial !== null && ev.editorial !== undefined) {
+    if (typeof ev.editorial !== 'number') {
+      const num = parseFloat(ev.editorial);
+      if (!isNaN(num)) {
+        ev.editorial = Math.max(-1.0, Math.min(1.0, num));
+        repairs.push(`Coerced editorial to number: ${ev.editorial}`);
+      } else {
+        ev.editorial = null;
+        repairs.push('Set editorial to null (was non-numeric)');
+      }
+    } else if (ev.editorial < -1.0 || ev.editorial > 1.0) {
+      const original = ev.editorial;
+      ev.editorial = Math.max(-1.0, Math.min(1.0, ev.editorial));
+      repairs.push(`Clamped editorial: ${original} → ${ev.editorial}`);
+    }
+  }
+
+  // Structural score
+  if (ev.structural !== null && ev.structural !== undefined) {
+    if (typeof ev.structural !== 'number') {
+      const num = parseFloat(ev.structural);
+      if (!isNaN(num)) {
+        ev.structural = Math.max(-1.0, Math.min(1.0, num));
+        repairs.push(`Coerced structural to number: ${ev.structural}`);
+      } else {
+        ev.structural = null;
+        repairs.push('Set structural to null (was non-numeric)');
+      }
+    } else if (ev.structural < -1.0 || ev.structural > 1.0) {
+      const original = ev.structural;
+      ev.structural = Math.max(-1.0, Math.min(1.0, ev.structural));
+      repairs.push(`Clamped structural: ${original} → ${ev.structural}`);
+    }
+  }
+
+  // Need at least one channel scored
+  if (ev.editorial === null && ev.structural === null) {
+    errors.push('Both editorial and structural are null — no data to score');
+  }
+
+  // Evidence strength
+  if (ev.evidence_strength) {
+    const upper = String(ev.evidence_strength).toUpperCase();
+    if (VALID_EVIDENCE_STRENGTHS.includes(upper)) {
+      ev.evidence_strength = upper;
+    } else {
+      ev.evidence_strength = 'M';
+      repairs.push(`Set evidence_strength to M (was "${ev.evidence_strength}")`);
+    }
+  } else {
+    ev.evidence_strength = 'M';
+    repairs.push('Set evidence_strength to M (was missing)');
+  }
+
+  // Confidence
+  if (ev.confidence === undefined || ev.confidence === null || typeof ev.confidence !== 'number') {
+    ev.confidence = 0.5;
+    repairs.push('Set confidence to 0.5 (was missing/invalid)');
+  } else {
+    ev.confidence = Math.max(0.0, Math.min(1.0, ev.confidence));
+  }
+
+  // Sentiment tag
+  if (parsed.sentiment_tag && !VALID_SENTIMENT_TAGS.includes(parsed.sentiment_tag)) {
+    warnings.push(`Invalid sentiment_tag "${parsed.sentiment_tag}"`);
+  }
+
+  // Supplementary scores — clamp to [0, 1] if present
+  for (const field of ['eq_score', 'so_score', 'td_score'] as const) {
+    if (parsed[field] !== null && parsed[field] !== undefined) {
+      if (typeof parsed[field] !== 'number') {
+        const num = parseFloat(parsed[field]);
+        parsed[field] = !isNaN(num) ? Math.max(0.0, Math.min(1.0, num)) : null;
+        repairs.push(`Coerced ${field} to ${parsed[field]}`);
+      } else {
+        parsed[field] = Math.max(0.0, Math.min(1.0, parsed[field]));
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors, warnings, repairs };
+}
+
+export function computeLightAggregates(light: LightEvalResponse): {
+  weighted_mean: number;
+  classification: string;
+  setl: number;
+} {
+  const ct = light.evaluation.content_type || 'MX';
+  const weights = CONTENT_TYPE_WEIGHTS[ct] || CONTENT_TYPE_WEIGHTS['MX'];
+  const e = light.evaluation.editorial;
+  const s = light.evaluation.structural;
+
+  let weightedMean: number;
+  if (e !== null && s !== null) {
+    weightedMean = weights.e * e + weights.s * s;
+  } else if (e !== null) {
+    weightedMean = e;
+  } else if (s !== null) {
+    weightedMean = s;
+  } else {
+    weightedMean = 0;
+  }
+
+  // Clamp
+  weightedMean = Math.max(-1.0, Math.min(1.0, weightedMean));
+  weightedMean = Math.round(weightedMean * 1000) / 1000;
+
+  // Classify using same buckets as full eval
+  let classification = 'Neutral';
+  for (const c of CLASSIFICATIONS) {
+    if (weightedMean >= c.min && weightedMean <= c.max) {
+      classification = c.label;
+      break;
+    }
+  }
+
+  // SETL from single E/S pair
+  const setl = (e !== null && s !== null) ? Math.abs(e - s) : 0;
+
+  return { weighted_mean: weightedMean, classification, setl };
+}
+
+export function buildLightUserMessage(url: string, title: string, content: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  return `Evaluate this URL: ${url}
+Title: ${title}
+
+Content:
+${content}
+
+Today's date: ${today}
+
+Output ONLY the JSON evaluation object, no other text.`;
+}
+
+export async function writeLightRaterEvalResult(
+  db: D1Database,
+  hnId: number,
+  light: LightEvalResponse,
+  modelId: string,
+  provider: string,
+  promptHash: string | null,
+  methodologyHash: string | null,
+  inputTokens: number,
+  outputTokens: number,
+): Promise<void> {
+  const agg = computeLightAggregates(light);
+
+  // Evidence counts from single evidence_strength value
+  const evStr = light.evaluation.evidence_strength?.toUpperCase() || 'M';
+  const hcbEvidenceH = evStr === 'H' ? 1 : 0;
+  const hcbEvidenceM = evStr === 'M' ? 1 : 0;
+  const hcbEvidenceL = evStr === 'L' ? 1 : 0;
+
+  // UPSERT rater_evals
+  await db
+    .prepare(
+      `INSERT INTO rater_evals (
+        hn_id, eval_model, eval_provider, eval_status,
+        hcb_weighted_mean, hcb_classification, hcb_json,
+        hcb_signal_sections, hcb_nd_count,
+        hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
+        eval_prompt_hash, methodology_hash,
+        content_type, schema_version,
+        hcb_theme_tag, hcb_sentiment_tag, hcb_executive_summary,
+        fw_ratio, fw_observable_count, fw_inference_count,
+        hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
+        eq_score, so_score, et_primary_tone, et_valence,
+        sr_score, pt_flag_count, td_score,
+        input_tokens, output_tokens,
+        evaluated_at
+      ) VALUES (
+        ?, ?, ?, 'done',
+        ?, ?, ?,
+        ?, ?,
+        ?, ?, ?,
+        ?, ?,
+        ?, ?,
+        ?, ?, ?,
+        ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?, ?,
+        ?, ?,
+        datetime('now')
+      )
+      ON CONFLICT(hn_id, eval_model) DO UPDATE SET
+        eval_status = 'done',
+        eval_error = NULL,
+        hcb_weighted_mean = excluded.hcb_weighted_mean,
+        hcb_classification = excluded.hcb_classification,
+        hcb_json = excluded.hcb_json,
+        hcb_signal_sections = excluded.hcb_signal_sections,
+        hcb_nd_count = excluded.hcb_nd_count,
+        hcb_evidence_h = excluded.hcb_evidence_h,
+        hcb_evidence_m = excluded.hcb_evidence_m,
+        hcb_evidence_l = excluded.hcb_evidence_l,
+        eval_prompt_hash = excluded.eval_prompt_hash,
+        methodology_hash = excluded.methodology_hash,
+        content_type = excluded.content_type,
+        schema_version = excluded.schema_version,
+        hcb_theme_tag = excluded.hcb_theme_tag,
+        hcb_sentiment_tag = excluded.hcb_sentiment_tag,
+        hcb_executive_summary = excluded.hcb_executive_summary,
+        fw_ratio = excluded.fw_ratio,
+        fw_observable_count = excluded.fw_observable_count,
+        fw_inference_count = excluded.fw_inference_count,
+        hcb_editorial_mean = excluded.hcb_editorial_mean,
+        hcb_structural_mean = excluded.hcb_structural_mean,
+        hcb_setl = excluded.hcb_setl,
+        hcb_confidence = excluded.hcb_confidence,
+        eq_score = excluded.eq_score,
+        so_score = excluded.so_score,
+        et_primary_tone = excluded.et_primary_tone,
+        et_valence = excluded.et_valence,
+        sr_score = excluded.sr_score,
+        pt_flag_count = excluded.pt_flag_count,
+        td_score = excluded.td_score,
+        input_tokens = excluded.input_tokens,
+        output_tokens = excluded.output_tokens,
+        evaluated_at = excluded.evaluated_at`
+    )
+    .bind(
+      hnId, modelId, provider,
+      agg.weighted_mean,
+      agg.classification,
+      JSON.stringify(light),
+      0, // hcb_signal_sections (no per-section data)
+      0, // hcb_nd_count
+      hcbEvidenceH, hcbEvidenceM, hcbEvidenceL,
+      promptHash, methodologyHash,
+      light.evaluation.content_type || 'MX',
+      light.schema_version || 'light-1.0',
+      light.theme_tag || null,
+      light.sentiment_tag || null,
+      light.executive_summary || null,
+      null, // fw_ratio
+      0,    // fw_observable_count
+      0,    // fw_inference_count
+      light.evaluation.editorial,   // hcb_editorial_mean
+      light.evaluation.structural,  // hcb_structural_mean
+      agg.setl,                     // hcb_setl
+      light.evaluation.confidence,  // hcb_confidence
+      light.eq_score ?? null,
+      light.so_score ?? null,
+      light.primary_tone ?? null,   // et_primary_tone
+      null,                         // et_valence (not in light)
+      null,                         // sr_score (not in light)
+      0,                            // pt_flag_count (not in light)
+      light.td_score ?? null,
+      inputTokens, outputTokens,
+    )
+    .run();
+
+  // No rater_scores or rater_witness writes for light evals
+
+  // Write to eval_history
+  await db
+    .prepare(
+      `INSERT INTO eval_history (hn_id, eval_model, hcb_weighted_mean, hcb_classification, hcb_json, input_tokens, output_tokens)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .bind(
+      hnId, modelId,
+      agg.weighted_mean,
+      agg.classification,
+      JSON.stringify(light),
+      inputTokens, outputTokens,
+    )
     .run();
 }
