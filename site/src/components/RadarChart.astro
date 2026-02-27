@@ -80,7 +80,7 @@ const zeroR = 0.5 * radius;
       <polygon
         points={zeroPoints}
         fill="none"
-        stroke="#555"
+        stroke="#5b7279"
         stroke-width="1"
         stroke-dasharray="4,2"
       />
@@ -101,7 +101,7 @@ const zeroR = 0.5 * radius;
         <text
           x={lx}
           y={ly}
-          fill="#888"
+          fill="#5b7279"
           font-size="10"
           text-anchor={anchor}
           dominant-baseline="middle"
@@ -117,13 +117,13 @@ const zeroR = 0.5 * radius;
   <polygon
     points={polygonPoints}
     fill="rgba(99, 102, 241, 0.15)"
-    stroke="#6366f1"
+    stroke="#2b90d8"
     stroke-width="2"
   />
 
   <!-- Data points -->
   {points.map(([x, y], i) => (
-    <circle cx={x} cy={y} r="4" fill="#6366f1" stroke="#1a1a25" stroke-width="2">
+    <circle cx={x} cy={y} r="4" fill="#2b90d8" stroke="#0d4655" stroke-width="2">
       <title>{groupScores[i].name}: {groupScores[i].avg.toFixed(2)} ({groupScores[i].count} articles)</title>
     </circle>
   ))}

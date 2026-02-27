@@ -82,8 +82,8 @@ const domain_context_profile = evalData?.domain_context_profile;
 const aggregates = evalData?.aggregates;
 const scores = isDone ? (storyData.scores.length > 0 ? storyData.scores : evalData!.scores) : [];
 
-const classColor = aggregates ? classificationColor(aggregates.classification) : '#555';
-const classText = aggregates ? classificationTextColor(aggregates.classification) : '#ccc';
+const classColor = aggregates ? classificationColor(aggregates.classification) : '#5b7279';
+const classText = aggregates ? classificationTextColor(aggregates.classification) : '#98a8a8';
 
 // Fair Witness: detect if any score has FW data (from evalData JSON, not DB scores)
 const fwScores = evalData?.scores ?? [];
@@ -250,28 +250,28 @@ function timeAgo(unixTime: number): string {
   {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
 
   {/* Breadcrumb */}
-  <div style="padding: 4px 0; font-size: var(--font-xs); color: #555;">
-    <a href="/" style="color: #555;">home</a>
+  <div style="padding: 4px 0; font-size: var(--font-xs); color: #5b7279;">
+    <a href="/" style="color: #5b7279;">home</a>
     {storyData.domain && (
       <>
-        <span style="color: #333;"> / </span>
-        <a href={`/domain/${storyData.domain}`} style="color: #555;">{storyData.domain}</a>
+        <span style="color: #0d4655;"> / </span>
+        <a href={`/domain/${storyData.domain}`} style="color: #5b7279;">{storyData.domain}</a>
       </>
     )}
-    <span style="color: #333;"> / </span>
-    <span style="color: #888;">item {storyData.hn_id}</span>
+    <span style="color: #0d4655;"> / </span>
+    <span style="color: #5b7279;">item {storyData.hn_id}</span>
   </div>
 
   {/* Model tab bar (shown when multiple models have evaluated) */}
   {isDone && hasMultipleModels && (
     <div style="padding: 6px 0; margin-bottom: 4px; display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
-      <span style="color: #555; font-size: var(--font-xs); margin-right: 4px;">Model:</span>
+      <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 4px;">Model:</span>
       {raterEvals.map(re => {
         const isActive = modelParam ? modelParam === re.eval_model : re.eval_model === PRIMARY_MODEL_ID;
         const isPrimary = re.eval_model === PRIMARY_MODEL_ID;
         return (
           <a href={isPrimary ? `/item/${hnId}` : `/item/${hnId}?model=${re.eval_model}`}
-             style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #2a2a3a; color: #ccc; border: 1px solid #444;' : 'background: #12121a; color: #888; border: 1px solid #222;'}`}>
+             style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #2a2a3a; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #222;'}`}>
             {modelDisplayName(re.eval_model)}
             <span style={`margin-left: 4px; color: ${scoreToColor(re.hcb_weighted_mean)};`}>
               {formatScore(re.hcb_weighted_mean)}
@@ -280,7 +280,7 @@ function timeAgo(unixTime: number): string {
         );
       })}
       <a href={`/item/${hnId}?view=compare`}
-         style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${viewParam === 'compare' ? 'background: #2a2a3a; color: #ccc; border: 1px solid #444;' : 'background: #12121a; color: #888; border: 1px solid #222;'}`}>
+         style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${viewParam === 'compare' ? 'background: #2a2a3a; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #222;'}`}>
         Compare
       </a>
     </div>
@@ -330,27 +330,27 @@ function timeAgo(unixTime: number): string {
 
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
         <tr>
-          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Evaluation Failed</div>
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Evaluation Failed</div>
             <div style="color: #dc2626; font-size: var(--font-base); padding: 8px 0; line-height: 1.5;">
               {storyData.eval_error || 'Unknown error'}
             </div>
             <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-top: 8px;">
               {storyData.domain && (
                 <tr>
-                  <td style="color: #666; width: 100px;">Domain</td>
-                  <td><a href={`/domain/${storyData.domain}`} style="color: #c9c9c9;">{storyData.domain}</a></td>
+                  <td style="color: #5b7279; width: 100px;">Domain</td>
+                  <td><a href={`/domain/${storyData.domain}`} style="color: #98a8a8;">{storyData.domain}</a></td>
                 </tr>
               )}
               {storyData.content_type && (
                 <tr>
-                  <td style="color: #666;">Content Type</td>
-                  <td style="color: #888;">{CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}</td>
+                  <td style="color: #5b7279;">Content Type</td>
+                  <td style="color: #5b7279;">{CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}</td>
                 </tr>
               )}
               <tr>
-                <td style="color: #666;">Created</td>
-                <td style="color: #555;">{storyData.created_at}</td>
+                <td style="color: #5b7279;">Created</td>
+                <td style="color: #5b7279;">{storyData.created_at}</td>
               </tr>
             </table>
             <div style="margin-top: 12px;">
@@ -370,10 +370,10 @@ function timeAgo(unixTime: number): string {
       {cachedDcpElements && (
         <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
           <tr>
-            <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+              <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
                 Cached Domain Context Profile
-                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">from previous evaluation</span>
+                <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">from previous evaluation</span>
               </div>
               <DcpTable elements={cachedDcpElements} />
             </td>
@@ -426,7 +426,7 @@ function timeAgo(unixTime: number): string {
         >
           {aggregates.classification}
         </span>
-        <span style="color: #828282; margin-left: 4px;">
+        <span style="color: #5b7279; margin-left: 4px;">
           <span title={`Content type: ${CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}`} style="cursor: help;">
             {CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}
           </span>
@@ -451,11 +451,11 @@ function timeAgo(unixTime: number): string {
   {(executiveSummary || themeTag || sentimentTag) && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-            <span style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Summary</span>
+            <span style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Summary</span>
             {themeTag && (
-              <span class="badge" style="background: rgba(99,102,241,0.15); color: #818cf8; font-size: var(--font-xs);">
+              <span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1; font-size: var(--font-xs);">
                 {themeTag}
               </span>
             )}
@@ -466,7 +466,7 @@ function timeAgo(unixTime: number): string {
             )}
           </div>
           {executiveSummary && (
-            <div style="color: #c9c9c9; font-size: var(--font-sm); line-height: 1.6;">
+            <div style="color: #98a8a8; font-size: var(--font-sm); line-height: 1.6;">
               {executiveSummary}
             </div>
           )}
@@ -478,10 +478,10 @@ function timeAgo(unixTime: number): string {
   {/* Heatmap */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Article Heatmap</div>
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Article Heatmap</div>
         <HeatMap scores={scores} compact={false} showLabels={true} />
-        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: var(--font-xs); color: #666;">
+        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: var(--font-xs); color: #5b7279;">
           <span><span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 2px;"></span> Negative</span>
           <span><span style="display: inline-block; width: 8px; height: 8px; background: #eab308; border-radius: 2px;"></span> Neutral</span>
           <span><span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 2px;"></span> Positive</span>
@@ -495,59 +495,59 @@ function timeAgo(unixTime: number): string {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td width="50%" valign="top" style="padding-right: 5px;">
-        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
+        <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr>
-              <td style="color: #666;">Weighted Mean</td>
+              <td style="color: #5b7279;">Weighted Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(aggregates.weighted_mean)}`}>{formatScore(aggregates.weighted_mean)}</td>
-              <td style="color: #666;">Unweighted Mean</td>
+              <td style="color: #5b7279;">Unweighted Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(aggregates.unweighted_mean)}`}>{formatScore(aggregates.unweighted_mean)}</td>
             </tr>
             <tr>
-              <td style="color: #666;">Max</td>
-              <td class="score-font" style={`color: ${scoreToColor(aggregates.max.value)}`}>{formatScore(aggregates.max.value)} <span style="color: #555;">{aggregates.max.section}</span></td>
-              <td style="color: #666;">Min</td>
-              <td class="score-font" style={`color: ${scoreToColor(aggregates.min.value)}`}>{formatScore(aggregates.min.value)} <span style="color: #555;">{aggregates.min.section}</span></td>
+              <td style="color: #5b7279;">Max</td>
+              <td class="score-font" style={`color: ${scoreToColor(aggregates.max.value)}`}>{formatScore(aggregates.max.value)} <span style="color: #5b7279;">{aggregates.max.section}</span></td>
+              <td style="color: #5b7279;">Min</td>
+              <td class="score-font" style={`color: ${scoreToColor(aggregates.min.value)}`}>{formatScore(aggregates.min.value)} <span style="color: #5b7279;">{aggregates.min.section}</span></td>
             </tr>
             <tr>
-              <td style="color: #666;">Signal</td>
-              <td class="score-font" style="color: #ccc;">{aggregates.signal_sections}</td>
-              <td style="color: #666;" title="Articles with insufficient evidence to score">No Data</td>
-              <td class="score-font" style="color: #666;">{aggregates.nd_count}</td>
+              <td style="color: #5b7279;">Signal</td>
+              <td class="score-font" style="color: #98a8a8;">{aggregates.signal_sections}</td>
+              <td style="color: #5b7279;" title="Articles with insufficient evidence to score">No Data</td>
+              <td class="score-font" style="color: #5b7279;">{aggregates.nd_count}</td>
             </tr>
             <tr>
-              <td style="color: #666;">Confidence</td>
+              <td style="color: #5b7279;">Confidence</td>
               <td class="score-font" style={`color: ${confidenceToColor(confidence)};`} title={`${aggregates.signal_sections}/${aggregates.signal_sections + aggregates.nd_count} articles scored`}>{formatConfidence(confidence)}</td>
-              <td style="color: #666;">Volatility</td>
-              <td class="score-font" style="color: #ccc;">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
+              <td style="color: #5b7279;">Volatility</td>
+              <td class="score-font" style="color: #98a8a8;">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
             </tr>
             <tr>
-              <td style="color: #666;">Negative</td>
+              <td style="color: #5b7279;">Negative</td>
               <td class="score-font" style="color: #ef4444;">{aggregates.negative_count}</td>
-              <td style="color: #666;">Channels</td>
+              <td style="color: #5b7279;">Channels</td>
               <td class="score-font">
                 <span style="color: #60a5fa;" title="What the content says">E: {evaluation.channel_weights.editorial}</span>
                 <span style="color: #22d3ee; margin-left: 6px;" title="What the site does">S: {evaluation.channel_weights.structural}</span>
               </td>
             </tr>
             <tr>
-              <td style="color: #666;" title="Structural-Editorial Tension Level: normalized difference between S and E channels">SETL</td>
+              <td style="color: #5b7279;" title="Structural-Editorial Tension Level: normalized difference between S and E channels">SETL</td>
               <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
-              <td style="color: #555; font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
+              <td style="color: #5b7279; font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
             </tr>
             {hasFairWitness && (
               <tr>
-                <td style="color: #666;" title="Fair Witness ratio: proportion of observable facts to total evidence items">FW Ratio</td>
+                <td style="color: #5b7279;" title="Fair Witness ratio: proportion of observable facts to total evidence items">FW Ratio</td>
                 <td class="score-font" style={`color: ${fwRatioColor(fwRatio)};`}>{formatFwRatio(fwRatio)}</td>
-                <td style="color: #555; font-size: var(--font-xs);" title="Observable facts / Inferences" colspan="2">
+                <td style="color: #5b7279; font-size: var(--font-xs);" title="Observable facts / Inferences" colspan="2">
                   <span style="color: #22c55e;">{fwObservableCount} facts</span> · <span style="color: #a855f7;">{fwInferenceCount} inferences</span>
                 </td>
               </tr>
             )}
           </table>
           <div style="margin-top: 6px;">
-            <span style="color: #666; font-size: var(--font-xs);">Evidence: </span>
+            <span style="color: #5b7279; font-size: var(--font-xs);">Evidence: </span>
             {Object.entries(aggregates.evidence_profile).map(([key, count]) => {
               const label = EVIDENCE_LABELS[key] || key;
               return (
@@ -563,8 +563,8 @@ function timeAgo(unixTime: number): string {
         </div>
       </td>
       <td width="50%" valign="top" style="padding-left: 5px;">
-        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
+        <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
           <RadarChart scores={scores} size={300} />
         </div>
       </td>
@@ -575,18 +575,18 @@ function timeAgo(unixTime: number): string {
   {comments.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             HN Discussion
-            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
               {comments.filter(c => c.depth === 0).length} top-level · {comments.filter(c => c.depth > 0).length} replies
             </span>
           </div>
           {comments.map((c) => (
-            <div style={`border-top: 1px solid #1a1a25; padding: 8px 0; margin-left: ${c.depth * 20}px;`}>
-              <div style="font-size: var(--font-xs); color: #555; margin-bottom: 4px;">
+            <div style={`border-top: 1px solid #0d4655; padding: 8px 0; margin-left: ${c.depth * 20}px;`}>
+              <div style="font-size: var(--font-xs); color: #5b7279; margin-bottom: 4px;">
                 <a href={`/user/${c.author}`}
-                   style="color: #888;">{c.author}</a>
+                   style="color: #5b7279;">{c.author}</a>
                 {c.time && (
                   <span style="margin-left: 6px;">
                     {new Date(c.time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC
@@ -594,9 +594,9 @@ function timeAgo(unixTime: number): string {
                 )}
                 <a href={`https://news.ycombinator.com/item?id=${c.comment_id}`}
                    target="_blank" rel="noopener"
-                   style="color: #555; margin-left: 6px;">link</a>
+                   style="color: #5b7279; margin-left: 6px;">link</a>
               </div>
-              <div style="color: #aaa; font-size: var(--font-sm); line-height: 1.5;" set:html={c.text} />
+              <div style="color: #8faaab; font-size: var(--font-sm); line-height: 1.5;" set:html={c.text} />
             </div>
           ))}
         </td>
@@ -607,10 +607,10 @@ function timeAgo(unixTime: number): string {
   {/* Editorial Channel */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; border-top: 3px solid #a78bfa;">
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #a78bfa;">
         <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
           <div style="color: #a78bfa; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Editorial Channel</div>
-          <div style="color: #555; font-size: var(--font-xs);">What the content says</div>
+          <div style="color: #5b7279; font-size: var(--font-xs);">What the content says</div>
         </div>
         {editorialRanked.map((score, i) => (
           <ArticleDetail score={score} index={i} channel="editorial" />
@@ -622,14 +622,14 @@ function timeAgo(unixTime: number): string {
   {/* Structural Channel */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; border-top: 3px solid #22d3ee;">
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #22d3ee;">
         <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
           <div style="color: #22d3ee; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Structural Channel</div>
-          <div style="color: #555; font-size: var(--font-xs);">What the site does</div>
+          <div style="color: #5b7279; font-size: var(--font-xs);">What the site does</div>
         </div>
         {domain_context_profile && (
           <div style="margin-bottom: 12px; padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px;">
-            <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Domain Context Profile</div>
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Domain Context Profile</div>
             <DcpTable elements={domain_context_profile.elements} />
           </div>
         )}
@@ -644,7 +644,7 @@ function timeAgo(unixTime: number): string {
   {hasSignals && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; border-top: 3px solid #f59e0b;">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #f59e0b;">
           <div style="color: #f59e0b; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 12px;">Supplementary Signals</div>
 
           <table cellpadding="0" cellspacing="0" width="100%">
@@ -652,7 +652,7 @@ function timeAgo(unixTime: number): string {
               {/* Epistemic Quality */}
               <td width="33%" valign="top" style="padding: 0 5px 10px 0;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Epistemic Quality</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Epistemic Quality</div>
                   {eqData ? (
                     <>
                       <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
@@ -660,16 +660,16 @@ function timeAgo(unixTime: number): string {
                         <span class="badge" style={`background: ${eqData.claim_density === 'low' ? 'rgba(22,163,106,0.15)' : eqData.claim_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${eqData.claim_density === 'low' ? '#16a34a' : eqData.claim_density === 'medium' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{eqData.claim_density} claims</span>
                       </div>
                       <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                        <tr><td style="color: #555; width: 55%;">Sources</td><td><div style={`height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.source_quality * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right; width: 30px;">{eqData.source_quality.toFixed(1)}</td></tr>
-                        <tr><td style="color: #555;">Evidence</td><td><div style={`height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.evidence_reasoning * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right;">{eqData.evidence_reasoning.toFixed(1)}</td></tr>
-                        <tr><td style="color: #555;">Uncertainty</td><td><div style={`height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.uncertainty_handling * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right;">{eqData.uncertainty_handling.toFixed(1)}</td></tr>
-                        <tr><td style="color: #555;">Purpose</td><td><div style={`height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.purpose_transparency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right;">{eqData.purpose_transparency.toFixed(1)}</td></tr>
+                        <tr><td style="color: #5b7279; width: 55%;">Sources</td><td><div style={`height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.source_quality * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right; width: 30px;">{eqData.source_quality.toFixed(1)}</td></tr>
+                        <tr><td style="color: #5b7279;">Evidence</td><td><div style={`height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.evidence_reasoning * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right;">{eqData.evidence_reasoning.toFixed(1)}</td></tr>
+                        <tr><td style="color: #5b7279;">Uncertainty</td><td><div style={`height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.uncertainty_handling * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right;">{eqData.uncertainty_handling.toFixed(1)}</td></tr>
+                        <tr><td style="color: #5b7279;">Purpose</td><td><div style={`height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.purpose_transparency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right;">{eqData.purpose_transparency.toFixed(1)}</td></tr>
                       </table>
                     </>
                   ) : eqScore !== null ? (
                     <span class="score-font" style={`color: ${eqScore >= 0.7 ? '#16a34a' : eqScore >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{eqScore.toFixed(2)}</span>
                   ) : (
-                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
               </td>
@@ -677,17 +677,17 @@ function timeAgo(unixTime: number): string {
               {/* Propaganda Flags */}
               <td width="33%" valign="top" style="padding: 0 5px 10px 5px;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Propaganda Flags</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Propaganda Flags</div>
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                     <span class="badge" style={`background: ${ptFlagCount === 0 ? 'rgba(22,163,106,0.15)' : ptFlagCount <= 2 ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${ptFlagCount === 0 ? '#16a34a' : ptFlagCount <= 2 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm);`}>{ptFlagCount}</span>
-                    <span style="color: #555; font-size: var(--font-xs);">techniques detected</span>
+                    <span style="color: #5b7279; font-size: var(--font-xs);">techniques detected</span>
                   </div>
                   {ptFlags && ptFlags.length > 0 && (
                     <div style="font-size: var(--font-xs);">
                       {ptFlags.map((f: any) => (
-                        <div style="padding: 3px 0; border-top: 1px solid #1a1a25;">
+                        <div style="padding: 3px 0; border-top: 1px solid #0d4655;">
                           <span class="badge" style={`background: ${f.severity === 'high' ? 'rgba(220,38,38,0.15)' : f.severity === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(107,114,128,0.15)'}; color: ${f.severity === 'high' ? '#dc2626' : f.severity === 'medium' ? '#eab308' : '#6b7280'}; font-size: var(--font-xs);`}>{f.technique.replace(/_/g, ' ')}</span>
-                          <div style="color: #555; font-size: var(--font-xs); margin-top: 2px; font-style: italic;">{f.evidence}</div>
+                          <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 2px; font-style: italic;">{f.evidence}</div>
                         </div>
                       ))}
                     </div>
@@ -698,7 +698,7 @@ function timeAgo(unixTime: number): string {
               {/* Solution Orientation */}
               <td width="33%" valign="top" style="padding: 0 0 10px 5px;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Solution Orientation</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Solution Orientation</div>
                   {soData ? (
                     <>
                       <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
@@ -706,11 +706,11 @@ function timeAgo(unixTime: number): string {
                         <span class="badge" style={`background: ${soData.framing === 'solution_oriented' ? 'rgba(22,163,106,0.15)' : soData.framing === 'mixed' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${soData.framing === 'solution_oriented' ? '#16a34a' : soData.framing === 'mixed' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{soData.framing.replace(/_/g, ' ')}</span>
                       </div>
                       <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                        <tr><td style="color: #555;">Reader Agency</td><td><div style="height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;"><div style={`width: ${soData.reader_agency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #888; text-align: right; width: 30px;">{soData.reader_agency.toFixed(1)}</td></tr>
+                        <tr><td style="color: #5b7279;">Reader Agency</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${soData.reader_agency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right; width: 30px;">{soData.reader_agency.toFixed(1)}</td></tr>
                       </table>
                     </>
                   ) : (
-                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
               </td>
@@ -720,20 +720,20 @@ function timeAgo(unixTime: number): string {
               {/* Emotional Tone */}
               <td width="33%" valign="top" style="padding: 0 5px 10px 0;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Emotional Tone</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Emotional Tone</div>
                   {etData ? (
                     <>
                       <div style="margin-bottom: 6px;">
                         <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7; font-size: var(--font-sm);">{etData.primary_tone}</span>
                       </div>
                       <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                        <tr><td style="color: #555; width: 55%;">Valence</td><td><div style="height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden; position: relative;"><div style={`position: absolute; left: 50%; width: ${Math.abs(etData.valence) * 50}%; height: 100%; background: ${etData.valence >= 0 ? '#16a34a' : '#dc2626'}; ${etData.valence >= 0 ? '' : 'transform: translateX(-100%);'}`}></div></div></td><td style="color: #888; text-align: right; width: 35px;">{etData.valence > 0 ? '+' : ''}{etData.valence.toFixed(1)}</td></tr>
-                        <tr><td style="color: #555;">Arousal</td><td><div style="height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.arousal * 100}%; height: 100%; background: #f59e0b;`}></div></div></td><td style="color: #888; text-align: right;">{etData.arousal.toFixed(1)}</td></tr>
-                        <tr><td style="color: #555;">Dominance</td><td><div style="height: 4px; background: #1a1a25; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.dominance * 100}%; height: 100%; background: #22d3ee;`}></div></div></td><td style="color: #888; text-align: right;">{etData.dominance.toFixed(1)}</td></tr>
+                        <tr><td style="color: #5b7279; width: 55%;">Valence</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden; position: relative;"><div style={`position: absolute; left: 50%; width: ${Math.abs(etData.valence) * 50}%; height: 100%; background: ${etData.valence >= 0 ? '#16a34a' : '#dc2626'}; ${etData.valence >= 0 ? '' : 'transform: translateX(-100%);'}`}></div></div></td><td style="color: #5b7279; text-align: right; width: 35px;">{etData.valence > 0 ? '+' : ''}{etData.valence.toFixed(1)}</td></tr>
+                        <tr><td style="color: #5b7279;">Arousal</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.arousal * 100}%; height: 100%; background: #f59e0b;`}></div></div></td><td style="color: #5b7279; text-align: right;">{etData.arousal.toFixed(1)}</td></tr>
+                        <tr><td style="color: #5b7279;">Dominance</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.dominance * 100}%; height: 100%; background: #22d3ee;`}></div></div></td><td style="color: #5b7279; text-align: right;">{etData.dominance.toFixed(1)}</td></tr>
                       </table>
                     </>
                   ) : (
-                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
               </td>
@@ -741,16 +741,16 @@ function timeAgo(unixTime: number): string {
               {/* Stakeholder Representation */}
               <td width="33%" valign="top" style="padding: 0 5px 10px 5px;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Stakeholder Voice</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Stakeholder Voice</div>
                   {srData ? (
                     <>
                       <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                         <span class="score-font" style={`color: ${srData.sr_score >= 0.7 ? '#16a34a' : srData.sr_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{srData.sr_score.toFixed(2)}</span>
-                        <span style="color: #555; font-size: var(--font-xs);">{srData.perspective_count} perspective{srData.perspective_count !== 1 ? 's' : ''}</span>
+                        <span style="color: #5b7279; font-size: var(--font-xs);">{srData.perspective_count} perspective{srData.perspective_count !== 1 ? 's' : ''}</span>
                       </div>
                       {srData.who_speaks && srData.who_speaks.length > 0 && (
                         <div style="font-size: var(--font-xs); margin-bottom: 3px;">
-                          <span style="color: #555;">Speaks: </span>
+                          <span style="color: #5b7279;">Speaks: </span>
                           {srData.who_speaks.map((s: string) => (
                             <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
                           ))}
@@ -758,7 +758,7 @@ function timeAgo(unixTime: number): string {
                       )}
                       {srData.who_is_spoken_about && srData.who_is_spoken_about.length > 0 && (
                         <div style="font-size: var(--font-xs);">
-                          <span style="color: #555;">About: </span>
+                          <span style="color: #5b7279;">About: </span>
                           {srData.who_is_spoken_about.map((s: string) => (
                             <span class="badge" style="background: rgba(107,114,128,0.15); color: #6b7280; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
                           ))}
@@ -766,7 +766,7 @@ function timeAgo(unixTime: number): string {
                       )}
                     </>
                   ) : (
-                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
               </td>
@@ -774,14 +774,14 @@ function timeAgo(unixTime: number): string {
               {/* Temporal Framing */}
               <td width="33%" valign="top" style="padding: 0 0 10px 5px;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Temporal Framing</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Temporal Framing</div>
                   {tfData ? (
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                       <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs);">{tfData.primary_focus}</span>
-                      <span class="badge" style="background: rgba(107,114,128,0.15); color: #888; font-size: var(--font-xs);">{tfData.time_horizon.replace(/_/g, ' ')}</span>
+                      <span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279; font-size: var(--font-xs);">{tfData.time_horizon.replace(/_/g, ' ')}</span>
                     </div>
                   ) : (
-                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
               </td>
@@ -791,18 +791,18 @@ function timeAgo(unixTime: number): string {
               {/* Geographic Scope */}
               <td width="33%" valign="top" style="padding: 0 5px 0 0;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Geographic Scope</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Geographic Scope</div>
                   {gsData ? (
                     <>
                       <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs); margin-bottom: 4px;">{gsData.scope}</span>
                       {gsData.regions_mentioned && gsData.regions_mentioned.length > 0 && (
-                        <div style="font-size: var(--font-xs); color: #555; margin-top: 4px;">
+                        <div style="font-size: var(--font-xs); color: #5b7279; margin-top: 4px;">
                           {gsData.regions_mentioned.join(', ')}
                         </div>
                       )}
                     </>
                   ) : (
-                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
               </td>
@@ -810,15 +810,15 @@ function timeAgo(unixTime: number): string {
               {/* Complexity Level */}
               <td width="33%" valign="top" style="padding: 0 5px 0 5px;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Complexity</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Complexity</div>
                   {clData ? (
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                       <span class="badge" style={`background: ${clData.reading_level === 'accessible' ? 'rgba(22,163,106,0.15)' : clData.reading_level === 'moderate' ? 'rgba(96,165,250,0.15)' : clData.reading_level === 'technical' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.reading_level === 'accessible' ? '#16a34a' : clData.reading_level === 'moderate' ? '#60a5fa' : clData.reading_level === 'technical' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.reading_level}</span>
                       <span class="badge" style={`background: ${clData.jargon_density === 'low' ? 'rgba(22,163,106,0.15)' : clData.jargon_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.jargon_density === 'low' ? '#16a34a' : clData.jargon_density === 'medium' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.jargon_density} jargon</span>
-                      <span class="badge" style="background: rgba(107,114,128,0.15); color: #888; font-size: var(--font-xs);">{clData.assumed_knowledge.replace(/_/g, ' ')}</span>
+                      <span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279; font-size: var(--font-xs);">{clData.assumed_knowledge.replace(/_/g, ' ')}</span>
                     </div>
                   ) : (
-                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
               </td>
@@ -826,7 +826,7 @@ function timeAgo(unixTime: number): string {
               {/* Transparency & Disclosure */}
               <td width="33%" valign="top" style="padding: 0 0 0 5px;">
                 <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
-                  <div style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Transparency</div>
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Transparency</div>
                   {tdData ? (
                     <>
                       <div style="margin-bottom: 6px;">
@@ -843,7 +843,7 @@ function timeAgo(unixTime: number): string {
                       </div>
                     </>
                   ) : (
-                    <span style="color: #444; font-size: var(--font-xs);">No data</span>
+                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
               </td>
@@ -897,16 +897,16 @@ function timeAgo(unixTime: number): string {
 
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
         <tr>
-          <td style="padding: 15px; background: #12121a; border: 1px solid #222230; border-radius: 6px; text-align: center;">
+          <td style="padding: 15px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; text-align: center;">
             <div style={`color: ${storyData.eval_status === 'evaluating' ? '#60a5fa' : '#eab308'}; font-size: var(--font-md); margin-bottom: 6px;`}>
               {storyData.eval_status === 'evaluating' ? 'Evaluating...' : 'Pending Evaluation'}
             </div>
-            <div style="color: #555; font-size: var(--font-sm);">
+            <div style="color: #5b7279; font-size: var(--font-sm);">
               {storyData.eval_status === 'evaluating'
                 ? 'This story is currently being evaluated against the UDHR. Results will appear shortly.'
                 : 'This story is queued for evaluation. It will be processed in an upcoming batch.'}
             </div>
-            <div style="color: #444; font-size: var(--font-xs); margin-top: 8px;">
+            <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 8px;">
               Queued: {storyData.created_at}
             </div>
           </td>
@@ -919,18 +919,18 @@ function timeAgo(unixTime: number): string {
   {storyEvents.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             Event Timeline
-            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">{storyEvents.length} events</span>
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">{storyEvents.length} events</span>
           </div>
           <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
             {storyEvents.map((ev) => {
-              const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#555';
-              const typeColor = EVENT_TYPE_COLORS[ev.event_type] || '#888';
+              const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#5b7279';
+              const typeColor = EVENT_TYPE_COLORS[ev.event_type] || '#5b7279';
               return (
-                <tr style={`border-top: 1px solid #1a1a25;`}>
-                  <td style="color: #555; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
+                <tr style={`border-top: 1px solid #0d4655;`}>
+                  <td style="color: #5b7279; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
                   <td style="width: 90px;">
                     <span class="badge" style={`background: ${typeColor}20; color: ${typeColor}; font-size: var(--font-xs);`}>
                       {ev.event_type}
@@ -941,15 +941,15 @@ function timeAgo(unixTime: number): string {
                     {ev.investigated === 1
                       ? <span style="color: #3b82f6;" title="Investigated">INV</span>
                       : ev.investigated === 0
-                        ? <span style="color: #555;" title="Not investigated">--</span>
-                        : <span style="color: #333;" title="Not triaged">-</span>
+                        ? <span style="color: #5b7279;" title="Not investigated">--</span>
+                        : <span style="color: #0d4655;" title="Not triaged">-</span>
                     }
                     {' '}
                     {ev.resolved === 1
                       ? <span style="color: #22c55e;" title="Resolved">RES</span>
                       : ev.resolved === 0
-                        ? <span style="color: #555;" title="Not resolved">--</span>
-                        : <span style="color: #333;" title="Not triaged">-</span>
+                        ? <span style="color: #5b7279;" title="Not resolved">--</span>
+                        : <span style="color: #0d4655;" title="Not triaged">-</span>
                     }
                   </td>
                 </tr>

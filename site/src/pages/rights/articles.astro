@@ -37,8 +37,8 @@ const groupColors: Record<string, string> = {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">UDHR Articles</span>
-        <span style="color: #828282; margin-left: 8px; font-size: var(--font-base);">
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">UDHR Articles</span>
+        <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-base);">
           31 provisions · {articleStats.filter(a => a.signal_count > 0).length} with scores
         </span>
       </td>
@@ -46,15 +46,15 @@ const groupColors: Record<string, string> = {
   </table>
 
   {[...groupedSections.entries()].map(([group, sections]) => {
-    const color = groupColors[group] || '#888';
+    const color = groupColors[group] || '#5b7279';
     return (
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
         <tr>
-          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
             <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
               <span style={`color: ${color}; font-size: var(--font-sm); font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;`}>{group}</span>
-              <span style="color: #444; font-size: var(--font-xs);">{sections.length} articles</span>
+              <span style="color: #1a5568; font-size: var(--font-xs);">{sections.length} articles</span>
             </div>
 
             <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); min-width: 480px;">
@@ -74,17 +74,17 @@ const groupColors: Record<string, string> = {
                   }).join(' ');
                 }
                 return (
-                  <tr style="border-top: 1px solid #1a1a25;">
-                    <td style="width: 24px; color: #555;" class="score-font">
-                      <a href={`/article/${s.number}`} style={`color: ${hasData ? color : '#333'}; font-weight: bold;`}>
+                  <tr style="border-top: 1px solid #0d4655;">
+                    <td style="width: 24px; color: #5b7279;" class="score-font">
+                      <a href={`/article/${s.number}`} style={`color: ${hasData ? color : '#0d4655'}; font-weight: bold;`}>
                         {s.id === 'Preamble' ? 'P' : s.number}
                       </a>
                     </td>
                     <td>
-                      <a href={`/article/${s.number}`} style={`color: ${hasData ? '#c9c9c9' : '#555'};`}>
+                      <a href={`/article/${s.number}`} style={`color: ${hasData ? '#98a8a8' : '#5b7279'};`}>
                         {s.title}
                       </a>
-                      <div style="color: #444; font-size: var(--font-xs); margin-top: 1px; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 1px; max-width: 500px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         {s.text.slice(0, 120)}{s.text.length > 120 ? '...' : ''}
                       </div>
                     </td>
@@ -92,20 +92,20 @@ const groupColors: Record<string, string> = {
                       {hasData ? (
                         <span style={`color: ${scoreToColor(stat.avg_final)};`}>{formatScore(stat.avg_final)}</span>
                       ) : (
-                        <span style="color: #333;">—</span>
+                        <span style="color: #0d4655;">—</span>
                       )}
                     </td>
-                    <td style="width: 60px; text-align: right; color: #555; font-size: var(--font-xs);" class="score-font">
+                    <td style="width: 60px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">
                       {hasData ? `${stat.signal_count} (${covPct}%)` : ''}
                     </td>
                     <td style="width: 65px; text-align: center;">
                       {spark.length > 1 ? (
                         <svg width="60" height="14" viewBox="0 0 60 14">
-                          <line x1="0" y1="7" x2="60" y2="7" stroke="#1a1a25" stroke-width="0.5" />
+                          <line x1="0" y1="7" x2="60" y2="7" stroke="#0d4655" stroke-width="0.5" />
                           <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
                         </svg>
                       ) : (
-                        <span style="color: #333;">—</span>
+                        <span style="color: #0d4655;">—</span>
                       )}
                     </td>
                   </tr>

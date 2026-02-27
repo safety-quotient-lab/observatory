@@ -6,6 +6,19 @@
 
 @layer base {
   :root {
+    /* OkSolar color palette */
+    --bg-primary: #002d38;
+    --bg-highlight: #093946;
+    --fg-primary: #98a8a8;
+    --fg-emphasis: #8faaab;
+    --fg-secondary: #5b7279;
+    --color-orange: #d56500;
+    --color-blue: #2b90d8;
+    --color-cyan: #259d94;
+    --color-green: #819500;
+    --color-red: #f23749;
+    --color-violet: #7d80d1;
+
     /* Golden ratio type scale (φ = 1.618, base = 10pt) */
     --phi: 1.618;
     --font-xs: 6.18pt;    /* base / φ / φ — micro labels, timestamps */
@@ -28,32 +41,59 @@
     @apply bg-surface-0 text-gray-300 antialiased;
     font-family: Verdana, Geneva, sans-serif;
     font-size: var(--font-base);
+    color: var(--fg-primary);
   }
 
   body {
     @apply min-h-screen;
+    box-sizing: border-box;
+  }
+
+  *, *::before, *::after {
+    box-sizing: inherit;
   }
 
   a {
-    color: #c9c9c9;
+    color: var(--color-blue);
     text-decoration: none;
+    transition: color 0.15s ease, background-color 0.15s ease;
   }
 
   a:visited {
-    color: #888;
+    color: var(--fg-secondary);
+  }
+
+  a:hover {
+    color: var(--color-cyan);
+    background-color: var(--bg-highlight);
+  }
+
+  /* Text shadows on headings */
+  h1 {
+    text-shadow: 0.31rem 0.31rem 0.5rem rgba(0,0,0,0.62);
+  }
+
+  h2, h3, h4 {
+    text-shadow: 0.19rem 0.19rem 0.31rem rgba(0,0,0,0.62);
   }
 
   ::selection {
-    background: rgba(255, 102, 0, 0.3);
+    background: rgba(37, 157, 148, 0.3);
   }
 
   /* Focus states for keyboard accessibility (WCAG 2.1 AA) */
   a:focus-visible,
   button:focus-visible {
-    outline: 2px solid #ff6600;
+    outline: 2px solid var(--color-orange);
     outline-offset: 2px;
     border-radius: 2px;
   }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--fg-secondary); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--fg-primary); }
 }
 
 @layer components {
@@ -63,6 +103,7 @@
 
   .card {
     @apply bg-surface-1 border border-surface-3 rounded-lg;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
   }
 
   .badge {
@@ -79,11 +120,11 @@
   /* HN subtext style */
   .subtext {
     font-size: var(--font-xs);
-    color: #828282;
+    color: var(--fg-secondary);
   }
 
   .subtext a {
-    color: #828282;
+    color: var(--fg-secondary);
   }
 
   .subtext a:hover {
@@ -92,15 +133,15 @@
 
   /* Title links */
   .titleline a {
-    color: #c9c9c9;
+    color: var(--fg-primary);
   }
 
   .titleline a:visited {
-    color: #888;
+    color: var(--fg-secondary);
   }
 
   .sitebit a {
-    color: #828282;
+    color: var(--fg-secondary);
   }
 
   /* Evaluating spinner */
@@ -116,7 +157,7 @@
 
   /* Play button hover */
   .trigger-btn:hover {
-    color: #ff6600 !important;
+    color: var(--color-orange) !important;
   }
 }
 
@@ -127,12 +168,16 @@
   }
 }
 
-/* Mobile responsiveness — quick wins */
+/* Mobile responsiveness */
 @media (max-width: 640px) {
   :root {
     --font-base: 12pt;
     --font-xs: 8pt;
     --font-sm: 9pt;
+  }
+
+  body {
+    overflow-x: hidden;
   }
 
   /* Full-width layout on mobile */
@@ -142,6 +187,7 @@
 
   .hn-page {
     width: 100%;
+    padding: 0 8px;
   }
 
   /* Nav: wrap links instead of overflowing */
@@ -149,6 +195,7 @@
     display: flex !important;
     flex-wrap: wrap;
     gap: 2px 0;
+    font-size: 9pt !important;
   }
 
   /* Make all content tables scrollable */
@@ -161,5 +208,24 @@
   .itemlist td {
     padding-left: 4px !important;
     padding-right: 4px !important;
+  }
+
+  /* Stack flex layouts vertically on mobile */
+  .card {
+    padding: 8px !important;
+  }
+
+  /* Better touch targets */
+  .subtext a,
+  .nav-links a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Break long URLs */
+  td, div, span {
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 }

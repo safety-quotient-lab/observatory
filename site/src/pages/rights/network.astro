@@ -21,14 +21,14 @@ const groupColors: Record<string, string> = {
   'Personal': '#34d399',
   'Political': '#fbbf24',
   'Economic': '#fb923c',
-  'Limits': '#818cf8',
+  'Limits': '#7d80d1',
 };
 
 function getGroupColor(group: string): string {
   for (const [key, color] of Object.entries(groupColors)) {
     if (group.toLowerCase().includes(key.toLowerCase())) return color;
   }
-  return '#888';
+  return '#5b7279';
 }
 
 const nodes = SECTIONS.map(s => {
@@ -145,8 +145,8 @@ const powerData = JSON.stringify(powerRankings);
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Rights Correlation Network</span>
-        <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Rights Correlation Network</span>
+        <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-sm);">
           MST backbone — minimum spanning tree by Pearson |r|
         </span>
       </td>
@@ -155,7 +155,7 @@ const powerData = JSON.stringify(powerRankings);
 
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 5px 0;">
     <tr>
-      <td style="color: #828282; font-size: var(--font-sm); line-height: 1.6; padding: 4px 0;">
+      <td style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; padding: 4px 0;">
         How do UDHR rights move together across Hacker News stories? This page maps the statistical relationships between all 31 provisions. The graph below uses a minimum spanning tree to show the single strongest path connecting every article — green edges link rights that rise and fall together, red edges link rights that pull in opposite directions, and blue edges mark near-zero correlation. Below the graph, the tension and harmony tables list the most aligned and most opposed pairs across all evaluated content, the editorial/structural chart shows whether each right is driven more by what sites say versus what they do, and the power rankings table lets you sort articles by score, volatility, or signal count.
       </td>
     </tr>
@@ -164,13 +164,13 @@ const powerData = JSON.stringify(powerRankings);
   {/* === Section 1: MST Backbone Graph === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
         <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;">
           {Object.entries(groupColors).map(([group, color]) => (
             <span style={`color: ${color}; font-size: var(--font-xs);`}>{group}</span>
           ))}
         </div>
-        <div style="color: #555; font-size: var(--font-xs); margin-bottom: 8px;">
+        <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 8px;">
           Green edges = positive r · Red edges = negative r · Blue edges = neutral (|r| ≤ 0.1) · Width = strength · 30 MST edges · Drag nodes to explore
         </div>
         <canvas id="network-canvas" width="1200" height="900" style="width: 100%; max-width: 1200px; height: auto; aspect-ratio: 4/3; background: #0a0a12; border-radius: 4px; cursor: grab;"></canvas>
@@ -181,8 +181,8 @@ const powerData = JSON.stringify(powerRankings);
   {/* === Section 2: Tension & Harmony Pairs === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px;">
           Tension & Harmony Pairs
         </div>
         <div style="display: flex; gap: 16px; flex-wrap: wrap;">
@@ -192,21 +192,21 @@ const powerData = JSON.stringify(powerRankings);
               Harmony — Top 10 Positive
             </div>
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-              <tr style="color: #555;">
+              <tr style="color: #5b7279;">
                 <td>Article A</td><td>Article B</td><td style="text-align: right;">r</td><td style="text-align: right;">n</td>
               </tr>
               {harmonyPairs.map(e => (
-                <tr style="border-top: 1px solid #1a1a25; background: rgba(52, 211, 153, 0.03);">
+                <tr style="border-top: 1px solid #0d4655; background: rgba(52, 211, 153, 0.03);">
                   <td>
-                    <a href={`/article/${getArticleNumber(e.source)}`} style="color: #aaa;">{e.source}</a>
+                    <a href={`/article/${getArticleNumber(e.source)}`} style="color: #8faaab;">{e.source}</a>
                   </td>
                   <td>
-                    <a href={`/article/${getArticleNumber(e.target)}`} style="color: #aaa;">{e.target}</a>
+                    <a href={`/article/${getArticleNumber(e.target)}`} style="color: #8faaab;">{e.target}</a>
                   </td>
                   <td style="text-align: right; color: #34d399;" class="score-font">
                     +{e.r.toFixed(3)}
                   </td>
-                  <td style="text-align: right; color: #555;" class="score-font">{e.n}</td>
+                  <td style="text-align: right; color: #5b7279;" class="score-font">{e.n}</td>
                 </tr>
               ))}
             </table>
@@ -217,21 +217,21 @@ const powerData = JSON.stringify(powerRankings);
               Tension — Top 10 Negative
             </div>
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-              <tr style="color: #555;">
+              <tr style="color: #5b7279;">
                 <td>Article A</td><td>Article B</td><td style="text-align: right;">r</td><td style="text-align: right;">n</td>
               </tr>
               {tensionPairs.map(e => (
-                <tr style="border-top: 1px solid #1a1a25; background: rgba(248, 113, 113, 0.03);">
+                <tr style="border-top: 1px solid #0d4655; background: rgba(248, 113, 113, 0.03);">
                   <td>
-                    <a href={`/article/${getArticleNumber(e.source)}`} style="color: #aaa;">{e.source}</a>
+                    <a href={`/article/${getArticleNumber(e.source)}`} style="color: #8faaab;">{e.source}</a>
                   </td>
                   <td>
-                    <a href={`/article/${getArticleNumber(e.target)}`} style="color: #aaa;">{e.target}</a>
+                    <a href={`/article/${getArticleNumber(e.target)}`} style="color: #8faaab;">{e.target}</a>
                   </td>
                   <td style="text-align: right; color: #f87171;" class="score-font">
                     {e.r.toFixed(3)}
                   </td>
-                  <td style="text-align: right; color: #555;" class="score-font">{e.n}</td>
+                  <td style="text-align: right; color: #5b7279;" class="score-font">{e.n}</td>
                 </tr>
               ))}
             </table>
@@ -244,24 +244,24 @@ const powerData = JSON.stringify(powerRankings);
   {/* === Section 3: E/S Channel Split (SVG diverging bar chart) === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
           Editorial / Structural Channel Split
-          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
             <span style="color: #a78bfa;">■</span> Editorial (right)
             <span style="color: #22d3ee; margin-left: 8px;">■</span> Structural (left)
           </span>
         </div>
         <svg id="es-chart" viewBox="0 0 800 750" style="width: 100%; max-width: 800px; height: auto; font-family: monospace;">
           {/* Scale labels */}
-          <text x="100" y="16" fill="#555" font-size="10" text-anchor="end">-1.0</text>
-          <text x="400" y="16" fill="#555" font-size="10" text-anchor="middle">0</text>
-          <text x="700" y="16" fill="#555" font-size="10" text-anchor="start">+1.0</text>
+          <text x="100" y="16" fill="#5b7279" font-size="10" text-anchor="end">-1.0</text>
+          <text x="400" y="16" fill="#5b7279" font-size="10" text-anchor="middle">0</text>
+          <text x="700" y="16" fill="#5b7279" font-size="10" text-anchor="start">+1.0</text>
           {/* Center line */}
-          <line x1="400" y1="20" x2="400" y2={20 + esData.length * 23} stroke="#333" stroke-width="1" stroke-dasharray="3,3" />
+          <line x1="400" y1="20" x2="400" y2={20 + esData.length * 23} stroke="#0d4655" stroke-width="1" stroke-dasharray="3,3" />
           {/* Scale lines */}
-          <line x1="100" y1="20" x2="100" y2={20 + esData.length * 23} stroke="#1a1a25" stroke-width="1" />
-          <line x1="700" y1="20" x2="700" y2={20 + esData.length * 23} stroke="#1a1a25" stroke-width="1" />
+          <line x1="100" y1="20" x2="100" y2={20 + esData.length * 23} stroke="#0d4655" stroke-width="1" />
+          <line x1="700" y1="20" x2="700" y2={20 + esData.length * 23} stroke="#0d4655" stroke-width="1" />
           {esData.map((d, i) => {
             const y = 28 + i * 23;
             const barH = 16;
@@ -281,7 +281,7 @@ const powerData = JSON.stringify(powerRankings);
             return (
               <g>
                 {/* Article label */}
-                <text x="90" y={y + barH / 2 + 1} fill="#888" font-size="10" text-anchor="end" dominant-baseline="middle">
+                <text x="90" y={y + barH / 2 + 1} fill="#5b7279" font-size="10" text-anchor="end" dominant-baseline="middle">
                   {d.id === 'Preamble' ? 'Preamble' : `Art. ${d.label}`}
                 </text>
                 {/* Structural bar (cyan, extends left) */}
@@ -303,16 +303,16 @@ const powerData = JSON.stringify(powerRankings);
   {/* === Section 4: Power Rankings (sortable table) === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
           Power Rankings
-          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
             Click column headers to sort
           </span>
         </div>
         <table id="power-table" cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
           <thead>
-            <tr style="color: #555; cursor: pointer; user-select: none;">
+            <tr style="color: #5b7279; cursor: pointer; user-select: none;">
               <td data-col="rank" data-type="num" style="width: 40px;">#</td>
               <td data-col="article" data-type="str">Article</td>
               <td data-col="shortTitle" data-type="str">Short Title</td>
@@ -326,20 +326,20 @@ const powerData = JSON.stringify(powerRankings);
           </thead>
           <tbody id="power-body">
             {powerRankings.map((r, i) => (
-              <tr style="border-top: 1px solid #1a1a25;">
-                <td style="color: #555;" class="score-font">{i + 1}</td>
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style="color: #5b7279;" class="score-font">{i + 1}</td>
                 <td>
-                  <a href={`/article/${r.number}`} style="color: #aaa;">
+                  <a href={`/article/${r.number}`} style="color: #8faaab;">
                     {r.id === 'Preamble' ? 'Preamble' : `Article ${r.number}`}
                   </a>
                 </td>
-                <td style="color: #888;">{r.shortTitle}</td>
+                <td style="color: #5b7279;">{r.shortTitle}</td>
                 <td style={`text-align: right; color: ${scoreToColor(r.avgScore)};`} class="score-font" data-val={r.avgScore ?? -999}>
                   {formatScore(r.avgScore)}
                 </td>
-                <td style="text-align: right; color: #aaa;" class="score-font" data-val={r.signalCount}>{r.signalCount}</td>
-                <td style="text-align: right; color: #555;" class="score-font" data-val={r.ndCount}>{r.ndCount}</td>
-                <td style="text-align: right; color: #888;" class="score-font" data-val={r.stddev}>
+                <td style="text-align: right; color: #8faaab;" class="score-font" data-val={r.signalCount}>{r.signalCount}</td>
+                <td style="text-align: right; color: #5b7279;" class="score-font" data-val={r.ndCount}>{r.ndCount}</td>
+                <td style="text-align: right; color: #5b7279;" class="score-font" data-val={r.stddev}>
                   {r.stddev.toFixed(3)}
                 </td>
                 <td style={`text-align: right; color: ${scoreToColor(r.avgEditorial)};`} class="score-font" data-val={r.avgEditorial ?? -999}>
@@ -554,7 +554,7 @@ const powerData = JSON.stringify(powerRankings);
         ctx.arc(n.x, n.y, radius, 0, 2 * Math.PI);
         ctx.fillStyle = isHovered ? '#fff' : n.color;
         ctx.fill();
-        ctx.strokeStyle = isHovered ? n.color : '#0d0d14';
+        ctx.strokeStyle = isHovered ? n.color : '#002d38';
         ctx.lineWidth = isHovered ? 3 : 2;
         ctx.stroke();
 
@@ -619,7 +619,7 @@ const powerData = JSON.stringify(powerRankings);
       ctx.roundRect(tx, ty, tw + px * 2, 20 + py * 2, 4);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = '#eee';
+      ctx.fillStyle = '#98a8a8';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(label, tx + px, ty + 10 + py);

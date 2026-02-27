@@ -6,37 +6,37 @@ import Base from '../layouts/Base.astro';
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
       <td>
-        <p style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold; margin-bottom: 10px;">About HN HRCB</p>
+        <p style="font-size: var(--font-md); color: #98a8a8; font-weight: bold; margin-bottom: 10px;">About HN HRCB</p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 15px;">
-          HN HRCB is a mirror of <a href="https://news.ycombinator.com" style="color: #ff6600;">Hacker News</a> that
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 15px;">
+          HN HRCB is a mirror of <a href="https://news.ycombinator.com" style="color: #d56500;">Hacker News</a> that
           evaluates every story's linked content against the 30 articles and preamble of the UN Universal Declaration
           of Human Rights. Each evaluation produces a Human Rights Compatibility Bias (HRCB) score showing how the
           content's editorial and structural signals align with fundamental human rights provisions.
         </p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 15px;">
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 15px;">
           A cron worker crawls HN stories every 5 minutes across 6 lists (top, new, best, ask, show, job),
           tracking all stories but only auto-evaluating those in the top 7 pages (210 stories) of the
           front page plus the top 30 from the best, ask, and show feeds. Stories outside this range are tracked but skipped unless manually triggered.
           Content is cleaned and dispatched via a Cloudflare Queue. A separate consumer worker
           evaluates each URL against the UDHR methodology (v3.7) using Claude, with DCP caching per domain
           and content snapshots stored in R2. Results are displayed alongside standard HN metadata.
-          The evaluator operates as a <b style="color: #ff6600;">Fair Witness</b> — reporting only what is
+          The evaluator operates as a <b style="color: #d56500;">Fair Witness</b> — reporting only what is
           directly observable, with no inference beyond the evidence.
         </p>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Core Construct: HRCB</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Core Construct: HRCB</p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
           <b>Human Rights Compatibility Bias (HRCB)</b> measures the directional lean
           of web content relative to the provisions of the UDHR.
           A positive score indicates content that aligns with UDHR provisions; a negative score indicates
           content that conflicts with them.
         </p>
 
-        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
-          <tr style="color: #828282;">
+        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #093946; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
+          <tr style="color: #5b7279;">
             <td class="score-font" style="color: #dc2626;">-1.0</td>
             <td>&larr;</td>
             <td>Strong negative</td>
@@ -49,36 +49,36 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Signal Channels</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Signal Channels</p>
 
         <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
           <tr>
-            <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
+            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
               <b style="color: #60a5fa;">Editorial</b><br>
-              <span style="color: #828282;">What the content <b style="color: #c9c9c9;">says</b>. Analyzes text, arguments, framing, and sourcing.</span>
+              <span style="color: #5b7279;">What the content <b style="color: #98a8a8;">says</b>. Analyzes text, arguments, framing, and sourcing.</span>
             </td>
             <td width="5px"></td>
-            <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
+            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
               <b style="color: #22d3ee;">Structural</b><br>
-              <span style="color: #828282;">What the site <b style="color: #c9c9c9;">does</b>. Examines privacy, accessibility, tracking, access models.</span>
+              <span style="color: #5b7279;">What the site <b style="color: #98a8a8;">does</b>. Examines privacy, accessibility, tracking, access models.</span>
             </td>
           </tr>
         </table>
 
-        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
+        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
           Channels are weighted by content type (e.g., Editorial=0.6, Structural=0.4).
           Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.
         </p>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
           SETL measures the divergence between editorial and structural signals for each article.
           It captures whether a site's words and infrastructure tell different stories.
         </p>
 
-        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #12121a; border: 1px solid #222230; border-radius: 4px;" width="100%">
-          <tr style="color: #828282;">
+        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #093946; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
+          <tr style="color: #5b7279;">
             <td class="score-font" style="color: #dc2626;">-1.0</td>
             <td>&larr;</td>
             <td>S-dominant (structural exceeds editorial)</td>
@@ -91,64 +91,64 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
+        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
           Formula: <span class="score-font">sign(E-S) &times; &radic;(|E-S| &times; max(|E|, |S|))</span>.
           A high absolute SETL means the site's content and infrastructure are misaligned on human rights.
           The geometric mean rewards both large gaps AND strong signals, filtering out noise from near-zero scores.
         </p>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Fair Witness Evidence Layer</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Fair Witness Evidence Layer</p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
           Inspired by Heinlein's Fair Witnesses from <i>Stranger in a Strange Land</i>,
           every evaluation separates its evidence into two categories:
         </p>
 
         <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
           <tr>
-            <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
+            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
               <b style="color: #22c55e;">Observable Facts</b><br>
-              <span style="color: #828282;">Directly verifiable statements grounded in page content. Any reader could confirm these by visiting the page.</span>
+              <span style="color: #5b7279;">Directly verifiable statements grounded in page content. Any reader could confirm these by visiting the page.</span>
             </td>
             <td width="5px"></td>
-            <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
+            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
               <b style="color: #a855f7;">Inferences</b><br>
-              <span style="color: #828282;">Interpretive conclusions drawn from the observable evidence. These explain <i>why</i> the evidence maps to the score.</span>
+              <span style="color: #5b7279;">Interpretive conclusions drawn from the observable evidence. These explain <i>why</i> the evidence maps to the score.</span>
             </td>
           </tr>
         </table>
 
-        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 10px;">
-          The <b style="color: #c9c9c9;">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts
+        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">
+          The <b style="color: #98a8a8;">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts
           to total evidence items. A high ratio means the evaluation is well-grounded in verifiable observations;
           a low ratio means more interpretive weight. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7; font-size: var(--font-xs);">Fair Witness</span>
           on any item page to switch between the standard view and a stripped-down view showing only the evidence breakdown.
         </p>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Story-Level Labels</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Story-Level Labels</p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
           Each evaluation generates three story-level labels that provide a quick overview:
         </p>
 
         <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
           <tr>
-            <td><span class="badge" style="background: rgba(99,102,241,0.15); color: #818cf8;">Theme Tag</span></td>
-            <td style="color: #828282; padding-left: 6px;">Dominant human rights theme (e.g., "Privacy & Surveillance", "Free Expression")</td>
+            <td><span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1;">Theme Tag</span></td>
+            <td style="color: #5b7279; padding-left: 6px;">Dominant human rights theme (e.g., "Privacy & Surveillance", "Free Expression")</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee;">Sentiment</span></td>
-            <td style="color: #828282; padding-left: 6px;">Overall disposition: Champions, Advocates, Acknowledges, Neutral, Neglects, Undermines, Hostile</td>
+            <td style="color: #5b7279; padding-left: 6px;">Overall disposition: Champions, Advocates, Acknowledges, Neutral, Neglects, Undermines, Hostile</td>
           </tr>
           <tr>
-            <td><span class="badge" style="background: rgba(107,114,128,0.15); color: #888;">Summary</span></td>
-            <td style="color: #828282; padding-left: 6px;">2-3 sentence narrative summary in Fair Witness style</td>
+            <td><span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279;">Summary</span></td>
+            <td style="color: #5b7279; padding-left: 6px;">2-3 sentence narrative summary in Fair Witness style</td>
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Supplementary Signals</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Supplementary Signals</p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
           Nine supplementary signals capture <i>how</i> content communicates, orthogonal to HRCB which measures
           <i>directional lean</i>. These are grounded in established psychometric and information quality frameworks.
         </p>
@@ -156,54 +156,54 @@ import Base from '../layouts/Base.astro';
         <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;" width="100%">
           <tr>
             <td><span class="badge" style="background: rgba(245,158,11,0.15); color: #f59e0b;">EQ</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px; width: 140px;">Epistemic Quality</td>
-            <td style="color: #828282; padding-left: 6px;">Source quality, evidence reasoning, uncertainty handling, purpose transparency. Based on the CRAAP Test framework from library science.</td>
+            <td style="color: #98a8a8; padding-left: 6px; width: 140px;">Epistemic Quality</td>
+            <td style="color: #5b7279; padding-left: 6px;">Source quality, evidence reasoning, uncertainty handling, purpose transparency. Based on the CRAAP Test framework from library science.</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(220,38,38,0.15); color: #dc2626;">PT</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Propaganda Flags</td>
-            <td style="color: #828282; padding-left: 6px;">Detects 18 propaganda techniques (loaded language, strawman, whataboutism, etc.). Based on Da San Martino et al. (2019) PTC-18 corpus.</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Propaganda Flags</td>
+            <td style="color: #5b7279; padding-left: 6px;">Detects 18 propaganda techniques (loaded language, strawman, whataboutism, etc.). Based on Da San Martino et al. (2019) PTC-18 corpus.</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">SO</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Solution Orientation</td>
-            <td style="color: #828282; padding-left: 6px;">Problem-only vs solution-oriented framing, reader agency score.</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Solution Orientation</td>
+            <td style="color: #5b7279; padding-left: 6px;">Problem-only vs solution-oriented framing, reader agency score.</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7;">ET</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Emotional Tone</td>
-            <td style="color: #828282; padding-left: 6px;">Primary tone label + valence/arousal/dominance dimensions. Based on Russell's Circumplex Model of Affect.</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Emotional Tone</td>
+            <td style="color: #5b7279; padding-left: 6px;">Primary tone label + valence/arousal/dominance dimensions. Based on Russell's Circumplex Model of Affect.</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">SR</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Stakeholder Voice</td>
-            <td style="color: #828282; padding-left: 6px;">Who speaks vs who is spoken about, perspective count, voice balance. Power-axis taxonomy aligned with UDHR rights-holder/duty-bearer framework.</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Stakeholder Voice</td>
+            <td style="color: #5b7279; padding-left: 6px;">Who speaks vs who is spoken about, perspective count, voice balance. Power-axis taxonomy aligned with UDHR rights-holder/duty-bearer framework.</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">TF</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Temporal Framing</td>
-            <td style="color: #828282; padding-left: 6px;">Retrospective, present, or prospective focus; time horizon from immediate to long-term.</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Temporal Framing</td>
+            <td style="color: #5b7279; padding-left: 6px;">Retrospective, present, or prospective focus; time horizon from immediate to long-term.</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">GS</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Geographic Scope</td>
-            <td style="color: #828282; padding-left: 6px;">Local, national, regional, or global scope with specific regions mentioned.</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Geographic Scope</td>
+            <td style="color: #5b7279; padding-left: 6px;">Local, national, regional, or global scope with specific regions mentioned.</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308;">CL</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Complexity Level</td>
-            <td style="color: #828282; padding-left: 6px;">Reading level, jargon density, and assumed knowledge requirements.</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Complexity Level</td>
+            <td style="color: #5b7279; padding-left: 6px;">Reading level, jargon density, and assumed knowledge requirements.</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">TD</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Transparency</td>
-            <td style="color: #828282; padding-left: 6px;">Author identified, conflicts disclosed, funding disclosed.</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Transparency</td>
+            <td style="color: #5b7279; padding-left: 6px;">Author identified, conflicts disclosed, funding disclosed.</td>
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Domain Signal Profiles (Factions)</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Domain Signal Profiles (Factions)</p>
 
-        <p style="font-size: var(--font-base); color: #828282; margin-bottom: 10px;">
+        <p style="font-size: var(--font-base); color: #5b7279; margin-bottom: 10px;">
           The <a href="/factions" style="color: #60a5fa;">Factions page</a> clusters domains by <em>editorial character</em>
           &mdash; how they cover topics, not just what they score. Instead of using the 31-dimension UDHR fingerprint,
           it clusters on 8 normalized supplementary signal dimensions:
@@ -211,24 +211,24 @@ import Base from '../layouts/Base.astro';
 
         <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
           <tr>
-            <td style="color: #60a5fa;">EQ</td><td style="color: #828282;">Epistemic Quality</td>
-            <td style="color: #a78bfa;">SR</td><td style="color: #828282;">Stakeholder Representation</td>
+            <td style="color: #60a5fa;">EQ</td><td style="color: #5b7279;">Epistemic Quality</td>
+            <td style="color: #a78bfa;">SR</td><td style="color: #5b7279;">Stakeholder Representation</td>
           </tr>
           <tr>
-            <td style="color: #4ade80;">SO</td><td style="color: #828282;">Solution Orientation</td>
-            <td style="color: #34d399;">TD</td><td style="color: #828282;">Transparency & Disclosure</td>
+            <td style="color: #4ade80;">SO</td><td style="color: #5b7279;">Solution Orientation</td>
+            <td style="color: #34d399;">TD</td><td style="color: #5b7279;">Transparency & Disclosure</td>
           </tr>
           <tr>
-            <td style="color: #f87171;">PT</td><td style="color: #828282;">Propaganda (inverted)</td>
-            <td style="color: #fb923c;">AR</td><td style="color: #828282;">Arousal</td>
+            <td style="color: #f87171;">PT</td><td style="color: #5b7279;">Propaganda (inverted)</td>
+            <td style="color: #fb923c;">AR</td><td style="color: #5b7279;">Arousal</td>
           </tr>
           <tr>
-            <td style="color: #fbbf24;">VA</td><td style="color: #828282;">Valence</td>
-            <td style="color: #22d3ee;">FW</td><td style="color: #828282;">Fair Witness ratio</td>
+            <td style="color: #fbbf24;">VA</td><td style="color: #5b7279;">Valence</td>
+            <td style="color: #22d3ee;">FW</td><td style="color: #5b7279;">Fair Witness ratio</td>
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #828282; margin-bottom: 10px;">
+        <p style="font-size: var(--font-base); color: #5b7279; margin-bottom: 10px;">
           Each dimension is z-normalized (zero mean, unit variance) across all domains with 3+ evaluations.
           Missing values are imputed as 0 (population mean). Cosine similarity on the resulting 8D vectors
           measures editorial character similarity. Domains are then clustered using agglomerative hierarchical
@@ -238,149 +238,149 @@ import Base from '../layouts/Base.astro';
         <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
           <tr>
             <td style="color: #a78bfa; font-family: var(--font-mono);">Faction</td>
-            <td style="color: #828282;">sim &ge; 1/&#x3C6; (0.618) &mdash; core editorial alignment</td>
+            <td style="color: #5b7279;">sim &ge; 1/&#x3C6; (0.618) &mdash; core editorial alignment</td>
           </tr>
           <tr>
             <td style="color: #34d399; font-family: var(--font-mono);">Alliance</td>
-            <td style="color: #828282;">sim &ge; 1/&#x3C6;&sup2; (0.382) &mdash; sympathetic but distinct</td>
+            <td style="color: #5b7279;">sim &ge; 1/&#x3C6;&sup2; (0.382) &mdash; sympathetic but distinct</td>
           </tr>
           <tr>
             <td style="color: #fbbf24; font-family: var(--font-mono);">Acquaintance</td>
-            <td style="color: #828282;">sim &ge; 1/&#x3C6;&sup3; (0.236) &mdash; occasional overlap</td>
+            <td style="color: #5b7279;">sim &ge; 1/&#x3C6;&sup3; (0.236) &mdash; occasional overlap</td>
           </tr>
           <tr>
-            <td style="color: #555; font-family: var(--font-mono);">Neutral</td>
-            <td style="color: #828282;">sim &ge; 0 &mdash; no meaningful relationship</td>
+            <td style="color: #5b7279; font-family: var(--font-mono);">Neutral</td>
+            <td style="color: #5b7279;">sim &ge; 0 &mdash; no meaningful relationship</td>
           </tr>
           <tr>
             <td style="color: #f87171; font-family: var(--font-mono);">Rival</td>
-            <td style="color: #828282;">sim &lt; 0 &mdash; oppositional editorial profiles</td>
+            <td style="color: #5b7279;">sim &lt; 0 &mdash; oppositional editorial profiles</td>
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #828282; margin-bottom: 10px;">
+        <p style="font-size: var(--font-base); color: #5b7279; margin-bottom: 10px;">
           Clusters are named using ~22 pattern rules that map signal combinations to descriptive archetypes
           (e.g., high EQ + high TD + low PT &rarr; "Rigorous Analysts", many low signals &rarr; "Minimalist Wire").
           When no named pattern matches, clusters get readable descriptive names based on their strongest
           high/low markers (e.g., "High EQ/FW" or "Low AR/PT").
         </p>
 
-        <p style="font-size: var(--font-base); color: #828282; margin-bottom: 10px;">
+        <p style="font-size: var(--font-base); color: #5b7279; margin-bottom: 10px;">
           The page flows from terrain to clusters to relationships:
         </p>
 
         <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
           <tr>
-            <td style="color: #c9c9c9; white-space: nowrap;">Signal Landscape</td>
-            <td style="color: #828282;">2&times;4 histogram grid showing how domains distribute across each dimension. Colored vertical lines mark cluster centroids.</td>
+            <td style="color: #98a8a8; white-space: nowrap;">Signal Landscape</td>
+            <td style="color: #5b7279;">2&times;4 histogram grid showing how domains distribute across each dimension. Colored vertical lines mark cluster centroids.</td>
           </tr>
           <tr>
-            <td style="color: #c9c9c9; white-space: nowrap;">Parallel Coordinates</td>
-            <td style="color: #828282;">Each domain drawn as a polyline across 8 vertical axes. Bundled lines = agreement, crossing lines = divergence. Thick lines show cluster centroids.</td>
+            <td style="color: #98a8a8; white-space: nowrap;">Parallel Coordinates</td>
+            <td style="color: #5b7279;">Each domain drawn as a polyline across 8 vertical axes. Bundled lines = agreement, crossing lines = divergence. Thick lines show cluster centroids.</td>
           </tr>
           <tr>
-            <td style="color: #c9c9c9; white-space: nowrap;">Differentiation</td>
-            <td style="color: #828282;">Inter-cluster variance per signal dimension &mdash; which signals separate clusters most.</td>
+            <td style="color: #98a8a8; white-space: nowrap;">Differentiation</td>
+            <td style="color: #5b7279;">Inter-cluster variance per signal dimension &mdash; which signals separate clusters most.</td>
           </tr>
           <tr>
-            <td style="color: #c9c9c9; white-space: nowrap;">Cluster Cards</td>
-            <td style="color: #828282;">Per-cluster detail: archetype name, 8-axis radar chart (vs population median), key characteristics, member domains, liminal members.</td>
+            <td style="color: #98a8a8; white-space: nowrap;">Cluster Cards</td>
+            <td style="color: #5b7279;">Per-cluster detail: archetype name, 8-axis radar chart (vs population median), key characteristics, member domains, liminal members.</td>
           </tr>
           <tr>
-            <td style="color: #c9c9c9; white-space: nowrap;">Affinity Matrix</td>
-            <td style="color: #828282;">N&times;N heatmap of cosine similarity between cluster centroids with golden ratio tier labels.</td>
+            <td style="color: #98a8a8; white-space: nowrap;">Affinity Matrix</td>
+            <td style="color: #5b7279;">N&times;N heatmap of cosine similarity between cluster centroids with golden ratio tier labels.</td>
           </tr>
           <tr>
-            <td style="color: #c9c9c9; white-space: nowrap;">Interesting Pairs</td>
-            <td style="color: #828282;">Cross-cluster harmony (similar domains in different clusters) and intra-cluster tension (divergent members within a cluster).</td>
+            <td style="color: #98a8a8; white-space: nowrap;">Interesting Pairs</td>
+            <td style="color: #5b7279;">Cross-cluster harmony (similar domains in different clusters) and intra-cluster tension (divergent members within a cluster).</td>
           </tr>
           <tr>
-            <td style="color: #c9c9c9; white-space: nowrap;">Outliers</td>
-            <td style="color: #828282;">Unaligned domains sorted by outlier score (mean distance to all cluster centroids), with nearest cluster and key distinguishing signal.</td>
+            <td style="color: #98a8a8; white-space: nowrap;">Outliers</td>
+            <td style="color: #5b7279;">Unaligned domains sorted by outlier score (mean distance to all cluster centroids), with nearest cluster and key distinguishing signal.</td>
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
 
         <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
           <tr>
-            <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
-              <b style="color: #828282;">No Data</b><br>
-              <span style="color: #828282;">No relevant content for this UDHR article. The topic is simply absent.</span>
+            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+              <b style="color: #5b7279;">No Data</b><br>
+              <span style="color: #5b7279;">No relevant content for this UDHR article. The topic is simply absent.</span>
             </td>
             <td width="5px"></td>
-            <td width="50%" valign="top" style="background: #12121a; border: 1px solid #222230; border-radius: 4px; padding: 8px;">
-              <b style="color: #c9c9c9;">0.0 (Neutral)</b><br>
-              <span style="color: #828282;">Relevant content exists but has balanced signals, netting to zero.</span>
+            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+              <b style="color: #98a8a8;">0.0 (Neutral)</b><br>
+              <span style="color: #5b7279;">Relevant content exists but has balanced signals, netting to zero.</span>
             </td>
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Domain Context Profile (DCP)</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Domain Context Profile (DCP)</p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 10px;">
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
           Eight domain-level elements provide context modifiers:
         </p>
 
         <table cellpadding="3" cellspacing="2" style="font-size: var(--font-sm); margin-bottom: 15px;">
           <tr>
             {['Privacy', 'ToS', 'Accessibility', 'Mission'].map((el) => (
-              <td style="background: #12121a; border: 1px solid #222230; border-radius: 3px; padding: 4px 8px; color: #c9c9c9; text-align: center;">{el}</td>
+              <td style="background: #093946; border: 1px solid #1a5568; border-radius: 3px; padding: 4px 8px; color: #98a8a8; text-align: center;">{el}</td>
             ))}
           </tr>
           <tr>
             {['Editorial Code', 'Ownership', 'Access Model', 'Ad/Tracking'].map((el) => (
-              <td style="background: #12121a; border: 1px solid #222230; border-radius: 3px; padding: 4px 8px; color: #c9c9c9; text-align: center;">{el}</td>
+              <td style="background: #093946; border: 1px solid #1a5568; border-radius: 3px; padding: 4px 8px; color: #98a8a8; text-align: center;">{el}</td>
             ))}
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Evidence Strength & Confidence</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Evidence Strength & Confidence</p>
 
         <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 10px;">
           <tr>
             <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">High</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Direct, explicit content with strong sourcing (max score 1.0)</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Direct, explicit content with strong sourcing (max score 1.0)</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(234,179,8,0.2); color: #eab308;">Medium</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Clear signal but may be secondary (max score 0.7)</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Clear signal but may be secondary (max score 0.7)</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(107,114,128,0.2); color: #6b7280;">Low</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Tangential, indirect, or weakly sourced (max score 0.4)</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Tangential, indirect, or weakly sourced (max score 0.4)</td>
           </tr>
         </table>
 
-        <p style="color: #828282; font-size: var(--font-sm); margin-bottom: 15px;">
-          <b style="color: #c9c9c9;">Confidence</b> is an evidence-weighted aggregate across all 31 provisions:
+        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
+          <b style="color: #98a8a8;">Confidence</b> is an evidence-weighted aggregate across all 31 provisions:
           H=1.0, M=0.6, L=0.2, ND=0.0. Higher confidence means more provisions had strong evidence.
         </p>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Directionality Markers</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Directionality Markers</p>
 
         <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
           <tr>
-            <td><span class="badge" style="background: rgba(129,140,248,0.2); color: #818cf8;">Advocacy</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Explicitly argues for or against a right</td>
+            <td><span class="badge" style="background: rgba(129,140,248,0.2); color: #7d80d1;">Advocacy</span></td>
+            <td style="color: #98a8a8; padding-left: 6px;">Explicitly argues for or against a right</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(34,211,238,0.2); color: #22d3ee;">Practice</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Site infrastructure reflects a rights stance</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Site infrastructure reflects a rights stance</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(167,139,250,0.2); color: #a78bfa;">Framing</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Presents issues in a rights-aligned or rights-opposed frame</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Presents issues in a rights-aligned or rights-opposed frame</td>
           </tr>
           <tr>
             <td><span class="badge" style="background: rgba(251,146,60,0.2); color: #fb923c;">Coverage</span></td>
-            <td style="color: #c9c9c9; padding-left: 6px;">Factual content relevant to human rights topics</td>
+            <td style="color: #98a8a8; padding-left: 6px;">Factual content relevant to human rights topics</td>
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">How Evaluations Work</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">How Evaluations Work</p>
 
-        <ol style="color: #828282; line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
+        <ol style="color: #5b7279; line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
           <li>A URL from HN's top 7 pages (plus top best/ask/show) is fetched as the unit of analysis (other stories can be manually triggered)</li>
           <li>The page's content type is classified (Editorial, Community, HR, etc.)</li>
           <li>Channel weights are assigned based on content type</li>
@@ -393,7 +393,7 @@ import Base from '../layouts/Base.astro';
           <li>A final classification is assigned (Strong positive to Strong negative)</li>
         </ol>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Version History</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Version History</p>
 
         <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
           {[
@@ -408,39 +408,39 @@ import Base from '../layouts/Base.astro';
           ].map(({ v, desc }) => (
             <tr>
               <td>
-                <span class="badge" style={v === 'v3.7' ? 'background: rgba(255,102,0,0.2); color: #ff6600;' : 'background: #1a1a25; color: #828282;'}>
+                <span class="badge" style={v === 'v3.7' ? 'background: rgba(255,102,0,0.2); color: #d56500;' : 'background: #0d4655; color: #5b7279;'}>
                   {v}
                 </span>
               </td>
-              <td style="color: #828282; padding-left: 6px;">{desc}</td>
+              <td style="color: #5b7279; padding-left: 6px;">{desc}</td>
             </tr>
           ))}
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">Technical Details</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Technical Details</p>
 
-        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); background: #12121a; border: 1px solid #222230; border-radius: 4px; margin-bottom: 15px;" width="100%">
+        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); background: #093946; border: 1px solid #1a5568; border-radius: 4px; margin-bottom: 15px;" width="100%">
           <tr>
-            <td style="color: #828282;" class="score-font">Schema</td><td style="color: #c9c9c9;" class="score-font">3.7</td>
-            <td style="color: #828282;" class="score-font">Framework</td><td style="color: #c9c9c9;" class="score-font">Astro + CF Pages</td>
+            <td style="color: #5b7279;" class="score-font">Schema</td><td style="color: #98a8a8;" class="score-font">3.7</td>
+            <td style="color: #5b7279;" class="score-font">Framework</td><td style="color: #98a8a8;" class="score-font">Astro + CF Pages</td>
           </tr>
           <tr>
-            <td style="color: #828282;" class="score-font">Evaluator</td><td style="color: #c9c9c9;" class="score-font">Claude Haiku 4.5</td>
-            <td style="color: #828282;" class="score-font">Database</td><td style="color: #c9c9c9;" class="score-font">Cloudflare D1</td>
+            <td style="color: #5b7279;" class="score-font">Evaluator</td><td style="color: #98a8a8;" class="score-font">Claude Haiku 4.5</td>
+            <td style="color: #5b7279;" class="score-font">Database</td><td style="color: #98a8a8;" class="score-font">Cloudflare D1</td>
           </tr>
           <tr>
-            <td style="color: #828282;" class="score-font">Cron</td><td style="color: #c9c9c9;" class="score-font">Every 5 min (6 HN lists, top 7 pages)</td>
-            <td style="color: #828282;" class="score-font">Cache</td><td style="color: #c9c9c9;" class="score-font">KV (content + DCP)</td>
+            <td style="color: #5b7279;" class="score-font">Cron</td><td style="color: #98a8a8;" class="score-font">Every 5 min (6 HN lists, top 7 pages)</td>
+            <td style="color: #5b7279;" class="score-font">Cache</td><td style="color: #98a8a8;" class="score-font">KV (content + DCP)</td>
           </tr>
           <tr>
-            <td style="color: #828282;" class="score-font">Queue</td><td style="color: #c9c9c9;" class="score-font">CF Queues (fan-out)</td>
-            <td style="color: #828282;" class="score-font">Storage</td><td style="color: #c9c9c9;" class="score-font">R2 (content snapshots)</td>
+            <td style="color: #5b7279;" class="score-font">Queue</td><td style="color: #98a8a8;" class="score-font">CF Queues (fan-out)</td>
+            <td style="color: #5b7279;" class="score-font">Storage</td><td style="color: #98a8a8;" class="score-font">R2 (content snapshots)</td>
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #c9c9c9; font-weight: bold; margin: 20px 0 8px 0;">The Universal Declaration of Human Rights</p>
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">The Universal Declaration of Human Rights</p>
 
-        <p style="color: #c9c9c9; line-height: 1.6; margin-bottom: 15px;">
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 15px;">
           Adopted by the United Nations General Assembly on 10 December 1948 (Resolution 217 A),
           the UDHR is a milestone document in the history of human rights. It has been translated
           into over 500 languages. The Declaration consists of a Preamble and 30 Articles covering civil, political,

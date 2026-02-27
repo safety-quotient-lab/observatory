@@ -332,7 +332,7 @@ function assignArchetype(centroidRaw: number[]): { name: string; archetype: stri
 
   const primaryCode = hiMarkers[0] || loMarkers[0] || null;
   const dim = primaryCode ? SIGNAL_DIMS.find(d => d.code === primaryCode) : null;
-  return { name: profileName, archetype, description, icon, color: dim?.color || '#818cf8' };
+  return { name: profileName, archetype, description, icon, color: dim?.color || '#7d80d1' };
 }
 
 function generateInsight(centroidRaw: number[], archName: string): string {
@@ -446,7 +446,7 @@ for (const cl of enrichedClusters) {
 
 // --- 9. Parallel coordinates data ---
 // Cluster color map (assign distinct colors)
-const CLUSTER_COLORS = ['#a78bfa', '#34d399', '#60a5fa', '#fb923c', '#f87171', '#fbbf24', '#22d3ee', '#e879f9', '#818cf8', '#4ade80'];
+const CLUSTER_COLORS = ['#a78bfa', '#34d399', '#60a5fa', '#fb923c', '#f87171', '#fbbf24', '#22d3ee', '#e879f9', '#7d80d1', '#4ade80'];
 
 for (let i = 0; i < enrichedClusters.length; i++) {
   enrichedClusters[i].color = CLUSTER_COLORS[i % CLUSTER_COLORS.length];
@@ -498,7 +498,7 @@ for (const domain of loneWolfDomains) {
   const vec = rawVectors.get(domain);
   if (!vec) continue;
   const pts = vec.map((v, i) => `${pcAxisX(i)},${pcValY(isNaN(v) ? means[i] : v, i)}`).join(' ');
-  pcLines.push({ domain, color: '#555', opacity: 0.25, points: pts, clusterName: null });
+  pcLines.push({ domain, color: '#5b7279', opacity: 0.25, points: pts, clusterName: null });
 }
 for (const cl of enrichedClusters) {
   for (const m of cl.members) {
@@ -549,7 +549,7 @@ function affinityColor(sim: number): string {
   if (sim >= factionThreshold) return '#34d399';
   if (sim >= allianceThreshold) return '#4ade80';
   if (sim >= acquaintanceThreshold) return '#fbbf24';
-  if (sim >= 0) return '#333';
+  if (sim >= 0) return '#0d4655';
   return '#f87171';
 }
 
@@ -619,7 +619,7 @@ function buildCoreHistograms(): SignalHistogram[] {
   const vals = [...signalProfiles.values()];
   const coreExtractors: { code: string; fullLabel: string; color: string; fn: (p: DomainSignalProfile) => number | null }[] = [
     { code: 'HRCB', fullLabel: 'HRCB Score', color: '#e879f9', fn: p => p.avg_hrcb },
-    { code: 'E', fullLabel: 'Editorial Channel', color: '#818cf8', fn: p => p.avg_editorial },
+    { code: 'E', fullLabel: 'Editorial Channel', color: '#7d80d1', fn: p => p.avg_editorial },
     { code: 'S', fullLabel: 'Structural Channel', color: '#38bdf8', fn: p => p.avg_structural },
     { code: 'CONF', fullLabel: 'Confidence', color: '#a3e635', fn: p => p.avg_confidence },
     { code: 'SETL', fullLabel: 'Structural-Editorial Tension', color: '#fb7185', fn: p => p.avg_setl },
@@ -737,7 +737,7 @@ function tierLabel(sim: number): { label: string; color: string } {
   if (sim >= factionThreshold) return { label: 'Faction', color: '#a78bfa' };
   if (sim >= allianceThreshold) return { label: 'Alliance', color: '#34d399' };
   if (sim >= acquaintanceThreshold) return { label: 'Acquaintance', color: '#fbbf24' };
-  if (sim >= 0) return { label: 'Neutral', color: '#555' };
+  if (sim >= 0) return { label: 'Neutral', color: '#5b7279' };
   return { label: 'Rival', color: '#f87171' };
 }
 ---
@@ -748,14 +748,14 @@ function tierLabel(sim: number): { label: string; color: string } {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Domain Factions</span>
-        <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Domain Factions</span>
+        <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-sm);">
           signal-profile clustering
         </span>
       </td>
     </tr>
     <tr>
-      <td style="color: #666; font-size: var(--font-xs); padding: 4px 0 8px 0; line-height: 1.5;">
+      <td style="color: #5b7279; font-size: var(--font-xs); padding: 4px 0 8px 0; line-height: 1.5;">
         Domains grouped by <em>editorial character</em> &mdash; how they cover topics, not just what they score.
         Signal landscape shows 13 dimensions: 5 core (HRCB, editorial, structural, confidence, SETL) and
         8 editorial character signals. Clustering uses the 8 editorial dimensions with cosine similarity
@@ -767,7 +767,7 @@ function tierLabel(sim: number): { label: string; color: string } {
   {totalDomains < 5 ? (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 20px; background: #12121a; border: 1px solid #222230; border-radius: 6px; color: #888; text-align: center;">
+        <td style="padding: 20px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; color: #5b7279; text-align: center;">
           Not enough evaluated domains for signal-profile clustering. At least 5 domains with 3+ evaluations are needed ({totalDomains} available).
         </td>
       </tr>
@@ -777,16 +777,16 @@ function tierLabel(sim: number): { label: string; color: string } {
       {/* === Section 1: Signal Distributions === */}
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
         <tr>
-          <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+          <td style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
               Signal Landscape
-              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
                 how {signalProfiles.size} domains distribute across core and editorial dimensions · colored lines mark cluster centroids
               </span>
             </div>
 
             {/* Core signals: HRCB, Editorial, Structural, Confidence, SETL */}
-            <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px; margin-bottom: 4px;">
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px; margin-bottom: 4px;">
               Core Signals
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
@@ -799,10 +799,10 @@ function tierLabel(sim: number): { label: string; color: string } {
                 const range = h.max - h.min || 1;
                 const toX = (v: number) => ((v - h.min) / range) * chartW;
                 return (
-                  <div style="background: #0d0d14; border: 1px solid #1a1a25; border-radius: 4px; padding: 6px 8px;">
+                  <div style="background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 6px 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                       <span style={`color: ${h.color}; font-size: var(--font-xs); font-weight: bold;`}>{h.code}</span>
-                      <span style="color: #555; font-size: 9px;">{h.fullLabel}</span>
+                      <span style="color: #5b7279; font-size: 9px;">{h.fullLabel}</span>
                     </div>
                     <svg width={chartW + 10} height={chartH + 16} viewBox={`0 0 ${chartW + 10} ${chartH + 16}`} style="display: block;">
                       {h.bins.map((bin, bi) => {
@@ -822,8 +822,8 @@ function tierLabel(sim: number): { label: string; color: string } {
                           </line>
                         );
                       })}
-                      <text x="5" y={chartH + 11} fill="#444" font-size="7" font-family="monospace">{h.min.toFixed(2)}</text>
-                      <text x={5 + chartW} y={chartH + 11} fill="#444" font-size="7" font-family="monospace" text-anchor="end">{h.max.toFixed(2)}</text>
+                      <text x="5" y={chartH + 11} fill="#1a5568" font-size="7" font-family="monospace">{h.min.toFixed(2)}</text>
+                      <text x={5 + chartW} y={chartH + 11} fill="#1a5568" font-size="7" font-family="monospace" text-anchor="end">{h.max.toFixed(2)}</text>
                     </svg>
                   </div>
                 );
@@ -831,8 +831,8 @@ function tierLabel(sim: number): { label: string; color: string } {
             </div>
 
             {/* Editorial signal dimensions */}
-            <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 10px; margin-bottom: 4px;">
-              Editorial Character <span style="text-transform: none; letter-spacing: 0; color: #444;">(used for clustering)</span>
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 10px; margin-bottom: 4px;">
+              Editorial Character <span style="text-transform: none; letter-spacing: 0; color: #1a5568;">(used for clustering)</span>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
               {histograms.map(h => {
@@ -844,10 +844,10 @@ function tierLabel(sim: number): { label: string; color: string } {
                 const range = h.max - h.min || 1;
                 const toX = (v: number) => ((v - h.min) / range) * chartW;
                 return (
-                  <div style="background: #0d0d14; border: 1px solid #1a1a25; border-radius: 4px; padding: 6px 8px;">
+                  <div style="background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 6px 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
                       <span style={`color: ${h.color}; font-size: var(--font-xs); font-weight: bold;`}>{h.code}</span>
-                      <span style="color: #555; font-size: 9px;">{h.fullLabel}</span>
+                      <span style="color: #5b7279; font-size: 9px;">{h.fullLabel}</span>
                     </div>
                     <svg width={chartW + 10} height={chartH + 16} viewBox={`0 0 ${chartW + 10} ${chartH + 16}`} style="display: block;">
                       {h.bins.map((bin, bi) => {
@@ -867,14 +867,14 @@ function tierLabel(sim: number): { label: string; color: string } {
                           </line>
                         );
                       })}
-                      <text x="5" y={chartH + 11} fill="#444" font-size="7" font-family="monospace">{h.min.toFixed(2)}</text>
-                      <text x={5 + chartW} y={chartH + 11} fill="#444" font-size="7" font-family="monospace" text-anchor="end">{h.max.toFixed(2)}</text>
+                      <text x="5" y={chartH + 11} fill="#1a5568" font-size="7" font-family="monospace">{h.min.toFixed(2)}</text>
+                      <text x={5 + chartW} y={chartH + 11} fill="#1a5568" font-size="7" font-family="monospace" text-anchor="end">{h.max.toFixed(2)}</text>
                     </svg>
                   </div>
                 );
               })}
             </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: var(--font-xs); color: #555;">
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: var(--font-xs); color: #5b7279;">
               <span>Colored lines = cluster centroids</span>
               {enrichedClusters.map(cl => (
                 <span style={`display: inline-flex; align-items: center; gap: 3px;`}>
@@ -890,32 +890,32 @@ function tierLabel(sim: number): { label: string; color: string } {
       {/* === Section 2: Landscape Overview === */}
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
         <tr>
-          <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          <td style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
               Landscape Overview
-              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
                 parallel coordinates &mdash; each line is a domain across 8 signal dimensions
               </span>
             </div>
 
             {/* Stat badges */}
             <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
-              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
+              <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
                 {totalClusters} clusters
               </span>
-              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #60a5fa;">
+              <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #60a5fa;">
                 {totalDomains} domains
               </span>
-              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #888;">
+              <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #5b7279;">
                 {unalignedCount} unaligned
               </span>
               {mostDiff && (
-                <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #666;">
+                <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #5b7279;">
                   Most differentiating: <span style={`color: ${mostDiff.color};`}>{mostDiff.code}</span>
                 </span>
               )}
               {leastDiff && (
-                <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #666;">
+                <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #5b7279;">
                   Least differentiating: <span style={`color: ${leastDiff.color};`}>{leastDiff.code}</span>
                 </span>
               )}
@@ -943,10 +943,10 @@ function tierLabel(sim: number): { label: string; color: string } {
                       {dim.code}
                     </text>
                     {/* Min/max tick labels */}
-                    <text x={x} y={pcPadT - 6} fill="#444" font-size="7" font-family="monospace" text-anchor="middle">
+                    <text x={x} y={pcPadT - 6} fill="#1a5568" font-size="7" font-family="monospace" text-anchor="middle">
                       {pcDimMaxs[i].toFixed(2)}
                     </text>
-                    <text x={x} y={pcPadT + pcInnerH + 28} fill="#444" font-size="7" font-family="monospace" text-anchor="middle">
+                    <text x={x} y={pcPadT + pcInnerH + 28} fill="#1a5568" font-size="7" font-family="monospace" text-anchor="middle">
                       {pcDimMins[i].toFixed(2)}
                     </text>
                   </g>
@@ -1000,24 +1000,24 @@ function tierLabel(sim: number): { label: string; color: string } {
               ))}
               {unalignedCount > 0 && (
                 <span style="display: inline-flex; align-items: center; gap: 3px; font-size: var(--font-xs);">
-                  <span style="display: inline-block; width: 12px; height: 1px; background: #555;"></span>
-                  <span style="color: #555;">Unaligned</span>
+                  <span style="display: inline-block; width: 12px; height: 1px; background: #5b7279;"></span>
+                  <span style="color: #5b7279;">Unaligned</span>
                 </span>
               )}
-              <span style="font-size: var(--font-xs); color: #444; margin-left: 8px;">
+              <span style="font-size: var(--font-xs); color: #1a5568; margin-left: 8px;">
                 Thick lines = cluster centroids · Thin lines = individual domains · Bundled = agreement · Crossing = divergence
               </span>
             </div>
 
             {/* Threshold badges */}
             <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
-              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
+              <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #a78bfa;">
                 Faction &ge; 1/&#x3C6; ({factionThreshold.toFixed(3)})
               </span>
-              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #34d399;">
+              <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #34d399;">
                 Alliance &ge; 1/&#x3C6;&sup2; ({allianceThreshold.toFixed(3)})
               </span>
-              <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #fbbf24;">
+              <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: #fbbf24;">
                 Acquaintance &ge; 1/&#x3C6;&sup3; ({acquaintanceThreshold.toFixed(3)})
               </span>
             </div>
@@ -1029,10 +1029,10 @@ function tierLabel(sim: number): { label: string; color: string } {
       {enrichedClusters.length > 1 && (
         <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
           <tr>
-            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+            <td style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+              <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
                 What Drives Differentiation
-                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
                   inter-cluster variance per signal dimension
                 </span>
               </div>
@@ -1042,12 +1042,12 @@ function tierLabel(sim: number): { label: string; color: string } {
                   const y = i * 28 + 5;
                   return (
                     <g>
-                      <text x="70" y={y + 14} fill="#888" font-size="10" font-family="monospace" text-anchor="end">{v.code}</text>
-                      <rect x="80" y={y + 2} width={350} height="16" rx="2" fill="#1a1a25" />
+                      <text x="70" y={y + 14} fill="#5b7279" font-size="10" font-family="monospace" text-anchor="end">{v.code}</text>
+                      <rect x="80" y={y + 2} width={350} height="16" rx="2" fill="#0d4655" />
                       <rect x="80" y={y + 2} width={Math.max(barW, 2)} height="16" rx="2" fill={v.color} opacity="0.8">
                         <title>{v.label}: variance {v.variance.toFixed(3)}</title>
                       </rect>
-                      <text x={85 + barW} y={y + 14} fill="#666" font-size="9" font-family="monospace">{v.variance.toFixed(3)}</text>
+                      <text x={85 + barW} y={y + 14} fill="#5b7279" font-size="9" font-family="monospace">{v.variance.toFixed(3)}</text>
                     </g>
                   );
                 })}
@@ -1094,12 +1094,12 @@ function tierLabel(sim: number): { label: string; color: string } {
         return (
           <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
             <tr>
-              <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+              <td style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
                 {/* Header */}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                   <span style={`color: ${cl.color}; font-weight: bold; font-size: var(--font-sm);`}>
                     {cl.name}
-                    <span style="color: #888; font-weight: normal; margin-left: 8px; font-size: var(--font-xs);">
+                    <span style="color: #5b7279; font-weight: normal; margin-left: 8px; font-size: var(--font-xs);">
                       {cl.members.length} domains
                     </span>
                   </span>
@@ -1113,11 +1113,11 @@ function tierLabel(sim: number): { label: string; color: string } {
                 {/* Archetype + description */}
                 {cl.archetype && (
                   <div style="margin-bottom: 4px;">
-                    <span style="color: #888; font-size: var(--font-xs); font-style: italic;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); font-style: italic;">
                       {cl.icon} {cl.archetype}
                     </span>
                     {cl.description && (
-                      <span style="color: #555; font-size: var(--font-xs); margin-left: 6px;">
+                      <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 6px;">
                         &mdash; {cl.description}
                       </span>
                     )}
@@ -1125,7 +1125,7 @@ function tierLabel(sim: number): { label: string; color: string } {
                 )}
 
                 {/* Insight */}
-                <div style="color: #888; font-size: var(--font-xs); margin-bottom: 8px; line-height: 1.4;">
+                <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 8px; line-height: 1.4;">
                   {cl.insight}
                 </div>
 
@@ -1157,45 +1157,45 @@ function tierLabel(sim: number): { label: string; color: string } {
                       })}
 
                       {/* Population median polygon */}
-                      <polygon points={medianPoly} fill="none" stroke="#555" stroke-width="1" stroke-dasharray="3,2" />
+                      <polygon points={medianPoly} fill="none" stroke="#5b7279" stroke-width="1" stroke-dasharray="3,2" />
 
                       {/* Cluster data polygon */}
                       <polygon points={radarPoly} fill={cl.color} fill-opacity="0.15" stroke={cl.color} stroke-width="2" />
 
                       {/* Data points */}
                       {radarPoints.map(([x, y], i) => (
-                        <circle cx={x} cy={y} r="3" fill={cl.color} stroke="#12121a" stroke-width="1">
+                        <circle cx={x} cy={y} r="3" fill={cl.color} stroke="#093946" stroke-width="1">
                           <title>{SIGNAL_DIMS[i].code}: {cl.rawCentroid[i].toFixed(2)}</title>
                         </circle>
                       ))}
                     </svg>
-                    <div style="text-align: center; font-size: 8px; color: #555; margin-top: 2px;">
+                    <div style="text-align: center; font-size: 8px; color: #5b7279; margin-top: 2px;">
                       <span style={`color: ${cl.color};`}>&#9632;</span> cluster
-                      <span style="color: #555; margin-left: 6px;">- - -</span> population median
+                      <span style="color: #5b7279; margin-left: 6px;">- - -</span> population median
                     </div>
                   </div>
 
                   {/* Key characteristics */}
                   <div style="flex: 1; min-width: 200px;">
-                    <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Key Characteristics</div>
+                    <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">Key Characteristics</div>
                     <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
                       {cl.dominantTone && (
-                        <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                        <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #5b7279;">
                           {cl.dominantTone}
                         </span>
                       )}
                       {cl.dominantScope && (
-                        <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                        <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #5b7279;">
                           {cl.dominantScope}
                         </span>
                       )}
                       {cl.dominantReadingLevel && (
-                        <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                        <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #5b7279;">
                           {cl.dominantReadingLevel}
                         </span>
                       )}
                       {cl.avgSetl !== null && (
-                        <span style="background: #0d0d14; border: 1px solid #222230; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #888;">
+                        <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #5b7279;">
                           SETL <span class="score-font" style={`color: ${scoreToColor(cl.avgSetl)};`}>{cl.avgSetl > 0 ? '+' : ''}{cl.avgSetl.toFixed(2)}</span>
                         </span>
                       )}
@@ -1203,23 +1203,23 @@ function tierLabel(sim: number): { label: string; color: string } {
 
                     {/* HN engagement */}
                     <div style="display: flex; gap: 16px; margin-bottom: 10px; font-size: var(--font-xs);">
-                      <span style="color: #888;">
-                        <span style="color: #555;">Pts</span> <span class="score-font" style="color: #fb923c;">{Math.round(cl.avgHnScore)}</span>
+                      <span style="color: #5b7279;">
+                        <span style="color: #5b7279;">Pts</span> <span class="score-font" style="color: #fb923c;">{Math.round(cl.avgHnScore)}</span>
                       </span>
-                      <span style="color: #888;">
-                        <span style="color: #555;">Cmts</span> <span class="score-font" style="color: #60a5fa;">{Math.round(cl.avgHnComments)}</span>
+                      <span style="color: #5b7279;">
+                        <span style="color: #5b7279;">Cmts</span> <span class="score-font" style="color: #60a5fa;">{Math.round(cl.avgHnComments)}</span>
                       </span>
                     </div>
 
                     {/* Member domains */}
-                    <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Members</div>
+                    <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">Members</div>
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                       {cl.members.map(m => {
                         const score = domainScoreMap.get(m);
                         const isLiminal = cl.liminalMembers.some(l => l.domain === m);
                         return (
                           <a href={`/domain/${m}`}
-                             style={`color: ${score !== undefined && score !== null ? scoreToColor(score) : '#888'}; font-size: var(--font-xs); padding: 2px 6px; background: #0d0d14; border: 1px solid ${isLiminal ? '#fbbf24' : '#222230'}; border-radius: 3px; text-decoration: none;`}>
+                             style={`color: ${score !== undefined && score !== null ? scoreToColor(score) : '#5b7279'}; font-size: var(--font-xs); padding: 2px 6px; background: #002d38; border: 1px solid ${isLiminal ? '#fbbf24' : '#1a5568'}; border-radius: 3px; text-decoration: none;`}>
                             {m}
                             {score !== null && score !== undefined && (
                               <span class="score-font" style="margin-left: 3px; font-size: var(--font-xs);">{formatScore(score)}</span>
@@ -1232,11 +1232,11 @@ function tierLabel(sim: number): { label: string; color: string } {
 
                     {/* Liminal members detail */}
                     {cl.liminalMembers.length > 0 && (
-                      <div style="margin-top: 6px; font-size: var(--font-xs); color: #666;">
+                      <div style="margin-top: 6px; font-size: var(--font-xs); color: #5b7279;">
                         <span style="color: #fbbf24;">*</span> Liminal:
                         {cl.liminalMembers.map(l => (
                           <span style="margin-left: 4px;">
-                            {l.domain} &rarr; {l.secondCluster} <span class="score-font" style="color: #555;">({l.similarity.toFixed(2)})</span>
+                            {l.domain} &rarr; {l.secondCluster} <span class="score-font" style="color: #5b7279;">({l.similarity.toFixed(2)})</span>
                           </span>
                         ))}
                       </div>
@@ -1253,10 +1253,10 @@ function tierLabel(sim: number): { label: string; color: string } {
       {nClusters > 1 && (
         <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
           <tr>
-            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            <td style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+              <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
                 Inter-Cluster Affinity
-                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
                   cosine similarity between cluster centroids
                 </span>
               </div>
@@ -1283,11 +1283,11 @@ function tierLabel(sim: number): { label: string; color: string } {
                                   fill={affinityColor(sim)} opacity={affinityOpacity(sim)}>
                               <title>{clI.name} vs {clJ.name}: {sim.toFixed(3)} ({tier.label})</title>
                             </rect>
-                            <text x={180 + j * 60 + 25} y={26 + i * 60 + 28} fill="#eee" font-size="10" font-family="monospace" text-anchor="middle">
+                            <text x={180 + j * 60 + 25} y={26 + i * 60 + 28} fill="#98a8a8" font-size="10" font-family="monospace" text-anchor="middle">
                               {sim.toFixed(2)}
                             </text>
                             {i !== j && (
-                              <text x={180 + j * 60 + 25} y={26 + i * 60 + 40} fill="#aaa" font-size="7" font-family="monospace" text-anchor="middle">
+                              <text x={180 + j * 60 + 25} y={26 + i * 60 + 40} fill="#8faaab" font-size="7" font-family="monospace" text-anchor="middle">
                                 {tier.label}
                               </text>
                             )}
@@ -1298,10 +1298,10 @@ function tierLabel(sim: number): { label: string; color: string } {
                   ))}
                 </svg>
               </div>
-              <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs); color: #555;">
+              <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs); color: #5b7279;">
                 <span><span style="color: #34d399;">&#9632;</span> Allied</span>
                 <span><span style="color: #fbbf24;">&#9632;</span> Acquaintance</span>
-                <span><span style="color: #333;">&#9632;</span> Neutral</span>
+                <span><span style="color: #0d4655;">&#9632;</span> Neutral</span>
                 <span><span style="color: #f87171;">&#9632;</span> Rival</span>
               </div>
             </td>
@@ -1313,10 +1313,10 @@ function tierLabel(sim: number): { label: string; color: string } {
       {(crossClusterPairs.length > 0 || sameClusterDivergent.length > 0) && (
         <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
           <tr>
-            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            <td style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+              <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
                 Interesting Pairs
-                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
                   editorially similar across clusters &amp; divergent within clusters
                 </span>
               </div>
@@ -1329,15 +1329,15 @@ function tierLabel(sim: number): { label: string; color: string } {
                     </div>
                     <div class="table-wrap">
                       <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                        <tr style="color: #555;">
+                        <tr style="color: #5b7279;">
                           <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Sim</td><td>Clusters</td>
                         </tr>
                         {crossClusterPairs.map(p => (
-                          <tr style="border-top: 1px solid #1a1a25; background: rgba(52, 211, 153, 0.03);">
-                            <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
-                            <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
+                          <tr style="border-top: 1px solid #0d4655; background: rgba(52, 211, 153, 0.03);">
+                            <td><a href={`/domain/${p.a}`} style="color: #8faaab; text-decoration: none;">{p.a}</a></td>
+                            <td><a href={`/domain/${p.b}`} style="color: #8faaab; text-decoration: none;">{p.b}</a></td>
                             <td style="text-align: right; color: #34d399;" class="score-font">{p.similarity.toFixed(3)}</td>
-                            <td style="color: #666; font-size: var(--font-xs);">{p.clusterA} / {p.clusterB}</td>
+                            <td style="color: #5b7279; font-size: var(--font-xs);">{p.clusterA} / {p.clusterB}</td>
                           </tr>
                         ))}
                       </table>
@@ -1352,15 +1352,15 @@ function tierLabel(sim: number): { label: string; color: string } {
                     </div>
                     <div class="table-wrap">
                       <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                        <tr style="color: #555;">
+                        <tr style="color: #5b7279;">
                           <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Sim</td><td>Cluster</td>
                         </tr>
                         {sameClusterDivergent.map(p => (
-                          <tr style="border-top: 1px solid #1a1a25; background: rgba(248, 113, 113, 0.03);">
-                            <td><a href={`/domain/${p.a}`} style="color: #aaa; text-decoration: none;">{p.a}</a></td>
-                            <td><a href={`/domain/${p.b}`} style="color: #aaa; text-decoration: none;">{p.b}</a></td>
+                          <tr style="border-top: 1px solid #0d4655; background: rgba(248, 113, 113, 0.03);">
+                            <td><a href={`/domain/${p.a}`} style="color: #8faaab; text-decoration: none;">{p.a}</a></td>
+                            <td><a href={`/domain/${p.b}`} style="color: #8faaab; text-decoration: none;">{p.b}</a></td>
                             <td style="text-align: right; color: #f87171;" class="score-font">{p.similarity.toFixed(3)}</td>
-                            <td style="color: #666; font-size: var(--font-xs);">{p.cluster}</td>
+                            <td style="color: #5b7279; font-size: var(--font-xs);">{p.cluster}</td>
                           </tr>
                         ))}
                       </table>
@@ -1377,16 +1377,16 @@ function tierLabel(sim: number): { label: string; color: string } {
       {outlierEntries.length > 0 && (
         <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
           <tr>
-            <td style="padding: 12px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            <td style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+              <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
                 Outliers & Lone Wolves
-                <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+                <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
                   domains not assigned to any cluster, sorted by outlier score
                 </span>
               </div>
               <div class="table-wrap">
                 <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                  <tr style="color: #555;">
+                  <tr style="color: #5b7279;">
                     <td>Domain</td>
                     <td style="text-align: right;">HRCB</td>
                     <td style="text-align: right;">Outlier</td>
@@ -1398,21 +1398,21 @@ function tierLabel(sim: number): { label: string; color: string } {
                   {outlierEntries.map(w => {
                     const tier = tierLabel(w.nearestSim);
                     return (
-                      <tr style="border-top: 1px solid #1a1a25;">
-                        <td><a href={`/domain/${w.domain}`} style="color: #aaa; text-decoration: none;">{w.domain}</a></td>
-                        <td style={`text-align: right; color: ${w.score !== null ? scoreToColor(w.score) : '#555'};`} class="score-font">
+                      <tr style="border-top: 1px solid #0d4655;">
+                        <td><a href={`/domain/${w.domain}`} style="color: #8faaab; text-decoration: none;">{w.domain}</a></td>
+                        <td style={`text-align: right; color: ${w.score !== null ? scoreToColor(w.score) : '#5b7279'};`} class="score-font">
                           {w.score !== null ? formatScore(w.score) : 'ND'}
                         </td>
                         <td style="text-align: right; color: #fb923c;" class="score-font">{w.outlierScore.toFixed(2)}</td>
-                        <td style="color: #888;">
+                        <td style="color: #5b7279;">
                           {w.nearestCluster}
                         </td>
                         <td style={`text-align: right; color: ${tier.color};`} class="score-font">
                           {w.nearestSim.toFixed(2)}
-                          <span style="color: #555; margin-left: 3px; font-size: var(--font-xs);">{tier.label}</span>
+                          <span style="color: #5b7279; margin-left: 3px; font-size: var(--font-xs);">{tier.label}</span>
                         </td>
-                        <td style="color: #888;">{w.keySignal}</td>
-                        <td style="color: #888;">{w.tone || '\u2014'}</td>
+                        <td style="color: #5b7279;">{w.keySignal}</td>
+                        <td style="color: #5b7279;">{w.tone || '\u2014'}</td>
                       </tr>
                     );
                   })}
@@ -1427,33 +1427,33 @@ function tierLabel(sim: number): { label: string; color: string } {
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0 20px 0;">
         <tr>
           <td>
-            <details style="background: #12121a; border: 1px solid #222230; border-radius: 6px; padding: 12px;">
-              <summary style="color: #888; font-size: var(--font-sm); cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;">
+            <details style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 12px;">
+              <summary style="color: #5b7279; font-size: var(--font-sm); cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;">
                 Methodology Notes
               </summary>
-              <div style="color: #666; font-size: var(--font-xs); line-height: 1.6; margin-top: 8px;">
-                <p><strong style="color: #888;">Clustering input:</strong> 8 signal dimensions per domain &mdash;
+              <div style="color: #5b7279; font-size: var(--font-xs); line-height: 1.6; margin-top: 8px;">
+                <p><strong style="color: #5b7279;">Clustering input:</strong> 8 signal dimensions per domain &mdash;
                   Epistemic Quality (EQ), Solution Orientation (SO), Stakeholder Representation (SR), Transparency (TD),
                   Propaganda Techniques (PT, inverted), Arousal (AR), Valence (VA), Fair Witness (FW).</p>
-                <p><strong style="color: #888;">Z-normalization:</strong> Each dimension is standardized to zero mean and unit variance
+                <p><strong style="color: #5b7279;">Z-normalization:</strong> Each dimension is standardized to zero mean and unit variance
                   across all domains with 3+ evaluations. Missing values are imputed as 0 (population mean). Domains with &gt;3 missing dimensions are flagged.</p>
-                <p><strong style="color: #888;">Similarity:</strong> Cosine similarity on z-normalized 8D vectors measures editorial character similarity
+                <p><strong style="color: #5b7279;">Similarity:</strong> Cosine similarity on z-normalized 8D vectors measures editorial character similarity
                   independent of magnitude.</p>
-                <p><strong style="color: #888;">Clustering:</strong> Agglomerative hierarchical clustering with average linkage. Pairs are sorted by
+                <p><strong style="color: #5b7279;">Clustering:</strong> Agglomerative hierarchical clustering with average linkage. Pairs are sorted by
                   descending similarity and greedily merged when average inter-cluster similarity &ge; 1/&#x3C6; (~0.618).
                   If this produces a single giant cluster, the fallback threshold 1/&#x3C6;&sup2; (~0.382) is used.</p>
-                <p><strong style="color: #888;">Golden ratio tiers:</strong>
+                <p><strong style="color: #5b7279;">Golden ratio tiers:</strong>
                   Faction &ge; 1/&#x3C6; (0.618) &middot;
                   Alliance &ge; 1/&#x3C6;&sup2; (0.382) &middot;
                   Acquaintance &ge; 1/&#x3C6;&sup3; (0.236) &middot;
                   Neutral &ge; 0 &middot;
                   Rival &lt; 0</p>
-                <p><strong style="color: #888;">Parallel coordinates:</strong> Each domain is drawn as a polyline across 8 vertical axes
+                <p><strong style="color: #5b7279;">Parallel coordinates:</strong> Each domain is drawn as a polyline across 8 vertical axes
                   (one per signal dimension). Values are normalized to the observed min/max per dimension. Thick lines show cluster centroids;
                   thin lines show individual domains. Bundled lines indicate agreement; crossing lines indicate divergence.</p>
-                <p><strong style="color: #888;">Archetype naming:</strong> ~12 pattern rules map signal combinations to descriptive names
+                <p><strong style="color: #5b7279;">Archetype naming:</strong> ~12 pattern rules map signal combinations to descriptive names
                   (e.g., high EQ + high TD + low PT &rarr; &ldquo;Rigorous Analysts&rdquo;). Fallback uses marker-based names.</p>
-                <p><strong style="color: #888;">Minimum data:</strong> Requires 5+ domains with 3+ evaluations each.</p>
+                <p><strong style="color: #5b7279;">Minimum data:</strong> Requires 5+ domains with 3+ evaluations each.</p>
               </div>
             </details>
           </td>

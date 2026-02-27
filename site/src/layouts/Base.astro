@@ -59,7 +59,7 @@ try {
   </head>
   <body data-ts={triggerSecret}>
     <center>
-      <table id="hnmain" width="85%" cellpadding="0" cellspacing="0" style="background-color: #0d0d14; max-width: 1280px;">
+      <table id="hnmain" width="85%" cellpadding="0" cellspacing="0" style="background-color: #002d38; max-width: 1280px;">
         <tr>
           <td>
             <Nav />
@@ -80,9 +80,9 @@ try {
     </center>
     {/* Donate modal */}
     <div id="donate-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
-      <div style="background:#12121a; border:1px solid #222230; border-radius:8px; padding:24px; max-width:400px; width:90%; text-align:center;">
-        <div style="color:#c9c9c9; font-size:14pt; margin-bottom:12px;">Support HN HRCB</div>
-        <div style="color:#888; font-size:10pt; line-height:1.6; margin-bottom:20px;">
+      <div style="background:#093946; border:1px solid #1a5568; border-radius:8px; padding:24px; max-width:400px; width:90%; text-align:center;">
+        <div style="color:#98a8a8; font-size:14pt; margin-bottom:12px;">Support HN HRCB</div>
+        <div style="color:#5b7279; font-size:10pt; line-height:1.6; margin-bottom:20px;">
           Evaluations use Claude API credits. Please consider donating to keep the service running.
         </div>
         <form action="https://www.paypal.com/donate" method="post" target="_blank" id="donate-form">
@@ -92,7 +92,7 @@ try {
           </button>
         </form>
         <div style="margin-top:16px;">
-          <a href="#" id="already-donated" style="color:#555; font-size:9pt; text-decoration:underline;">I've already donated</a>
+          <a href="#" id="already-donated" style="color:#5b7279; font-size:9pt; text-decoration:underline;">I've already donated</a>
         </div>
       </div>
     </div>
@@ -297,7 +297,7 @@ try {
                     const sep = document.createTextNode(' | ');
                     const link = document.createElement('a');
                     link.href = `/item/${hnId}`;
-                    link.style.color = '#ff6600';
+                    link.style.color = '#d56500';
                     link.textContent = 'hrcb';
                     statusEl.appendChild(sep);
                     statusEl.appendChild(link);

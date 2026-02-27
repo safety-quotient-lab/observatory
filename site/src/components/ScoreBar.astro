@@ -19,10 +19,10 @@ const centerX = width / 2;
   {label && <span class="text-xs text-gray-400 w-12">{label}</span>}
   <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} class="rounded overflow-hidden">
     <!-- Background -->
-    <rect x="0" y="0" width={width} height={height} fill="#1a1a25" />
+    <rect x="0" y="0" width={width} height={height} fill="#0d4655" />
 
     <!-- Center line -->
-    <line x1={centerX} y1="0" x2={centerX} y2={height} stroke="#333" stroke-width="1" />
+    <line x1={centerX} y1="0" x2={centerX} y2={height} stroke="#0d4655" stroke-width="1" />
 
     {!isND ? (
       <>
@@ -52,8 +52,8 @@ const centerX = width / 2;
     )}
 
     <!-- Scale labels -->
-    <text x="3" y={height / 2 + 1} fill="#666" font-size="8" dominant-baseline="middle" font-family="monospace">-1</text>
-    <text x={width - 3} y={height / 2 + 1} fill="#666" font-size="8" dominant-baseline="middle" text-anchor="end" font-family="monospace">+1</text>
+    <text x="3" y={height / 2 + 1} fill="#5b7279" font-size="8" dominant-baseline="middle" font-family="monospace">-1</text>
+    <text x={width - 3} y={height / 2 + 1} fill="#5b7279" font-size="8" dominant-baseline="middle" text-anchor="end" font-family="monospace">+1</text>
   </svg>
   <span class="score-font text-sm" style={`color: ${color}`}>{formatScore(score)}</span>
 </div>

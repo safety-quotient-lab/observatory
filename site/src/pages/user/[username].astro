@@ -42,34 +42,34 @@ const accountAgeDays = hnUser?.created
 
 <Base title={`${username} — HN HRCB`} canonicalUrl={`${url.origin}/user/${username}`}>
   {/* Breadcrumb */}
-  <div style="padding: 4px 0; font-size: var(--font-xs); color: #555;">
-    <a href="/" style="color: #555;">home</a>
-    <span style="color: #333;"> / </span>
-    <span style="color: #555;">user</span>
-    <span style="color: #333;"> / </span>
-    <span style="color: #888;">{username}</span>
+  <div style="padding: 4px 0; font-size: var(--font-xs); color: #5b7279;">
+    <a href="/" style="color: #5b7279;">home</a>
+    <span style="color: #0d4655;"> / </span>
+    <span style="color: #5b7279;">user</span>
+    <span style="color: #0d4655;"> / </span>
+    <span style="color: #5b7279;">{username}</span>
   </div>
 
   {/* User header card */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">{username}</span>
+            <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">{username}</span>
             {hnUser?.karma !== null && hnUser?.karma !== undefined && (
-              <span class="badge" style="background: rgba(255,102,0,0.15); color: #ff6600; font-size: var(--font-xs);">
+              <span class="badge" style="background: rgba(255,102,0,0.15); color: #d56500; font-size: var(--font-xs);">
                 {hnUser.karma.toLocaleString()} karma
               </span>
             )}
             {accountAgeDays !== null && (
-              <span style="color: #555; font-size: var(--font-sm);">
+              <span style="color: #5b7279; font-size: var(--font-sm);">
                 {accountAgeDays >= 365
                   ? `${Math.floor(accountAgeDays / 365)}y ${Math.floor((accountAgeDays % 365) / 30)}m`
                   : `${accountAgeDays}d`} on HN
               </span>
             )}
-            <a href={`https://news.ycombinator.com/user?id=${username}`} target="_blank" rel="noopener" style="color: #ff6600; font-size: var(--font-sm);">HN profile &rarr;</a>
+            <a href={`https://news.ycombinator.com/user?id=${username}`} target="_blank" rel="noopener" style="color: #d56500; font-size: var(--font-sm);">HN profile &rarr;</a>
             {pendingIds.length > 0 && (
               <button
                 id="eval-all-btn"
@@ -84,28 +84,28 @@ const accountAgeDays = hnUser?.created
 
           {/* About text */}
           {hnUser?.about && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25; color: #888; font-size: var(--font-sm); line-height: 1.5;" set:html={hnUser.about} />
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; color: #5b7279; font-size: var(--font-sm); line-height: 1.5;" set:html={hnUser.about} />
           )}
 
           {/* Stats row */}
           <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-top: 8px;">
             <tr>
-              <td style="color: #666; width: 85px;">Stories</td>
-              <td class="score-font" style="color: #888;">{total} <span style="color: #555;">({detail.evaluatedCount} evaluated)</span></td>
-              <td style="color: #666; width: 85px;">Avg HRCB</td>
+              <td style="color: #5b7279; width: 85px;">Stories</td>
+              <td class="score-font" style="color: #5b7279;">{total} <span style="color: #5b7279;">({detail.evaluatedCount} evaluated)</span></td>
+              <td style="color: #5b7279; width: 85px;">Avg HRCB</td>
               <td class="score-font" style={`color: ${scoreToColor(avgScore)};`}>{formatScore(avgScore)}</td>
             </tr>
             <tr>
-              <td style="color: #666;">Avg SETL</td>
+              <td style="color: #5b7279;">Avg SETL</td>
               <td class="score-font" style={`color: ${setlToColor(userSetl)};`}>{formatSetl(userSetl)}</td>
-              <td style="color: #666;">Avg Conf</td>
+              <td style="color: #5b7279;">Avg Conf</td>
               <td class="score-font" style={`color: ${confidenceToColor(detail.avgConf)};`}>{formatConfidence(detail.avgConf)}</td>
             </tr>
             {detail.avgEditorial !== null && (
               <tr>
-                <td style="color: #666;">Avg Editorial</td>
+                <td style="color: #5b7279;">Avg Editorial</td>
                 <td class="score-font" style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</td>
-                <td style="color: #666;">Avg Structural</td>
+                <td style="color: #5b7279;">Avg Structural</td>
                 <td class="score-font" style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</td>
               </tr>
             )}
@@ -113,8 +113,8 @@ const accountAgeDays = hnUser?.created
 
           {/* UDHR Fingerprint */}
           {fingerprint.some((s: number | null) => s !== null) && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25;">
-              <span style="color: #555; font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655;">
+              <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
               <svg width="186" height="14" viewBox="0 0 186 14" style="vertical-align: middle;">
                 {fingerprint.map((score: number | null, i: number) => (
                   <rect x={i * 6} y="0" width="5" height="14" rx="1"
@@ -128,17 +128,17 @@ const accountAgeDays = hnUser?.created
 
           {/* Top/bottom stories */}
           {detail.topStory && detail.bottomStory && detail.topStory.hn_id !== detail.bottomStory.hn_id && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25; font-size: var(--font-sm);">
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; font-size: var(--font-sm);">
               <div style="display: flex; gap: 16px; flex-wrap: wrap;">
                 <span>
-                  <span style="color: #555;">best:</span>
+                  <span style="color: #5b7279;">best:</span>
                   <span class="score-font" style={`color: ${scoreToColor(detail.topStory.hcb_weighted_mean)};`}>{formatScore(detail.topStory.hcb_weighted_mean)}</span>
-                  <a href={`/item/${detail.topStory.hn_id}`} style="color: #888; margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
+                  <a href={`/item/${detail.topStory.hn_id}`} style="color: #5b7279; margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
                 </span>
                 <span>
-                  <span style="color: #555;">worst:</span>
+                  <span style="color: #5b7279;">worst:</span>
                   <span class="score-font" style={`color: ${scoreToColor(detail.bottomStory.hcb_weighted_mean)};`}>{formatScore(detail.bottomStory.hcb_weighted_mean)}</span>
-                  <a href={`/item/${detail.bottomStory.hn_id}`} style="color: #888; margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
+                  <a href={`/item/${detail.bottomStory.hn_id}`} style="color: #5b7279; margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
                 </span>
               </div>
             </div>
@@ -152,10 +152,10 @@ const accountAgeDays = hnUser?.created
   {setlHistory.length > 1 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             SETL History
-            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
               structural-editorial tension over time · {setlHistory.length} days
             </span>
           </div>
@@ -166,7 +166,7 @@ const accountAgeDays = hnUser?.created
           </div>
           <svg width="100%" viewBox={`0 0 ${Math.max(setlHistory.length * 20, 200)} 80`} style="max-height: 100px;">
             {/* Zero line */}
-            <line x1="0" y1="40" x2={setlHistory.length * 20} y2="40" stroke="#222230" stroke-width="0.5" />
+            <line x1="0" y1="40" x2={setlHistory.length * 20} y2="40" stroke="#1a5568" stroke-width="0.5" />
             {/* Editorial line */}
             <polyline
               fill="none"
@@ -196,7 +196,7 @@ const accountAgeDays = hnUser?.created
 
   {/* Story list header */}
   {total > 0 && (
-    <div style="padding: 4px 0; font-size: var(--font-sm); color: #555;">
+    <div style="padding: 4px 0; font-size: var(--font-sm); color: #5b7279;">
       {total} stories {page > 1 ? `· page ${page}` : ''}
     </div>
   )}
@@ -213,7 +213,7 @@ const accountAgeDays = hnUser?.created
   {displayStories.length === 0 && (
     <table width="100%">
       <tr>
-        <td style="padding: 40px 20px; text-align: center; color: #828282;">
+        <td style="padding: 40px 20px; text-align: center; color: #5b7279;">
           No stories from this user.
         </td>
       </tr>
@@ -224,7 +224,7 @@ const accountAgeDays = hnUser?.created
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={`/user/${username}?p=${page + 1}`} class="morelink" style="color: #828282; font-size: var(--font-base);">
+          <a href={`/user/${username}?p=${page + 1}`} class="morelink" style="color: #5b7279; font-size: var(--font-base);">
             More
           </a>
         </td>
@@ -233,17 +233,17 @@ const accountAgeDays = hnUser?.created
   )}
 
   {/* Batch eval progress bar */}
-  <div id="eval-all-progress" style="display: none; padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; margin-bottom: 10px; position: sticky; bottom: 8px; z-index: 10;">
+  <div id="eval-all-progress" style="display: none; padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; margin-bottom: 10px; position: sticky; bottom: 8px; z-index: 10;">
     <div style="display: flex; align-items: center; gap: 10px; font-size: var(--font-sm);">
       <span class="eval-spinner" style="color: #60a5fa; display: inline-block;">&#9881;</span>
-      <span id="eval-all-status" style="color: #888;">Starting...</span>
-      <span id="eval-all-counter" class="score-font" style="color: #555; margin-left: auto;"></span>
+      <span id="eval-all-status" style="color: #5b7279;">Starting...</span>
+      <span id="eval-all-counter" class="score-font" style="color: #5b7279; margin-left: auto;"></span>
       <button id="eval-all-stop" style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 2px 8px; font-size: var(--font-xs); color: #dc2626; border-radius: 4px;">Stop</button>
     </div>
-    <div style="margin-top: 6px; background: #222230; border-radius: 3px; height: 4px; overflow: hidden;">
+    <div style="margin-top: 6px; background: #1a5568; border-radius: 3px; height: 4px; overflow: hidden;">
       <div id="eval-all-bar" style="height: 100%; background: #eab308; width: 0%; transition: width 0.3s;"></div>
     </div>
-    <div id="eval-all-log" style="margin-top: 6px; max-height: 120px; overflow-y: auto; font-size: var(--font-xs); color: #555;"></div>
+    <div id="eval-all-log" style="margin-top: 6px; max-height: 120px; overflow-y: auto; font-size: var(--font-xs); color: #5b7279;"></div>
   </div>
 
   <script is:inline>
@@ -298,7 +298,7 @@ const accountAgeDays = hnUser?.created
 
       function addLog(msg, color) {
         var line = document.createElement('div');
-        line.style.color = color || '#555';
+        line.style.color = color || '#5b7279';
         line.textContent = msg;
         log.appendChild(line);
         log.scrollTop = log.scrollHeight;
@@ -359,7 +359,7 @@ const accountAgeDays = hnUser?.created
           } else {
             var json = await res.json();
             if (res.status === 409) {
-              addLog('#' + hnId + ': ' + (json.error || 'skipped'), '#555');
+              addLog('#' + hnId + ': ' + (json.error || 'skipped'), '#5b7279');
               succeeded++;
             } else {
               failed++;

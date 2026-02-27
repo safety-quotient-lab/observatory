@@ -76,7 +76,7 @@ export function evidenceColor(evidence: string | null): string {
     case 'H': return '#22c55e';
     case 'M': return '#eab308';
     case 'L': return '#6b7280';
-    default: return '#3a3a45';
+    default: return '#1a5568';
   }
 }
 
@@ -153,7 +153,7 @@ export function formatConfidence(confidence: number | null): string {
 
 /** DCP modifier color */
 export function modifierColor(mod: number | null): string {
-  if (mod === null) return '#3a3a45';
+  if (mod === null) return '#1a5568';
   // Map modifier (typically small, e.g. -0.1 to +0.1) to score scale
   const scaled = Math.max(-1, Math.min(1, mod * 10));
   return scoreToColor(scaled);

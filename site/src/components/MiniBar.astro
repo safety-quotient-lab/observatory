@@ -19,7 +19,7 @@ const scoreMap = new Map(scores.map((s) => [s.section, s.final]));
 <div style="display: inline-flex; gap: 1px; vertical-align: middle;">
   {ALL_SECTIONS.map((section) => {
     const final = scoreMap.get(section) ?? null;
-    const color = final !== null ? scoreToColor(final) : '#1a1a25';
+    const color = final !== null ? scoreToColor(final) : '#0d4655';
     const label = section === 'Preamble' ? 'P' : section.replace('Article ', '');
     return (
       <span

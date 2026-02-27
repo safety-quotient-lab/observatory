@@ -156,13 +156,13 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
     <tr>
       <td>
-        <div style="color: #ccc; font-size: var(--font-lg); font-weight: bold; margin-bottom: 4px;">
+        <div style="color: #98a8a8; font-size: var(--font-lg); font-weight: bold; margin-bottom: 4px;">
           Model Comparison
         </div>
-        <div style="color: #666; font-size: var(--font-sm);">
+        <div style="color: #5b7279; font-size: var(--font-sm);">
           {totalStories} stories evaluated by {modelIds.length} models
           {excludedModels.length > 0 && (
-            <span style="color: #555;"> &middot; {excludedModels.length} model{excludedModels.length > 1 ? 's' : ''} excluded (&lt;{MIN_STORIES} stories)</span>
+            <span style="color: #5b7279;"> &middot; {excludedModels.length} model{excludedModels.length > 1 ? 's' : ''} excluded (&lt;{MIN_STORIES} stories)</span>
           )}
         </div>
       </td>
@@ -173,11 +173,11 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
     <table width="100%">
       <tr>
         <td style="padding: 40px 20px; text-align: center;">
-          <div style="color: #828282; margin-bottom: 12px;">
+          <div style="color: #5b7279; margin-bottom: 12px;">
             No stories have been evaluated by multiple models yet.
           </div>
-          <div style="color: #555; font-size: var(--font-sm);">
-            Check the <a href="/system" style="color: #ff6600;">system</a> for pipeline status.
+          <div style="color: #5b7279; font-size: var(--font-sm);">
+            Check the <a href="/system" style="color: #d56500;">system</a> for pipeline status.
           </div>
         </td>
       </tr>
@@ -187,43 +187,43 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       {/* Summary stats */}
       <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
         <tr>
-          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
               <div>
-                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Sign Agreement</div>
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Sign Agreement</div>
                 <span class="score-font" style={`color: ${agreePct >= 80 ? '#34d399' : agreePct >= 60 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
                   {agreePct}%
                 </span>
-                <span style="color: #555; font-size: var(--font-xs); margin-left: 4px;">{agreeCount}/{totalStories}</span>
+                <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">{agreeCount}/{totalStories}</span>
               </div>
               <div>
-                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Class Agreement</div>
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Class Agreement</div>
                 <span class="score-font" style={`color: ${classAgreePct >= 60 ? '#34d399' : classAgreePct >= 40 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
                   {classAgreePct}%
                 </span>
-                <span style="color: #555; font-size: var(--font-xs); margin-left: 4px;">{classAgreeCount}/{totalStories}</span>
+                <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">{classAgreeCount}/{totalStories}</span>
               </div>
               <div>
-                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Median Delta</div>
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Median Delta</div>
                 <span class="score-font" style={`color: ${medianDelta < 0.1 ? '#34d399' : medianDelta < 0.2 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
                   {medianDelta.toFixed(3)}
                 </span>
               </div>
               <div>
-                <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Mean Delta</div>
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Mean Delta</div>
                 <span class="score-font" style={`color: ${avgDelta < 0.1 ? '#34d399' : avgDelta < 0.2 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
                   {avgDelta.toFixed(3)}
                 </span>
               </div>
               {pairCorrelations.map(pc => (
                 <div>
-                  <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">
+                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">
                     Pearson r
                   </div>
                   <span class="score-font" style={`color: ${pc.r !== null && pc.r >= 0.7 ? '#34d399' : pc.r !== null && pc.r >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
                     {pc.r !== null ? pc.r.toFixed(3) : '---'}
                   </span>
-                  <span style="color: #555; font-size: var(--font-xs); margin-left: 4px;">n={pc.n}</span>
+                  <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">n={pc.n}</span>
                 </div>
               ))}
             </div>
@@ -235,10 +235,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
         <tr>
-          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Model Profiles</div>
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Model Profiles</div>
             <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 600px;">
-              <tr style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+              <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
                 <td style="padding: 4px 8px;">Model</td>
                 <td style="padding: 4px 8px; text-align: center;">Shared</td>
                 <td style="padding: 4px 8px; text-align: center;">Avg HRCB</td>
@@ -252,26 +252,26 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
               {aggregates.filter(a => modelIds.includes(a.model)).map(a => {
                 const bias = biasAnalysis.find(b => b.model === a.model);
                 return (
-                  <tr style="border-top: 1px solid #1a1a25;">
-                    <td style="padding: 6px 8px; color: #ccc; font-weight: bold; font-size: var(--font-sm);">{modelDisplayName(a.model)}</td>
-                    <td style="padding: 6px 8px; text-align: center; color: #888;">{a.story_count}</td>
+                  <tr style="border-top: 1px solid #0d4655;">
+                    <td style="padding: 6px 8px; color: #98a8a8; font-weight: bold; font-size: var(--font-sm);">{modelDisplayName(a.model)}</td>
+                    <td style="padding: 6px 8px; text-align: center; color: #5b7279;">{a.story_count}</td>
                     <td style={`padding: 6px 8px; text-align: center; font-weight: bold; color: ${scoreToColor(a.avg_score)};`}>
                       {formatScore(a.avg_score)}
                     </td>
-                    <td style="padding: 6px 8px; text-align: center; color: #aaa;">{a.avg_abs_score.toFixed(3)}</td>
+                    <td style="padding: 6px 8px; text-align: center; color: #8faaab;">{a.avg_abs_score.toFixed(3)}</td>
                     <td style="padding: 6px 8px; text-align: center; color: #34d399;">{a.positive_pct}%</td>
-                    <td style="padding: 6px 8px; text-align: center; color: #888;">{a.neutral_pct}%</td>
+                    <td style="padding: 6px 8px; text-align: center; color: #5b7279;">{a.neutral_pct}%</td>
                     <td style="padding: 6px 8px; text-align: center; color: #dc2626;">{a.negative_pct}%</td>
                     <td style="padding: 6px 8px; text-align: center;">
                       {bias && (
-                        <span style={`color: ${bias.higherPct > 55 ? '#34d399' : '#888'}; font-size: var(--font-sm);`}>
+                        <span style={`color: ${bias.higherPct > 55 ? '#34d399' : '#5b7279'}; font-size: var(--font-sm);`}>
                           {bias.higherPct}%
                         </span>
                       )}
                     </td>
                     <td style="padding: 6px 8px; text-align: center;">
                       {bias && (
-                        <span style={`color: ${bias.lowerPct > 55 ? '#dc2626' : '#888'}; font-size: var(--font-sm);`}>
+                        <span style={`color: ${bias.lowerPct > 55 ? '#dc2626' : '#5b7279'}; font-size: var(--font-sm);`}>
                           {bias.lowerPct}%
                         </span>
                       )}
@@ -288,14 +288,14 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       {/* Score distribution histogram */}
       <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
         <tr>
-          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Score Distribution</div>
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Score Distribution</div>
             <div style="display: flex; gap: 24px; flex-wrap: wrap;">
               {modelIds.map(mid => {
                 const counts = histogramByModel.get(mid) || [];
                 return (
                   <div style="flex: 1; min-width: 200px;">
-                    <div style="color: #aaa; font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">{modelDisplayName(mid)}</div>
+                    <div style="color: #8faaab; font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">{modelDisplayName(mid)}</div>
                     <div style="display: flex; align-items: flex-end; gap: 2px; height: 60px;">
                       {counts.map((count, i) => {
                         const binStart = BIN_MIN + i * BIN_WIDTH;
@@ -309,9 +309,9 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                       })}
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-top: 2px;">
-                      <span style="color: #555; font-size: 8px;">-0.5</span>
-                      <span style="color: #555; font-size: 8px;">0</span>
-                      <span style="color: #555; font-size: 8px;">+0.5</span>
+                      <span style="color: #5b7279; font-size: 8px;">-0.5</span>
+                      <span style="color: #5b7279; font-size: 8px;">0</span>
+                      <span style="color: #5b7279; font-size: 8px;">+0.5</span>
                     </div>
                   </div>
                 );
@@ -324,31 +324,31 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       {/* Top divergent UDHR sections */}
       <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
         <tr>
-          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Largest Section Divergences</div>
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Largest Section Divergences</div>
             <table cellpadding="0" cellspacing="0" width="100%">
-              <tr style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+              <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
                 <td style="padding: 3px 6px;">Section</td>
-                <td style="padding: 3px 6px; color: #555; font-weight: normal; text-transform: none;">Topic</td>
+                <td style="padding: 3px 6px; color: #5b7279; font-weight: normal; text-transform: none;">Topic</td>
                 {modelIds.map(m => (
                   <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
                 ))}
                 <td style="padding: 3px 6px; text-align: center;">Gap</td>
               </tr>
               {topDivergent.map(d => (
-                <tr style="border-top: 1px solid #1a1a25;">
+                <tr style="border-top: 1px solid #0d4655;">
                   <td style="padding: 4px 6px; font-size: var(--font-xs);">
-                    <a href={`/article/${d.idx === 0 ? 'preamble' : d.idx}`} style="color: #aaa; text-decoration: none;">{d.section}</a>
+                    <a href={`/article/${d.idx === 0 ? 'preamble' : d.idx}`} style="color: #8faaab; text-decoration: none;">{d.section}</a>
                   </td>
-                  <td style="padding: 4px 6px; color: #555; font-size: var(--font-xs); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={d.title}>
+                  <td style="padding: 4px 6px; color: #5b7279; font-size: var(--font-xs); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={d.title}>
                     {d.title.length > 30 ? d.title.slice(0, 30) + '...' : d.title}
                   </td>
                   {d.vals.map(v => (
-                    <td style={`padding: 4px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : '#555'}; font-size: var(--font-sm); font-weight: bold;`}>
+                    <td style={`padding: 4px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
                       {v !== null ? formatScore(v) : '---'}
                     </td>
                   ))}
-                  <td style={`padding: 4px 6px; text-align: center; color: ${d.delta >= 0.1 ? '#dc2626' : d.delta >= 0.05 ? '#eab308' : '#555'}; font-size: var(--font-sm); font-weight: bold;`}>
+                  <td style={`padding: 4px 6px; text-align: center; color: ${d.delta >= 0.1 ? '#dc2626' : d.delta >= 0.05 ? '#eab308' : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
                     {d.delta.toFixed(3)}
                   </td>
                 </tr>
@@ -362,10 +362,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
         <tr>
           <td width="50%" valign="top" style="padding-right: 5px;">
-            <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Disagreed</div>
+            <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; height: 100%;">
+              <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Disagreed</div>
               <table cellpadding="0" cellspacing="0" width="100%">
-                <tr style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">
+                <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">
                   <td style="padding: 3px 6px;">Story</td>
                   {modelIds.map(m => (
                     <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
@@ -373,21 +373,21 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                   <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
                 </tr>
                 {mostDisagreed.map(s => (
-                  <tr style="border-top: 1px solid #1a1a25;">
+                  <tr style="border-top: 1px solid #0d4655;">
                     <td style="padding: 3px 6px; font-size: var(--font-xs);">
-                      <a href={`/item/${s.hn_id}`} style="color: #ccc; text-decoration: none;" title={s.title}>
+                      <a href={`/item/${s.hn_id}`} style="color: #98a8a8; text-decoration: none;" title={s.title}>
                         {s.title.length > 40 ? s.title.slice(0, 40) + '...' : s.title}
                       </a>
                     </td>
                     {modelIds.map(mid => {
                       const me = s.models.find(m => m.model === mid);
                       return (
-                        <td style={`padding: 3px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#555'}; font-size: var(--font-sm); font-weight: bold;`}>
+                        <td style={`padding: 3px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
                           {me ? formatScore(me.score) : '---'}
                         </td>
                       );
                     })}
-                    <td style={`padding: 3px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? '#dc2626' : s.maxDelta >= 0.15 ? '#eab308' : '#555'}; font-size: var(--font-sm); font-weight: bold;`}>
+                    <td style={`padding: 3px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? '#dc2626' : s.maxDelta >= 0.15 ? '#eab308' : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
                       {s.maxDelta.toFixed(2)}
                     </td>
                   </tr>
@@ -396,10 +396,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
             </div>
           </td>
           <td width="50%" valign="top" style="padding-left: 5px;">
-            <div style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px; height: 100%;">
-              <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Agreed</div>
+            <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; height: 100%;">
+              <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Agreed</div>
               <table cellpadding="0" cellspacing="0" width="100%">
-                <tr style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">
+                <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">
                   <td style="padding: 3px 6px;">Story</td>
                   {modelIds.map(m => (
                     <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
@@ -407,16 +407,16 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                   <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
                 </tr>
                 {mostAgreed.map(s => (
-                  <tr style="border-top: 1px solid #1a1a25;">
+                  <tr style="border-top: 1px solid #0d4655;">
                     <td style="padding: 3px 6px; font-size: var(--font-xs);">
-                      <a href={`/item/${s.hn_id}`} style="color: #ccc; text-decoration: none;" title={s.title}>
+                      <a href={`/item/${s.hn_id}`} style="color: #98a8a8; text-decoration: none;" title={s.title}>
                         {s.title.length > 40 ? s.title.slice(0, 40) + '...' : s.title}
                       </a>
                     </td>
                     {modelIds.map(mid => {
                       const me = s.models.find(m => m.model === mid);
                       return (
-                        <td style={`padding: 3px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#555'}; font-size: var(--font-sm); font-weight: bold;`}>
+                        <td style={`padding: 3px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
                           {me ? formatScore(me.score) : '---'}
                         </td>
                       );
@@ -436,11 +436,11 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
         <tr>
-          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Per-Section Average Scores</div>
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Per-Section Average Scores</div>
             <div style="max-height: 500px; overflow-y: auto;">
               <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 400px;">
-                <tr style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #12121a;">
+                <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #093946;">
                   <td style="padding: 3px 6px;">Section</td>
                   {modelIds.map(m => (
                     <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
@@ -452,16 +452,16 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                   const validVals = vals.filter((v): v is number => v !== null);
                   const delta = validVals.length >= 2 ? Math.max(...validVals) - Math.min(...validVals) : null;
                   const deltaColor = delta !== null
-                    ? delta < 0.05 ? '#555' : delta < 0.1 ? '#eab308' : '#dc2626'
-                    : '#555';
+                    ? delta < 0.05 ? '#5b7279' : delta < 0.1 ? '#eab308' : '#dc2626'
+                    : '#5b7279';
                   const title = idx > 0 && idx <= 30 ? ARTICLE_TITLES[idx - 1] : '';
                   return (
-                    <tr style="border-top: 1px solid #1a1a25;">
-                      <td style="padding: 2px 6px; color: #aaa; font-size: var(--font-xs);" title={title}>
-                        <a href={`/article/${idx === 0 ? 'preamble' : idx}`} style="color: #aaa; text-decoration: none;">{section}</a>
+                    <tr style="border-top: 1px solid #0d4655;">
+                      <td style="padding: 2px 6px; color: #8faaab; font-size: var(--font-xs);" title={title}>
+                        <a href={`/article/${idx === 0 ? 'preamble' : idx}`} style="color: #8faaab; text-decoration: none;">{section}</a>
                       </td>
                       {vals.map(v => (
-                        <td style={`padding: 2px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : '#555'}; font-size: var(--font-sm);`}>
+                        <td style={`padding: 2px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : '#5b7279'}; font-size: var(--font-sm);`}>
                           {v !== null ? v.toFixed(3) : '---'}
                         </td>
                       ))}
@@ -484,14 +484,14 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
         <tr>
-          <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-            <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
               All Compared Stories
-              <span style="color: #555; text-transform: none; letter-spacing: normal; margin-left: 8px;">{totalStories}</span>
+              <span style="color: #5b7279; text-transform: none; letter-spacing: normal; margin-left: 8px;">{totalStories}</span>
             </div>
             <div style="max-height: 600px; overflow-y: auto;">
               <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 500px;">
-                <tr style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #12121a;">
+                <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #093946;">
                   <td style="padding: 3px 6px;">Story</td>
                   <td style="padding: 3px 6px;">Domain</td>
                   {modelIds.map(m => (
@@ -500,26 +500,26 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                   <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
                 </tr>
                 {storyStats.map(s => (
-                  <tr style={`border-top: 1px solid #1a1a25;${!s.allAgree ? ' background: rgba(220, 38, 38, 0.04);' : ''}`}>
+                  <tr style={`border-top: 1px solid #0d4655;${!s.allAgree ? ' background: rgba(220, 38, 38, 0.04);' : ''}`}>
                     <td style="padding: 2px 6px; font-size: var(--font-xs);">
-                      <a href={`/item/${s.hn_id}`} style="color: #aaa; text-decoration: none;" title={s.title}>
+                      <a href={`/item/${s.hn_id}`} style="color: #8faaab; text-decoration: none;" title={s.title}>
                         {s.title.length > 50 ? s.title.slice(0, 50) + '...' : s.title}
                       </a>
                     </td>
-                    <td style="padding: 2px 6px; font-size: var(--font-xs); color: #555;">
+                    <td style="padding: 2px 6px; font-size: var(--font-xs); color: #5b7279;">
                       {s.domain ? (
-                        <a href={`/domain/${s.domain}`} style="color: #555; text-decoration: none;">{s.domain.length > 20 ? s.domain.slice(0, 20) + '...' : s.domain}</a>
+                        <a href={`/domain/${s.domain}`} style="color: #5b7279; text-decoration: none;">{s.domain.length > 20 ? s.domain.slice(0, 20) + '...' : s.domain}</a>
                       ) : '---'}
                     </td>
                     {modelIds.map(mid => {
                       const me = s.models.find(m => m.model === mid);
                       return (
-                        <td style={`padding: 2px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#555'}; font-size: var(--font-sm);`}>
+                        <td style={`padding: 2px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#5b7279'}; font-size: var(--font-sm);`}>
                           {me ? formatScore(me.score) : '---'}
                         </td>
                       );
                     })}
-                    <td style={`padding: 2px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? '#dc2626' : s.maxDelta >= 0.15 ? '#eab308' : '#555'}; font-size: var(--font-sm);`}>
+                    <td style={`padding: 2px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? '#dc2626' : s.maxDelta >= 0.15 ? '#eab308' : '#5b7279'}; font-size: var(--font-sm);`}>
                       {s.maxDelta.toFixed(2)}
                     </td>
                   </tr>
@@ -535,14 +535,14 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       {excludedModels.length > 0 && (
         <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
           <tr>
-            <td style="padding: 8px 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-              <div style="color: #555; font-size: var(--font-xs);">
-                <span style="color: #666; text-transform: uppercase; letter-spacing: 0.05em;">Excluded models</span> (fewer than {MIN_STORIES} shared stories):
+            <td style="padding: 8px 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+              <div style="color: #5b7279; font-size: var(--font-xs);">
+                <span style="color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em;">Excluded models</span> (fewer than {MIN_STORIES} shared stories):
                 {excludedModels.map((m, i) => (
                   <span>
                     {i > 0 ? ', ' : ' '}
-                    <span style="color: #888;">{modelDisplayName(m.model)}</span>
-                    <span style="color: #444;"> ({m.story_count})</span>
+                    <span style="color: #5b7279;">{modelDisplayName(m.model)}</span>
+                    <span style="color: #1a5568;"> ({m.story_count})</span>
                   </span>
                 ))}
               </div>

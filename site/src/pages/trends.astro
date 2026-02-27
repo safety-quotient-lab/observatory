@@ -61,8 +61,8 @@ function fmtSig(v: number | null | undefined): string {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Trends</span>
-        <span style="color: #828282; margin-left: 8px; font-size: var(--font-sm);">
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Trends</span>
+        <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-sm);">
           Temporal analysis and signal landscapes.
         </span>
       </td>
@@ -72,10 +72,10 @@ function fmtSig(v: number | null | undefined): string {
   {/* 30-day HRCB trend sparkline */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 14px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+      <td style="padding: 14px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
           30-Day HRCB Trend
-          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
             {dailyHrcb.length} days of data
           </span>
         </div>
@@ -87,10 +87,10 @@ function fmtSig(v: number | null | undefined): string {
               <line
                 x1={padX} y1={sparkline.zeroY}
                 x2={chartW - padX} y2={sparkline.zeroY}
-                stroke="#333" stroke-width="0.5" stroke-dasharray="3,3"
+                stroke="#0d4655" stroke-width="0.5" stroke-dasharray="3,3"
               />
               {/* Zero label */}
-              <text x={chartW - padX - 1} y={sparkline.zeroY - 3} fill="#555" font-size="7" text-anchor="end">0</text>
+              <text x={chartW - padX - 1} y={sparkline.zeroY - 3} fill="#5b7279" font-size="7" text-anchor="end">0</text>
               {/* Trend line */}
               <path
                 d={sparkline.path}
@@ -112,19 +112,19 @@ function fmtSig(v: number | null | undefined): string {
             </svg>
 
             <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span style="color: #555; font-size: var(--font-xs);">Latest</span>
+              <span style="color: #5b7279; font-size: var(--font-xs);">Latest</span>
               <span style={`color: ${latestColor}; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;`}>
                 {latestLabel}
               </span>
               {latestDay && (
-                <span style="color: #555; font-size: var(--font-xs);">
+                <span style="color: #5b7279; font-size: var(--font-xs);">
                   {latestDay.day} &middot; {latestDay.count} evals
                 </span>
               )}
             </div>
           </div>
         ) : (
-          <div style="color: #555; font-size: var(--font-sm);">
+          <div style="color: #5b7279; font-size: var(--font-sm);">
             Not enough data for trend line.
           </div>
         )}
@@ -135,11 +135,11 @@ function fmtSig(v: number | null | undefined): string {
   {/* Signal overview */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 14px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+      <td style="padding: 14px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
           Signal Overview
           {signals && (
-            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
               {signals.total_with_signals} stories with supplementary signals
             </span>
           )}
@@ -149,50 +149,50 @@ function fmtSig(v: number | null | undefined): string {
           <div style="display: flex; gap: 12px; flex-wrap: wrap;">
             {/* EQ */}
             <div style="flex: 1; min-width: 100px; background: #0a0a12; border: 1px solid #1a1a28; border-radius: 4px; padding: 10px; text-align: center;">
-              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
                 Epistemic Quality
               </div>
               <div style="color: #60a5fa; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
                 {fmtSig(signals.avg_eq)}
               </div>
-              <div style="color: #444; font-size: var(--font-xs);">avg EQ</div>
+              <div style="color: #1a5568; font-size: var(--font-xs);">avg EQ</div>
             </div>
 
             {/* SO */}
             <div style="flex: 1; min-width: 100px; background: #0a0a12; border: 1px solid #1a1a28; border-radius: 4px; padding: 10px; text-align: center;">
-              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
                 Solution Orientation
               </div>
               <div style="color: #34d399; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
                 {fmtSig(signals.avg_so)}
               </div>
-              <div style="color: #444; font-size: var(--font-xs);">avg SO</div>
+              <div style="color: #1a5568; font-size: var(--font-xs);">avg SO</div>
             </div>
 
             {/* SR */}
             <div style="flex: 1; min-width: 100px; background: #0a0a12; border: 1px solid #1a1a28; border-radius: 4px; padding: 10px; text-align: center;">
-              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
                 Stakeholder Rep
               </div>
               <div style="color: #fbbf24; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
                 {fmtSig(signals.avg_sr)}
               </div>
-              <div style="color: #444; font-size: var(--font-xs);">avg SR</div>
+              <div style="color: #1a5568; font-size: var(--font-xs);">avg SR</div>
             </div>
 
             {/* TD */}
             <div style="flex: 1; min-width: 100px; background: #0a0a12; border: 1px solid #1a1a28; border-radius: 4px; padding: 10px; text-align: center;">
-              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
                 Temporal Depth
               </div>
               <div style="color: #a78bfa; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
                 {fmtSig(signals.avg_td)}
               </div>
-              <div style="color: #444; font-size: var(--font-xs);">avg TD</div>
+              <div style="color: #1a5568; font-size: var(--font-xs);">avg TD</div>
             </div>
           </div>
         ) : (
-          <div style="color: #555; font-size: var(--font-sm);">
+          <div style="color: #5b7279; font-size: var(--font-sm);">
             Signal data unavailable.
           </div>
         )}
@@ -203,12 +203,12 @@ function fmtSig(v: number | null | undefined): string {
   {/* Link to Seldon */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
     <tr>
-      <td style="padding: 14px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+      <td style="padding: 14px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
         <a href="/seldon" style="text-decoration: none; display: block;">
-          <div style="color: #c9c9c9; font-size: var(--font-sm); font-weight: bold; margin-bottom: 4px;">
+          <div style="color: #98a8a8; font-size: var(--font-sm); font-weight: bold; margin-bottom: 4px;">
             Seldon &rarr;
           </div>
-          <div style="color: #828282; font-size: var(--font-xs); line-height: 1.5;">
+          <div style="color: #5b7279; font-size: var(--font-xs); line-height: 1.5;">
             Psychohistorical trends. Regime change detection, rolling averages, per-feed analysis, and SETL drift.
           </div>
         </a>

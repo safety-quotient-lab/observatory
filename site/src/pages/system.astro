@@ -90,7 +90,7 @@ function formatTokens(n: number): string {
 // Event type color map for Pipeline Events panel
 const EVENT_TYPE_COLORS: Record<string, string> = {
   eval_failure: '#dc2626', eval_retry: '#f97316', eval_skip: '#6b7280',
-  eval_success: '#16a34a', rate_limit: '#eab308', self_throttle: '#818cf8',
+  eval_success: '#16a34a', rate_limit: '#eab308', self_throttle: '#7d80d1',
   credit_exhausted: '#ef4444', fetch_error: '#dc2626',
   parse_error: '#dc2626', cron_run: '#60a5fa', cron_error: '#f97316',
   crawl_error: '#f97316', r2_error: '#f97316', dlq: '#dc2626', dlq_replay: '#34d399',
@@ -110,9 +110,9 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">System</span>
-        <span style="color: #828282; margin-left: var(--space-lg);">Pipeline operations and system health.</span>
-        <span id="live-indicator" style="margin-left: var(--space-lg); font-size: var(--font-xs); color: #555;">connecting...</span>
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">System</span>
+        <span style="color: #5b7279; margin-left: var(--space-lg);">Pipeline operations and system health.</span>
+        <span id="live-indicator" style="margin-left: var(--space-lg); font-size: var(--font-xs); color: #5b7279;">connecting...</span>
       </td>
     </tr>
   </table>
@@ -120,48 +120,48 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {/* Pipeline Status */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Pipeline</div>
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Pipeline</div>
 
         {/* Progress bar */}
-        <div style="width: 100%; height: 8px; background: #1a1a25; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 10px;">
+        <div style="width: 100%; height: 8px; background: #0d4655; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 10px;">
           {status.done > 0 && <div style={`width: ${pctDone}%; background: #16a34a;`}></div>}
-          {status.skipped > 0 && <div style={`width: ${pctSkipped}%; background: #555;`}></div>}
+          {status.skipped > 0 && <div style={`width: ${pctSkipped}%; background: #5b7279;`}></div>}
           {status.failed > 0 && <div style={`width: ${pctFailed}%; background: #dc2626;`}></div>}
-          {status.pending > 0 && <div style={`width: ${pctPending}%; background: #333;`}></div>}
+          {status.pending > 0 && <div style={`width: ${pctPending}%; background: #0d4655;`}></div>}
         </div>
 
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-base);">
           <tr>
             <td style="text-align: center; width: 20%;">
               <div class="score-font" style="font-size: var(--font-lg); color: #16a34a; font-weight: bold;">{status.done}</div>
-              <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Done</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Done</div>
             </td>
             <td style="text-align: center; width: 20%;">
               <div class="score-font" style="font-size: var(--font-lg); color: #eab308; font-weight: bold;">{status.pending}</div>
-              <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Pending</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Pending</div>
             </td>
             <td style="text-align: center; width: 20%;">
               <div class="score-font" style="font-size: var(--font-lg); color: #60a5fa; font-weight: bold;">{status.evaluating}</div>
-              <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Evaluating</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Evaluating</div>
             </td>
             <td style="text-align: center; width: 20%;">
               <div class="score-font" style="font-size: var(--font-lg); color: #dc2626; font-weight: bold;">{status.failed}</div>
-              <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Failed</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Failed</div>
             </td>
             <td style="text-align: center; width: 20%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #555; font-weight: bold;">{status.skipped}</div>
-              <div style="color: #666; font-size: var(--font-xs); text-transform: uppercase;">Skipped</div>
+              <div class="score-font" style="font-size: var(--font-lg); color: #5b7279; font-weight: bold;">{status.skipped}</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Skipped</div>
             </td>
           </tr>
         </table>
         {velocity.evalsPerDay > 0 && (
-          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #1a1a25; display: flex; gap: 16px; font-size: var(--font-sm); color: #666;">
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; display: flex; gap: 16px; font-size: var(--font-sm); color: #5b7279;">
             <span>
-              <span class="score-font" style="color: #888;">{velocity.evalsPerDay.toFixed(1)}</span> evals/day
+              <span class="score-font" style="color: #5b7279;">{velocity.evalsPerDay.toFixed(1)}</span> evals/day
             </span>
             <span>
-              <span class="score-font" style="color: #888;">{velocity.daysActive}</span> days active
+              <span class="score-font" style="color: #5b7279;">{velocity.daysActive}</span> days active
             </span>
             {velocity.daysToClearing !== null && status.pending > 0 && (
               <span>
@@ -178,10 +178,10 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {raterStatus.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Multi-Model Raters</div>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Multi-Model Raters</div>
           <table cellpadding="0" cellspacing="0" width="100%">
-            <tr style="color: #666; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td style="padding: 4px 8px;">Model</td>
               <td style="padding: 4px 8px; text-align: center;">Avg Score</td>
               <td style="padding: 4px 8px; text-align: center;">Conf</td>
@@ -196,17 +196,17 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               const coverageColor = coveragePct >= 95 ? '#34d399' : coveragePct >= 50 ? '#eab308' : '#dc2626';
               const inFlight = rs.queued + rs.pending + rs.evaluating;
               return (
-                <tr style="border-top: 1px solid #1a1a25;">
-                  <td style="padding: 6px 8px; color: #ccc; font-size: var(--font-sm); font-weight: bold;">
+                <tr style="border-top: 1px solid #0d4655;">
+                  <td style="padding: 6px 8px; color: #98a8a8; font-size: var(--font-sm); font-weight: bold;">
                     {modelDisplayName(rs.model)}
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
-                    <span class="score-font" style={`color: ${summary?.avg_score != null ? scoreToColor(summary.avg_score) : '#555'}; font-weight: bold;`}>
+                    <span class="score-font" style={`color: ${summary?.avg_score != null ? scoreToColor(summary.avg_score) : '#5b7279'}; font-weight: bold;`}>
                       {summary?.avg_score != null ? summary.avg_score.toFixed(3) : '---'}
                     </span>
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
-                    <span class="score-font" style={`color: ${summary?.avg_confidence != null ? confidenceToColor(summary.avg_confidence) : '#555'};`}>
+                    <span class="score-font" style={`color: ${summary?.avg_confidence != null ? confidenceToColor(summary.avg_confidence) : '#5b7279'};`}>
                       {summary?.avg_confidence != null ? summary.avg_confidence.toFixed(2) : '---'}
                     </span>
                   </td>
@@ -216,18 +216,18 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   <td style="padding: 6px 8px; text-align: center;">
                     {inFlight > 0
                       ? <span class="score-font" style="color: #eab308;">{inFlight}</span>
-                      : <span style="color: #555;">0</span>
+                      : <span style="color: #5b7279;">0</span>
                     }
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
                     {rs.failed > 0
                       ? <span class="score-font" style="color: #dc2626;">{rs.failed}</span>
-                      : <span style="color: #555;">0</span>
+                      : <span style="color: #5b7279;">0</span>
                     }
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
                     <div style="display: inline-flex; align-items: center; gap: 4px;">
-                      <div style="width: 50px; height: 6px; background: #1a1a25; border-radius: 3px; overflow: hidden;">
+                      <div style="width: 50px; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
                         <div style={`width: ${coveragePct}%; height: 100%; background: ${coverageColor}; border-radius: 3px;`}></div>
                       </div>
                       <span class="score-font" style={`color: ${coverageColor}; font-size: var(--font-xs);`}>{coveragePct}%</span>
@@ -246,17 +246,17 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {models.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Evaluation Models
             {modelComparison.length > 1 && (
-              <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+              <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
                 {modelComparison.length} models in history
               </span>
             )}
           </div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-            <tr style="color: #555; font-size: var(--font-xs);">
+            <tr style="color: #5b7279; font-size: var(--font-xs);">
               <td>Model</td>
               <td width="60" align="center">Status</td>
               <td width="70" align="center">Provider</td>
@@ -271,20 +271,20 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               const evalCount = active?.count ?? hist?.count ?? 0;
               const avgScore = active?.avg_score ?? hist?.avg_score ?? null;
               return (
-              <tr style="border-top: 1px solid #1a1a25;">
-                <td style={`color: ${reg.enabled ? '#c9c9c9' : '#555'};`} class="score-font">
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style={`color: ${reg.enabled ? '#98a8a8' : '#5b7279'};`} class="score-font">
                   {reg.api_model_id}
                 </td>
                 <td align="center" class="score-font">
                   {reg.enabled
                     ? <span style="color: #4ade80;">on</span>
-                    : <span style="color: #666;">off</span>
+                    : <span style="color: #5b7279;">off</span>
                   }
                 </td>
                 <td align="center" class="score-font" style={`color: ${reg.provider === 'anthropic' ? '#c084fc' : reg.provider === 'workers-ai' ? '#f59e0b' : '#60a5fa'};`}>
                   {reg.provider === 'anthropic' ? 'anth' : reg.provider === 'workers-ai' ? 'CF' : 'OR'}{reg.is_free ? '' : ''}
                 </td>
-                <td align="center" class="score-font" style="color: #888;">
+                <td align="center" class="score-font" style="color: #5b7279;">
                   {evalCount > 0 ? evalCount : '---'}
                 </td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(avgScore)};`}>
@@ -309,10 +309,10 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {(eventStats.total > 0 || recentPipelineEvents.length > 0) && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Pipeline Events
-            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
               {eventStats.last_24h} last 24h · {eventStats.last_7d} last 7d · {eventStats.error_count_7d > 0 ? `${eventStats.error_count_7d} errors` : 'no errors'}
             </span>
           </div>
@@ -320,7 +320,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
           {/* Error sparkline (last 7 days) */}
           {dailyErrors.length > 0 && (
             <div style="margin-bottom: 10px;">
-              <div style="color: #555; font-size: var(--font-xs); margin-bottom: 4px;">Errors/warnings (7d)</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">Errors/warnings (7d)</div>
               <div style="display: flex; align-items: flex-end; gap: 2px; height: 24px;">
                 {dailyErrors.map((d) => {
                   const maxCount = Math.max(...dailyErrors.map(x => x.count), 1);
@@ -338,52 +338,52 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
 
           {/* API Headroom */}
           {rateLimitSnapshot && (
-            <div style="margin-bottom: 10px; padding: 8px; background: #0a0a12; border: 1px solid #1a1a25; border-radius: 4px;">
-              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 6px;">
+            <div style="margin-bottom: 10px; padding: 8px; background: #0a0a12; border: 1px solid #0d4655; border-radius: 4px;">
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 6px;">
                 API Headroom
-                <span style="text-transform: none; color: #444; margin-left: 6px;">
+                <span style="text-transform: none; color: #1a5568; margin-left: 6px;">
                   {rateLimitSnapshot.model} · {rateLimitSnapshot.created_at.slice(0, 16)}
                 </span>
               </div>
               <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: var(--font-xs);">
                 {/* Requests */}
                 <div style="flex: 1; min-width: 100px;">
-                  <div style="color: #555; margin-bottom: 2px;">Requests</div>
+                  <div style="color: #5b7279; margin-bottom: 2px;">Requests</div>
                   <div style="display: flex; align-items: center; gap: 4px;">
-                    <div style="flex: 1; height: 6px; background: #1a1a25; border-radius: 3px; overflow: hidden;">
+                    <div style="flex: 1; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
                       {rateLimitSnapshot.requests_remaining != null && rateLimitSnapshot.requests_limit != null && rateLimitSnapshot.requests_limit > 0 && (
                         <div style={`width: ${Math.round((rateLimitSnapshot.requests_remaining / rateLimitSnapshot.requests_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
                       )}
                     </div>
-                    <span style={`color: ${rateLimitSnapshot.requests_remaining != null && rateLimitSnapshot.requests_limit != null && rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? '#dc2626' : '#888'};`}>
+                    <span style={`color: ${rateLimitSnapshot.requests_remaining != null && rateLimitSnapshot.requests_limit != null && rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? '#dc2626' : '#5b7279'};`}>
                       {rateLimitSnapshot.requests_remaining ?? '?'}/{rateLimitSnapshot.requests_limit ?? '?'}
                     </span>
                   </div>
                 </div>
                 {/* Input tokens */}
                 <div style="flex: 1; min-width: 100px;">
-                  <div style="color: #555; margin-bottom: 2px;">Input Tokens</div>
+                  <div style="color: #5b7279; margin-bottom: 2px;">Input Tokens</div>
                   <div style="display: flex; align-items: center; gap: 4px;">
-                    <div style="flex: 1; height: 6px; background: #1a1a25; border-radius: 3px; overflow: hidden;">
+                    <div style="flex: 1; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
                       {rateLimitSnapshot.input_tokens_remaining != null && rateLimitSnapshot.input_tokens_limit != null && rateLimitSnapshot.input_tokens_limit > 0 && (
                         <div style={`width: ${Math.round((rateLimitSnapshot.input_tokens_remaining / rateLimitSnapshot.input_tokens_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
                       )}
                     </div>
-                    <span style={`color: ${rateLimitSnapshot.input_tokens_remaining != null && rateLimitSnapshot.input_tokens_limit != null && rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? '#dc2626' : '#888'}; white-space: nowrap;`}>
+                    <span style={`color: ${rateLimitSnapshot.input_tokens_remaining != null && rateLimitSnapshot.input_tokens_limit != null && rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? '#dc2626' : '#5b7279'}; white-space: nowrap;`}>
                       {rateLimitSnapshot.input_tokens_remaining != null ? (rateLimitSnapshot.input_tokens_remaining > 999999 ? `${(rateLimitSnapshot.input_tokens_remaining / 1000000).toFixed(1)}M` : rateLimitSnapshot.input_tokens_remaining > 999 ? `${(rateLimitSnapshot.input_tokens_remaining / 1000).toFixed(0)}k` : rateLimitSnapshot.input_tokens_remaining) : '?'}
                     </span>
                   </div>
                 </div>
                 {/* Output tokens */}
                 <div style="flex: 1; min-width: 100px;">
-                  <div style="color: #555; margin-bottom: 2px;">Output Tokens</div>
+                  <div style="color: #5b7279; margin-bottom: 2px;">Output Tokens</div>
                   <div style="display: flex; align-items: center; gap: 4px;">
-                    <div style="flex: 1; height: 6px; background: #1a1a25; border-radius: 3px; overflow: hidden;">
+                    <div style="flex: 1; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
                       {rateLimitSnapshot.output_tokens_remaining != null && rateLimitSnapshot.output_tokens_limit != null && rateLimitSnapshot.output_tokens_limit > 0 && (
                         <div style={`width: ${Math.round((rateLimitSnapshot.output_tokens_remaining / rateLimitSnapshot.output_tokens_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
                       )}
                     </div>
-                    <span style={`color: ${rateLimitSnapshot.output_tokens_remaining != null && rateLimitSnapshot.output_tokens_limit != null && rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? '#dc2626' : '#888'}; white-space: nowrap;`}>
+                    <span style={`color: ${rateLimitSnapshot.output_tokens_remaining != null && rateLimitSnapshot.output_tokens_limit != null && rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? '#dc2626' : '#5b7279'}; white-space: nowrap;`}>
                       {rateLimitSnapshot.output_tokens_remaining != null ? (rateLimitSnapshot.output_tokens_remaining > 999999 ? `${(rateLimitSnapshot.output_tokens_remaining / 1000000).toFixed(1)}M` : rateLimitSnapshot.output_tokens_remaining > 999 ? `${(rateLimitSnapshot.output_tokens_remaining / 1000).toFixed(0)}k` : rateLimitSnapshot.output_tokens_remaining) : '?'}
                     </span>
                   </div>
@@ -391,8 +391,8 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               </div>
               <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs);">
                 {rateLimitSnapshot.cache_hit_rate != null && (
-                  <span style="color: #888;">
-                    Cache: <span style={`color: ${rateLimitSnapshot.cache_hit_rate > 0.5 ? '#16a34a' : rateLimitSnapshot.cache_hit_rate > 0.2 ? '#eab308' : '#888'};`}>{(rateLimitSnapshot.cache_hit_rate * 100).toFixed(0)}%</span>
+                  <span style="color: #5b7279;">
+                    Cache: <span style={`color: ${rateLimitSnapshot.cache_hit_rate > 0.5 ? '#16a34a' : rateLimitSnapshot.cache_hit_rate > 0.2 ? '#eab308' : '#5b7279'};`}>{(rateLimitSnapshot.cache_hit_rate * 100).toFixed(0)}%</span>
                   </span>
                 )}
                 <span style={`color: ${rateLimitSnapshot.consecutive_429s === 0 ? '#16a34a' : rateLimitSnapshot.consecutive_429s <= 2 ? '#eab308' : '#dc2626'};`}>
@@ -406,7 +406,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
           {Object.keys(eventStats.by_type).length > 0 && (
             <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
               {Object.entries(eventStats.by_type).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
-                const color = EVENT_TYPE_COLORS[type] || '#888';
+                const color = EVENT_TYPE_COLORS[type] || '#5b7279';
                 return (
                   <span class="badge" style={`background: ${color}20; color: ${color}; font-size: var(--font-xs);`}>
                     {type}: {count}
@@ -419,9 +419,9 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
           {/* Cycle stats (evals per cycle + cycle time) */}
           {cycleStats.length > 0 && (
             <div style="margin-bottom: 10px;">
-              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Cycle Performance</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Cycle Performance</div>
               <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                <tr style="color: #444; font-size: 9px; text-transform: uppercase;">
+                <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase;">
                   <td width="130">Cycle Start</td>
                   <td width="50" align="center">Crawl</td>
                   <td width="40" align="center" title="Stories found by cron">Found</td>
@@ -437,17 +437,17 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   const cycleMins = cycleDuration !== null ? Math.floor(cycleDuration / 60) : null;
                   const cycleSecs = cycleDuration !== null ? cycleDuration % 60 : null;
                   return (
-                    <tr style="border-top: 1px solid #1a1a25;">
-                      <td style="color: #555; white-space: nowrap;">{c.cycle_start.slice(0, 16)}</td>
-                      <td align="center" style="color: #555; white-space: nowrap;">
+                    <tr style="border-top: 1px solid #0d4655;">
+                      <td style="color: #5b7279; white-space: nowrap;">{c.cycle_start.slice(0, 16)}</td>
+                      <td align="center" style="color: #5b7279; white-space: nowrap;">
                         {c.duration_ms !== null ? `${(c.duration_ms / 1000).toFixed(1)}s` : '---'}
                       </td>
-                      <td align="center" style="color: #888;">{c.stories_found ?? '---'}</td>
-                      <td align="center" style={`color: ${(c.stories_new ?? 0) > 0 ? '#16a34a' : '#555'};`}>{c.stories_new ?? '---'}</td>
-                      <td align="center" style={`color: ${c.evals_completed > 0 ? '#60a5fa' : '#555'}; font-weight: ${c.evals_completed > 0 ? 'bold' : 'normal'};`}>{c.evals_completed}</td>
-                      <td align="center" style={`color: ${c.evals_failed > 0 ? '#dc2626' : '#555'};`}>{c.evals_failed || '---'}</td>
-                      <td style="color: #555;">
-                        {cycleMins !== null ? `${cycleMins}m ${cycleSecs}s` : <span style="color: #333;">current</span>}
+                      <td align="center" style="color: #5b7279;">{c.stories_found ?? '---'}</td>
+                      <td align="center" style={`color: ${(c.stories_new ?? 0) > 0 ? '#16a34a' : '#5b7279'};`}>{c.stories_new ?? '---'}</td>
+                      <td align="center" style={`color: ${c.evals_completed > 0 ? '#60a5fa' : '#5b7279'}; font-weight: ${c.evals_completed > 0 ? 'bold' : 'normal'};`}>{c.evals_completed}</td>
+                      <td align="center" style={`color: ${c.evals_failed > 0 ? '#dc2626' : '#5b7279'};`}>{c.evals_failed || '---'}</td>
+                      <td style="color: #5b7279;">
+                        {cycleMins !== null ? `${cycleMins}m ${cycleSecs}s` : <span style="color: #0d4655;">current</span>}
                       </td>
                     </tr>
                   );
@@ -465,10 +465,10 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                 const avgCycleMins = Math.floor(avgCycle / 60);
                 const avgCycleSecs = Math.round(avgCycle % 60);
                 return (
-                  <div style="margin-top: 6px; font-size: var(--font-xs); color: #555;">
+                  <div style="margin-top: 6px; font-size: var(--font-xs); color: #5b7279;">
                     Avg: <span style="color: #60a5fa;">{avgEvals.toFixed(1)}</span> evals/cycle
-                    <span style="color: #333;"> · </span>
-                    <span style="color: #888;">{avgCycleMins}m {avgCycleSecs}s</span> cycle time
+                    <span style="color: #0d4655;"> · </span>
+                    <span style="color: #5b7279;">{avgCycleMins}m {avgCycleSecs}s</span> cycle time
                   </div>
                 );
               })()}
@@ -478,22 +478,22 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
           {/* Measurement Integrity */}
           <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
             {/* DLQ Status */}
-            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${dlqStats.pending > 0 ? '#dc262640' : '#1a1a25'}; border-radius: 4px;`}>
-              <div style="color: #555; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Dead Letter Queue</div>
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${dlqStats.pending > 0 ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Dead Letter Queue</div>
               {dlqStats.total === 0 ? (
-                <div style="color: #555; font-size: var(--font-xs);">Empty</div>
+                <div style="color: #5b7279; font-size: var(--font-xs);">Empty</div>
               ) : (
                 <div style="font-size: var(--font-xs);">
                   <span style={`color: ${dlqStats.pending > 0 ? '#dc2626' : '#16a34a'}; font-weight: bold;`}>{dlqStats.pending}</span>
-                  <span style="color: #555;"> pending</span>
-                  {dlqStats.replayed > 0 && <span style="color: #555;"> · {dlqStats.replayed} replayed</span>}
-                  {dlqStats.discarded > 0 && <span style="color: #444;"> · {dlqStats.discarded} discarded</span>}
+                  <span style="color: #5b7279;"> pending</span>
+                  {dlqStats.replayed > 0 && <span style="color: #5b7279;"> · {dlqStats.replayed} replayed</span>}
+                  {dlqStats.discarded > 0 && <span style="color: #1a5568;"> · {dlqStats.discarded} discarded</span>}
                 </div>
               )}
               {dlqMessages.length > 0 && (
                 <div style="margin-top: 4px; font-size: 9px;">
                   {dlqMessages.slice(0, 3).map((m) => (
-                    <div style="color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;" title={`hn_id=${m.hn_id}: ${m.title}`}>
+                    <div style="color: #5b7279; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;" title={`hn_id=${m.hn_id}: ${m.title}`}>
                       <a href={`/item/${m.hn_id}`} style="color: #dc2626;">{m.hn_id}</a> {m.title.slice(0, 30)}...
                     </div>
                   ))}
@@ -502,19 +502,19 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             </div>
 
             {/* Methodology Versions */}
-            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid #1a1a25; border-radius: 4px;">
-              <div style="color: #555; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Methodology Versions</div>
+            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid #0d4655; border-radius: 4px;">
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Methodology Versions</div>
               {methodologyDist.length === 0 ? (
-                <div style="color: #555; font-size: var(--font-xs);">No data</div>
+                <div style="color: #5b7279; font-size: var(--font-xs);">No data</div>
               ) : (
                 <div style="font-size: var(--font-xs);">
                   {methodologyDist.map((m, i) => {
                     const hashDisplay = m.methodology_hash ? m.methodology_hash.slice(0, 8) : 'pre-v';
                     const isLatest = i === 0 && m.methodology_hash !== null;
                     return (
-                      <div style={`color: ${isLatest ? '#16a34a' : m.methodology_hash === null ? '#eab308' : '#888'};`}>
+                      <div style={`color: ${isLatest ? '#16a34a' : m.methodology_hash === null ? '#eab308' : '#5b7279'};`}>
                         <span style="font-family: monospace;">{hashDisplay}</span>
-                        <span style="color: #555;"> · {m.count} evals</span>
+                        <span style="color: #5b7279;"> · {m.count} evals</span>
                         {m.methodology_hash === null && <span style="color: #eab308;"> (stale)</span>}
                       </div>
                     );
@@ -529,25 +529,25 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             </div>
 
             {/* Model Drift */}
-            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid #1a1a25; border-radius: 4px;">
-              <div style="color: #555; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Model Drift</div>
+            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid #0d4655; border-radius: 4px;">
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Model Drift</div>
               {driftStats.models.length === 0 ? (
-                <div style="color: #555; font-size: var(--font-xs);">No data</div>
+                <div style="color: #5b7279; font-size: var(--font-xs);">No data</div>
               ) : (
                 <div style="font-size: var(--font-xs);">
                   {driftStats.models.map((m) => (
-                    <div style="color: #888;">
+                    <div style="color: #5b7279;">
                       <span style="color: #60a5fa;">{m.eval_model}</span>
-                      <span style="color: #555;"> · {m.count} evals · avg </span>
-                      <span style={`color: ${m.avg_score > 0.05 ? '#16a34a' : m.avg_score < -0.05 ? '#dc2626' : '#888'};`}>{m.avg_score?.toFixed(3)}</span>
-                      <span style="color: #444;"> ±{m.stddev?.toFixed(3)}</span>
+                      <span style="color: #5b7279;"> · {m.count} evals · avg </span>
+                      <span style={`color: ${m.avg_score > 0.05 ? '#16a34a' : m.avg_score < -0.05 ? '#dc2626' : '#5b7279'};`}>{m.avg_score?.toFixed(3)}</span>
+                      <span style="color: #1a5568;"> ±{m.stddev?.toFixed(3)}</span>
                     </div>
                   ))}
                   {driftStats.overlapping > 0 && (
-                    <div style="margin-top: 2px; color: #555; font-size: 9px;">
+                    <div style="margin-top: 2px; color: #5b7279; font-size: 9px;">
                       {driftStats.overlapping} overlapping
                       {driftStats.meanDelta !== null && (
-                        <span> · mean |Δ| = <span style={`color: ${driftStats.meanDelta > 0.1 ? '#eab308' : '#888'};`}>{driftStats.meanDelta.toFixed(3)}</span></span>
+                        <span> · mean |Δ| = <span style={`color: ${driftStats.meanDelta > 0.1 ? '#eab308' : '#5b7279'};`}>{driftStats.meanDelta.toFixed(3)}</span></span>
                       )}
                     </div>
                   )}
@@ -556,19 +556,19 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             </div>
 
             {/* Calibration Status */}
-            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${lastCalibration?.status === 'fail' ? '#dc262640' : '#1a1a25'}; border-radius: 4px;`}>
-              <div style="color: #555; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Calibration</div>
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${lastCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Calibration</div>
               {!lastCalibration ? (
                 <div style="font-size: var(--font-xs);">
                   <div style="color: #eab308;">No runs yet</div>
-                  <div style="color: #444; font-size: 9px;">{CALIBRATION_SET.length} URLs defined</div>
+                  <div style="color: #1a5568; font-size: 9px;">{CALIBRATION_SET.length} URLs defined</div>
                 </div>
               ) : (
                 <div style="font-size: var(--font-xs);">
                   <span style={`color: ${lastCalibration.status === 'pass' ? '#16a34a' : lastCalibration.status === 'fail' ? '#dc2626' : '#eab308'}; font-weight: bold; text-transform: uppercase;`}>{lastCalibration.status}</span>
-                  <span style="color: #555;"> · {lastCalibration.passed}/{lastCalibration.total_urls} passed</span>
+                  <span style="color: #5b7279;"> · {lastCalibration.passed}/{lastCalibration.total_urls} passed</span>
                   {lastCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastCalibration.failed} failed</span>}
-                  <div style="color: #444; font-size: 9px; margin-top: 2px;">
+                  <div style="color: #1a5568; font-size: 9px; margin-top: 2px;">
                     {lastCalibration.model.replace('claude-', '').replace('-20251001', '')} · {lastCalibration.created_at.slice(0, 10)}
                   </div>
                 </div>
@@ -579,14 +579,14 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
           {/* Recent events table */}
           {recentPipelineEvents.length > 0 && (
             <div>
-              <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Recent Events</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Recent Events</div>
               <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
                 {recentPipelineEvents.map((ev) => {
-                  const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#555';
-                  const typeColor = EVENT_TYPE_COLORS[ev.event_type] || '#888';
+                  const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#5b7279';
+                  const typeColor = EVENT_TYPE_COLORS[ev.event_type] || '#5b7279';
                   return (
-                    <tr style="border-top: 1px solid #1a1a25;">
-                      <td style="color: #555; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
+                    <tr style="border-top: 1px solid #0d4655;">
+                      <td style="color: #5b7279; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
                       <td style="width: 90px;">
                         <span class="badge" style={`background: ${typeColor}20; color: ${typeColor}; font-size: var(--font-xs);`}>
                           {ev.event_type}
@@ -603,15 +603,15 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                         {ev.investigated === 1
                           ? <span style="color: #3b82f6;" title="Investigated">INV</span>
                           : ev.investigated === 0
-                            ? <span style="color: #555;" title="Not investigated">--</span>
-                            : <span style="color: #333;" title="Not triaged">-</span>
+                            ? <span style="color: #5b7279;" title="Not investigated">--</span>
+                            : <span style="color: #0d4655;" title="Not triaged">-</span>
                         }
                         {' '}
                         {ev.resolved === 1
                           ? <span style="color: #22c55e;" title="Resolved">RES</span>
                           : ev.resolved === 0
-                            ? <span style="color: #555;" title="Not resolved">--</span>
-                            : <span style="color: #333;" title="Not triaged">-</span>
+                            ? <span style="color: #5b7279;" title="Not resolved">--</span>
+                            : <span style="color: #0d4655;" title="Not triaged">-</span>
                         }
                       </td>
                     </tr>
@@ -629,14 +629,14 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {failed.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Recent Failures</div>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Recent Failures</div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             {failed.map((s) => (
-              <tr style="border-top: 1px solid #1a1a25;">
-                <td style="color: #c9c9c9;">
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style="color: #98a8a8;">
                   {s.title}
-                  {s.domain && <span style="color: #555; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
+                  {s.domain && <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
                 </td>
                 <td style="color: #dc2626; font-size: var(--font-xs); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   {s.eval_error?.slice(0, 80) || 'Unknown error'}
@@ -653,23 +653,23 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {queue.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Queue
-            <span style="color: #555; text-transform: none; letter-spacing: 0; margin-left: 6px;">
+            <span style="color: #5b7279; text-transform: none; letter-spacing: 0; margin-left: 6px;">
               {queue.length} stories waiting &middot; ~20 per batch &middot; est. {Math.ceil(queue.length / 20) * 10} min to clear
             </span>
           </div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-            <tr style="color: #555; font-size: var(--font-xs);">
+            <tr style="color: #5b7279; font-size: var(--font-xs);">
               <td width="24">#</td>
               <td width="70">Status</td>
               <td>Story</td>
               <td width="140">Domain</td>
             </tr>
             {queue.map((s, i) => (
-              <tr style="border-top: 1px solid #1a1a25;">
-                <td style="color: #555;" class="score-font">{i + 1}</td>
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style="color: #5b7279;" class="score-font">{i + 1}</td>
                 <td>
                   {s.eval_status === 'evaluating' ? (
                     <span class="badge" style="background: rgba(96,165,250,0.2); color: #60a5fa; font-size: var(--font-xs);">evaluating</span>
@@ -679,11 +679,11 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                 </td>
                 <td>
                   <a href={s.url || `https://news.ycombinator.com/item?id=${s.hn_id}`}
-                     target="_blank" rel="noopener" style="color: #c9c9c9;">
+                     target="_blank" rel="noopener" style="color: #98a8a8;">
                     {s.title}
                   </a>
                 </td>
-                <td style="color: #555; font-size: var(--font-xs);">{s.domain || 'self'}</td>
+                <td style="color: #5b7279; font-size: var(--font-xs);">{s.domain || 'self'}</td>
               </tr>
             ))}
           </table>
@@ -695,55 +695,55 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {/* Operations */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Operations</div>
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Operations</div>
         <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
           <tr>
-            <td style="color: #666; width: 140px;">Cron interval</td>
-            <td style="color: #c9c9c9;">Every 5 minutes</td>
+            <td style="color: #5b7279; width: 140px;">Cron interval</td>
+            <td style="color: #98a8a8;">Every 5 minutes</td>
           </tr>
           <tr>
-            <td style="color: #666;">Score refresh</td>
-            <td style="color: #c9c9c9;">Every 5 min (updates) · 48h sweep every 10 min</td>
+            <td style="color: #5b7279;">Score refresh</td>
+            <td style="color: #98a8a8;">Every 5 min (updates) · 48h sweep every 10 min</td>
           </tr>
           <tr>
-            <td style="color: #666;">Eval today</td>
+            <td style="color: #5b7279;">Eval today</td>
             <td>
               <span class="score-font" style="color: #eab308;">{costStats.today_evals}</span>
-              <span style="color: #555;"> evals · </span>
-              <span class="score-font" style="color: #888;">{formatTokens(costStats.today_input_tokens)}</span>
-              <span style="color: #555;"> in · </span>
-              <span class="score-font" style="color: #888;">{formatTokens(costStats.today_output_tokens)}</span>
-              <span style="color: #555;"> out</span>
+              <span style="color: #5b7279;"> evals · </span>
+              <span class="score-font" style="color: #5b7279;">{formatTokens(costStats.today_input_tokens)}</span>
+              <span style="color: #5b7279;"> in · </span>
+              <span class="score-font" style="color: #5b7279;">{formatTokens(costStats.today_output_tokens)}</span>
+              <span style="color: #5b7279;"> out</span>
             </td>
           </tr>
           <tr>
-            <td style="color: #666;">Total usage</td>
+            <td style="color: #5b7279;">Total usage</td>
             <td>
               <span class="score-font" style="color: #16a34a;">{costStats.total_evals}</span>
-              <span style="color: #555;"> evals · </span>
-              <span class="score-font" style="color: #888;">{formatTokens(costStats.total_input_tokens)}</span>
-              <span style="color: #555;"> in · </span>
-              <span class="score-font" style="color: #888;">{formatTokens(costStats.total_output_tokens)}</span>
-              <span style="color: #555;"> out</span>
+              <span style="color: #5b7279;"> evals · </span>
+              <span class="score-font" style="color: #5b7279;">{formatTokens(costStats.total_input_tokens)}</span>
+              <span style="color: #5b7279;"> in · </span>
+              <span class="score-font" style="color: #5b7279;">{formatTokens(costStats.total_output_tokens)}</span>
+              <span style="color: #5b7279;"> out</span>
             </td>
           </tr>
           <tr>
-            <td style="color: #666;">Queue</td>
+            <td style="color: #5b7279;">Queue</td>
             <td>
               <span class="score-font" style="color: #60a5fa;">{status.evaluating}</span>
-              <span style="color: #555;"> evaluating · </span>
+              <span style="color: #5b7279;"> evaluating · </span>
               <span class="score-font" style="color: #eab308;">{queue.length}</span>
-              <span style="color: #555;"> queued/pending</span>
+              <span style="color: #5b7279;"> queued/pending</span>
             </td>
           </tr>
           <tr>
-            <td style="color: #666;">Crawl surface</td>
-            <td style="color: #c9c9c9;">top · new · best · ask · show (5 lists)</td>
+            <td style="color: #5b7279;">Crawl surface</td>
+            <td style="color: #98a8a8;">top · new · best · ask · show (5 lists)</td>
           </tr>
           <tr>
-            <td style="color: #666;">Architecture</td>
-            <td style="color: #555; font-size: var(--font-xs);">Cron v5 → Queue → Consumer (fan-out) · KV content cache · KV DCP cache</td>
+            <td style="color: #5b7279;">Architecture</td>
+            <td style="color: #5b7279; font-size: var(--font-xs);">Cron v5 → Queue → Consumer (fan-out) · KV content cache · KV DCP cache</td>
           </tr>
         </table>
       </td>
@@ -753,10 +753,10 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {/* Link card: Models */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-        <a href="/models" style="color: #c9c9c9; text-decoration: none; display: block;">
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <a href="/models" style="color: #98a8a8; text-decoration: none; display: block;">
           <div style="font-size: var(--font-sm); font-weight: bold;">Models</div>
-          <div style="color: #666; font-size: var(--font-xs); margin-top: 2px;">Multi-model comparison, agreement analysis, and score distributions.</div>
+          <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 2px;">Multi-model comparison, agreement analysis, and score distributions.</div>
         </a>
       </td>
     </tr>
@@ -785,8 +785,8 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
         const d = JSON.parse(e.data);
         const score = d.hcb_weighted_mean !== null ? d.hcb_weighted_mean.toFixed(2) : '?';
         const toast = document.createElement('div');
-        toast.style.cssText = 'background:#12121a;border:1px solid #222230;border-radius:4px;padding:6px 10px;font-size:8pt;color:#aaa;animation:fadeIn 0.3s;';
-        toast.innerHTML = '<a href="/item/' + d.hn_id + '" style="color:#c9c9c9;">' + d.title.slice(0, 40) + '</a>' +
+        toast.style.cssText = 'background:#093946;border:1px solid #1a5568;border-radius:4px;padding:6px 10px;font-size:8pt;color:#8faaab;animation:fadeIn 0.3s;';
+        toast.innerHTML = '<a href="/item/' + d.hn_id + '" style="color:#98a8a8;">' + d.title.slice(0, 40) + '</a>' +
           ' <span style="color:' + (d.hcb_weighted_mean > 0.05 ? '#16a34a' : d.hcb_weighted_mean < -0.05 ? '#dc2626' : '#eab308') + ';font-family:monospace;">' + score + '</span>';
         if (feed) {
           feed.appendChild(toast);
@@ -798,13 +798,13 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
 
       es.addEventListener('timeout', function() {
         es.close();
-        if (indicator) { indicator.style.color = '#555'; indicator.textContent = 'reconnecting...'; }
+        if (indicator) { indicator.style.color = '#5b7279'; indicator.textContent = 'reconnecting...'; }
         setTimeout(connect, 2000);
       });
 
       es.onerror = function() {
         es.close();
-        if (indicator) { indicator.style.color = '#555'; indicator.textContent = 'offline'; }
+        if (indicator) { indicator.style.color = '#5b7279'; indicator.textContent = 'offline'; }
         setTimeout(connect, 30000);
       };
     }

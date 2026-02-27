@@ -57,25 +57,25 @@ const jsonLd = udhrSection ? {
 <Base title={`${section}: ${articleTitle} — Rankings`}>
   {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
   {/* Breadcrumb */}
-  <div style="padding: 4px 0; font-size: var(--font-xs); color: #555;">
-    <a href="/" style="color: #555;">home</a>
-    <span style="color: #333;"> / </span>
-    <a href="/rights/articles" style="color: #555;">articles</a>
-    <span style="color: #333;"> / </span>
-    <span style="color: #888;">{section}</span>
+  <div style="padding: 4px 0; font-size: var(--font-xs); color: #5b7279;">
+    <a href="/" style="color: #5b7279;">home</a>
+    <span style="color: #0d4655;"> / </span>
+    <a href="/rights/articles" style="color: #5b7279;">articles</a>
+    <span style="color: #0d4655;"> / </span>
+    <span style="color: #5b7279;">{section}</span>
   </div>
   {/* Header */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">{section}</span>
-        <span style="color: #828282; margin-left: 8px;">{articleTitle}</span>
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">{section}</span>
+        <span style="color: #5b7279; margin-left: 8px;">{articleTitle}</span>
       </td>
     </tr>
     <tr>
       <td class="subtext" style="padding: 4px 0 8px 0;">
         Stories ranked by their score on this UDHR provision.
-        {page > 1 && <span style="color: #555;"> · page {page}</span>}
+        {page > 1 && <span style="color: #5b7279;"> · page {page}</span>}
         {prevNum !== null && (
           <>
             <span> | </span>
@@ -96,14 +96,14 @@ const jsonLd = udhrSection ? {
   {udhrSection && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
-          <div style="color: #888; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
             UDHR Text
-            <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
               {udhrSection.group}
             </span>
           </div>
-          <div style="color: #aaa; font-size: var(--font-base); line-height: 1.6; white-space: pre-line;">{udhrSection.text}</div>
+          <div style="color: #8faaab; font-size: var(--font-base); line-height: 1.6; white-space: pre-line;">{udhrSection.text}</div>
         </td>
       </tr>
     </table>
@@ -113,9 +113,9 @@ const jsonLd = udhrSection ? {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 10px 0;">
     <tr>
       <td>
-        <div style="color: #828282; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
           All Articles
-          <span style="text-transform: none; letter-spacing: 0; color: #555; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
             {coverage.filter(c => c.signal_count > 0).length}/{ALL_SECTIONS.length} with scores
           </span>
         </div>
@@ -127,11 +127,11 @@ const jsonLd = udhrSection ? {
             const hasScores = cov && cov.signal_count > 0;
             let style: string;
             if (isActive) {
-              style = 'background: rgba(255,102,0,0.2); color: #ff6600; border: 1px solid rgba(255,102,0,0.4);';
+              style = 'background: rgba(255,102,0,0.2); color: #d56500; border: 1px solid rgba(255,102,0,0.4);';
             } else if (hasScores) {
               style = `background: ${scoreToColor(cov.avg_final)}20; color: ${scoreToColor(cov.avg_final)}; border: 1px solid ${scoreToColor(cov.avg_final)}40;`;
             } else {
-              style = 'background: #1a1a25; color: #444; border: 1px solid #1a1a25;';
+              style = 'background: #0d4655; color: #1a5568; border: 1px solid #0d4655;';
             }
             return (
               <a
@@ -152,7 +152,7 @@ const jsonLd = udhrSection ? {
   {displayRankings.length > 0 ? (
     <table id="article-table" cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
       <thead>
-        <tr style="color: #828282; font-size: var(--font-sm); cursor: pointer; user-select: none;">
+        <tr style="color: #5b7279; font-size: var(--font-sm); cursor: pointer; user-select: none;">
           <td data-col="rank" data-type="num" width="30"># ▼</td>
           <td data-col="hrcb" data-type="num" width="60" align="center">HRCB</td>
           <td data-col="pts" data-type="num" width="34" align="center" title="HN Points">Pts</td>
@@ -171,17 +171,17 @@ const jsonLd = udhrSection ? {
           const rowSetl = computeSetl(row.structural, row.editorial);
           const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
           return (
-          <tr style="border-top: 1px solid #222230;">
-            <td style="color: #828282;" class="score-font" data-val={offset + i + 1}>{offset + i + 1}.</td>
+          <tr style="border-top: 1px solid #1a5568;">
+            <td style="color: #5b7279;" class="score-font" data-val={offset + i + 1}>{offset + i + 1}.</td>
             <td align="center" data-val={row.final ?? -999}>
               <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
                 {formatScore(row.final)}
               </span>
             </td>
-            <td align="center" style="color: #888; font-size: var(--font-sm);" data-val={row.hn_score ?? -999}>
+            <td align="center" style="color: #5b7279; font-size: var(--font-sm);" data-val={row.hn_score ?? -999}>
               {row.hn_score ?? ''}
             </td>
-            <td align="center" style="color: #666; font-size: var(--font-sm);" data-val={row.hn_comments ?? -999}>
+            <td align="center" style="color: #5b7279; font-size: var(--font-sm);" data-val={row.hn_comments ?? -999}>
               {row.hn_comments ?? ''}
             </td>
             <td align="center" class="score-font" style={`color: ${confidenceToColor(rowConf)}; font-size: var(--font-sm);`} data-val={rowConf ?? -999}>
@@ -190,7 +190,7 @@ const jsonLd = udhrSection ? {
             <td data-val={row.title}>
               <a href={`/item/${row.hn_id}`}>{row.title}</a>
               {row.domain && (
-                <span style="color: #828282; font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
+                <span style="color: #5b7279; font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
               )}
             </td>
             <td align="center" class="score-font" style={`color: ${scoreToColor(row.editorial)}; font-size: var(--font-sm);`} data-val={row.editorial ?? -999}>
@@ -202,7 +202,7 @@ const jsonLd = udhrSection ? {
             <td align="center" class="score-font" style={`color: ${setlToColor(rowSetl)}; font-size: var(--font-sm);`} data-val={rowSetl ?? -999}>
               {formatSetl(rowSetl)}
             </td>
-            <td align="center" style="color: #828282; font-size: var(--font-sm);" data-val={row.evidence === 'H' ? 3 : row.evidence === 'M' ? 2 : row.evidence === 'L' ? 1 : 0}>
+            <td align="center" style="color: #5b7279; font-size: var(--font-sm);" data-val={row.evidence === 'H' ? 3 : row.evidence === 'M' ? 2 : row.evidence === 'L' ? 1 : 0}>
               {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
             </td>
             <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_weighted_mean)}; font-size: var(--font-sm);`} data-val={row.hcb_weighted_mean ?? -999}>
@@ -222,18 +222,18 @@ const jsonLd = udhrSection ? {
     return (
     <table cellpadding="0" cellspacing="0" width="100%">
       <tr>
-        <td style="padding: 15px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <td style="padding: 15px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
           <div style="text-align: center; margin-bottom: 12px;">
-            <span style="color: #555; font-size: var(--font-lg);">&#9675;</span>
-            <div style="color: #888; margin-top: 6px;">No stories have scored on <strong style="color: #c9c9c9;">{section}</strong> yet.</div>
-            <div style="font-size: var(--font-sm); color: #555; margin-top: 4px;">
+            <span style="color: #5b7279; font-size: var(--font-lg);">&#9675;</span>
+            <div style="color: #5b7279; margin-top: 6px;">No stories have scored on <strong style="color: #98a8a8;">{section}</strong> yet.</div>
+            <div style="font-size: var(--font-sm); color: #5b7279; margin-top: 4px;">
               When stories are evaluated, those with signal on this provision will be ranked here.
             </div>
           </div>
 
           {nearbyWithScores.length > 0 && (
-            <div style="border-top: 1px solid #1a1a25; padding-top: 10px;">
-              <div style="color: #666; font-size: var(--font-sm); margin-bottom: 6px;">Nearby articles with rankings:</div>
+            <div style="border-top: 1px solid #0d4655; padding-top: 10px;">
+              <div style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 6px;">Nearby articles with rankings:</div>
               <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
                 {nearbyWithScores.map(c => (
                   <tr>
@@ -243,14 +243,14 @@ const jsonLd = udhrSection ? {
                       </a>
                     </td>
                     <td>
-                      <a href={`/article/${c.sort_order}`} style="color: #888;">
+                      <a href={`/article/${c.sort_order}`} style="color: #5b7279;">
                         {ARTICLE_TITLES[c.section]}
                       </a>
                     </td>
                     <td style="width: 50px; text-align: right;" class="score-font">
                       <span style={`color: ${scoreToColor(c.avg_final)};`}>{formatScore(c.avg_final)}</span>
                     </td>
-                    <td style="width: 60px; text-align: right; color: #555; font-size: var(--font-xs);">
+                    <td style="width: 60px; text-align: right; color: #5b7279; font-size: var(--font-xs);">
                       {c.signal_count} stories
                     </td>
                   </tr>
@@ -268,7 +268,7 @@ const jsonLd = udhrSection ? {
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={`/article/${articleNum}?p=${page + 1}`} class="morelink" style="color: #828282; font-size: var(--font-base);">
+          <a href={`/article/${articleNum}?p=${page + 1}`} class="morelink" style="color: #5b7279; font-size: var(--font-base);">
             More
           </a>
         </td>

@@ -57,7 +57,7 @@ const svgH = compact ? cellH : cellH + (showLabels ? 16 : 0);
             y={y}
             width={cellW}
             height={cellH}
-            fill={finalScore === null ? '#1a1a25' : color}
+            fill={finalScore === null ? '#0d4655' : color}
             rx={compact ? 1 : 2}
           >
             <title>{section}: {formatScore(finalScore)} — {ARTICLE_TITLES[section]}</title>
@@ -78,7 +78,7 @@ const svgH = compact ? cellH : cellH + (showLabels ? 16 : 0);
             <text
               x={x + cellW / 2}
               y={cellH + 12}
-              fill="#666"
+              fill="#5b7279"
               font-size="7"
               text-anchor="middle"
               font-family="monospace"

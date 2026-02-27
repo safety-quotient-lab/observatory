@@ -56,31 +56,31 @@ function buildDomainUrl(params: Record<string, string>): string {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">Domains</span>
-        <span style="color: #828282; margin-left: 8px; font-size: var(--font-base);">
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Domains</span>
+        <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-base);">
           {domains.length} domains{safeClassify !== 'all' ? ` (${safeClassify})` : ''}
         </span>
         <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
-          <span style="color: #666;">sort:</span>
+          <span style="color: #5b7279;">sort:</span>
           {(['count', 'score', 'setl', 'conf'] as const).map((opt, i) => {
             const labels = { count: 'stories', score: 'hrcb', setl: 'setl', conf: 'confidence' } as any;
             return (
               <>
-                {i > 0 && <span style="color: #444;"> | </span>}
+                {i > 0 && <span style="color: #1a5568;"> | </span>}
                 {safeSort === opt
-                  ? <span style="color: #ff6600; font-weight: bold;">{labels[opt]}</span>
+                  ? <span style="color: #d56500; font-weight: bold;">{labels[opt]}</span>
                   : <a href={buildDomainUrl({ sort: opt })}>{labels[opt]}</a>
                 }
               </>
             );
           })}
           <br />
-          <span style="color: #666;">show:</span>
+          <span style="color: #5b7279;">show:</span>
           {(['all', 'positive', 'negative', 'neutral', 'contested'] as const).map((opt, i) => (
             <>
-              {i > 0 && <span style="color: #444;"> | </span>}
+              {i > 0 && <span style="color: #1a5568;"> | </span>}
               {safeClassify === opt
-                ? <span style="color: #ff6600; font-weight: bold;">{opt}</span>
+                ? <span style="color: #d56500; font-weight: bold;">{opt}</span>
                 : <a href={buildDomainUrl({ class: opt })}>{opt}</a>
               }
             </>
@@ -95,53 +95,53 @@ function buildDomainUrl(params: Record<string, string>): string {
     <div class="table-wrap" style="margin-bottom: 10px;">
     <table cellpadding="0" cellspacing="0" width="100%">
       <tr>
-        <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
           <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 700px;">
             <tr>
               <td style="vertical-align: top; width: 20%; padding: 4px 8px;">
-                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
                 {topHrcb.map(d => (
                   <div style="margin-bottom: 3px;">
-                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
                     <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
                   </div>
                 ))}
               </td>
-              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
-                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #0d4655;">
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
                 {bottomHrcb.map(d => (
                   <div style="margin-bottom: 3px;">
-                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
                     <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
                   </div>
                 ))}
               </td>
-              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
-                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #0d4655;">
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
                 {controversial.map(d => (
                   <div style="margin-bottom: 3px;">
-                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
                     <span class="score-font" style="color: #e2b340; font-size: var(--font-sm); margin-left: 4px;">{d.hrcb_range !== null ? d.hrcb_range.toFixed(2) : '--'}</span>
                   </div>
                 ))}
               </td>
-              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
-                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Engaging</div>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #0d4655;">
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Engaging</div>
                 {highEngagement.map(d => (
                   <div style="margin-bottom: 3px;">
-                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
                     <span class="score-font" style="color: #60a5fa; font-size: var(--font-sm); margin-left: 4px;">{d.comment_per_point !== null ? d.comment_per_point.toFixed(2) : '--'}</span>
-                    <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">c/pt</span>
+                    <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">c/pt</span>
                   </div>
                 ))}
               </td>
-              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #1a1a25;">
-                <div style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
+              <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #0d4655;">
+                <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
                 {diverse.map(d => (
                   <div style="margin-bottom: 3px;">
-                    <a href={`/domain/${d.domain}`} style="color: #c9c9c9; font-size: var(--font-sm);">{d.domain}</a>
+                    <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
                     <span class="score-font" style="color: #a78bfa; font-size: var(--font-sm); margin-left: 4px;">{d.unique_submitters}</span>
-                    <span style="color: #555; font-size: var(--font-xs); margin-left: 2px;">users</span>
+                    <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">users</span>
                   </div>
                 ))}
               </td>
@@ -156,10 +156,10 @@ function buildDomainUrl(params: Record<string, string>): string {
   <div class="table-wrap">
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
     <tr>
-      <td style="padding: 10px; background: #12121a; border: 1px solid #222230; border-radius: 6px;">
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
         {domains.length > 0 ? (
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); min-width: 480px;">
-            <tr style="color: #555; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td width="24">#</td>
               <td>Domain</td>
               <td width="70" align="center">Stories</td>
@@ -170,35 +170,35 @@ function buildDomainUrl(params: Record<string, string>): string {
             </tr>
             {domains.map((d, i) => {
               const pct = d.count > 0 ? Math.round((d.evaluated / d.count) * 100) : 0;
-              const coverageColor = pct === 100 ? '#4ade80' : pct >= 50 ? '#eab308' : '#666';
+              const coverageColor = pct === 100 ? '#4ade80' : pct >= 50 ? '#eab308' : '#5b7279';
               return (
-              <tr style="border-top: 1px solid #1a1a25;">
-                <td style="color: #555;" class="score-font">{i + 1}</td>
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style="color: #5b7279;" class="score-font">{i + 1}</td>
                 <td>
-                  <a href={`/domain/${d.domain}`} style="color: #c9c9c9;">{d.domain}</a>
+                  <a href={`/domain/${d.domain}`} style="color: #98a8a8;">{d.domain}</a>
                 </td>
-                <td align="center" class="score-font" style="color: #888;">{d.count}</td>
+                <td align="center" class="score-font" style="color: #5b7279;">{d.count}</td>
                 <td align="center" class="score-font" style={`color: ${coverageColor};`}>
-                  {d.evaluated}/{d.count} <span style="color: #555;">({pct}%)</span>
+                  {d.evaluated}/{d.count} <span style="color: #5b7279;">({pct}%)</span>
                 </td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
-                  {d.avg_score !== null ? formatScore(d.avg_score) : <span style="color: #555;">—</span>}
+                  {d.avg_score !== null ? formatScore(d.avg_score) : <span style="color: #5b7279;">—</span>}
                 </td>
                 <td align="center" class="score-font" style={`color: ${confidenceToColor(d.avg_conf)};`}>
-                  {d.avg_conf !== null ? formatConfidence(d.avg_conf) : <span style="color: #555;">—</span>}
+                  {d.avg_conf !== null ? formatConfidence(d.avg_conf) : <span style="color: #5b7279;">—</span>}
                 </td>
                 <td align="center" class="score-font" style={`color: ${setlToColor(d.avg_setl)};`}>
-                  {d.avg_setl !== null ? formatSetl(d.avg_setl) : <span style="color: #555;">—</span>}
+                  {d.avg_setl !== null ? formatSetl(d.avg_setl) : <span style="color: #5b7279;">—</span>}
                 </td>
               </tr>
               );
             })}
           </table>
         ) : (
-          <div style="color: #555; font-size: var(--font-sm); padding: 10px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); padding: 10px;">
             {safeClassify !== 'all' ? `No ${safeClassify} domains found.` : 'No domain data yet.'}
             {safeClassify !== 'all' && (
-              <a href="/domains" style="color: #ff6600; margin-left: 6px;">show all</a>
+              <a href="/domains" style="color: #d56500; margin-left: 6px;">show all</a>
             )}
           </div>
         )}

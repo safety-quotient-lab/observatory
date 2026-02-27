@@ -44,20 +44,20 @@ const displayDate = dayDate.toLocaleDateString('en-US', { weekday: 'long', year:
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td style="padding: 4px 0;">
-        <span style="font-size: var(--font-md); color: #c9c9c9; font-weight: bold;">{displayDate}</span>
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">{displayDate}</span>
         <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
           <a href={`/past?day=${prevDay}`}>&larr; {prevDay}</a>
           {!isFuture && !isToday && (
             <>
-              <span style="color: #444;"> | </span>
+              <span style="color: #1a5568;"> | </span>
               <a href={`/past?day=${nextDay}`}>{nextDay} &rarr;</a>
             </>
           )}
-          <span style="color: #444;"> | </span>
+          <span style="color: #1a5568;"> | </span>
           <a href="/past">yesterday</a>
-          <span style="color: #444;"> | </span>
-          <span style="color: #555;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
-          {page > 1 && <span style="color: #555;"> · page {page}</span>}
+          <span style="color: #1a5568;"> | </span>
+          <span style="color: #5b7279;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
+          {page > 1 && <span style="color: #5b7279;"> · page {page}</span>}
         </div>
       </td>
     </tr>
@@ -75,7 +75,7 @@ const displayDate = dayDate.toLocaleDateString('en-US', { weekday: 'long', year:
   {displayStories.length === 0 && (
     <table width="100%">
       <tr>
-        <td style="padding: 40px 20px; text-align: center; color: #828282;">
+        <td style="padding: 40px 20px; text-align: center; color: #5b7279;">
           No stories from {safeDay}.
         </td>
       </tr>
@@ -86,7 +86,7 @@ const displayDate = dayDate.toLocaleDateString('en-US', { weekday: 'long', year:
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={`/past?day=${safeDay}&p=${page + 1}`} class="morelink" style="color: #828282; font-size: var(--font-base);">
+          <a href={`/past?day=${safeDay}&p=${page + 1}`} class="morelink" style="color: #5b7279; font-size: var(--font-base);">
             More
           </a>
         </td>

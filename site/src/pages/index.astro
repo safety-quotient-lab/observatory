@@ -99,23 +99,23 @@ function modelLabel(id: string): string {
     <tr>
       <td style="padding: 4px 0;">
         <span class="subtext" style="font-size: var(--font-sm);">
-          <span style="color: #666;">sort:</span>
+          <span style="color: #5b7279;">sort:</span>
           {SORT_OPTIONS.map((opt, i) => (
             <>
-              {i > 0 && <span style="color: #444;"> | </span>}
+              {i > 0 && <span style="color: #1a5568;"> | </span>}
               {safeSort === opt.value
-                ? <span style="color: #ff6600; font-weight: bold;">{opt.label}</span>
+                ? <span style="color: #d56500; font-weight: bold;">{opt.label}</span>
                 : <a href={buildUrl({ sort: opt.value, p: '1' })}>{opt.label}</a>
               }
             </>
           ))}
           <br />
-          <span style="color: #666;">show:</span>
+          <span style="color: #5b7279;">show:</span>
           {FILTER_OPTIONS.map((opt, i) => (
             <>
-              {i > 0 && <span style="color: #444;"> | </span>}
+              {i > 0 && <span style="color: #1a5568;"> | </span>}
               {safeFilter === opt.value
-                ? <span style="color: #ff6600; font-weight: bold;">{opt.label}</span>
+                ? <span style="color: #d56500; font-weight: bold;">{opt.label}</span>
                 : <a href={buildUrl({ filter: opt.value, p: '1' })}>{opt.label}</a>
               }
             </>
@@ -123,21 +123,21 @@ function modelLabel(id: string): string {
           {distinctModels.length > 1 && (
             <>
               <br />
-              <span style="color: #666;">model:</span>
+              <span style="color: #5b7279;">model:</span>
               {safeModel === 'any'
-                ? <span style="color: #ff6600; font-weight: bold;"> any</span>
+                ? <span style="color: #d56500; font-weight: bold;"> any</span>
                 : <a href={buildUrl({ model: 'any', p: '1' })}> any</a>
               }
-              <span style="color: #444;"> | </span>
+              <span style="color: #1a5568;"> | </span>
               {safeModel === 'all'
-                ? <span style="color: #ff6600; font-weight: bold;">all</span>
+                ? <span style="color: #d56500; font-weight: bold;">all</span>
                 : <a href={buildUrl({ model: 'all', p: '1' })}>all</a>
               }
               {distinctModels.map((m) => (
                 <>
-                  <span style="color: #444;"> | </span>
+                  <span style="color: #1a5568;"> | </span>
                   {safeModel === m
-                    ? <span style="color: #ff6600; font-weight: bold;">{modelLabel(m)}</span>
+                    ? <span style="color: #d56500; font-weight: bold;">{modelLabel(m)}</span>
                     : <a href={buildUrl({ model: m, p: '1' })}>{modelLabel(m)}</a>
                   }
                 </>
@@ -145,14 +145,14 @@ function modelLabel(id: string): string {
             </>
           )}
           <br />
-          <span style="color: #555;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
-          {evaluatedCount > 0 && <span style="color: #555;"> ({evaluatedCount} evaluated)</span>}
-          {page > 1 && <span style="color: #555;"> · page {page}</span>}
-          <span style="color: #555;"> · </span>
+          <span style="color: #5b7279;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
+          {evaluatedCount > 0 && <span style="color: #5b7279;"> ({evaluatedCount} evaluated)</span>}
+          {page > 1 && <span style="color: #5b7279;"> · page {page}</span>}
+          <span style="color: #5b7279;"> · </span>
           <a href="/past">past</a>
-          <span style="color: #555;"> · </span>
+          <span style="color: #5b7279;"> · </span>
           <a href="/velocity">velocity</a>
-          <span style="color: #555;"> · </span>
+          <span style="color: #5b7279;"> · </span>
           <a href="/dynamics">dynamics</a>
         </span>
       </td>
@@ -174,15 +174,15 @@ function modelLabel(id: string): string {
     <table width="100%">
       <tr>
         <td style="padding: 40px 20px; text-align: center;">
-          <div style="color: #828282; margin-bottom: 12px;">
+          <div style="color: #5b7279; margin-bottom: 12px;">
             {safeFilter !== 'all' || safeType !== 'all'
               ? `No stories match the current filters.`
               : 'No stories yet.'}
           </div>
           {safeFilter !== 'all' || safeType !== 'all' ? (
-            <a href="/" style="color: #ff6600;">clear filters</a>
+            <a href="/" style="color: #d56500;">clear filters</a>
           ) : (
-            <span style="color: #828282; font-size: var(--font-sm);">No stories yet. The cron worker will populate them shortly.</span>
+            <span style="color: #5b7279; font-size: var(--font-sm);">No stories yet. The cron worker will populate them shortly.</span>
           )}
         </td>
       </tr>
@@ -194,7 +194,7 @@ function modelLabel(id: string): string {
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={buildUrl({ p: String(page + 1) })} class="morelink" style="color: #828282; font-size: var(--font-base);">
+          <a href={buildUrl({ p: String(page + 1) })} class="morelink" style="color: #5b7279; font-size: var(--font-base);">
             More
           </a>
         </td>

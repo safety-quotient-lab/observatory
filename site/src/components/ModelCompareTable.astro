@@ -36,7 +36,7 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
 ---
 
 <div style="margin-bottom: 15px;">
-  <div style="color: #aaa; font-size: var(--font-sm); margin-bottom: 8px;">
+  <div style="color: #8faaab; font-size: var(--font-sm); margin-bottom: 8px;">
     Model Comparison
     {agreementPct !== null && (
       <span style={`margin-left: 8px; color: ${agreementPct >= 80 ? '#34d399' : agreementPct >= 60 ? '#eab308' : '#dc2626'};`}>
@@ -47,7 +47,7 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
 
   {/* Overall score comparison */}
   <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px;">
-    <tr style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+    <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
       <td style="padding: 4px 8px;">Model</td>
       <td style="padding: 4px 8px;">Score</td>
       <td style="padding: 4px 8px;">Class</td>
@@ -57,18 +57,18 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
     </tr>
     {evals.map(ev => (
       <tr style="border-top: 1px solid #222;">
-        <td style="padding: 4px 8px; color: #ccc; font-size: var(--font-sm);">{modelDisplayName(ev.eval_model)}</td>
+        <td style="padding: 4px 8px; color: #98a8a8; font-size: var(--font-sm);">{modelDisplayName(ev.eval_model)}</td>
         <td style={`padding: 4px 8px; color: ${scoreToColor(ev.hcb_weighted_mean)}; font-weight: bold;`}>
           {formatScore(ev.hcb_weighted_mean)}
         </td>
-        <td style="padding: 4px 8px; color: #aaa; font-size: var(--font-sm);">{ev.hcb_classification || '—'}</td>
-        <td style="padding: 4px 8px; color: #aaa; font-size: var(--font-sm);">
+        <td style="padding: 4px 8px; color: #8faaab; font-size: var(--font-sm);">{ev.hcb_classification || '—'}</td>
+        <td style="padding: 4px 8px; color: #8faaab; font-size: var(--font-sm);">
           {ev.hcb_confidence !== null ? ev.hcb_confidence.toFixed(2) : '—'}
         </td>
-        <td style="padding: 4px 8px; color: #aaa; font-size: var(--font-sm);">
+        <td style="padding: 4px 8px; color: #8faaab; font-size: var(--font-sm);">
           {ev.hcb_setl !== null ? ev.hcb_setl.toFixed(2) : '—'}
         </td>
-        <td style="padding: 4px 8px; color: #818cf8; font-size: var(--font-xs);">{ev.hcb_theme_tag || '—'}</td>
+        <td style="padding: 4px 8px; color: #7d80d1; font-size: var(--font-xs);">{ev.hcb_theme_tag || '—'}</td>
       </tr>
     ))}
   </table>
@@ -76,7 +76,7 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
   {/* Per-section delta table */}
   <div style="max-height: 400px; overflow-y: auto;">
     <table cellpadding="0" cellspacing="0" style="width: 100%;">
-      <tr style="color: #888; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #12121a;">
+      <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #093946;">
         <td style="padding: 3px 6px;">Section</td>
         {models.map(m => (
           <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
@@ -93,14 +93,14 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
           ? finals[0]! - finals[1]!
           : null;
         const deltaColor = delta !== null
-          ? Math.abs(delta) < 0.1 ? '#555' : Math.abs(delta) < 0.3 ? '#eab308' : '#dc2626'
-          : '#555';
+          ? Math.abs(delta) < 0.1 ? '#5b7279' : Math.abs(delta) < 0.3 ? '#eab308' : '#dc2626'
+          : '#5b7279';
 
         return (
-          <tr style="border-top: 1px solid #1a1a25;">
-            <td style="padding: 2px 6px; color: #aaa; font-size: var(--font-xs);">{section}</td>
+          <tr style="border-top: 1px solid #0d4655;">
+            <td style="padding: 2px 6px; color: #8faaab; font-size: var(--font-xs);">{section}</td>
             {finals.map(f => (
-              <td style={`padding: 2px 6px; text-align: center; color: ${f !== null ? scoreToColor(f) : '#555'}; font-size: var(--font-sm);`}>
+              <td style={`padding: 2px 6px; text-align: center; color: ${f !== null ? scoreToColor(f) : '#5b7279'}; font-size: var(--font-sm);`}>
                 {f !== null ? f.toFixed(2) : 'ND'}
               </td>
             ))}
