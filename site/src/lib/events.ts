@@ -509,25 +509,6 @@ export async function getMethodologyDistribution(
   }
 }
 
-export async function getStaleEvalCount(
-  db: D1Database,
-  currentHash: string,
-): Promise<number> {
-  try {
-    const row = await db
-      .prepare(
-        `SELECT COUNT(*) as cnt FROM stories
-         WHERE eval_status = 'done'
-           AND (methodology_hash IS NULL OR methodology_hash != ?)`,
-      )
-      .bind(currentHash)
-      .first<{ cnt: number }>();
-    return row?.cnt ?? 0;
-  } catch {
-    return 0;
-  }
-}
-
 // --- Model drift queries ---
 
 export interface ModelDriftPair {
@@ -638,19 +619,3 @@ export async function getLatestLightCalibrationRun(
   }
 }
 
-export async function getCalibrationHistory(
-  db: D1Database,
-  limit = 10,
-): Promise<CalibrationRun[]> {
-  try {
-    const { results } = await db
-      .prepare(
-        `SELECT * FROM calibration_runs ORDER BY created_at DESC LIMIT ?`,
-      )
-      .bind(limit)
-      .all<CalibrationRun>();
-    return results;
-  } catch {
-    return [];
-  }
-}

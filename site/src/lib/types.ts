@@ -25,13 +25,13 @@ export const CONTENT_TYPE_BY_SLUG: Record<string, string> = Object.fromEntries(
 // --- Classification slugs ---
 
 export const CLASSIFICATIONS = [
-  { slug: 'strong-positive',   label: 'Strong positive',   min: 0.7,  max: 1.0  },
-  { slug: 'moderate-positive', label: 'Moderate positive', min: 0.4,  max: 0.6  },
+  { slug: 'strong-positive',   label: 'Strong positive',   min: 0.6,  max: 1.0  },
+  { slug: 'moderate-positive', label: 'Moderate positive', min: 0.3,  max: 0.6  },
   { slug: 'mild-positive',     label: 'Mild positive',     min: 0.1,  max: 0.3  },
   { slug: 'neutral',           label: 'Neutral',           min: -0.1, max: 0.1  },
   { slug: 'mild-negative',     label: 'Mild negative',     min: -0.3, max: -0.1 },
-  { slug: 'moderate-negative', label: 'Moderate negative', min: -0.6, max: -0.4 },
-  { slug: 'strong-negative',   label: 'Strong negative',   min: -1.0, max: -0.7 },
+  { slug: 'moderate-negative', label: 'Moderate negative', min: -0.6, max: -0.3 },
+  { slug: 'strong-negative',   label: 'Strong negative',   min: -1.0, max: -0.6 },
 ] as const;
 
 export const CLASSIFICATION_BY_SLUG: Record<string, string> = Object.fromEntries(

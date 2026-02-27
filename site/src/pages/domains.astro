@@ -17,7 +17,7 @@ const safeClassify = validClassify.includes(classify) ? classify : 'all';
 
 // Fetch more to allow filtering
 const [allDomains, intelDomains, gatekeptDomains] = await Promise.all([
-  getAllDomainStats(db, safeSort, 500),
+  getAllDomainStats(db, safeSort, 200),
   getDomainIntelligence(db, 'stories', 3, 150),
   getMostGatekeptDomains(db),
 ]);

@@ -9,16 +9,13 @@ import { ALL_SECTIONS, type EvalResult, type LightEvalResponse } from './eval-ty
 import { computeLightAggregates } from './eval-parse';
 import { PRIMARY_MODEL_ID } from './models';
 
-// Default eval model (same as shared-eval.ts)
-const EVAL_MODEL = 'claude-haiku-4-5-20251001';
-
 // --- DB write helpers ---
 
 export async function writeEvalResult(
   db: D1Database,
   hnId: number,
   result: EvalResult,
-  model: string = EVAL_MODEL,
+  model: string = PRIMARY_MODEL_ID,
   promptHash: string | null = null
 ): Promise<void> {
   const agg = result.aggregates;
@@ -262,7 +259,7 @@ export async function writeEvalResult(
 
 export async function markFailed(db: D1Database, hnId: number, error: string): Promise<void> {
   await db
-    .prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ?`)
+    .prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ? AND eval_status NOT IN ('done', 'rescoring')`)
     .bind(error.slice(0, 500), hnId)
     .run();
 }
@@ -276,12 +273,12 @@ export async function markSkipped(
 ): Promise<void> {
   if (gateCategory != null) {
     await db
-      .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = ?, gate_category = ?, gate_confidence = ? WHERE hn_id = ?`)
+      .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = ?, gate_category = ?, gate_confidence = ? WHERE hn_id = ? AND eval_status NOT IN ('done', 'rescoring')`)
       .bind(reason, gateCategory, gateConfidence ?? null, hnId)
       .run();
   } else {
     await db
-      .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = ? WHERE hn_id = ?`)
+      .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = ? WHERE hn_id = ? AND eval_status NOT IN ('done', 'rescoring')`)
       .bind(reason, hnId)
       .run();
   }
@@ -467,12 +464,7 @@ export async function writeRaterEvalResult(
     )
     .run();
 
-  // DELETE + INSERT rater_scores
-  await db
-    .prepare(`DELETE FROM rater_scores WHERE hn_id = ? AND eval_model = ?`)
-    .bind(hnId, modelId)
-    .run();
-
+  // DELETE + INSERT rater_scores atomically (DELETE + ≤31 INSERTs always fits in one batch)
   const scoreStmts = result.scores.map((score) => {
     const sortOrder = ALL_SECTIONS.indexOf(score.section);
     const editorialNote = score.editorial_note || '';
@@ -493,17 +485,16 @@ export async function writeRaterEvalResult(
       );
   });
   if (scoreStmts.length > 0) {
-    for (let i = 0; i < scoreStmts.length; i += 100) {
-      await db.batch(scoreStmts.slice(i, i + 100));
+    const deleteScores = db.prepare(`DELETE FROM rater_scores WHERE hn_id = ? AND eval_model = ?`).bind(hnId, modelId);
+    for (let i = 0; i < scoreStmts.length; i += 99) {
+      const chunk = i === 0
+        ? [deleteScores, ...scoreStmts.slice(0, 99)]
+        : scoreStmts.slice(i, i + 99);
+      await db.batch(chunk);
     }
   }
 
-  // DELETE + INSERT rater_witness
-  await db
-    .prepare(`DELETE FROM rater_witness WHERE hn_id = ? AND eval_model = ?`)
-    .bind(hnId, modelId)
-    .run();
-
+  // DELETE + INSERT rater_witness (13B: DELETE only when rows exist; 8A: first chunk is atomic)
   const fwRows: { section: string; factType: string; factText: string }[] = [];
   for (const score of result.scores) {
     if (score.witness_facts) {
@@ -518,16 +509,17 @@ export async function writeRaterEvalResult(
     }
   }
   if (fwRows.length > 0) {
-    for (let i = 0; i < fwRows.length; i += 100) {
-      const chunk = fwRows.slice(i, i + 100);
-      const fwStmts = chunk.map((row) =>
-        db
-          .prepare(
-            `INSERT INTO rater_witness (hn_id, eval_model, section, fact_type, fact_text) VALUES (?, ?, ?, ?, ?)`
-          )
-          .bind(hnId, modelId, row.section, row.factType, row.factText)
-      );
-      await db.batch(fwStmts);
+    const deleteFw = db.prepare(`DELETE FROM rater_witness WHERE hn_id = ? AND eval_model = ?`).bind(hnId, modelId);
+    const fwStmts = fwRows.map((row) =>
+      db
+        .prepare(`INSERT INTO rater_witness (hn_id, eval_model, section, fact_type, fact_text) VALUES (?, ?, ?, ?, ?)`)
+        .bind(hnId, modelId, row.section, row.factType, row.factText)
+    );
+    for (let i = 0; i < fwStmts.length; i += 99) {
+      const chunk = i === 0
+        ? [deleteFw, ...fwStmts.slice(0, 99)]
+        : fwStmts.slice(i, i + 99);
+      await db.batch(chunk);
     }
   }
 

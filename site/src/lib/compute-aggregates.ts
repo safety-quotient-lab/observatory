@@ -139,13 +139,15 @@ export function computeAggregates(
 }
 
 function classifyScore(score: number): string {
+  // Clamp edge cases before range scan
+  if (score >= 1.0) return 'Strong positive';
+  if (score <= -1.0) return 'Strong negative';
+  // Use exclusive upper bound so contiguous ranges don't overlap
   for (const c of CLASSIFICATIONS) {
-    if (score >= c.min && score <= c.max) {
+    if (score >= c.min && score < c.max) {
       return c.label;
     }
   }
-  // Edge case: score is exactly between ranges (e.g., -0.1 overlaps neutral and mild-negative)
-  // CLASSIFICATIONS is ordered from most positive to most negative, first match wins
   return 'Neutral';
 }
 

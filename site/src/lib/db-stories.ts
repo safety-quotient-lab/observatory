@@ -122,7 +122,7 @@ function scoreRowToScore(row: ScoreRow): Score {
     combined: row.combined ?? null,
     context_modifier: row.context_modifier ?? null,
     final: row.final,
-    directionality: JSON.parse(row.directionality || '[]'),
+    directionality: (() => { try { return JSON.parse(row.directionality || '[]'); } catch { return []; } })(),
     evidence: row.evidence,
     note: row.note,
     editorial_note: row.editorial_note || undefined,
@@ -187,7 +187,7 @@ export async function getFilteredStoriesWithScores(
     case 'positive': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean > 0.05"); break;
     case 'negative': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean < -0.05"); break;
     case 'neutral': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05"); break;
-    case 'pending': conditions.push("s.eval_status IN ('pending', 'evaluating')"); break;
+    case 'pending': conditions.push("s.eval_status IN ('pending', 'queued', 'evaluating')"); break;
     case 'failed': conditions.push("s.eval_status IN ('failed', 'skipped')"); break;
   }
 
@@ -200,14 +200,15 @@ export async function getFilteredStoriesWithScores(
   const bindParams: (string | number)[] = [];
   const isAltModel = model !== 'all' && model !== 'any' && model !== PRIMARY_MODEL_ID;
 
-  // "all" model filter: only show stories evaluated by every enabled model
+  // "all" model filter: only show stories evaluated by every enabled full-mode model
   if (model === 'all') {
-    const enabledModelCount = getEnabledModels().length;
-    if (enabledModelCount > 1) {
+    const enabledFullModelCount = getEnabledModels().filter(m => m.prompt_mode === 'full').length;
+    if (enabledFullModelCount > 1) {
       conditions.push(
         `(SELECT COUNT(DISTINCT re_all.eval_model) FROM rater_evals re_all
-          WHERE re_all.hn_id = s.hn_id AND re_all.eval_status = 'done') >= ${enabledModelCount}`
+          WHERE re_all.hn_id = s.hn_id AND re_all.eval_status = 'done' AND re_all.prompt_mode = 'full') >= ?`
       );
+      bindParams.push(enabledFullModelCount);
     }
   }
 
@@ -216,7 +217,8 @@ export async function getFilteredStoriesWithScores(
     const dayStart = Math.floor(new Date(day + 'T00:00:00Z').getTime() / 1000);
     const dayEnd = dayStart + 86400;
     if (!isNaN(dayStart)) {
-      conditions.push(`s.hn_time >= ${dayStart} AND s.hn_time < ${dayEnd}`);
+      conditions.push(`s.hn_time >= ? AND s.hn_time < ?`);
+      bindParams.push(dayStart, dayEnd);
     }
   }
 
@@ -239,8 +241,8 @@ export async function getFilteredStoriesWithScores(
     case 'score_desc': orderBy = `${scorePrefix}.hcb_weighted_mean DESC NULLS LAST`; break;
     case 'score_asc': orderBy = `${scorePrefix}.hcb_weighted_mean ASC NULLS LAST`; break;
     case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
-    case 'conf_desc': orderBy = `CAST((COALESCE(${scorePrefix}.hcb_evidence_h,0)*1.0 + COALESCE(${scorePrefix}.hcb_evidence_m,0)*0.6 + COALESCE(${scorePrefix}.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(${scorePrefix}.hcb_evidence_h,0) + COALESCE(${scorePrefix}.hcb_evidence_m,0) + COALESCE(${scorePrefix}.hcb_evidence_l,0) + COALESCE(${scorePrefix}.hcb_nd_count,0), 1) DESC NULLS LAST`; break;
-    case 'conf_asc': orderBy = `CAST((COALESCE(${scorePrefix}.hcb_evidence_h,0)*1.0 + COALESCE(${scorePrefix}.hcb_evidence_m,0)*0.6 + COALESCE(${scorePrefix}.hcb_evidence_l,0)*0.2) AS REAL) / MAX(COALESCE(${scorePrefix}.hcb_evidence_h,0) + COALESCE(${scorePrefix}.hcb_evidence_m,0) + COALESCE(${scorePrefix}.hcb_evidence_l,0) + COALESCE(${scorePrefix}.hcb_nd_count,0), 1) ASC NULLS LAST`; break;
+    case 'conf_desc': orderBy = `${scorePrefix}.hcb_confidence DESC NULLS LAST`; break;
+    case 'conf_asc': orderBy = `${scorePrefix}.hcb_confidence ASC NULLS LAST`; break;
     case 'setl_desc': joinSetl = true; orderBy = 'story_setl DESC NULLS LAST'; break;
     case 'setl_asc': joinSetl = true; orderBy = 'story_setl ASC NULLS LAST'; break;
     case 'velocity': orderBy = 's.hn_score DESC NULLS LAST'; break; // proxy: highest points = most momentum
@@ -282,13 +284,15 @@ export async function getFilteredStoriesWithScores(
               s.hcb_theme_tag,
               SUBSTR(s.hn_text, 1, 100) as hn_text_preview${setlSelect}`;
 
-  const { results: storyRows } = await db
+  const storyQueryResult = await db
     .prepare(
       `SELECT ${selectCols}
        FROM stories s ${joinClause} WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
     .bind(...setlBindParams, ...bindParams, limit, offset)
-    .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>();
+    .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>()
+    .catch((err) => { console.error('[getFilteredStoriesWithScores] DB error:', err); return { results: [] as (Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null })[] }; });
+  const { results: storyRows } = storyQueryResult;
 
   // Fetch mini scores (final only) for evaluated stories
   const evaluatedIds = storyRows
@@ -334,22 +338,27 @@ export async function getFilteredStoriesWithScores(
 // --- Detail page ---
 
 export async function getStory(db: D1Database, hnId: number): Promise<StoryWithScores | null> {
-  const story = await db
-    .prepare(`SELECT * FROM stories WHERE hn_id = ?`)
-    .bind(hnId)
-    .first<Story>();
+  try {
+    const story = await db
+      .prepare(`SELECT * FROM stories WHERE hn_id = ?`)
+      .bind(hnId)
+      .first<Story>();
 
-  if (!story) return null;
+    if (!story) return null;
 
-  const { results: scoreRows } = await db
-    .prepare(`SELECT * FROM scores WHERE hn_id = ? ORDER BY sort_order`)
-    .bind(hnId)
-    .all<ScoreRow>();
+    const { results: scoreRows } = await db
+      .prepare(`SELECT * FROM scores WHERE hn_id = ? ORDER BY sort_order`)
+      .bind(hnId)
+      .all<ScoreRow>();
 
-  return {
-    ...story,
-    scores: scoreRows.map(scoreRowToScore),
-  };
+    return {
+      ...story,
+      scores: scoreRows.map(scoreRowToScore),
+    };
+  } catch (err) {
+    console.error('[getStory] DB error:', err);
+    return null;
+  }
 }
 
 // --- Article ranking ---
@@ -616,24 +625,13 @@ export interface DomainStat {
 export async function getDomainStats(db: D1Database, limit = 10): Promise<DomainStat[]> {
   const { results } = await db
     .prepare(
-      `SELECT s.domain, COUNT(*) as count, COUNT(*) as evaluated, AVG(s.hcb_weighted_mean) as avg_score,
-              (SELECT AVG(
-                CASE WHEN sc.editorial >= sc.structural
-                  THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                  ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                END
-               )
-               FROM scores sc
-               JOIN stories s2 ON s2.hn_id = sc.hn_id
-               WHERE s2.domain = s.domain
-                 AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
-                 AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-              ) as avg_setl,
-              AVG(
-                CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL)
-                / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1)
-              ) as avg_conf
-       FROM stories s WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
+      `SELECT s.domain,
+              COUNT(*) as count,
+              SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
+              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
+              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_setl END) as avg_setl,
+              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_confidence END) as avg_conf
+       FROM stories s WHERE s.domain IS NOT NULL
        GROUP BY s.domain ORDER BY count DESC LIMIT ?`
     )
     .bind(limit)

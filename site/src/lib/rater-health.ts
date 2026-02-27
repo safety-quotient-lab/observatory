@@ -15,10 +15,10 @@ export interface RaterHealthState {
   disabled_reason: string | null;
 }
 
-export const PARSE_FAILURE_DISABLE_THRESHOLD = 5;
+export const PARSE_FAILURE_DISABLE_THRESHOLD = 10;
 export const FAILURE_RATE_DISABLE_THRESHOLD = 0.7;
 export const FAILURE_RATE_MIN_ATTEMPTS = 20;
-export const AUTO_DISABLE_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24h
+export const AUTO_DISABLE_COOLDOWN_MS = 2 * 60 * 60 * 1000; // 2h
 
 export function emptyRaterHealth(): RaterHealthState {
   return {

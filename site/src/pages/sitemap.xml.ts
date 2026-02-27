@@ -50,6 +50,15 @@ export const GET: APIRoute = async ({ locals }) => {
     )
     .all<{ domain: string }>();
 
+  // Users with evaluated stories
+  const { results: users } = await db
+    .prepare(
+      `SELECT DISTINCT hn_by FROM stories
+       WHERE eval_status = 'done' AND hn_by IS NOT NULL
+       LIMIT 1000`
+    )
+    .all<{ hn_by: string }>();
+
   const urls = staticPages.map(
     (p) =>
       `  <url>
@@ -76,6 +85,16 @@ export const GET: APIRoute = async ({ locals }) => {
     <loc>${baseUrl}/domain/${domain}</loc>
     <changefreq>daily</changefreq>
     <priority>0.5</priority>
+  </url>`
+    );
+  }
+
+  for (const { hn_by } of users) {
+    urls.push(
+      `  <url>
+    <loc>${baseUrl}/user/${hn_by}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.4</priority>
   </url>`
     );
   }

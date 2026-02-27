@@ -177,7 +177,7 @@ function extractTitle(html: string): string {
 
 /** Strip scripts/styles and HTML tags, return text length */
 function proseLength(html: string): number {
-  let text = html;
+  let text = html.slice(0, 100_000); // bound input to avoid catastrophic backtracking
   text = text.replace(SCRIPT_STYLE_BLOCKS, ' ');
   text = text.replace(/<[^>]+>/g, ' ');
   text = text.replace(/\s+/g, ' ').trim();
@@ -214,6 +214,11 @@ function isPaywallDomain(hostname: string): boolean {
  * @returns Classification result with category, confidence, signals, and blocked flag
  */
 export function classifyContent(rawHtml: string, url: string): ContentGateResult {
+  // Early return for oversized pages — too large to classify reliably
+  if (rawHtml.length > 500_000 && !rawHtml.startsWith('[error:')) {
+    return { category: 'content', confidence: 0.3, signals: ['Oversized page — classification skipped'], blocked: false };
+  }
+
   // Accumulate scores per category
   const scores: Partial<Record<ContentCategory, number>> = {};
   const signals: string[] = [];
@@ -272,8 +277,9 @@ export function classifyContent(rawHtml: string, url: string): ContentGateResult
   }
 
   // --- Layer 4: Body keyword patterns ---
+  const bodySlice = rawHtml.slice(0, 50_000); // bound regex input to 50KB
   for (const bp of BODY_PATTERNS) {
-    if (bp.pattern.test(rawHtml)) {
+    if (bp.pattern.test(bodySlice)) {
       addScore(bp.category, bp.weight, bp.signal);
     }
   }

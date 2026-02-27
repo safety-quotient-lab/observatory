@@ -12,21 +12,28 @@ export async function callAnthropicApi(
     ? [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }]
     : systemPrompt;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: modelId,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
-  });
-  return { response: res, data: null };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: modelId,
+        max_tokens: maxTokens,
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+      signal: controller.signal,
+    });
+    return { response: res, data: null };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function callOpenRouterApi(
@@ -47,17 +54,24 @@ export async function callOpenRouterApi(
     body.response_format = { type: 'json_object' };
   }
 
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'HTTP-Referer': 'https://hn-hrcb.pages.dev',
-      'X-Title': 'HN HRCB Evaluator',
-    },
-    body: JSON.stringify(body),
-  });
-  return { response: res, data: null };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://hn-hrcb.pages.dev',
+        'X-Title': 'HN HRCB Evaluator',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    return { response: res, data: null };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function callWorkersAi(

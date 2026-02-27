@@ -227,7 +227,8 @@ export async function getRaterSummaryStats(db: D1Database): Promise<{
       )
       .all<{ model: string; eval_count: number; avg_score: number | null; avg_confidence: number | null }>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getRaterSummaryStats] DB error:', err);
     return [];
   }
 }
@@ -259,7 +260,8 @@ export async function getRaterStatusBreakdown(db: D1Database): Promise<{
       )
       .all<{ model: string; done: number; queued: number; failed: number; pending: number; evaluating: number; total_primary: number }>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getRaterStatusBreakdown] DB error:', err);
     return [];
   }
 }

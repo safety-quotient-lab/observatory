@@ -67,24 +67,8 @@ export async function getAllDomainStats(
       `SELECT s.domain, COUNT(*) as count,
               SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
               AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
-              (SELECT AVG(
-                CASE WHEN sc.editorial >= sc.structural
-                  THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                  ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                END
-               )
-               FROM scores sc
-               JOIN stories s2 ON s2.hn_id = sc.hn_id
-               WHERE s2.domain = s.domain
-                 AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
-                 AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-              ) as avg_setl,
-              AVG(
-                CASE WHEN s.eval_status = 'done' THEN
-                  CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL)
-                  / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1)
-                END
-              ) as avg_conf
+              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_setl END) as avg_setl,
+              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_confidence END) as avg_conf
        FROM stories s
        WHERE s.domain IS NOT NULL
        GROUP BY s.domain
@@ -242,69 +226,61 @@ export interface DomainSignalProfile {
 }
 
 export async function getDomainSignalProfiles(db: D1Database): Promise<Map<string, DomainSignalProfile>> {
-  const { results } = await db
-    .prepare(
-      `SELECT
-         s.domain,
-         COUNT(*) as count,
-         AVG(s.eq_score) as avg_eq,
-         AVG(s.so_score) as avg_so,
-         AVG(s.sr_score) as avg_sr,
-         AVG(s.td_score) as avg_td,
-         AVG(s.pt_flag_count) as avg_pt_count,
-         AVG(s.et_valence) as avg_valence,
-         AVG(s.et_arousal) as avg_arousal,
-         AVG(s.et_dominance) as avg_dominance,
-         AVG(s.fw_ratio) as avg_fw_ratio,
-         AVG(s.hn_score) as avg_hn_score,
-         AVG(s.hn_comments) as avg_hn_comments,
-         AVG(u.karma) as avg_poster_karma,
-         (SELECT AVG(
-           CASE WHEN sc.editorial >= sc.structural
-             THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-             ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-           END
-          )
-          FROM scores sc
-          JOIN stories s3 ON s3.hn_id = sc.hn_id
-          WHERE s3.domain = s.domain
-            AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
-            AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
-         ) as avg_setl,
-         AVG(s.hcb_weighted_mean) as avg_hrcb,
-         (SELECT AVG(sc2.editorial) FROM scores sc2
-          JOIN stories s4 ON s4.hn_id = sc2.hn_id
-          WHERE s4.domain = s.domain AND sc2.editorial IS NOT NULL) as avg_editorial,
-         (SELECT AVG(sc2.structural) FROM scores sc2
-          JOIN stories s4 ON s4.hn_id = sc2.hn_id
-          WHERE s4.domain = s.domain AND sc2.structural IS NOT NULL) as avg_structural,
-         AVG(s.hcb_confidence) as avg_confidence,
-         (SELECT s2.et_primary_tone FROM stories s2
-          WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.et_primary_tone IS NOT NULL
-          GROUP BY s2.et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1) as dominant_tone,
-         (SELECT s2.gs_scope FROM stories s2
-          WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.gs_scope IS NOT NULL
-          GROUP BY s2.gs_scope ORDER BY COUNT(*) DESC LIMIT 1) as dominant_scope,
-         (SELECT s2.cl_reading_level FROM stories s2
-          WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.cl_reading_level IS NOT NULL
-          GROUP BY s2.cl_reading_level ORDER BY COUNT(*) DESC LIMIT 1) as dominant_reading_level,
-         (SELECT s2.hcb_sentiment_tag FROM stories s2
-          WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.hcb_sentiment_tag IS NOT NULL
-          GROUP BY s2.hcb_sentiment_tag ORDER BY COUNT(*) DESC LIMIT 1) as dominant_sentiment
-       FROM stories s
-       LEFT JOIN hn_users u ON s.hn_by = u.username
-       WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
-       GROUP BY s.domain
-       HAVING COUNT(*) >= 3
-       ORDER BY COUNT(*) DESC`
-    )
-    .all<DomainSignalProfile>();
+  const t0 = Date.now();
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT
+           s.domain,
+           COUNT(*) as count,
+           AVG(s.eq_score) as avg_eq,
+           AVG(s.so_score) as avg_so,
+           AVG(s.sr_score) as avg_sr,
+           AVG(s.td_score) as avg_td,
+           AVG(s.pt_flag_count) as avg_pt_count,
+           AVG(s.et_valence) as avg_valence,
+           AVG(s.et_arousal) as avg_arousal,
+           AVG(s.et_dominance) as avg_dominance,
+           AVG(s.fw_ratio) as avg_fw_ratio,
+           AVG(s.hn_score) as avg_hn_score,
+           AVG(s.hn_comments) as avg_hn_comments,
+           AVG(u.karma) as avg_poster_karma,
+           AVG(s.hcb_setl) as avg_setl,
+           AVG(s.hcb_weighted_mean) as avg_hrcb,
+           AVG(s.hcb_editorial_mean) as avg_editorial,
+           AVG(s.hcb_structural_mean) as avg_structural,
+           AVG(s.hcb_confidence) as avg_confidence,
+           (SELECT s2.et_primary_tone FROM stories s2
+            WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.et_primary_tone IS NOT NULL
+            GROUP BY s2.et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1) as dominant_tone,
+           (SELECT s2.gs_scope FROM stories s2
+            WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.gs_scope IS NOT NULL
+            GROUP BY s2.gs_scope ORDER BY COUNT(*) DESC LIMIT 1) as dominant_scope,
+           (SELECT s2.cl_reading_level FROM stories s2
+            WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.cl_reading_level IS NOT NULL
+            GROUP BY s2.cl_reading_level ORDER BY COUNT(*) DESC LIMIT 1) as dominant_reading_level,
+           (SELECT s2.hcb_sentiment_tag FROM stories s2
+            WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.hcb_sentiment_tag IS NOT NULL
+            GROUP BY s2.hcb_sentiment_tag ORDER BY COUNT(*) DESC LIMIT 1) as dominant_sentiment
+         FROM stories s
+         LEFT JOIN hn_users u ON s.hn_by = u.username
+         WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
+         GROUP BY s.domain
+         HAVING COUNT(*) >= 3
+         ORDER BY COUNT(*) DESC`
+      )
+      .all<DomainSignalProfile>();
 
-  const map = new Map<string, DomainSignalProfile>();
-  for (const r of results) {
-    map.set(r.domain, r);
+    console.log(`[getDomainSignalProfiles] ${results.length} domains in ${Date.now() - t0}ms`);
+    const map = new Map<string, DomainSignalProfile>();
+    for (const r of results) {
+      map.set(r.domain, r);
+    }
+    return map;
+  } catch (err) {
+    console.error('[getDomainSignalProfiles] DB error:', err);
+    return new Map();
   }
-  return map;
 }
 
 // --- Domain SETL temporal tracking (Hypocrisy Index) ---
@@ -345,7 +321,8 @@ export async function getDomainSetlHistory(db: D1Database, domain: string, limit
       .bind(domain, limit)
       .all<DomainSetlPoint>();
     return results.reverse();
-  } catch {
+  } catch (err) {
+    console.error('[getDomainSetlHistory] DB error:', err);
     return [];
   }
 }
@@ -366,7 +343,8 @@ export async function getHnUser(db: D1Database, username: string): Promise<HnUse
       .prepare(`SELECT * FROM hn_users WHERE username = ?`)
       .bind(username)
       .first<HnUser>();
-  } catch {
+  } catch (err) {
+    console.error('[getHnUser] DB error:', err);
     return null;
   }
 }
@@ -425,7 +403,8 @@ export async function getUserFingerprint(db: D1Database, username: string): Prom
       }
     }
     return fp;
-  } catch {
+  } catch (err) {
+    console.error('[getUserFingerprint] DB error:', err);
     return new Array(31).fill(null);
   }
 }
@@ -460,7 +439,8 @@ export async function getUserSetlHistory(db: D1Database, username: string, limit
       .bind(username, limit)
       .all<DomainSetlPoint>();
     return results.reverse();
-  } catch {
+  } catch (err) {
+    console.error('[getUserSetlHistory] DB error:', err);
     return [];
   }
 }
@@ -494,7 +474,8 @@ export async function getGlobalSetlHistory(db: D1Database, limit = 90): Promise<
       .bind(limit)
       .all<DomainSetlPoint>();
     return results.reverse();
-  } catch {
+  } catch (err) {
+    console.error('[getGlobalSetlHistory] DB error:', err);
     return [];
   }
 }
@@ -508,8 +489,9 @@ export async function getDomainDcp(db: D1Database, domain: string): Promise<stri
       .bind(domain)
       .first<{ dcp_json: string }>();
     return row?.dcp_json ?? null;
-  } catch {
-    return null; // table may not exist
+  } catch (err) {
+    console.error('[getDomainDcp] DB error:', err);
+    return null;
   }
 }
 
@@ -638,7 +620,8 @@ export async function getDomainSignals(db: D1Database, domain: string): Promise<
       recentAvgScore: recentRow?.avg_score ?? null,
       olderAvgScore: olderRow?.avg_score ?? null,
     };
-  } catch {
+  } catch (err) {
+    console.error('[getDomainSignals] DB error:', err);
     return {
       avgEq: null, avgSo: null, avgSr: null, avgTd: null,
       avgPtCount: null, topTone: null, topScope: null, topSentiment: null,
@@ -666,23 +649,23 @@ export async function getPipelineHealth(db: D1Database): Promise<PipelineHealth>
     db.prepare(
       `SELECT CAST((julianday('now') - julianday(created_at)) * 86400 AS INTEGER) as age_sec
        FROM events WHERE event_type = 'cron_run' ORDER BY created_at DESC LIMIT 1`
-    ).first<{ age_sec: number }>(),
+    ).first<{ age_sec: number }>().catch(() => null),
     db.prepare(
       `SELECT CAST((julianday('now') - julianday(created_at)) * 86400 AS INTEGER) as age_sec
        FROM events WHERE event_type = 'eval_success' ORDER BY created_at DESC LIMIT 1`
-    ).first<{ age_sec: number }>(),
+    ).first<{ age_sec: number }>().catch(() => null),
     db.prepare(
       `SELECT
         SUM(CASE WHEN eval_status = 'queued' THEN 1 ELSE 0 END) as queued,
         SUM(CASE WHEN eval_status = 'pending' THEN 1 ELSE 0 END) as pending,
         SUM(CASE WHEN eval_status = 'failed' THEN 1 ELSE 0 END) as failed
        FROM stories`
-    ).first<{ queued: number; pending: number; failed: number }>(),
+    ).first<{ queued: number; pending: number; failed: number }>().catch(() => null),
     db.prepare(`SELECT COUNT(*) as cnt FROM dlq_messages WHERE status = 'pending'`)
       .first<{ cnt: number }>().catch(() => ({ cnt: 0 })),
     db.prepare(
       `SELECT COUNT(*) as cnt FROM events WHERE event_type = 'eval_success' AND created_at > datetime('now', '-24 hours')`
-    ).first<{ cnt: number }>(),
+    ).first<{ cnt: number }>().catch(() => null),
     db.prepare(
       `SELECT requests_remaining, consecutive_429s FROM ratelimit_snapshots ORDER BY created_at DESC LIMIT 1`
     ).first<{ requests_remaining: number | null; consecutive_429s: number }>().catch(() => null),
@@ -808,7 +791,8 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
       scope_distribution: scopeDistribution,
       reading_level_distribution: readingLevelDistribution,
     };
-  } catch {
+  } catch (err) {
+    console.error('[getSignalOverview] DB error:', err);
     return {
       total_with_signals: 0,
       avg_eq: null, avg_so: null, avg_sr: null, avg_td: null,
@@ -852,7 +836,8 @@ export async function getDomainGateStats(db: D1Database, domain: string): Promis
       gate_pct: total > 0 ? Math.round((gated / total) * 1000) / 10 : 0,
       breakdown: breakdown.results,
     };
-  } catch {
+  } catch (err) {
+    console.error('[getDomainGateStats] DB error:', err);
     return { total: 0, gated: 0, gate_pct: 0, breakdown: [] };
   }
 }
@@ -886,7 +871,8 @@ export async function getMostGatekeptDomains(db: D1Database, minStories = 5, lim
       .bind(minStories, limit)
       .all<GatekeptDomain>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getMostGatekeptDomains] DB error:', err);
     return [];
   }
 }
@@ -922,7 +908,8 @@ export async function getGlobalGateStats(db: D1Database): Promise<GlobalGateStat
       gate_pct: total > 0 ? Math.round((gated / total) * 1000) / 10 : 0,
       breakdown: breakdown.results,
     };
-  } catch {
+  } catch (err) {
+    console.error('[getGlobalGateStats] DB error:', err);
     return { total: 0, gated: 0, gate_pct: 0, breakdown: [] };
   }
 }
@@ -998,12 +985,8 @@ export async function getUserIntelligence(
                 NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) AS negative_pct,
           ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END) /
                 NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) AS neutral_pct,
-          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN
-            (SELECT AVG(sc.editorial) FROM scores sc WHERE sc.hn_id = s.hn_id AND sc.editorial IS NOT NULL)
-          END), 4) AS avg_editorial,
-          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN
-            (SELECT AVG(sc.structural) FROM scores sc WHERE sc.hn_id = s.hn_id AND sc.structural IS NOT NULL)
-          END), 4) AS avg_structural
+          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_editorial_mean END), 4) AS avg_editorial,
+          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_structural_mean END), 4) AS avg_structural
         FROM stories s
         WHERE s.hn_by IS NOT NULL AND s.hn_id > 0
         GROUP BY s.hn_by

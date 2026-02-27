@@ -45,6 +45,7 @@ export interface QueueMessage {
   domain: string | null;
   eval_model?: string;
   eval_provider?: string;
+  prompt_mode?: 'full' | 'light';
 }
 
 export interface DomainHealth {
@@ -663,6 +664,7 @@ export async function dispatchFreeModelEvals(
           domain: story.domain,
           eval_model: model.id,
           eval_provider: model.provider,
+          prompt_mode: model.prompt_mode,
         },
       });
 

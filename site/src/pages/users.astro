@@ -12,9 +12,11 @@ const validSorts: UserIntelSortOption[] = ['stories', 'score', 'comments', 'avg_
 const safeSort = validSorts.includes(sort) ? sort : 'stories';
 const minStories = Math.max(2, Math.min(20, parseInt(url.searchParams.get('min') || '3', 10) || 3));
 
-const users = await getUserIntelligence(db, safeSort, minStories, 200);
-const hourly = await getHourlyPatterns(db);
-const daily = await getDayOfWeekPatterns(db);
+const [users, hourly, daily] = await Promise.all([
+  getUserIntelligence(db, safeSort, minStories, 200),
+  getHourlyPatterns(db),
+  getDayOfWeekPatterns(db),
+]);
 
 // Aggregate stats
 const totalUsers = users.length;
@@ -31,9 +33,9 @@ const mostDiverse = [...users].filter(u => u.stories >= 3).sort((a, b) => b.uniq
 const mostControversial = [...hrcbUsers].filter(u => u.hrcb_range !== null).sort((a, b) => (b.hrcb_range || 0) - (a.hrcb_range || 0)).slice(0, 5);
 
 // Hourly pattern stats
-const maxHourlyStories = Math.max(...hourly.map(h => h.stories), 1);
-const peakHour = hourly.reduce((best, h) => h.avg_hn_score > best.avg_hn_score ? h : best, hourly[0]);
-const peakCommentHour = hourly.reduce((best, h) => h.avg_comments > best.avg_comments ? h : best, hourly[0]);
+const maxHourlyStories = hourly.length > 0 ? Math.max(...hourly.map(h => h.stories), 1) : 1;
+const peakHour = hourly.length > 0 ? hourly.reduce((best, h) => h.avg_hn_score > best.avg_hn_score ? h : best, hourly[0]) : null;
+const peakCommentHour = hourly.length > 0 ? hourly.reduce((best, h) => h.avg_comments > best.avg_comments ? h : best, hourly[0]) : null;
 
 // Day of week stats
 const maxDailyStories = Math.max(...daily.map(d => d.stories), 1);
@@ -66,11 +68,11 @@ function thStyle(col: string): string {
 }
 ---
 
-<Base title="User Intelligence — HN HRCB">
+<Base title="User Profiles — HN HRCB">
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">User Intelligence</span>
+        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">User Profiles</span>
         <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-base);">
           {totalUsers} users, {totalStories} stories
         </span>

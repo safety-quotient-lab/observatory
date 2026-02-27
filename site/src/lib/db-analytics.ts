@@ -123,7 +123,8 @@ export async function getArticlePairStats(db: D1Database): Promise<ArticlePairDa
         SUM(a.final * a.final) as sum_a2, SUM(b.final * b.final) as sum_b2
        FROM scores a JOIN scores b ON a.hn_id = b.hn_id
        WHERE a.final IS NOT NULL AND b.final IS NOT NULL AND a.sort_order <= b.sort_order
-       GROUP BY a.section, b.section`
+       GROUP BY a.section, b.section
+       HAVING COUNT(*) >= 5`
     )
     .all<{
       section_a: string; section_b: string;
@@ -373,7 +374,8 @@ export async function getHighVelocityStories(db: D1Database, limit = 20): Promis
       .bind(limit)
       .all<VelocityStory>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getHighVelocityStories] DB error:', err);
     return [];
   }
 }
@@ -410,7 +412,8 @@ export async function getVelocityVsHrcb(db: D1Database, limit = 100): Promise<Ve
       .bind(limit)
       .all<VelocityCorrelation>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getVelocityVsHrcb] DB error:', err);
     return [];
   }
 }
@@ -438,7 +441,8 @@ export async function getDailyContentTypeHrcb(db: D1Database, limit = 90): Promi
       .bind(limit * 15)
       .all<DailyContentTypeHrcb>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getDailyContentTypeHrcb] DB error:', err);
     return [];
   }
 }
@@ -458,7 +462,8 @@ export async function getFeedDailyHrcb(db: D1Database, limit = 90): Promise<{ da
       .bind(limit * 6)
       .all<{ day: string; feed: string; avg_score: number; count: number }>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getFeedDailyHrcb] DB error:', err);
     return [];
   }
 }
@@ -559,7 +564,8 @@ export async function getStakeholderOverview(db: D1Database): Promise<Stakeholde
     .prepare(
       `SELECT sr_who_speaks, sr_who_spoken_about
        FROM stories
-       WHERE eval_status = 'done' AND (sr_who_speaks IS NOT NULL OR sr_who_spoken_about IS NOT NULL)`
+       WHERE eval_status = 'done' AND (sr_who_speaks IS NOT NULL OR sr_who_spoken_about IS NOT NULL)
+       LIMIT 10000`
     )
     .all<{ sr_who_speaks: string | null; sr_who_spoken_about: string | null }>();
 
@@ -609,7 +615,8 @@ export async function getRegionDistribution(db: D1Database): Promise<{ regions: 
     .prepare(
       `SELECT gs_regions_json
        FROM stories
-       WHERE eval_status = 'done' AND gs_regions_json IS NOT NULL`
+       WHERE eval_status = 'done' AND gs_regions_json IS NOT NULL
+       LIMIT 50000`
     )
     .all<{ gs_regions_json: string }>();
 

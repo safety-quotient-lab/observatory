@@ -290,7 +290,7 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
   if (ev.editorial !== null && ev.editorial !== undefined) {
     if (typeof ev.editorial !== 'number') {
       const num = parseFloat(ev.editorial);
-      if (!isNaN(num)) {
+      if (!isNaN(num) && isFinite(num)) {
         ev.editorial = Math.max(-1.0, Math.min(1.0, num));
         repairs.push(`Coerced editorial to number: ${ev.editorial}`);
       } else {
@@ -341,7 +341,7 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
     if (parsed[field] !== null && parsed[field] !== undefined) {
       if (typeof parsed[field] !== 'number') {
         const num = parseFloat(parsed[field]);
-        parsed[field] = !isNaN(num) ? Math.max(0.0, Math.min(1.0, num)) : null;
+        parsed[field] = (!isNaN(num) && isFinite(num)) ? Math.max(0.0, Math.min(1.0, num)) : null;
         repairs.push(`Coerced ${field} to ${parsed[field]}`);
       } else {
         parsed[field] = Math.max(0.0, Math.min(1.0, parsed[field]));
@@ -366,12 +366,18 @@ export function computeLightAggregates(light: LightEvalResponse): {
   weightedMean = Math.max(-1.0, Math.min(1.0, weightedMean));
   weightedMean = Math.round(weightedMean * 1000) / 1000;
 
-  // Classify using same buckets as full eval
+  // Classify using same buckets as full eval (exclusive upper bound, edge-case clamp)
   let classification = 'Neutral';
-  for (const c of CLASSIFICATIONS) {
-    if (weightedMean >= c.min && weightedMean <= c.max) {
-      classification = c.label;
-      break;
+  if (weightedMean >= 1.0) {
+    classification = 'Strong positive';
+  } else if (weightedMean <= -1.0) {
+    classification = 'Strong negative';
+  } else {
+    for (const c of CLASSIFICATIONS) {
+      if (weightedMean >= c.min && weightedMean < c.max) {
+        classification = c.label;
+        break;
+      }
     }
   }
 

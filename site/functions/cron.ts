@@ -52,9 +52,30 @@ export default {
     const db = env.DB;
     const minute = new Date(event.scheduledTime).getMinutes();
 
+    // ─── Distributed lock (prevent overlapping cron cycles) ───
+    const lockKey = 'cron:lock';
+    try {
+      const existing = await env.CONTENT_CACHE.get(lockKey);
+      if (existing) {
+        console.warn('[cron] Lock held, skipping cycle');
+        return;
+      }
+      await env.CONTENT_CACHE.put(lockKey, new Date().toISOString(), { expirationTtl: 120 });
+    } catch (err) {
+      console.warn('[cron] KV lock check failed (non-fatal):', err);
+    }
+
+    try {
     // ─── HN crawl cycle (fetch, diff, insert, refresh, comments, users, re-eval, enqueue) ───
 
-    const crawlResult = await runCrawlCycle(db, env.EVAL_QUEUE, env.CONTENT_CACHE, minute);
+    let crawlResult: Awaited<ReturnType<typeof runCrawlCycle>>;
+    try {
+      crawlResult = await runCrawlCycle(db, env.EVAL_QUEUE, env.CONTENT_CACHE, minute);
+    } catch (err) {
+      console.error('[cron] Crawl cycle failed (non-fatal):', err);
+      await logEvent(db, { event_type: 'cron_error', severity: 'error', message: `Crawl cycle failed`, details: { phase: 'crawl', error: String(err) } }).catch(() => {});
+      crawlResult = { stories_new: 0, stories_found: 0, feeds: {}, score_refresh: { updates: 0, sweep: 0 } };
+    }
 
     // ─── Multi-model dispatch (every 5 minutes) ───
 
@@ -108,6 +129,11 @@ export default {
     });
 
     console.log('Cron cycle complete');
+
+    } catch (err) {
+      console.error('[cron] Scheduled handler error:', err);
+      await logEvent(db, { event_type: 'cron_error', severity: 'error', message: `Scheduled handler failed: ${String(err).slice(0, 500)}`, details: { error: String(err) } }).catch(() => {});
+    }
   },
 
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -295,6 +321,20 @@ export default {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
 
+      // Clean up stale calibration data before re-enqueue
+      try {
+        const calIds = CALIBRATION_SET.map((_, i) => -(1000 + i + 1));
+        const placeholders = calIds.map(() => '?').join(',');
+        await db.batch([
+          db.prepare(`DELETE FROM eval_history WHERE hn_id IN (${placeholders})`).bind(...calIds),
+          db.prepare(`DELETE FROM fair_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
+          db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${placeholders})`).bind(...calIds),
+          db.prepare(`DELETE FROM calibration_runs WHERE created_at < datetime('now', '-30 days')`),
+        ]);
+      } catch (err) {
+        console.warn('[calibrate] Cleanup failed (non-fatal):', err);
+      }
+
       let enqueued = 0;
       const enabledModels = getEnabledModels();
 
@@ -334,6 +374,7 @@ export default {
             domain,
             eval_model: model.id,
             eval_provider: model.provider,
+            prompt_mode: model.prompt_mode,
           });
 
           // UPSERT rater_evals as queued

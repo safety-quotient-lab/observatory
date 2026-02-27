@@ -117,12 +117,13 @@ export default {
             eval_provider: story.eval_provider,
           },
         });
+
+        // Ack only after successful recording
+        msg.ack();
       } catch (err) {
         console.error(`[dlq] Failed to record DLQ message for hn_id=${story.hn_id}:`, err);
+        // Don't ack — let CF retry or expire naturally
       }
-
-      // Always ack — we've recorded it, don't let it loop
-      msg.ack();
     }
   },
 

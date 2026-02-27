@@ -81,7 +81,7 @@ export async function updateRateLimitState(
   };
 
   try {
-    await kv.put(key, JSON.stringify(state), { expirationTtl: 120 });
+    await kv.put(key, JSON.stringify(state), { expirationTtl: 600 });
   } catch (err) {
     console.error(`[consumer] KV ratelimit write failed: ${err}`);
   }

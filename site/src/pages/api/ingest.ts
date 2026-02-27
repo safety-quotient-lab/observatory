@@ -60,12 +60,20 @@ export const POST: APIRoute = async ({ locals, request }) => {
     result,
   } = body;
 
-  if (!hn_id || !model_id || !provider || !result) {
-    return new Response(JSON.stringify({ error: 'Missing required fields: hn_id, model_id, provider, result' }), {
+  if (!hn_id || typeof hn_id !== 'number' || !Number.isInteger(hn_id)) {
+    return new Response(JSON.stringify({ error: 'hn_id must be an integer' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
+  if (!model_id || !provider || !result) {
+    return new Response(JSON.stringify({ error: 'Missing required fields: model_id, provider, result' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  const safeInputTokens = Number.isInteger(input_tokens) && input_tokens >= 0 ? input_tokens : 0;
+  const safeOutputTokens = Number.isInteger(output_tokens) && output_tokens >= 0 ? output_tokens : 0;
 
   if (prompt_mode === 'light') {
     const light = result as LightEvalResponse;
@@ -80,14 +88,18 @@ export const POST: APIRoute = async ({ locals, request }) => {
     await writeLightRaterEvalResult(
       env.DB, hn_id, light, model_id, provider,
       prompt_hash ?? null, methodology_hash ?? null,
-      input_tokens ?? 0, output_tokens ?? 0,
+      safeInputTokens, safeOutputTokens,
     );
 
     const agg = computeLightAggregates(light);
 
-    // Mark story as done and write editorial score so it shows in the feed
+    // Always write editorial score; only advance status if not already done
     await env.DB
-      .prepare(`UPDATE stories SET eval_status = 'done', evaluated_at = datetime('now'), hcb_editorial_mean = ? WHERE hn_id = ? AND eval_status IN ('pending', 'queued')`)
+      .prepare(`UPDATE stories
+        SET hcb_editorial_mean = ?,
+            eval_status = CASE WHEN eval_status IN ('pending', 'queued') THEN 'done' ELSE eval_status END,
+            evaluated_at = CASE WHEN eval_status IN ('pending', 'queued') THEN datetime('now') ELSE evaluated_at END
+        WHERE hn_id = ?`)
       .bind(light.evaluation.editorial, hn_id)
       .run();
     return new Response(JSON.stringify({
@@ -115,7 +127,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   await writeRaterEvalResult(
     env.DB, hn_id, fullResult, model_id, provider,
     prompt_hash ?? null, methodology_hash ?? null,
-    input_tokens ?? 0, output_tokens ?? 0,
+    safeInputTokens, safeOutputTokens,
   );
 
   // Mark story as done so it doesn't get re-queued

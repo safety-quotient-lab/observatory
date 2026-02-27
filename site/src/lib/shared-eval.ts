@@ -14,9 +14,6 @@ export const EVAL_MAX_TOKENS = 10240;
 /** Extended token budget for retry after stop_reason === 'end_turn' truncation */
 export const EVAL_MAX_TOKENS_EXTENDED = 12288;
 
-/** Full eval token budget (same as standard; alias for clarity) */
-export const EVAL_MAX_TOKENS_FULL = 10240;
-
 export const CONTENT_MAX_CHARS = 20_000;
 
 export const RAW_HTML_MAX_CHARS = 30_000;

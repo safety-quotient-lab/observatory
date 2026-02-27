@@ -22,7 +22,7 @@ function timeAgo(unixTime: number): string {
 }
 
 // Prepare scatter data for client
-const scatterData = JSON.stringify(velocityHrcb.map(v => ({
+const scatterData = JSON.stringify((velocityHrcb ?? []).map(v => ({
   id: v.hn_id,
   title: v.title.slice(0, 60),
   domain: v.domain,

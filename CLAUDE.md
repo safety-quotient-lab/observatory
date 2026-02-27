@@ -76,9 +76,10 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/calibration.ts` — Full-model `CALIBRATION_SET` (hn_ids -1001..-1015) + light-model `LIGHT_CALIBRATION_SET` (hn_ids -2001..-2015) + per-model thresholds + parameterized `runCalibrationCheck(scores, calSet?, thresholds?)`
 - `site/src/lib/content-gate.ts` — Pre-eval content classification (paywall, captcha, bot protection, etc.)
 - `site/src/lib/colors.ts` — Score/SETL/confidence/gate color mapping
+- `site/src/lib/db-utils.ts` — `safeBatch()` helper: chunks D1 batch writes into ≤100 statements
 - `site/src/components/` — Reusable Astro components (EvalCard, DcpTable, etc.)
-- `site/functions/rate-limit.ts` — Rate limit state, capacity checks, credit pause
-- `site/functions/providers.ts` — API call adapters (Anthropic, OpenRouter, Workers AI)
+- `site/functions/rate-limit.ts` — Rate limit state, capacity checks, credit pause (KV TTL: 600s)
+- `site/functions/providers.ts` — API call adapters (Anthropic, OpenRouter, Workers AI) with 15s AbortController timeout
 
 ## Build & Deploy
 
@@ -169,7 +170,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 
 **Archetype naming:** ~22 pattern rules (e.g., high EQ + TD + low PT → "Rigorous Analysts"), fallback to readable "High X/Y · Low Z" names.
 
-**Key data flow:** `getDomainSignalProfiles(db)` → build raw vectors → z-normalize → cluster → enrich with archetypes, insights, radar data → render. The `getDomainSignalProfiles` query includes `avg_setl` via a SETL subquery.
+**Key data flow:** `getDomainSignalProfiles(db)` → build raw vectors → z-normalize → cluster → enrich with archetypes, insights, radar data → render. The `getDomainSignalProfiles` query uses `AVG(s.hcb_setl)`, `AVG(s.hcb_editorial_mean)`, `AVG(s.hcb_structural_mean)` from materialized columns (not correlated subqueries).
 
 ## Key Patterns
 
@@ -184,4 +185,9 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 - **DCP caching**: 7-day TTL in KV per domain, also persisted to `domain_dcp` table in D1.
 - **Light prompt mode**: Small/free models (Workers AI Llama 4 Scout 17B, Nemotron Nano 30B) use `METHODOLOGY_SYSTEM_PROMPT_LIGHT` — editorial-only single score + 3 supplementary scores (eq, so, td) + primary_tone (~200-400 output tokens vs ~4-5K for full). Schema `light-1.2`. Field `executive_summary` renamed to `short_description` (max 20 words). Controlled by `ModelDefinition.prompt_mode: 'full' | 'light'`. No structural channel, no per-section scores, no DCP, no Fair Witness evidence. Results written to `rater_evals` with `prompt_mode = 'light'` (no `rater_scores`/`rater_witness`). DB column `prompt_mode` (migration 0023) enables filtering light vs full evals. `ingest.ts` also writes `stories.hcb_editorial_mean` for light evals so they appear in the feed (label: `~lite`). Light-only item pages show a summary card with editorial score, description, and 3 supplementary scores. `EvalCard.astro`: `hasEval` checks `hcb_weighted_mean !== null || hcb_editorial_mean !== null`; `isLightOnly = hcb_weighted_mean === null && hcb_editorial_mean !== null` suppresses S: channel display.
 - **Workers AI response format**: `ai.run()` may return `{ response: "string" }` or `{ response: { ...object } }` — consumer handles both.
+- **QueueMessage `prompt_mode`**: Non-primary model queue messages now include `prompt_mode: model.prompt_mode` (set at dispatch time in `hn-bot.ts` and `cron.ts`). Consumer uses this as fallback in `isLightMode` detection (alongside model registry lookup).
+- **Cron KV distributed lock**: Scheduled handler acquires a `cron:lock` KV key (120s TTL) before running. If lock exists, cycle is skipped. Lock check failure is non-fatal (logged and continues). Prevents overlapping cron cycles.
+- **Calibration cleanup**: `POST /calibrate` now deletes eval_history, fair_witness, and rater_evals for calibration IDs before re-enqueue; prunes calibration_runs older than 30 days.
+- **Consumer batch-level API key check**: Anthropic/OpenRouter consumers check API key at batch level (before message loop). Missing key → `msg.retry()` all messages and return (not silent ack → data loss).
+- **DLQ consumer ack placement**: `msg.ack()` only fires after successful DB write + event log. If write fails, message is NOT acked (lets CF retry or expire naturally).
 - **Content gate columns**: `stories.gate_category` (TEXT, nullable) and `stories.gate_confidence` (REAL, nullable) — migration 0024. NULL = content was accessible. Written by `markSkipped()` when content gate blocks a URL. Surfaced on `/domain/[domain]` (Access Barriers), `/domains` (Most Gatekept card), `/sources` (Gated Content card), `/system` (Content Gates box). Query functions: `getDomainGateStats`, `getMostGatekeptDomains`, `getGlobalGateStats` in `db-entities.ts`.

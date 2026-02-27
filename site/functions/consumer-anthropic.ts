@@ -50,19 +50,19 @@ export default {
   ): Promise<void> {
     const db = env.DB;
 
+    // Batch-level API key check — retry all messages if key is missing
+    if (!env.ANTHROPIC_API_KEY) {
+      console.error('[consumer-anthropic] No ANTHROPIC_API_KEY — retrying all messages');
+      for (const msg of batch.messages) msg.retry();
+      return;
+    }
+
     for (const msg of batch.messages) {
       const story = msg.body;
       const evalStartMs = Date.now();
       let prep: PreparedContent | null = null;
 
       try {
-        // API key check
-        if (!env.ANTHROPIC_API_KEY) {
-          console.warn(`[consumer-anthropic] No ANTHROPIC_API_KEY, skipping hn_id=${story.hn_id}`);
-          msg.ack();
-          continue;
-        }
-
         prep = await prepareContent(msg, env);
         if (!prep) continue;
 

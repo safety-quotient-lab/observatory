@@ -64,6 +64,7 @@ export interface QueueMessage {
   domain: string | null;
   eval_model?: string;
   eval_provider?: string;
+  prompt_mode?: 'full' | 'light';
 }
 
 // --- Hash utilities ---
@@ -275,7 +276,8 @@ export async function prepareContent(
     content = story.hn_text!;
   } else {
     const kvKey = `content:${story.hn_id}`;
-    const cached = await env.CONTENT_CACHE.get(kvKey);
+    let cached: string | null = null;
+    try { cached = await env.CONTENT_CACHE.get(kvKey); } catch {}
     if (cached) {
       content = cached;
       console.log(`[consumer] KV cache hit for hn_id=${story.hn_id}`);
@@ -329,7 +331,7 @@ export async function prepareContent(
     return null;
   }
 
-  const isLightMode = modelDef?.prompt_mode === 'light';
+  const isLightMode = story.prompt_mode === 'light' || modelDef?.prompt_mode === 'light';
   const domain = story.domain || (story.url ? extractDomain(story.url) : null);
 
   return {

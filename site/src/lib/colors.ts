@@ -40,11 +40,6 @@ export function scoreToColor(score: number | null): string {
   return hslToRgb(hue, sat, lit);
 }
 
-/** Get a text color (white or black) with enough contrast for a given score */
-export function scoreTextColor(score: number | null): string {
-  return '#e5e5e5';
-}
-
 /** Get classification badge color (derived from scoreToColor scale) */
 export function classificationColor(classification: string): string {
   const lower = classification.toLowerCase();
@@ -182,8 +177,7 @@ export function fwRatioColor(ratio: number | null): string {
   if (ratio === null) return '#4b5563';
   const r = Math.max(0, Math.min(1, ratio));
   // Low ratio (more inference) = purple, high ratio (more observable) = green
-  const hue = 142 * r; // 0→0° (red-ish), 1→142° (green)
-  // Use purple tint for low values: shift hue toward 280 for low r
+  // Shift hue toward 280 (purple) for low r, 142 (green) for high r
   const adjustedHue = r < 0.5 ? 280 - (280 - 142) * (r / 0.5) : 142;
   const sat = 0.7;
   const lit = 0.45;
