@@ -819,10 +819,10 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   {dlqStats.discarded > 0 && <span style="color: #1a5568;"> · {dlqStats.discarded} discarded</span>}
                 </div>
               )}
-              {dlqTrend && dlqTrend.daily.length > 0 && (
+              {dlqTrend && dlqTrend.days.length > 0 && (
                 <div style="margin-top: 4px; display: flex; align-items: flex-end; gap: 1px; height: 16px;" title="14-day DLQ new entries">
-                  {dlqTrend.daily.map(d => {
-                    const maxNew = Math.max(...dlqTrend!.daily.map(x => x.new_count), 1);
+                  {dlqTrend.days.map(d => {
+                    const maxNew = Math.max(...dlqTrend!.days.map(x => x.new_count), 1);
                     const h = Math.max(2, Math.round((d.new_count / maxNew) * 16));
                     return (
                       <div style={`width: 6px; height: ${h}px; background: ${d.new_count > 0 ? '#dc262680' : '#0d4655'}; border-radius: 1px;`} title={`${d.day}: ${d.new_count} new`}></div>

@@ -10,6 +10,20 @@
 - [x] **Content gate in cron pre-fetch** *(done)* — `hn-bot.ts` runs `classifyContent()` + `hasReadableText()` on raw HTML before queueing. Gated stories marked skipped with structured `gate_category`/`gate_confidence`. Consumer retains gate as safety net.
 - [x] **Backfill gate_category for existing stories** *(done)* — Swept 18 skipped stories (score >= 50) back to pending; they'll flow through cron pre-fetch content gate naturally. Remaining ~1,738 are low-score (<50) stories — not worth re-evaluating.
 
+## Data Model / Taxonomy Evaluation
+
+- [ ] **Comprehensive data model audit** *(big effort — needs separate plan)*
+  - **Trigger:** `avg_poster_karma` is computed and stored but not displayed anywhere meaningful. What else is being collected but unused? What relationships exist in the data that we're not surfacing?
+  - **Scope:**
+    1. **Inventory all computed/stored fields** — walk every D1 table, every computed aggregate, every crawled attribute. List which are displayed, which are only used internally, and which are completely orphaned.
+    2. **Map entity relationships** — stories ↔ users ↔ domains ↔ articles ↔ feeds ↔ comments ↔ evals ↔ events. Document which joins exist vs which are missing (e.g., user→domain affinity, comment sentiment→story score correlation).
+    3. **Identify missing vocabulary** — concepts we measure but don't name/surface (e.g., "user reliability" from karma+eval consistency, "domain editorial trajectory" from time-series HRCB).
+    4. **Taxonomy gaps** — what dimensions of the data model have no UI representation? What pages would be needed to surface them?
+    5. **Unused signals** — `avg_poster_karma`, supplementary signals on user/domain profiles, comment depth stats, feed membership patterns — where should these appear?
+    6. **Network analysis gaps** — user↔domain posting patterns, article co-occurrence in stories, cross-feed correlation
+  - **Output:** A `.claude/plans/data-model-audit-YYYY-MM-DD.md` with findings, gap analysis, and prioritized UI/schema recommendations
+  - **Prerequisite:** Needs full schema read + all page reads + entity query inventory
+
 ## Data Sources
 
 - [ ] **Add Lobsters (lobste.rs) as a data source**
