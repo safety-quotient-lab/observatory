@@ -254,15 +254,8 @@
     padding: 0 8px;
   }
 
-  /* Kill min-width on nested data tables */
-  .hn-page table table { min-width: unset !important; }
-
-  /* EvalCard score column — responsive instead of fixed 90px */
-  .athing td[style*="width: 90px"] {
-    width: auto !important;
-    min-width: 60px !important;
-    max-width: 80px !important;
-  }
+  /* Let nested data tables scroll rather than squeezing columns */
+  .hn-page table table { min-width: unset; }
 
   /* Nav: smaller font on mobile, natural inline wrap */
   .nav-links {
@@ -294,8 +287,8 @@
     align-items: center;
   }
 
-  /* Break long URLs */
-  td, div, span {
+  /* Break long URLs/titles only — not scores or labels */
+  .titleline, .sitebit {
     word-break: break-word;
     overflow-wrap: break-word;
   }
