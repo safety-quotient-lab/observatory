@@ -643,6 +643,17 @@ export default {
       // Light mode: insert LIGHT_CALIBRATION_SET stories as pending (hn_ids -2001 to -2015).
       // Evaluation is done by the local evaluate-standalone.mjs script, not Cloudflare queues.
       if (mode === 'light') {
+        // Clean up previous light calibration rater_evals so the queue filter doesn't skip them
+        const lightCalIds = LIGHT_CALIBRATION_SET.map((_, i) => -(2000 + i + 1));
+        const lightPlaceholders = lightCalIds.map(() => '?').join(',');
+        try {
+          await db.batch([
+            db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${lightPlaceholders}) AND prompt_mode = 'light'`).bind(...lightCalIds),
+            db.prepare(`DELETE FROM calibration_runs WHERE model = 'light-1.3'`),
+          ]);
+        } catch (err) {
+          console.warn('[calibrate] Light cleanup failed (non-fatal):', err);
+        }
         for (let i = 0; i < LIGHT_CALIBRATION_SET.length; i++) {
           const cal = LIGHT_CALIBRATION_SET[i];
           const syntheticId = -(2000 + i + 1);

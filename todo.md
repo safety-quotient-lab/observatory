@@ -71,7 +71,7 @@
 
 ## Data Quality
 
-- [ ] **Re-run light calibration against light-1.3 schema** — light-1.2 calibration set passed 15/15 but with new valence+arousal fields in light-1.3, calibration score ranges should be re-validated. Run `validate-light.mjs` after a few light-1.3 evals are in.
+- [x] **Re-run light calibration against light-1.3 schema** *(done — 15/15 pass, 2026-02-27)* — valence+arousal fields don't shift editorial scores. Calibration baseline holds.
 
 
 
