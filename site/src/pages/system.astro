@@ -32,6 +32,9 @@ import {
   getSelfThrottleImpact,
   getEvalLatencyStats,
   getSignalCompleteness,
+  getContentTypeValidation,
+  getContentTypeDisagreement,
+  getMisclassificationSummary,
 } from '../lib/db';
 import { cachedQuery } from '../lib/db-utils';
 import { CALIBRATION_SET, LIGHT_CALIBRATION_SET } from '../lib/calibration';
@@ -52,6 +55,7 @@ const [
   methodologyDist, driftStats, lastCalibration, lastLightCalibration, globalGate,
   raterSummary, raterStatus, providerStats, modelQueueStats,
   dlqTrend, throttleImpact, latencyStats, signalCompleteness,
+  ctValidation, ctDisagreement, ctMisclass,
 ] = await Promise.all([
   // Ops-critical (fresh)
   getFailedStories(db, 5),
@@ -86,6 +90,10 @@ const [
   cachedQuery(kv, 'sys:throttle', () => getSelfThrottleImpact(db), 300).catch(() => [] as Awaited<ReturnType<typeof getSelfThrottleImpact>>),
   getEvalLatencyStats(db).catch(() => [] as Awaited<ReturnType<typeof getEvalLatencyStats>>),
   cachedQuery(kv, 'sys:signalComplete', () => getSignalCompleteness(db), 300).catch(() => [] as Awaited<ReturnType<typeof getSignalCompleteness>>),
+  // Content type validation (cached)
+  cachedQuery(kv, 'sys:ctValidation', () => getContentTypeValidation(db), 300).catch(() => [] as Awaited<ReturnType<typeof getContentTypeValidation>>),
+  cachedQuery(kv, 'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300).catch(() => [] as Awaited<ReturnType<typeof getContentTypeDisagreement>>),
+  cachedQuery(kv, 'sys:ctMisclass', () => getMisclassificationSummary(db), 300).catch(() => ({ structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 })),
 ]);
 
 // Format token counts for display
@@ -94,6 +102,14 @@ function formatTokens(n: number): string {
   if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
   return String(n);
 }
+
+// Content type validation constants (extracted to frontmatter — Astro generics gotcha)
+const STRUCTURAL_HEAVY = new Set(['PO', 'LP', 'AD', 'AC', 'CO']);
+const CT_WEIGHTS: Record<string, { e: number; s: number }> = {
+  ED: { e: 0.6, s: 0.4 }, PO: { e: 0.3, s: 0.7 }, LP: { e: 0.3, s: 0.7 },
+  AD: { e: 0.2, s: 0.8 }, AC: { e: 0.4, s: 0.6 }, CO: { e: 0.5, s: 0.5 },
+  RE: { e: 0.7, s: 0.3 }, SA: { e: 0.8, s: 0.2 }, MX: { e: 0.5, s: 0.5 },
+};
 
 // Event type color map for Pipeline Events panel
 const EVENT_TYPE_COLORS: Record<string, string> = {
@@ -934,7 +950,86 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                 </div>
               )}
             </div>
+
+            {/* Content Type Validation */}
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid ${ctMisclass.misclassification_pct > 15 ? '#dc262640' : ctMisclass.misclassification_pct > 5 ? '#eab30840' : '#0d4655'}; border-radius: 4px;`}>
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Type Validation</div>
+              <div style="font-size: var(--font-xs);">
+                <span style={`color: ${ctMisclass.misclassification_pct > 15 ? '#dc2626' : ctMisclass.misclassification_pct > 5 ? '#eab308' : '#16a34a'}; font-weight: bold;`}>{ctMisclass.misclassification_pct}%</span>
+                <span style="color: #5b7279;"> suspect rate</span>
+              </div>
+              <div style="font-size: 9px; margin-top: 2px; color: #5b7279;">
+                {ctMisclass.structural_heavy_missing}/{ctMisclass.structural_heavy_total} structural-heavy missing S data
+              </div>
+              {ctMisclass.disagreement_count > 0 && (
+                <div style="font-size: 9px; margin-top: 1px;">
+                  <span style="color: #eab308;">{ctMisclass.disagreement_count}</span>
+                  <span style="color: #5b7279;"> stories with model disagreement</span>
+                </div>
+              )}
+            </div>
           </div>
+
+    {/* Content Type Breakdown (collapsed) */}
+    {ctValidation.length > 0 && (
+      <details style="margin-bottom: 8px;">
+        <summary style="color: #5b7279; font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">Content Type Breakdown</summary>
+        <div class="table-wrap">
+        <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+          <tr style="color: #5b7279; border-bottom: 1px solid #1a5568;">
+            <td style="padding: 3px 6px;">Type</td>
+            <td style="padding: 3px 6px; text-align: right;">Count</td>
+            <td style="padding: 3px 6px; text-align: right;">Avg Score</td>
+            <td style="padding: 3px 6px; text-align: center;">Weights</td>
+            <td style="padding: 3px 6px; text-align: right;">Suspect</td>
+          </tr>
+          {ctValidation.map(row => {
+            const isHeavy = STRUCTURAL_HEAVY.has(row.content_type);
+            const w = CT_WEIGHTS[row.content_type];
+            const suspect = row.missing_structural + row.low_evidence_only;
+            const suspectPct = row.total > 0 ? Math.round((suspect / row.total) * 100) : 0;
+            const suspectColor = suspectPct > 15 ? '#dc2626' : suspectPct > 5 ? '#eab308' : '#5b7279';
+            return (
+              <tr style="border-bottom: 1px solid #093946;">
+                <td style={`padding: 3px 6px; color: ${isHeavy ? '#d56500' : '#98a8a8'}; font-weight: ${isHeavy ? 'bold' : 'normal'};`}>
+                  {row.content_type}{isHeavy && <span style="color: #5b7279; font-weight: normal;" title="Structural-heavy type"> S</span>}
+                </td>
+                <td style="padding: 3px 6px; text-align: right; color: #98a8a8;">{row.total}</td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${row.avg_score != null ? scoreToColor(row.avg_score) : '#5b7279'};`}>
+                  {row.avg_score != null ? row.avg_score.toFixed(3) : '—'}
+                </td>
+                <td style="padding: 3px 6px; text-align: center; color: #5b7279; font-family: monospace;">
+                  {w ? `E:${w.e} S:${w.s}` : '—'}
+                </td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${suspectColor};`}>
+                  {suspect > 0 ? `${suspect} (${suspectPct}%)` : '—'}
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+        </div>
+      </details>
+    )}
+
+    {/* Cross-Model Type Disagreement (collapsed) */}
+    {ctDisagreement.length > 0 && (
+      <details style="margin-bottom: 8px;">
+        <summary style="color: #5b7279; font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+          Cross-Model Disagreement ({ctDisagreement.length})
+        </summary>
+        <div style="font-size: var(--font-xs);">
+          {ctDisagreement.slice(0, 10).map(row => (
+            <div style="padding: 2px 0; border-bottom: 1px solid #093946;">
+              <a href={`/item/${row.hn_id}`} style="color: #2b90d8;">{row.hn_id}</a>
+              <span style="color: #5b7279;"> · </span>
+              <span style="color: #eab308;">{row.types_seen}</span>
+              <span style="color: #5b7279;"> · {row.models}</span>
+            </div>
+          ))}
+        </div>
+      </details>
+    )}
   </details>
 
   {/* Pipeline Events */}

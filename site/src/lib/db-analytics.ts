@@ -990,3 +990,129 @@ export async function getKarmaHrcbCorrelation(db: D1Database): Promise<KarmaHrcb
     return { points: [], pearson_r: null, count: 0 };
   }
 }
+
+// --- Content type classification validation ---
+
+export interface ContentTypeValidationRow {
+  content_type: string;
+  total: number;
+  avg_score: number | null;
+  avg_confidence: number | null;
+  missing_structural: number;
+  low_evidence_only: number;
+}
+
+export async function getContentTypeValidation(db: D1Database): Promise<ContentTypeValidationRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT
+          content_type,
+          COUNT(*) as total,
+          ROUND(AVG(hcb_weighted_mean), 4) as avg_score,
+          ROUND(AVG(hcb_confidence), 4) as avg_confidence,
+          SUM(CASE
+            WHEN content_type IN ('PO','LP','AD','AC','CO')
+              AND hcb_structural_mean IS NULL
+              AND hcb_weighted_mean IS NOT NULL
+            THEN 1 ELSE 0 END) as missing_structural,
+          SUM(CASE
+            WHEN content_type IN ('PO','LP','AD','AC','CO')
+              AND hcb_evidence_h + hcb_evidence_m = 0
+              AND hcb_evidence_l > 0
+            THEN 1 ELSE 0 END) as low_evidence_only
+         FROM stories
+         WHERE eval_status = 'done' AND hn_id > 0
+         GROUP BY content_type
+         ORDER BY total DESC`
+      )
+      .all<ContentTypeValidationRow>();
+    return results;
+  } catch (err) {
+    console.error('[getContentTypeValidation]', err);
+    return [];
+  }
+}
+
+export interface ContentTypeDisagreementRow {
+  hn_id: number;
+  type_count: number;
+  types_seen: string;
+  models: string;
+}
+
+export async function getContentTypeDisagreement(db: D1Database): Promise<ContentTypeDisagreementRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT
+          hn_id,
+          COUNT(DISTINCT content_type) as type_count,
+          GROUP_CONCAT(DISTINCT content_type) as types_seen,
+          GROUP_CONCAT(DISTINCT eval_model) as models
+         FROM rater_evals
+         WHERE eval_status = 'done'
+           AND content_type IS NOT NULL
+           AND hn_id > 0
+         GROUP BY hn_id
+         HAVING COUNT(DISTINCT content_type) > 1
+         ORDER BY type_count DESC
+         LIMIT 20`
+      )
+      .all<ContentTypeDisagreementRow>();
+    return results;
+  } catch (err) {
+    console.error('[getContentTypeDisagreement]', err);
+    return [];
+  }
+}
+
+export interface MisclassificationSummary {
+  structural_heavy_total: number;
+  structural_heavy_missing: number;
+  misclassification_pct: number;
+  disagreement_count: number;
+}
+
+export async function getMisclassificationSummary(db: D1Database): Promise<MisclassificationSummary> {
+  try {
+    const structRow = await db
+      .prepare(
+        `SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN hcb_structural_mean IS NULL AND hcb_weighted_mean IS NOT NULL THEN 1 ELSE 0 END) as missing
+         FROM stories
+         WHERE eval_status = 'done'
+           AND content_type IN ('PO','LP','AD','AC','CO')
+           AND hn_id > 0`
+      )
+      .first<{ total: number; missing: number }>();
+
+    const disagreeRow = await db
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM (
+          SELECT hn_id
+          FROM rater_evals
+          WHERE eval_status = 'done'
+            AND content_type IS NOT NULL
+            AND hn_id > 0
+          GROUP BY hn_id
+          HAVING COUNT(DISTINCT content_type) > 1
+        )`
+      )
+      .first<{ cnt: number }>();
+
+    const total = structRow?.total ?? 0;
+    const missing = structRow?.missing ?? 0;
+
+    return {
+      structural_heavy_total: total,
+      structural_heavy_missing: missing,
+      misclassification_pct: total > 0 ? Math.round((missing / total) * 100) : 0,
+      disagreement_count: disagreeRow?.cnt ?? 0,
+    };
+  } catch (err) {
+    console.error('[getMisclassificationSummary]', err);
+    return { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 };
+  }
+}

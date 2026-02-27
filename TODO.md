@@ -25,9 +25,9 @@
 
 ## Data Quality
 
-- [ ] **Content type classification validation**
-  - Flag content_type=PO with 0 structural evidence as likely misclassification
-  - Track misclassification rate per model over time
+- [x] **Content type classification validation** *(done 2026-02-27)*
+  - `getContentTypeValidation`, `getContentTypeDisagreement`, `getMisclassificationSummary` in db-analytics.ts
+  - Content Type Validation card + breakdown table + cross-model disagreement in /system Measurement Integrity
 
 - [ ] **Eval consistency check for re-evaluations**
   - Compare hcb_weighted_mean across models for same URL
