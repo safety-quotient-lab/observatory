@@ -17,6 +17,7 @@ import {
 } from '../src/lib/shared-eval';
 import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, LIGHT_CALIBRATION_SET, LIGHT_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
+import { shouldAutoDisableFromCalibration, raterHealthKvKey, emptyRaterHealth, type RaterHealthState } from '../src/lib/rater-health';
 import { getPipelineHealth } from '../src/lib/db';
 import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions } from '../src/lib/coverage-crawl';
 import {
@@ -816,6 +817,29 @@ export default {
           pending: pendingCount,
         },
       });
+
+      // Phase 31D: auto-disable model on calibration drift
+      if (model !== 'unknown') {
+        const calDisable = shouldAutoDisableFromCalibration(summary, model);
+        if (calDisable.disable) {
+          try {
+            const healthKey = raterHealthKvKey(model);
+            let health: RaterHealthState = emptyRaterHealth();
+            const stored = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null;
+            if (stored) health = stored;
+            health = { ...health, disabled_at: new Date().toISOString(), disabled_reason: calDisable.reason };
+            await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+            await logEvent(db, {
+              event_type: 'rater_auto_disable',
+              severity: 'warn',
+              message: `Model ${model} auto-disabled after calibration drift`,
+              details: { model, reason: calDisable.reason, calibration_status: summary.status, classOrderingOk: summary.classOrderingOk },
+            });
+          } catch (err) {
+            console.error('[calibrate/check] Auto-disable failed (non-fatal):', err);
+          }
+        }
+      }
 
       return new Response(JSON.stringify({ ...summary, pending: pendingCount, model, methodologyHash }), {
         status: 200,
