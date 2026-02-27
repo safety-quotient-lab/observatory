@@ -95,10 +95,10 @@ const sections: SectionCard[] = [
   </div>
 
   <!-- Section cards -->
-  <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
     {sections.map(card => (
       <a href={card.href} style="text-decoration: none; display: block;">
-        <div class="hub-card" style={`background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; border-left: 3px solid ${card.accent}; transition: border-color 0.15s;`}>
+        <div class="hub-card" style={`background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; border-left: 3px solid ${card.accent}; transition: border-color 0.15s;`}>
           <div style={`color: ${card.accent}; font-size: var(--font-md); font-weight: bold;`}>{card.title}</div>
           <div style="color: #5b7279; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
             {card.description}
