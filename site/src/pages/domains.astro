@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getAllDomainStats, getDomainIntelligence, getMostGatekeptDomains } from '../lib/db';
+import { getAllDomainStats, getDomainIntelligence, getMostGatekeptDomains, getDomainKarmaMap } from '../lib/db';
 import type { DomainSortOption } from '../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../lib/colors';
 import { cachedQuery } from '../lib/db-utils';
@@ -18,11 +18,16 @@ const validClassify = ['all', 'positive', 'negative', 'neutral', 'contested'];
 const safeClassify = validClassify.includes(classify) ? classify : 'all';
 
 // Fetch more to allow filtering
-const [allDomains, intelDomains, gatekeptDomains] = await Promise.all([
+const [allDomains, intelDomains, gatekeptDomains, karmaMapArr] = await Promise.all([
   cachedQuery(kv, `allDomainStats:${safeSort}:200`, () => getAllDomainStats(db, safeSort, 200)),
   cachedQuery(kv, 'domainIntelligence', () => getDomainIntelligence(db, 'stories', 3, 150)),
   cachedQuery(kv, 'mostGatekeptDomains', () => getMostGatekeptDomains(db)),
+  cachedQuery<{domain: string; avg_karma: number; user_count: number}[]>(kv, 'domainKarmaMap', async () => {
+    const m = await getDomainKarmaMap(db);
+    return [...m.values()];
+  }, 600),
 ]);
+const karmaMap = new Map(karmaMapArr.map(k => [k.domain, k]));
 
 // Insight cards from domain-intel
 const hrcbDomains = intelDomains.filter(d => d.evaluated >= 3 && d.avg_hrcb !== null);
@@ -31,6 +36,32 @@ const bottomHrcb = [...hrcbDomains].sort((a, b) => (a.avg_hrcb || 0) - (b.avg_hr
 const controversial = [...hrcbDomains].filter(d => d.hrcb_range !== null).sort((a, b) => (b.hrcb_range || 0) - (a.hrcb_range || 0)).slice(0, 5);
 const highEngagement = intelDomains.filter(d => d.stories >= 3 && d.comment_per_point !== null).sort((a, b) => (b.comment_per_point || 0) - (a.comment_per_point || 0)).slice(0, 5);
 const diverse = intelDomains.filter(d => d.stories >= 3).sort((a, b) => b.unique_submitters - a.unique_submitters).slice(0, 5);
+const topKarma = [...karmaMap.values()].sort((a, b) => b.avg_karma - a.avg_karma).slice(0, 5);
+
+// Scatter data: merge karma + HRCB per domain
+const scatterDomains = intelDomains
+  .filter(d => d.avg_hrcb !== null && karmaMap.has(d.domain) && (karmaMap.get(d.domain)?.avg_karma ?? 0) > 0)
+  .map(d => {
+    const k = karmaMap.get(d.domain)!;
+    return { domain: d.domain, avg_karma: k.avg_karma, avg_hrcb: d.avg_hrcb as number, stories: d.stories };
+  });
+
+// Pearson r on log10(karma) vs avg_hrcb
+let domainPearsonR: number | null = null;
+if (scatterDomains.length >= 5) {
+  const logK = scatterDomains.map(d => Math.log10(d.avg_karma));
+  const hrcbs = scatterDomains.map(d => d.avg_hrcb);
+  const n = scatterDomains.length;
+  const sumA = logK.reduce((s, v) => s + v, 0);
+  const sumB = hrcbs.reduce((s, v) => s + v, 0);
+  const sumAB = logK.reduce((s, v, i) => s + v * hrcbs[i], 0);
+  const sumA2 = logK.reduce((s, v) => s + v * v, 0);
+  const sumB2 = hrcbs.reduce((s, v) => s + v * v, 0);
+  const num = n * sumAB - sumA * sumB;
+  const den = Math.sqrt(Math.max(0, n * sumA2 - sumA * sumA) * Math.max(0, n * sumB2 - sumB * sumB));
+  domainPearsonR = den > 0 ? num / den : null;
+}
+const domainScatterJson = JSON.stringify(scatterDomains);
 
 // Filter by classification
 const domains = safeClassify === 'all' ? allDomains.slice(0, 100) : allDomains.filter(d => {
@@ -144,6 +175,18 @@ function buildDomainUrl(params: Record<string, string>): string {
             </div>
           ))}
         </div>
+        {topKarma.length > 0 && (
+          <div style="padding: 4px 8px;">
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Highest Karma</div>
+            {topKarma.map(d => (
+              <div style="margin-bottom: 3px;">
+                <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
+                <span class="score-font" style="color: #22d3ee; font-size: var(--font-sm); margin-left: 4px;">{Math.round(d.avg_karma).toLocaleString()}</span>
+                <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">avg</span>
+              </div>
+            ))}
+          </div>
+        )}
         {gatekeptDomains.length > 0 && (
           <div style="padding: 4px 8px;">
             <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Gatekept</div>
@@ -157,6 +200,31 @@ function buildDomainUrl(params: Record<string, string>): string {
         )}
       </div>
     </div>
+  )}
+
+  {/* Domain Karma vs HRCB scatter */}
+  {scatterDomains.length >= 5 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Domain Karma vs HRCB
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+              avg poster karma vs avg HRCB per domain · {scatterDomains.length} domains
+            </span>
+            {domainPearsonR !== null && (
+              <span style={`margin-left: 8px; background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: ${Math.abs(domainPearsonR) > 0.3 ? '#22d3ee' : '#5b7279'};`}>
+                r = {domainPearsonR > 0 ? '+' : ''}{domainPearsonR.toFixed(3)}
+              </span>
+            )}
+          </div>
+          <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">
+            X: log&#8321;&#8320;(avg karma) · Y: avg HRCB · size: story count · hover for details
+          </div>
+          <canvas id="domain-karma-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: #002d38; border-radius: 4px;"></canvas>
+        </td>
+      </tr>
+    </table>
   )}
 
   <div class="table-wrap">
@@ -212,4 +280,93 @@ function buildDomainUrl(params: Record<string, string>): string {
     </tr>
   </table>
   </div>
+  <script define:vars={{ domainScatterJson }}>
+    const data = JSON.parse(domainScatterJson);
+    const canvas = document.getElementById('domain-karma-scatter');
+    if (canvas && data.length > 0) {
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const pad = 40;
+
+      const logKarmas = data.map(d => Math.log10(d.avg_karma));
+      const minLK = Math.min(...logKarmas);
+      const maxLK = Math.max(...logKarmas);
+      const minHrcb = Math.min(...data.map(d => d.avg_hrcb), -0.5);
+      const maxHrcb = Math.max(...data.map(d => d.avg_hrcb), 0.5);
+      const maxStories = Math.max(...data.map(d => d.stories), 1);
+
+      function x(lk) { return pad + ((lk - minLK) / (maxLK - minLK || 1)) * (W - pad * 2); }
+      function y(hrcb) { return H - pad - ((hrcb - minHrcb) / (maxHrcb - minHrcb)) * (H - pad * 2); }
+
+      // Axes
+      ctx.strokeStyle = '#1a5568';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad, pad); ctx.lineTo(pad, H - pad); ctx.lineTo(W - pad, H - pad);
+      ctx.stroke();
+
+      // Zero line
+      const zeroY = y(0);
+      ctx.strokeStyle = '#0d4655';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(pad, zeroY); ctx.lineTo(W - pad, zeroY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Labels
+      ctx.fillStyle = '#5b7279';
+      ctx.font = '10px monospace';
+      ctx.fillText('0', pad - 12, zeroY + 3);
+      ctx.fillText(`10^${maxLK.toFixed(1)}`, W - pad - 40, H - pad + 15);
+      ctx.fillText(`10^${minLK.toFixed(1)}`, pad, H - pad + 15);
+
+      function fmtScore(s) {
+        if (s === null) return 'ND';
+        return (s > 0 ? '+' : '') + s.toFixed(2);
+      }
+
+      function scoreColor(score) {
+        if (score > 0) {
+          const t = Math.min(score, 1);
+          return `rgb(${Math.round(234+(22-234)*t)},${Math.round(179+(163-179)*t)},${Math.round(8+(74-8)*t)})`;
+        } else if (score < 0) {
+          const t = Math.min(Math.abs(score), 1);
+          return `rgb(${Math.round(234+(220-234)*t)},${Math.round(179+(38-179)*t)},${Math.round(8+(38-8)*t)})`;
+        }
+        return '#eab308';
+      }
+
+      // Points
+      for (const d of data) {
+        const lk = Math.log10(d.avg_karma);
+        const r = 3 + (d.stories / maxStories) * 6;
+        ctx.beginPath();
+        ctx.arc(x(lk), y(d.avg_hrcb), r, 0, 2 * Math.PI);
+        ctx.fillStyle = scoreColor(d.avg_hrcb);
+        ctx.globalAlpha = 0.7;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // Tooltip
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scale = canvas.clientWidth / W;
+        const mx = (e.clientX - rect.left) / scale;
+        const my = (e.clientY - rect.top) / scale;
+        let found = null;
+        for (const d of data) {
+          const lk = Math.log10(d.avg_karma);
+          if (Math.hypot(x(lk) - mx, y(d.avg_hrcb) - my) < 10) {
+            found = d;
+            break;
+          }
+        }
+        canvas.title = found
+          ? `${found.domain}\nAvg karma: ${Math.round(found.avg_karma).toLocaleString()} | HRCB: ${fmtScore(found.avg_hrcb)} | ${found.stories} stories`
+          : '';
+      });
+    }
+  </script>
 </Base>

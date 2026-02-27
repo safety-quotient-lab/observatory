@@ -108,6 +108,11 @@ const regimeData = JSON.stringify(regimeChanges);
         <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px; line-height: 1.5;">
           Named after Hari Seldon from Asimov's <em>Foundation</em> — tracking whether HN's collective discourse is trending toward or away from human rights alignment.
           Bullish = trending rights-positive, Bearish = trending rights-negative.
+          Regime change detection compares 7-day and 30-day rolling HRCB averages.
+          When the short-term trend crosses the long-term trend, it signals a shift
+          in overall alignment. Upward crossovers mean recent content is more HR-aligned
+          than the longer trend; downward means the opposite. SETL drift tracks
+          structural-editorial tension over time.
         </div>
       </td>
     </tr>

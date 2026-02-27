@@ -72,6 +72,11 @@ const sortLabels: SortLabels = {
         <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-base);">
           {allStories.length} stories tracked
         </span>
+        <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px; line-height: 1.5;">
+          Engagement patterns across evaluated stories. Peak score = maximum points reached.
+          Score velocity = points per hour. Comment ratio = comments per point (high ratio =
+          discussion-heavy). Slow burners = high peak score but below-average velocity.
+        </div>
         <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
           <span style="color: #5b7279;">sort:</span>
           {Object.entries(sortLabels).map(([key, label], i) => (

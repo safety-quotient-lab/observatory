@@ -63,7 +63,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/db.ts` — Barrel re-export from `db-stories.ts`, `db-entities.ts`, `db-analytics.ts`, `db-multi-model.ts`
 - `site/src/lib/db-stories.ts` — Story types, feed queries, dashboard stats, queue/failed stories
 - `site/src/lib/db-entities.ts` — Domain/user queries, signal profiles, DCP, pipeline health, content gate stats, events re-exports
-- `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory, `getProviderStats` (per-worker eval activity), `getModelQueueStats` (per-queue in-flight + throughput), `getDlqTrend` (14-day daily counts + backlog direction), `getSelfThrottleImpact` (7-day wasted seconds per model), `getEvalLatencyStats` (P50/P95/P99 per model), `getSignalCompleteness` (per-model % non-null per supplementary signal), `getModelTrustHistory` + `groupTrustByModel` (14-day trust snapshots for Evaluator Trust Index on /models), `getKarmaHrcbCorrelation` (karma-vs-HRCB scatter + Pearson r on /users)
+- `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory, `getProviderStats` (per-worker eval activity), `getModelQueueStats` (per-queue in-flight + throughput), `getDlqTrend` (14-day daily counts + backlog direction), `getSelfThrottleImpact` (7-day wasted seconds per model), `getEvalLatencyStats` (P50/P95/P99 per model), `getSignalCompleteness` (per-model % non-null per supplementary signal), `getModelTrustHistory` + `groupTrustByModel` (14-day trust snapshots for Evaluator Trust Index on /models), `getDomainKarmaMap` (per-domain avg poster karma for /domains scatter + /factions enrichment), `getKarmaHrcbCorrelation` (karma-vs-HRCB scatter + Pearson r on /users)
 - `site/src/lib/db-multi-model.ts` — Rater evals/scores/witness, model agreement, multi-model stories
 - `site/src/lib/shared-eval.ts` — Barrel re-export from `eval-types.ts`, `models.ts`, `prompts.ts`, `eval-parse.ts`, `eval-write.ts`, `rater-health.ts`
 - `site/src/lib/eval-types.ts` — Type definitions, interfaces, ALL_SECTIONS constant
@@ -167,7 +167,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 
 **Algorithm:** Z-normalize per dimension → cosine similarity on 8D vectors → agglomerative hierarchical clustering with average linkage at 1/φ threshold (fallback to 1/φ² if single giant cluster).
 
-**Page sections (top→bottom):** Signal Landscape (histograms) → Parallel Coordinates → **Signal Space** (2D PCA scatter + 3D Three.js orbit toggle) → Differentiation (inter-cluster variance) → Cluster Cards (radar charts, members, liminal flags) → Affinity Matrix → Interesting Pairs → Outliers → Methodology Notes.
+**Page sections (top→bottom):** Signal Landscape (histograms) → Parallel Coordinates → **Signal Space** (2D PCA scatter + 3D Three.js orbit toggle) → Differentiation (inter-cluster variance) → Cluster Cards (radar charts, members, sentiment/karma/HRCB distribution, liminal flags) → Affinity Matrix → Interesting Pairs → Outliers → Methodology Notes.
 
 **Archetype naming:** ~22 pattern rules (e.g., high EQ + TD + low PT → "Rigorous Analysts"), fallback to readable "High X/Y · Low Z" names.
 

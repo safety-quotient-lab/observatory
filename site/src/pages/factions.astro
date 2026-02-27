@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getAllDomainStats, getDomainSignalProfiles } from '../lib/db';
+import { getAllDomainStats, getDomainSignalProfiles, getDomainKarmaMap } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 import type { DomainSignalProfile } from '../lib/db';
 import { cachedQuery } from '../lib/db-utils';
@@ -10,13 +10,18 @@ const db = Astro.locals.runtime.env.DB;
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 // --- 1. Parallel fetch ---
-const [domains, signalProfilesArr] = await Promise.all([
+const [domains, signalProfilesArr, karmaMapArr] = await Promise.all([
   cachedQuery(kv, 'allDomainStats:count:50', () => getAllDomainStats(db, 'count', 50)),
   cachedQuery<DomainSignalProfile[]>(kv, 'domainSignalProfiles', async () => {
     const m = await getDomainSignalProfiles(db);
     return [...m.values()];
   }),
+  cachedQuery<{domain: string; avg_karma: number; user_count: number}[]>(kv, 'domainKarmaMap', async () => {
+    const m = await getDomainKarmaMap(db);
+    return [...m.values()];
+  }, 600),
 ]);
+const karmaMap = new Map(karmaMapArr.map(k => [k.domain, k]));
 const signalProfiles = new Map(signalProfilesArr.map(p => [p.domain, p]));
 
 const evaluatedDomains = domains.filter(d => d.avg_score !== null && d.count >= 3);
@@ -262,9 +267,15 @@ interface EnrichedCluster {
   dominantTone: string | null;
   dominantScope: string | null;
   dominantReadingLevel: string | null;
+  dominantSentiment: string | null;
   avgSetl: number | null;
   avgHnScore: number;
   avgHnComments: number;
+  avgKarma: number | null;
+  storyCount: number;
+  hrcbPositive: number;
+  hrcbNeutral: number;
+  hrcbNegative: number;
   liminalMembers: { domain: string; secondCluster: string; similarity: number }[];
 }
 
@@ -404,12 +415,25 @@ for (const cl of clusterList) {
   const dominantTone = mode(profiles.map(p => p.dominant_tone));
   const dominantScope = mode(profiles.map(p => p.dominant_scope));
   const dominantReadingLevel = mode(profiles.map(p => p.dominant_reading_level));
+  const dominantSentiment = mode(profiles.map(p => p.dominant_sentiment));
   const setlVals = profiles.map(p => p.avg_setl).filter((v): v is number => v !== null);
   const avgSetl = setlVals.length > 0 ? setlVals.reduce((a, b) => a + b, 0) / setlVals.length : null;
   const hnScores = profiles.map(p => p.avg_hn_score).filter((v): v is number => v !== null);
   const avgHnScore = hnScores.length > 0 ? hnScores.reduce((a, b) => a + b, 0) / hnScores.length : 0;
   const hnComments = profiles.map(p => p.avg_hn_comments).filter((v): v is number => v !== null);
   const avgHnComments = hnComments.length > 0 ? hnComments.reduce((a, b) => a + b, 0) / hnComments.length : 0;
+
+  // Karma per cluster
+  const karmaVals = cl.members.map(m => karmaMap.get(m)?.avg_karma).filter((v): v is number => v != null);
+  const avgKarma = karmaVals.length > 0 ? Math.round(karmaVals.reduce((a, b) => a + b, 0) / karmaVals.length) : null;
+
+  // Story count per cluster
+  const storyCount = profiles.reduce((s, p) => s + p.count, 0);
+
+  // HRCB distribution per cluster
+  const hrcbPositive = scores.filter(s => s > 0.05).length;
+  const hrcbNegative = scores.filter(s => s < -0.05).length;
+  const hrcbNeutral = scores.length - hrcbPositive - hrcbNegative;
 
   enrichedClusters.push({
     id: cl.id,
@@ -426,9 +450,15 @@ for (const cl of clusterList) {
     dominantTone,
     dominantScope,
     dominantReadingLevel,
+    dominantSentiment,
     avgSetl,
     avgHnScore,
     avgHnComments,
+    avgKarma,
+    storyCount,
+    hrcbPositive,
+    hrcbNeutral,
+    hrcbNegative,
     liminalMembers: [],
   });
 }
@@ -1125,7 +1155,7 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
                   <span style={`color: ${cl.color}; font-weight: bold; font-size: var(--font-sm);`}>
                     {cl.name}
                     <span style="color: #5b7279; font-weight: normal; margin-left: 8px; font-size: var(--font-xs);">
-                      {cl.members.length} domains
+                      {cl.members.length} domains · {cl.storyCount} stories
                     </span>
                   </span>
                   {cl.avgScore !== null && (
@@ -1209,6 +1239,11 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
                           {cl.dominantTone}
                         </span>
                       )}
+                      {cl.dominantSentiment && (
+                        <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #5b7279;">
+                          {cl.dominantSentiment}
+                        </span>
+                      )}
                       {cl.dominantScope && (
                         <span style="background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: #5b7279;">
                           {cl.dominantScope}
@@ -1226,14 +1261,36 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
                       )}
                     </div>
 
-                    {/* HN engagement */}
-                    <div style="display: flex; gap: 16px; margin-bottom: 10px; font-size: var(--font-xs);">
+                    {/* HN engagement + karma + HRCB distribution */}
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: var(--font-xs); align-items: center;">
                       <span style="color: #5b7279;">
-                        <span style="color: #5b7279;">Pts</span> <span class="score-font" style="color: #fb923c;">{Math.round(cl.avgHnScore)}</span>
+                        Pts <span class="score-font" style="color: #fb923c;">{Math.round(cl.avgHnScore)}</span>
                       </span>
                       <span style="color: #5b7279;">
-                        <span style="color: #5b7279;">Cmts</span> <span class="score-font" style="color: #60a5fa;">{Math.round(cl.avgHnComments)}</span>
+                        Cmts <span class="score-font" style="color: #60a5fa;">{Math.round(cl.avgHnComments)}</span>
                       </span>
+                      {cl.avgKarma !== null && (
+                        <span style="color: #5b7279;">
+                          Karma <span class="score-font" style="color: #22d3ee;">{cl.avgKarma.toLocaleString()}</span>
+                        </span>
+                      )}
+                      {(cl.hrcbPositive + cl.hrcbNeutral + cl.hrcbNegative) > 0 && (() => {
+                        const total = cl.hrcbPositive + cl.hrcbNeutral + cl.hrcbNegative;
+                        const posPct = Math.round((cl.hrcbPositive / total) * 100);
+                        const neuPct = Math.round((cl.hrcbNeutral / total) * 100);
+                        const negPct = 100 - posPct - neuPct;
+                        return (
+                          <span style="display: inline-flex; align-items: center; gap: 4px; color: #5b7279;">
+                            HRCB
+                            <span style="display: inline-flex; width: 60px; height: 8px; border-radius: 2px; overflow: hidden;">
+                              {posPct > 0 && <span style={`width: ${posPct}%; background: #34d399;`}></span>}
+                              {neuPct > 0 && <span style={`width: ${neuPct}%; background: #eab308;`}></span>}
+                              {negPct > 0 && <span style={`width: ${negPct}%; background: #f87171;`}></span>}
+                            </span>
+                            <span class="score-font" style="color: #5b7279;">{cl.hrcbPositive}+/{cl.hrcbNeutral}~/{cl.hrcbNegative}-</span>
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     {/* Member domains */}

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { writeRaterEvalResult, writeLightRaterEvalResult } from '../../lib/eval-write';
+import { writeRaterEvalResult, writeLightRaterEvalResult, writeCalibrationEval } from '../../lib/eval-write';
 import { validateSlimEvalResponse, validateLightEvalResponse, computeLightAggregates } from '../../lib/eval-parse';
 import { computeAggregates } from '../../lib/compute-aggregates';
 import type { EvalResult, SlimEvalResponse, LightEvalResponse } from '../../lib/eval-types';
@@ -21,7 +21,7 @@ import type { EvalResult, SlimEvalResponse, LightEvalResponse } from '../../lib/
  * }
  */
 export const POST: APIRoute = async ({ locals, request }) => {
-  const env = locals.runtime.env as { DB: D1Database; TRIGGER_SECRET?: string };
+  const env = locals.runtime.env as { DB: D1Database; TRIGGER_SECRET?: string; CONTENT_CACHE?: KVNamespace };
 
   const auth = request.headers.get('Authorization') ?? '';
   if (!env.TRIGGER_SECRET || auth !== `Bearer ${env.TRIGGER_SECRET}`) {
@@ -90,6 +90,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
       prompt_hash ?? null, methodology_hash ?? null,
       safeInputTokens, safeOutputTokens,
     );
+
+    // Longitudinal calibration snapshot: if this is a calibration ID and a run is active, persist to calibration_evals
+    const isCalId = hn_id >= -2015 && hn_id <= -2001;
+    if (isCalId && env.CONTENT_CACHE) {
+      const runStr = await env.CONTENT_CACHE.get('calibration:light:current_run').catch(() => null);
+      const calibrationRun = runStr ? parseInt(runStr) : NaN;
+      if (!isNaN(calibrationRun)) {
+        await writeCalibrationEval(env.DB, calibrationRun, hn_id, light, model_id, provider);
+      }
+    }
 
     const agg = computeLightAggregates(light);
 

@@ -643,6 +643,12 @@ export default {
       // Light mode: insert LIGHT_CALIBRATION_SET stories as pending (hn_ids -2001 to -2015).
       // Evaluation is done by the local evaluate-standalone.mjs script, not Cloudflare queues.
       if (mode === 'light') {
+        // Generate a calibration_run ID (unix timestamp) — stored in KV so ingest.ts can tag rows in calibration_evals
+        const calibrationRun = Math.floor(Date.now() / 1000);
+        try {
+          await env.CONTENT_CACHE.put('calibration:light:current_run', String(calibrationRun), { expirationTtl: 30 * 24 * 60 * 60 });
+        } catch { /* non-fatal */ }
+
         // Clean up previous light calibration rater_evals so the queue filter doesn't skip them
         const lightCalIds = LIGHT_CALIBRATION_SET.map((_, i) => -(2000 + i + 1));
         const lightPlaceholders = lightCalIds.map(() => '?').join(',');
@@ -675,6 +681,7 @@ export default {
         });
         return new Response(JSON.stringify({
           mode: 'light',
+          calibration_run: calibrationRun,
           queued: LIGHT_CALIBRATION_SET.length,
           calibration_ids: LIGHT_CALIBRATION_SET.map((_, i) => -(2000 + i + 1)),
           note: 'Stories inserted as pending. Run: node scripts/evaluate-standalone.mjs --mode light',

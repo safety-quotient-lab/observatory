@@ -906,6 +906,34 @@ export function groupTrustByModel(snapshots: ModelTrustSnapshot[]): Map<string, 
   return map;
 }
 
+// --- Domain Karma Map ---
+
+export interface DomainKarmaStat {
+  domain: string;
+  avg_karma: number;
+  user_count: number;
+}
+
+export async function getDomainKarmaMap(db: D1Database): Promise<Map<string, DomainKarmaStat>> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT s.domain, AVG(u.karma) as avg_karma, COUNT(DISTINCT u.username) as user_count
+       FROM stories s
+       JOIN hn_users u ON u.username = s.hn_by
+       WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
+         AND u.karma > 0 AND s.hn_id > 0
+       GROUP BY s.domain
+       HAVING COUNT(DISTINCT u.username) >= 2`
+    ).all<DomainKarmaStat>();
+    const map = new Map<string, DomainKarmaStat>();
+    for (const r of results) map.set(r.domain, r);
+    return map;
+  } catch (err) {
+    console.error('[getDomainKarmaMap]', err);
+    return new Map();
+  }
+}
+
 // --- Karma vs HRCB Correlation ---
 
 export interface KarmaHrcbPoint {

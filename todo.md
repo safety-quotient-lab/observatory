@@ -13,13 +13,13 @@
 ## Data Model / Taxonomy Evaluation
 
 - [ ] **Comprehensive data model audit** *(big effort — needs separate plan)*
-  - **Trigger:** `avg_poster_karma` is computed and stored but not displayed anywhere meaningful. What else is being collected but unused? What relationships exist in the data that we're not surfacing?
+  - **Trigger:** `avg_poster_karma` now surfaced on /domains (insight card + scatter), /domain/[domain] (stat badge), /factions (cluster cards). What else is being collected but unused? What relationships exist in the data that we're not surfacing?
   - **Scope:**
     1. **Inventory all computed/stored fields** — walk every D1 table, every computed aggregate, every crawled attribute. List which are displayed, which are only used internally, and which are completely orphaned.
     2. **Map entity relationships** — stories ↔ users ↔ domains ↔ articles ↔ feeds ↔ comments ↔ evals ↔ events. Document which joins exist vs which are missing (e.g., user→domain affinity, comment sentiment→story score correlation).
     3. **Identify missing vocabulary** — concepts we measure but don't name/surface (e.g., "user reliability" from karma+eval consistency, "domain editorial trajectory" from time-series HRCB).
     4. **Taxonomy gaps** — what dimensions of the data model have no UI representation? What pages would be needed to surface them?
-    5. **Unused signals** — `avg_poster_karma`, supplementary signals on user/domain profiles, comment depth stats, feed membership patterns — where should these appear?
+    5. **Unused signals** — ~~`avg_poster_karma`~~ (now on /domains, /domain/*, /factions), supplementary signals on user/domain profiles, comment depth stats, feed membership patterns — where should these appear?
     6. **Network analysis gaps** — user↔domain posting patterns, article co-occurrence in stories, cross-feed correlation
   - **Output:** A `.claude/plans/data-model-audit-YYYY-MM-DD.md` with findings, gap analysis, and prioritized UI/schema recommendations
   - **Prerequisite:** Needs full schema read + all page reads + entity query inventory

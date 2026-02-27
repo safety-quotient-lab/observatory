@@ -17,7 +17,7 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
-const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, setlHistory, signals, gateStats] = await Promise.all([
+const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, setlHistory, signals, gateStats, karmaRow] = await Promise.all([
   getStoriesByDomain(db, domain, PER_PAGE + 1, offset),
   getDomainSetl(db, domain),
   getDomainDetailStats(db, domain),
@@ -26,7 +26,13 @@ const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, 
   getDomainSetlHistory(db, domain),
   getDomainSignals(db, domain),
   getDomainGateStats(db, domain),
+  db.prepare(
+    `SELECT AVG(u.karma) as avg_karma, COUNT(DISTINCT u.username) as user_count
+     FROM stories s JOIN hn_users u ON u.username = s.hn_by
+     WHERE s.domain = ? AND u.karma > 0 AND s.hn_id > 0`
+  ).bind(domain).first<{ avg_karma: number | null; user_count: number }>(),
 ]);
+const avgPosterKarma = karmaRow?.avg_karma ?? null;
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
@@ -80,6 +86,14 @@ if (dcpJson) {
                 <td class="score-font" style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</td>
                 <td style="color: #5b7279;">Avg Structural</td>
                 <td class="score-font" style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</td>
+              </tr>
+            )}
+            {avgPosterKarma !== null && (
+              <tr>
+                <td style="color: #5b7279;">Poster Karma</td>
+                <td class="score-font" style="color: #22d3ee;">{Math.round(avgPosterKarma).toLocaleString()} <span style="color: #5b7279; font-size: var(--font-xs);">avg</span></td>
+                <td style="color: #5b7279;">Submitters</td>
+                <td class="score-font" style="color: #5b7279;">{karmaRow?.user_count ?? 0}</td>
               </tr>
             )}
           </table>

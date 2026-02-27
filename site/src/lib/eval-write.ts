@@ -774,6 +774,50 @@ export async function markRaterFailed(
     .run();
 }
 
+// --- Calibration longitudinal store ---
+
+/**
+ * Write a single calibration eval snapshot to calibration_evals.
+ * Called from ingest.ts when hn_id is a calibration ID and a calibration_run is active.
+ * Never deleted — accumulates across runs for longitudinal drift tracking.
+ */
+export async function writeCalibrationEval(
+  db: D1Database,
+  calibrationRun: number,
+  hnId: number,
+  light: LightEvalResponse,
+  modelId: string,
+  provider: string,
+): Promise<void> {
+  const agg = computeLightAggregates(light);
+  try {
+    await db
+      .prepare(
+        `INSERT INTO calibration_evals (
+           calibration_run, hn_id, eval_model, eval_provider, prompt_mode, schema_version,
+           hcb_editorial_mean, hcb_weighted_mean, hcb_classification,
+           eq_score, so_score, td_score, et_valence, et_arousal, et_primary_tone
+         ) VALUES (?, ?, ?, ?, 'light', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        calibrationRun, hnId, modelId, provider,
+        light.schema_version || 'light-1.3',
+        light.evaluation.editorial,
+        agg.weighted_mean,
+        agg.classification,
+        light.eq_score ?? null,
+        light.so_score ?? null,
+        light.td_score ?? null,
+        light.valence ?? null,
+        light.arousal ?? null,
+        light.primary_tone ?? null,
+      )
+      .run();
+  } catch (err) {
+    console.error(`[eval-write] writeCalibrationEval failed for hn_id=${hnId}:`, err);
+  }
+}
+
 // --- Light eval write helpers ---
 
 export async function writeLightRaterEvalResult(

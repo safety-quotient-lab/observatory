@@ -37,8 +37,13 @@ const scatterData = JSON.stringify((velocityHrcb ?? []).map(v => ({
       <td>
         <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Velocity Tracking</span>
         <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-sm);">
-          Cayce Pollard mode — tracking the fastest-rising content
+          {highVelocity.length} stories with snapshot data
         </span>
+        <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px; line-height: 1.5;">
+          How fast stories accumulate points (pts/hr from story snapshots).
+          High velocity with negative HRCB may indicate viral but rights-adverse content.
+          Low velocity with positive HRCB may indicate quality content that rises slowly.
+        </div>
       </td>
     </tr>
   </table>
