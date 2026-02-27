@@ -218,11 +218,8 @@
     max-width: 80px !important;
   }
 
-  /* Nav: wrap links instead of overflowing */
+  /* Nav: smaller font on mobile, natural inline wrap */
   .nav-links {
-    display: flex !important;
-    flex-wrap: wrap;
-    gap: 2px 0;
     font-size: 9pt !important;
   }
 
