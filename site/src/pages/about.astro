@@ -52,19 +52,16 @@ import Base from '../layouts/Base.astro';
 
         <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Signal Channels</p>
 
-        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
-          <tr>
-            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #60a5fa;">Editorial</b><br>
-              <span style="color: #5b7279;">What the content <b style="color: #98a8a8;">says</b>. Analyzes text, arguments, framing, and sourcing.</span>
-            </td>
-            <td width="5px"></td>
-            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #22d3ee;">Structural</b><br>
-              <span style="color: #5b7279;">What the site <b style="color: #98a8a8;">does</b>. Examines privacy, accessibility, tracking, access models.</span>
-            </td>
-          </tr>
-        </table>
+        <div class="two-col" style="font-size: var(--font-base); margin-bottom: 15px;">
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+            <b style="color: #60a5fa;">Editorial</b><br>
+            <span style="color: #5b7279;">What the content <b style="color: #98a8a8;">says</b>. Analyzes text, arguments, framing, and sourcing.</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+            <b style="color: #22d3ee;">Structural</b><br>
+            <span style="color: #5b7279;">What the site <b style="color: #98a8a8;">does</b>. Examines privacy, accessibility, tracking, access models.</span>
+          </div>
+        </div>
 
         <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
           Channels are weighted by content type (e.g., Editorial=0.6, Structural=0.4).
@@ -105,19 +102,16 @@ import Base from '../layouts/Base.astro';
           every evaluation separates its evidence into two categories:
         </p>
 
-        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
-          <tr>
-            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #22c55e;">Observable Facts</b><br>
-              <span style="color: #5b7279;">Directly verifiable statements grounded in page content. Any reader could confirm these by visiting the page.</span>
-            </td>
-            <td width="5px"></td>
-            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #a855f7;">Inferences</b><br>
-              <span style="color: #5b7279;">Interpretive conclusions drawn from the observable evidence. These explain <i>why</i> the evidence maps to the score.</span>
-            </td>
-          </tr>
-        </table>
+        <div class="two-col" style="font-size: var(--font-base); margin-bottom: 10px;">
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+            <b style="color: #22c55e;">Observable Facts</b><br>
+            <span style="color: #5b7279;">Directly verifiable statements grounded in page content. Any reader could confirm these by visiting the page.</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+            <b style="color: #a855f7;">Inferences</b><br>
+            <span style="color: #5b7279;">Interpretive conclusions drawn from the observable evidence. These explain <i>why</i> the evidence maps to the score.</span>
+          </div>
+        </div>
 
         <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">
           The <b style="color: #98a8a8;">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts
@@ -303,19 +297,16 @@ import Base from '../layouts/Base.astro';
 
         <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
 
-        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 15px;">
-          <tr>
-            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #5b7279;">No Data</b><br>
-              <span style="color: #5b7279;">No relevant content for this UDHR article. The topic is simply absent.</span>
-            </td>
-            <td width="5px"></td>
-            <td width="50%" valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #98a8a8;">0.0 (Neutral)</b><br>
-              <span style="color: #5b7279;">Relevant content exists but has balanced signals, netting to zero.</span>
-            </td>
-          </tr>
-        </table>
+        <div class="two-col" style="font-size: var(--font-base); margin-bottom: 15px;">
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+            <b style="color: #5b7279;">No Data</b><br>
+            <span style="color: #5b7279;">No relevant content for this UDHR article. The topic is simply absent.</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+            <b style="color: #98a8a8;">0.0 (Neutral)</b><br>
+            <span style="color: #5b7279;">Relevant content exists but has balanced signals, netting to zero.</span>
+          </div>
+        </div>
 
         <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Domain Context Profile (DCP)</p>
 

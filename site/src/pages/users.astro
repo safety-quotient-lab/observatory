@@ -102,73 +102,67 @@ function thStyle(col: string): string {
   </table>
 
   {/* --- Insight cards --- */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-    <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <table cellpadding="0" cellspacing="0" width="100%">
-          <tr>
-            {/* Top submitters */}
-            <td style="vertical-align: top; width: 20%; padding: 4px 8px;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Top Submitters</div>
-              {topSubmitters.map(u => (
-                <div style="margin-bottom: 3px;">
-                  <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
-                  <span class="score-font" style="color: #60a5fa; font-size: var(--font-sm); margin-left: 4px;">{u.stories}</span>
-                  <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">stories</span>
-                </div>
-              ))}
-            </td>
-            {/* Most HR-Positive */}
-            <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #0d4655;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
-              {topHrcb.map(u => (
-                <div style="margin-bottom: 3px;">
-                  <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
-                  <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
-                  <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.evaluated})</span>
-                </div>
-              ))}
-            </td>
-            {/* Most HR-Negative */}
-            <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #0d4655;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
-              {bottomHrcb.map(u => (
-                <div style="margin-bottom: 3px;">
-                  <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
-                  <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
-                  <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.evaluated})</span>
-                </div>
-              ))}
-            </td>
-            {/* Most Diverse (domains) */}
-            <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #0d4655;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
-              {mostDiverse.map(u => (
-                <div style="margin-bottom: 3px;">
-                  <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
-                  <span class="score-font" style="color: #a78bfa; font-size: var(--font-sm); margin-left: 4px;">{u.unique_domains}</span>
-                  <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">domains</span>
-                </div>
-              ))}
-            </td>
-            {/* Most Controversial */}
-            <td style="vertical-align: top; width: 20%; padding: 4px 8px; border-left: 1px solid #0d4655;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
-              {mostControversial.map(u => (
-                <div style="margin-bottom: 3px;">
-                  <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
-                  <span class="score-font" style="color: #e2b340; font-size: var(--font-sm); margin-left: 4px;">
-                    {u.hrcb_range !== null ? u.hrcb_range.toFixed(2) : '—'}
-                  </span>
-                  <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">range</span>
-                </div>
-              ))}
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+  <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; margin-bottom: 10px;">
+    <div class="insight-grid">
+      {/* Top submitters */}
+      <div style="padding: 4px 8px;">
+        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Top Submitters</div>
+        {topSubmitters.map(u => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
+            <span class="score-font" style="color: #60a5fa; font-size: var(--font-sm); margin-left: 4px;">{u.stories}</span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">stories</span>
+          </div>
+        ))}
+      </div>
+      {/* Most HR-Positive */}
+      <div style="padding: 4px 8px;">
+        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
+        {topHrcb.map(u => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
+            <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.evaluated})</span>
+          </div>
+        ))}
+      </div>
+      {/* Most HR-Negative */}
+      <div style="padding: 4px 8px;">
+        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
+        {bottomHrcb.map(u => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
+            <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.evaluated})</span>
+          </div>
+        ))}
+      </div>
+      {/* Most Diverse (domains) */}
+      <div style="padding: 4px 8px;">
+        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
+        {mostDiverse.map(u => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
+            <span class="score-font" style="color: #a78bfa; font-size: var(--font-sm); margin-left: 4px;">{u.unique_domains}</span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">domains</span>
+          </div>
+        ))}
+      </div>
+      {/* Most Controversial */}
+      <div style="padding: 4px 8px;">
+        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
+        {mostControversial.map(u => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
+            <span class="score-font" style="color: #e2b340; font-size: var(--font-sm); margin-left: 4px;">
+              {u.hrcb_range !== null ? u.hrcb_range.toFixed(2) : '—'}
+            </span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">range</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
 
   {/* --- Posting patterns --- */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">

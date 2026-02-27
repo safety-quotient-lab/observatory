@@ -159,6 +159,24 @@
   .trigger-btn:hover {
     color: var(--color-orange) !important;
   }
+
+  /* Responsive insight card grid */
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+  }
+
+  /* Two-column layout that stacks on mobile */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Flex stat cards with mobile collapse */
+  .stat-cards { display: flex; gap: 12px; flex-wrap: wrap; }
+  .stat-cards > * { flex: 1; min-width: 120px; }
 }
 
 /* Respect reduced motion preference */
@@ -190,6 +208,16 @@
     padding: 0 8px;
   }
 
+  /* Kill min-width on nested data tables */
+  .hn-page table table { min-width: unset !important; }
+
+  /* EvalCard score column — responsive instead of fixed 90px */
+  .athing td[style*="width: 90px"] {
+    width: auto !important;
+    min-width: 60px !important;
+    max-width: 80px !important;
+  }
+
   /* Nav: wrap links instead of overflowing */
   .nav-links {
     display: flex !important;
@@ -197,6 +225,9 @@
     gap: 2px 0;
     font-size: 9pt !important;
   }
+
+  /* Nav pipe separators — hide on mobile */
+  .nav-pipe { display: none; }
 
   /* Make all content tables scrollable */
   .table-wrap {
@@ -228,4 +259,19 @@
     word-break: break-word;
     overflow-wrap: break-word;
   }
+
+  /* Insight grid collapses to 2-col on mobile */
+  .insight-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Two-col stacks on mobile */
+  .two-col { grid-template-columns: 1fr; }
+
+  /* Stat cards collapse */
+  .stat-cards > * { min-width: 0; flex-basis: calc(50% - 6px); }
+}
+
+/* Extra-small screens */
+@media (max-width: 400px) {
+  .insight-grid { grid-template-columns: 1fr; }
+  .stat-cards > * { flex-basis: 100%; }
 }

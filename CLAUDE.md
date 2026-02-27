@@ -174,7 +174,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 ## Key Patterns
 
 - **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.
-- **Mobile table score wrapping**: Score values (e.g. `−0.24`) break across lines on mobile portrait in HTML tables. Fix: add `white-space: nowrap` to both the `<td>` and the score `<span>` directly. The `−` hyphen-minus is a browser break opportunity; `white-space: nowrap` on a parent div alone is not always sufficient inside compressed table layouts.
+- **Mobile responsiveness**: CSS utility classes in `global.css` handle mobile layout: `.insight-grid` (auto-fill grid → 2-col → 1-col), `.two-col` (2-col → stacked), `.stat-cards` (flex wrap → 50% → 100%). Nested table min-widths killed via `.hn-page table table { min-width: unset !important }`. EvalCard score column uses responsive width (60–80px) instead of fixed 90px. Nav pipe separators (`.nav-pipe`) hidden on mobile. Breakpoints: 640px (mobile) and 400px (extra-small).
 - **Consumer hash functions**: `hashString()` = SHA-256 first 16 bytes as hex (32 chars). Used for methodology_hash (system prompt only) and prompt_hash (system + user).
 - **Rate limiting**: Consumer reads `anthropic-ratelimit-*` headers proactively, self-throttles via KV state before hitting 429s. Circuit breaker at 3+ consecutive 429s.
 - **Content gate dual placement**: Runs in cron pre-fetch (primary — blocks before queueing, writes `gate_category`/`gate_confidence` to stories) AND consumer (safety net for KV cache misses). Pure regex, no LLM calls.

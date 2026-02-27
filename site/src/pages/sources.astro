@@ -63,12 +63,12 @@ const sections: SectionCard[] = [
   </table>
 
   <!-- Summary stats -->
-  <div style="display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 18px 0;">
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+  <div class="stat-cards" style="margin: 10px 0 18px 0;">
+    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px;">
       <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Total Domains</div>
       <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{domainCount}</div>
     </div>
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px;">
       <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Top Domain</div>
       <div style="margin-top: 2px;">
         {topDomain ? (
@@ -83,11 +83,11 @@ const sections: SectionCard[] = [
         )}
       </div>
     </div>
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px;">
       <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Eval Coverage</div>
       <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{coverage}%</div>
     </div>
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px;">
       <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Gated Content</div>
       <div style="color: #d56500; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{globalGate.gate_pct}%</div>
       <div style="color: #5b7279; font-size: var(--font-xs);">{globalGate.gated} of {globalGate.total} stories</div>
