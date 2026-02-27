@@ -46,6 +46,10 @@
     color: var(--fg-primary);
   }
 
+  [id] {
+    scroll-margin-top: 1em;
+  }
+
   body {
     @apply min-h-screen;
     box-sizing: border-box;
