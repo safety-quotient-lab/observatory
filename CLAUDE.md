@@ -48,10 +48,11 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 ### Site (Astro + Cloudflare Pages)
 
-**Navigation:** `stories | rights | sources | trends | system | about` (6 hubs)
+**Navigation:** `stories | signals | sources | rights | trends | system | about` (7 hubs)
 
 **Page taxonomy:**
 - **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]`
+- **Signals** (`/signals`): signal reference catalog — 9 sections (Core HRCB, Derived Metrics, Per-Provision Scoring, Supplementary Signals, Fair Witness, DCP, Content Gate, Labels & Metadata, Evaluation Modes). Uses `getStatusCounts` + `getSignalOverview` for live data.
 - **Rights** (`/rights`): hub → `/rights/observatory` (research dashboard), `/rights/articles`, `/rights/network`, `/article/[n]`
 - **Sources** (`/sources`): hub → `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
 - **Trends** (`/trends`): hub → `/seldon`, `/velocity`, `/dynamics`
@@ -175,6 +176,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 ## Key Patterns
 
 - **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.
+- **`compatibility_date` must stay at `2024-09-23`** in `site/wrangler.toml`. Bumping to 2026-02-01 breaks Astro SSR — every page returns `[object Object]` instead of HTML due to incompatible Response handling in newer Cloudflare compat flags.
 - **Mobile responsiveness**: CSS utility classes in `global.css` handle mobile layout: `.insight-grid` (auto-fill grid → 2-col → 1-col), `.two-col` (2-col → stacked), `.stat-cards` (flex wrap → 50% → 100%). Nested table min-widths relaxed via `.hn-page table table { min-width: unset; }` (no `!important` — let inline styles win when needed). `word-break: break-word` scoped to `.titleline, .sitebit` only (never on scores/labels). Nav links use flex-wrap with plain text `' | '` separators (wrapping spans break flex layout). Breakpoints: 640px (mobile) and 400px (extra-small).
 - **Progressive disclosure**: `.collapsible-section` class in `global.css` styles `<details>/<summary>` for 3-tier content. Used on About page (Tier 1 always visible, Tier 2 `<details open>`, Tier 3 `<details>` collapsed) and System page (primary always visible, secondary `<details open>`, tertiary `<details>` collapsed). Custom `▸` marker rotates on open.
 - **Hub pages as navigation gateways**: Rights, Sources, and Trends hubs are lean navigation gateways — minimal inline data, sub-page cards with descriptions. Redundant data that exists on sub-pages should not be duplicated on hub pages.
