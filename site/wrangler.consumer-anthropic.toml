@@ -1,0 +1,27 @@
+name = "hn-hrcb-consumer-anthropic"
+main = "functions/consumer-anthropic.ts"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hrcb-db"
+database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
+
+[[kv_namespaces]]
+binding = "CONTENT_CACHE"
+id = "ffe31e8bd21f43169e81f6d6137772bf"
+
+[[r2_buckets]]
+binding = "CONTENT_SNAPSHOTS"
+bucket_name = "hrcb-content-snapshots"
+
+# Primary model (Anthropic API — separate rate limit tracking)
+[[queues.consumers]]
+queue = "hrcb-eval-queue"
+max_batch_size = 1
+max_concurrency = 3
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+# Secrets (set via `wrangler secret put --name hn-hrcb-consumer-anthropic`):
+# ANTHROPIC_API_KEY

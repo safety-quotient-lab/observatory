@@ -2,7 +2,7 @@
  * Shared HRCB evaluation primitives.
  * Barrel re-export from split modules.
  *
- * Imported by src/lib/evaluate.ts (trigger endpoint), functions/cron.ts, and functions/consumer.ts.
+ * Imported by src/lib/evaluate.ts (trigger endpoint), functions/cron.ts, and functions/consumer-*.ts.
  */
 
 // --- Constants (kept here as canonical source) ---

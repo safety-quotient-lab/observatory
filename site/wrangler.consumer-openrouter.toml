@@ -1,5 +1,5 @@
-name = "hn-hrcb-consumer"
-main = "functions/consumer.ts"
+name = "hn-hrcb-consumer-openrouter"
+main = "functions/consumer-openrouter.ts"
 compatibility_date = "2024-09-23"
 
 [[d1_databases]]
@@ -14,17 +14,6 @@ id = "ffe31e8bd21f43169e81f6d6137772bf"
 [[r2_buckets]]
 binding = "CONTENT_SNAPSHOTS"
 bucket_name = "hrcb-content-snapshots"
-
-[ai]
-binding = "AI"
-
-# Primary model (Anthropic API — separate rate limit)
-[[queues.consumers]]
-queue = "hrcb-eval-queue"
-max_batch_size = 1
-max_concurrency = 3
-max_retries = 2
-dead_letter_queue = "hrcb-eval-dlq"
 
 # OpenRouter models — concurrency=1 each to stay under free tier rate limits
 [[queues.consumers]]
@@ -83,14 +72,5 @@ max_concurrency = 1
 max_retries = 2
 dead_letter_queue = "hrcb-eval-dlq"
 
-# Workers AI models — uses Cloudflare AI binding (no API key needed)
-[[queues.consumers]]
-queue = "hrcb-eval-workers-ai"
-max_batch_size = 1
-max_concurrency = 1
-max_retries = 2
-dead_letter_queue = "hrcb-eval-dlq"
-
-# Secrets (set via `wrangler secret put --name hn-hrcb-consumer`):
-# ANTHROPIC_API_KEY
+# Secrets (set via `wrangler secret put --name hn-hrcb-consumer-openrouter`):
 # OPENROUTER_API_KEY
