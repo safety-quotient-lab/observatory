@@ -671,7 +671,7 @@ export async function writeLightRaterEvalResult(
       hcbEvidenceH, hcbEvidenceM, hcbEvidenceL,
       promptHash, methodologyHash,
       light.evaluation.content_type || 'MX',
-      light.schema_version || 'light-1.1',
+      light.schema_version || 'light-1.2',
       light.theme_tag || null,
       light.sentiment_tag || null,
       light.short_description || null,
