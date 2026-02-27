@@ -60,6 +60,13 @@ export default {
           throw new Error(`Unknown model in registry: ${prep.msgModelId}`);
         }
 
+        // Provider guard — reject messages routed to wrong consumer
+        if (prep.modelDef.provider !== 'openrouter') {
+          console.warn(`[consumer-openrouter] Wrong provider ${prep.modelDef.provider} for model ${prep.msgModelId}, acking`);
+          msg.ack();
+          continue;
+        }
+
         if (prep.isLightMode) {
           // --- Light mode ---
           const lightModelDef = { ...prep.modelDef, max_tokens: EVAL_MAX_TOKENS_LIGHT };

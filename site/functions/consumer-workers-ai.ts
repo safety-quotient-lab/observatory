@@ -59,6 +59,13 @@ export default {
           throw new Error(`Unknown model in registry: ${prep.msgModelId}`);
         }
 
+        // Provider guard — reject messages routed to wrong consumer
+        if (prep.modelDef.provider !== 'workers-ai') {
+          console.warn(`[consumer-workers-ai] Wrong provider ${prep.modelDef.provider} for model ${prep.msgModelId}, acking`);
+          msg.ack();
+          continue;
+        }
+
         if (prep.isLightMode) {
           // --- Light mode ---
           const lightUserMessage = buildLightUserMessage(prep.evalUrl, story.title, prep.content);

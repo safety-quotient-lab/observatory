@@ -135,7 +135,10 @@ export function extractJsonFromResponse(raw: string): string {
   if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
     throw new Error(`No JSON object found. Response starts with: ${raw.slice(0, 300)}`);
   }
-  return text.slice(firstBrace, lastBrace + 1);
+  let json = text.slice(firstBrace, lastBrace + 1);
+  // Strip leading '+' on numeric values (e.g. "+0.5" → "0.5") — Llama models emit this
+  json = json.replace(/:\s*\+(\d)/g, ': $1');
+  return json;
 }
 
 // --- Section Name Normalization ---

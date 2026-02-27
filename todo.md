@@ -71,7 +71,8 @@
 
 ## Data Quality
 
-- [x] **Re-run light calibration against light-1.3 schema** *(done — 15/15 pass, 2026-02-27)* — valence+arousal fields don't shift editorial scores. Calibration baseline holds.
+- [x] **Re-run light calibration against light-1.3 schema** *(done — 15/15 pass ×2, then 14/15 on run 3 (EX-5 content variance), 2026-02-27)* — valence+arousal fields don't shift editorial scores. Calibration baseline holds.
+- [x] **Longitudinal calibration tracking** *(done — 2026-02-27)* — `calibration_evals` table (migrations 0035+0036) accumulates one row per (run, hn_id, model, provider). UNIQUE constraint + `INSERT OR IGNORE` prevents concurrent-evaluator duplicates. `calibration_run` unix timestamp stored in KV by cron, read by ingest.ts for cal IDs.
 
 
 

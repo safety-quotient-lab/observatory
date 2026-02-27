@@ -339,7 +339,7 @@ async function strategyHighSetlDeepDive(
        JOIN scores sc ON s.hn_id = sc.hn_id
        WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
        GROUP BY s.domain
-       HAVING cnt <= 3 AND avg_setl > 0.15
+       HAVING COUNT(*) <= 3 AND AVG(ABS(COALESCE(sc.editorial, 0) - COALESCE(sc.structural, 0))) > 0.15
        ORDER BY avg_setl DESC
        LIMIT 5`,
     )

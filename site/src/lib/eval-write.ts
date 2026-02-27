@@ -18,6 +18,12 @@ export async function writeEvalResult(
   model: string = PRIMARY_MODEL_ID,
   promptHash: string | null = null
 ): Promise<void> {
+  // FK guard: bail if story doesn't exist (stale queue message)
+  const exists = await db.prepare('SELECT 1 FROM stories WHERE hn_id = ?').bind(hnId).first();
+  if (!exists) {
+    throw new Error(`Story hn_id=${hnId} not found — skipping eval write (stale message)`);
+  }
+
   const agg = result.aggregates;
 
   // Compute Fair Witness aggregates from scores
@@ -537,6 +543,12 @@ export async function writeRaterEvalResult(
   inputTokens: number,
   outputTokens: number,
 ): Promise<void> {
+  // FK guard: bail if story doesn't exist (stale queue message)
+  const exists = await db.prepare('SELECT 1 FROM stories WHERE hn_id = ?').bind(hnId).first();
+  if (!exists) {
+    throw new Error(`Story hn_id=${hnId} not found — skipping rater eval write (stale message)`);
+  }
+
   const agg = result.aggregates;
 
   // Fair Witness aggregates
@@ -793,7 +805,7 @@ export async function writeCalibrationEval(
   try {
     await db
       .prepare(
-        `INSERT INTO calibration_evals (
+        `INSERT OR IGNORE INTO calibration_evals (
            calibration_run, hn_id, eval_model, eval_provider, prompt_mode, schema_version,
            hcb_editorial_mean, hcb_weighted_mean, hcb_classification,
            eq_score, so_score, td_score, et_valence, et_arousal, et_primary_tone
@@ -831,6 +843,12 @@ export async function writeLightRaterEvalResult(
   inputTokens: number,
   outputTokens: number,
 ): Promise<void> {
+  // FK guard: bail if story doesn't exist (stale queue message)
+  const exists = await db.prepare('SELECT 1 FROM stories WHERE hn_id = ?').bind(hnId).first();
+  if (!exists) {
+    throw new Error(`Story hn_id=${hnId} not found — skipping light eval write (stale message)`);
+  }
+
   const agg = computeLightAggregates(light);
 
   // Evidence counts from single evidence_strength value
@@ -926,10 +944,10 @@ export async function writeLightRaterEvalResult(
       null, // fw_ratio
       0,    // fw_observable_count
       0,    // fw_inference_count
-      light.evaluation.editorial,   // hcb_editorial_mean
-      null,                         // hcb_structural_mean (editorial-only in light mode)
-      0,                            // hcb_setl (no structural channel)
-      light.evaluation.confidence,  // hcb_confidence
+      light.evaluation.editorial ?? null,   // hcb_editorial_mean
+      null,                                // hcb_structural_mean (editorial-only in light mode)
+      0,                                   // hcb_setl (no structural channel)
+      light.evaluation.confidence ?? null,  // hcb_confidence
       light.eq_score ?? null,        // EQ
       light.so_score ?? null,        // SO
       light.primary_tone ?? null,    // tone
