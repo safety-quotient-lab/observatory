@@ -12,16 +12,19 @@ const subPages = [
     title: 'Observatory',
     href: '/rights/observatory',
     description: 'Deep-dive research dashboard. UDHR heatmap, propaganda landscape, stakeholder voices, and evidence transparency.',
+    accent: '#34d399',
   },
   {
     title: 'Articles',
     href: '/rights/articles',
     description: 'Browse all 31 UDHR provisions with scoring trends and coverage statistics.',
+    accent: '#60a5fa',
   },
   {
     title: 'Network',
     href: '/rights/network',
     description: 'Rights correlation network. Which UDHR provisions move together?',
+    accent: '#a78bfa',
   },
 ];
 ---
@@ -37,16 +40,16 @@ const subPages = [
     </div>
 
     <!-- Sub-page cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
       {subPages.map(page => (
-        <a href={page.href} style="text-decoration: none;">
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; transition: border-color 0.2s;"
-               class="hub-card">
-            <div style="margin-bottom: 6px;">
-              <span style="color: #98a8a8; font-size: var(--font-sm); font-weight: bold;">{page.title}</span>
-            </div>
-            <div style="color: #5b7279; font-size: var(--font-xs); line-height: 1.5;">
+        <a href={page.href} style="text-decoration: none; display: block;">
+          <div class="hub-card" style={`background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; border-left: 3px solid ${page.accent}; transition: border-color 0.15s;`}>
+            <div style={`color: ${page.accent}; font-size: var(--font-md); font-weight: bold;`}>{page.title}</div>
+            <div style="color: #5b7279; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
               {page.description}
+            </div>
+            <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 6px;">
+              {page.href} &rarr;
             </div>
           </div>
         </a>
