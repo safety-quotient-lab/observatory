@@ -7,7 +7,7 @@ import ArticleDetail from '../../components/ArticleDetail.astro';
 import ModelCompareTable from '../../components/ModelCompareTable.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
-import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getRaterEvalsForStory, getRaterScores } from '../../lib/db';
+import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getEvalHistoryForStory, getRaterEvalsForStory, getRaterScores } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
 import { modelDisplayName, PRIMARY_MODEL_ID, isLightMode } from '../../lib/shared-eval';
@@ -181,6 +181,70 @@ try {
   storyEvents = await getEventsForStory(db, hnId, 20);
 } catch {
   // events table may not exist yet — graceful fallback
+}
+
+let evalHistory: Awaited<ReturnType<typeof getEvalHistoryForStory>> = [];
+try {
+  evalHistory = await getEvalHistoryForStory(db, hnId);
+} catch {
+  // eval_history table may not exist yet
+}
+
+// Merge events and eval_history into a unified audit trail, sorted newest first
+interface AuditEntry {
+  timestamp: string;
+  type: 'event' | 'eval';
+  // event fields
+  event_type?: string;
+  severity?: string;
+  message?: string;
+  investigated?: number | null;
+  resolved?: number | null;
+  // eval fields
+  eval_model?: string;
+  hcb_weighted_mean?: number | null;
+  hcb_classification?: string | null;
+  total_tokens?: number | null;
+}
+
+const auditTrail: AuditEntry[] = [
+  ...storyEvents.map(ev => ({
+    timestamp: ev.created_at,
+    type: 'event' as const,
+    event_type: ev.event_type,
+    severity: ev.severity,
+    message: ev.message,
+    investigated: ev.investigated,
+    resolved: ev.resolved,
+  })),
+  ...evalHistory.map(eh => ({
+    timestamp: eh.evaluated_at,
+    type: 'eval' as const,
+    eval_model: eh.eval_model,
+    hcb_weighted_mean: eh.hcb_weighted_mean,
+    hcb_classification: eh.hcb_classification,
+    total_tokens: (eh.input_tokens ?? 0) + (eh.output_tokens ?? 0) || null,
+  })),
+].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+// Compute score drift for re-evaluations by same model
+const evalsByModel = new Map<string, number[]>();
+for (const entry of auditTrail) {
+  if (entry.type === 'eval' && entry.eval_model && entry.hcb_weighted_mean != null) {
+    const existing = evalsByModel.get(entry.eval_model);
+    if (existing) existing.push(entry.hcb_weighted_mean);
+    else evalsByModel.set(entry.eval_model, [entry.hcb_weighted_mean]);
+  }
+}
+const modelEvalIndex = new Map<string, number>();
+function getDriftForEval(model: string, score: number): number | null {
+  const scores = evalsByModel.get(model);
+  if (!scores || scores.length < 2) return null;
+  const idx = modelEvalIndex.get(model) ?? 0;
+  modelEvalIndex.set(model, idx + 1);
+  // scores are newest-first, so drift = current - next (older)
+  if (idx + 1 < scores.length) return score - scores[idx + 1];
+  return null;
 }
 
 const siteUrl = Astro.url.origin;
@@ -1025,40 +1089,66 @@ function timeAgo(unixTime: number): string {
     </>
   ) : null}
 
-  {/* Event Timeline — shown for all statuses when events exist */}
-  {storyEvents.length > 0 && (
+  {/* Audit Trail — merged eval_history + events, sorted by timestamp */}
+  {auditTrail.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
         <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
           <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-            Event Timeline
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">{storyEvents.length} events</span>
+            Audit Trail
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">{auditTrail.length} entries</span>
           </div>
           <div class="table-wrap">
           <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-            {storyEvents.map((ev) => {
-              const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#5b7279';
-              const typeColor = EVENT_TYPE_COLORS[ev.event_type] || '#5b7279';
+            {auditTrail.map((entry) => {
+              if (entry.type === 'eval') {
+                const drift = entry.eval_model && entry.hcb_weighted_mean != null
+                  ? getDriftForEval(entry.eval_model, entry.hcb_weighted_mean)
+                  : null;
+                const scoreStr = entry.hcb_weighted_mean != null ? formatScore(entry.hcb_weighted_mean) : '?';
+                const driftStr = drift != null ? (drift > 0 ? `+${drift.toFixed(2)}` : drift.toFixed(2)) : '';
+                const driftColor = drift != null ? (drift > 0 ? '#16a34a' : drift < 0 ? '#dc2626' : '#5b7279') : '';
+                return (
+                  <tr style="border-top: 1px solid #0d4655;">
+                    <td style="color: #5b7279; white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
+                    <td style="width: 90px;">
+                      <span class="badge" style="background: #16a34a20; color: #16a34a; font-size: var(--font-xs);">
+                        eval
+                      </span>
+                    </td>
+                    <td style="color: #98a8a8;">
+                      Evaluated by <strong>{entry.eval_model}</strong>: {scoreStr}
+                      {entry.hcb_classification ? ` (${entry.hcb_classification})` : ''}
+                      {entry.total_tokens ? <span style="color: #5b7279; margin-left: 6px;">{entry.total_tokens.toLocaleString()} tokens</span> : null}
+                      {driftStr ? <span style={`margin-left: 6px; color: ${driftColor}; font-weight: bold;`}>{driftStr}</span> : null}
+                    </td>
+                    <td style="width: 60px;"></td>
+                  </tr>
+                );
+              }
+              // Event entry
+              const sevColor = entry.severity === 'error' ? '#dc2626' : entry.severity === 'warn' ? '#eab308' : '#5b7279';
+              const typeColor = EVENT_TYPE_COLORS[entry.event_type || ''] || '#5b7279';
               return (
-                <tr style={`border-top: 1px solid #0d4655;`}>
-                  <td style="color: #5b7279; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
+                <tr style="border-top: 1px solid #0d4655;">
+                  <td style="color: #5b7279; white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
                   <td style="width: 90px;">
                     <span class="badge" style={`background: ${typeColor}20; color: ${typeColor}; font-size: var(--font-xs);`}>
-                      {ev.event_type}
+                      {entry.event_type}
                     </span>
                   </td>
-                  <td style={`color: ${sevColor};`}>{ev.message}</td>
+                  <td style={`color: ${sevColor};`}>{entry.message}</td>
                   <td style="width: 60px; text-align: center; white-space: nowrap;">
-                    {ev.investigated === 1
+                    {entry.investigated === 1
                       ? <span style="color: #3b82f6;" title="Investigated">INV</span>
-                      : ev.investigated === 0
+                      : entry.investigated === 0
                         ? <span style="color: #5b7279;" title="Not investigated">--</span>
                         : <span style="color: #0d4655;" title="Not triaged">-</span>
                     }
                     {' '}
-                    {ev.resolved === 1
+                    {entry.resolved === 1
                       ? <span style="color: #22c55e;" title="Resolved">RES</span>
-                      : ev.resolved === 0
+                      : entry.resolved === 0
                         ? <span style="color: #5b7279;" title="Not resolved">--</span>
                         : <span style="color: #0d4655;" title="Not triaged">-</span>
                     }

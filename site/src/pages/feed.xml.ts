@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { formatScore } from '../lib/colors';
+import { formatScore, classificationColor } from '../lib/colors';
 
 export const GET: APIRoute = async ({ locals }) => {
   const db = locals.runtime.env.DB;
@@ -8,9 +8,11 @@ export const GET: APIRoute = async ({ locals }) => {
   const { results: stories } = await db
     .prepare(
       `SELECT hn_id, title, url, domain, hcb_weighted_mean, hcb_editorial_mean, hcb_classification,
-              hcb_signal_sections, hcb_nd_count, evaluated_at, hn_by, hn_score, content_type
+              hcb_signal_sections, hcb_nd_count, evaluated_at, hn_by, hn_score, content_type,
+              hcb_theme_tag, hcb_sentiment_tag, hcb_executive_summary,
+              eq_score, consensus_score, fw_ratio
        FROM stories
-       WHERE eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
+       WHERE eval_status = 'done' AND (hcb_weighted_mean IS NOT NULL OR hcb_editorial_mean IS NOT NULL)
        ORDER BY evaluated_at DESC
        LIMIT 50`
     )
@@ -28,6 +30,12 @@ export const GET: APIRoute = async ({ locals }) => {
       hn_by: string | null;
       hn_score: number | null;
       content_type: string;
+      hcb_theme_tag: string | null;
+      hcb_sentiment_tag: string | null;
+      hcb_executive_summary: string | null;
+      eq_score: number | null;
+      consensus_score: number | null;
+      fw_ratio: number | null;
     }>();
 
   const updated = stories.length > 0 && stories[0].evaluated_at
@@ -38,10 +46,35 @@ export const GET: APIRoute = async ({ locals }) => {
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const entries = stories.map(s => {
-    const score = formatScore(s.hcb_editorial_mean ?? s.hcb_weighted_mean);
+    const isLightOnly = s.hcb_weighted_mean === null && s.hcb_editorial_mean !== null;
+    const score = isLightOnly ? '~lite' : formatScore(s.hcb_weighted_mean);
+    const numericScore = s.hcb_weighted_mean ?? s.hcb_editorial_mean;
     const link = `${baseUrl}/item/${s.hn_id}`;
     const pubDate = s.evaluated_at ? new Date(s.evaluated_at).toISOString() : updated;
-    const summary = `HRCB: ${score} (${s.hcb_classification || 'Unknown'}) — ${s.hcb_signal_sections ?? 0} of 31 UDHR provisions scored. ${s.domain || 'self-post'}`;
+
+    // Build enriched summary
+    const parts: string[] = [];
+    if (s.hcb_executive_summary) {
+      parts.push(s.hcb_executive_summary);
+      parts.push('—');
+    }
+    parts.push(`HRCB: ${formatScore(numericScore)} (${s.hcb_classification || 'Unknown'})`);
+    if (s.hcb_sentiment_tag) parts.push(`Sentiment: ${s.hcb_sentiment_tag}`);
+    if (s.hcb_theme_tag) parts.push(`Theme: ${s.hcb_theme_tag}`);
+    if (!isLightOnly && s.hcb_signal_sections != null) {
+      parts.push(`${s.hcb_signal_sections}/31 provisions`);
+    }
+    parts.push(s.domain || 'self-post');
+    const summary = parts.join('. ').replace(/\.\./g, '.');
+
+    // Category tags
+    const categories: string[] = [];
+    if (s.hcb_theme_tag) categories.push(s.hcb_theme_tag);
+    if (s.hcb_sentiment_tag) categories.push(s.hcb_sentiment_tag);
+    if (s.hcb_classification) categories.push(s.hcb_classification);
+    const categoryXml = categories.map(c =>
+      `    <category term="${escapeXml(c)}" />`
+    ).join('\n');
 
     return `  <entry>
     <title>${escapeXml(`[${score}] ${s.title}`)}</title>
@@ -49,7 +82,7 @@ export const GET: APIRoute = async ({ locals }) => {
     <id>${escapeXml(link)}</id>
     <updated>${pubDate}</updated>
     <summary>${escapeXml(summary)}</summary>
-    ${s.hn_by ? `<author><name>${escapeXml(s.hn_by)}</name></author>` : ''}
+${categoryXml ? categoryXml + '\n' : ''}    ${s.hn_by ? `<author><name>${escapeXml(s.hn_by)}</name></author>` : ''}
   </entry>`;
   }).join('\n');
 

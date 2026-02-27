@@ -80,7 +80,7 @@ interface AlgoliaSearchParams {
   byDate?: boolean;
 }
 
-async function searchAlgolia(params: AlgoliaSearchParams): Promise<AlgoliaHit[]> {
+export async function searchAlgolia(params: AlgoliaSearchParams): Promise<AlgoliaHit[]> {
   const endpoint = params.byDate
     ? 'https://hn.algolia.com/api/v1/search_by_date'
     : 'https://hn.algolia.com/api/v1/search';
@@ -108,7 +108,7 @@ interface InsertResult {
   skipped: number;
 }
 
-async function insertAlgoliaHits(
+export async function insertAlgoliaHits(
   db: D1Database,
   hits: AlgoliaHit[],
   hnType: string,

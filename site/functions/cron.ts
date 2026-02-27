@@ -18,7 +18,8 @@ import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, LIGHT_CALIBRATION_SET, LIGHT_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
 import { shouldAutoDisableFromCalibration, raterHealthKvKey, emptyRaterHealth, type RaterHealthState } from '../src/lib/rater-health';
 import { getPipelineHealth } from '../src/lib/db';
-import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions } from '../src/lib/coverage-crawl';
+import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions, searchAlgolia, insertAlgoliaHits } from '../src/lib/coverage-crawl';
+import { checkContentDrift } from '../src/lib/content-drift';
 import {
   computeAggregates,
   computeDerivedScoreFields,
@@ -624,7 +625,60 @@ export default {
         });
       }
 
-      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage'] }), {
+      if (sweep === 'content_drift') {
+        const result = await checkContentDrift(db, rawLimit);
+
+        if (result.drifted > 0) {
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+        }
+
+        await logEvent(db, {
+          event_type: 'trigger',
+          severity: 'info',
+          message: `Content drift: checked ${result.checked}, drifted ${result.drifted}, errors ${result.errors}`,
+          details: { sweep: 'content_drift', ...result, limit: rawLimit },
+        });
+
+        return new Response(JSON.stringify({ sweep: 'content_drift', ...result }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (sweep === 'algolia_backfill') {
+        const minScore = parseInt(url.searchParams.get('min_score') || '500', 10) || 500;
+        const daysBack = parseInt(url.searchParams.get('days_back') || '365', 10) || 365;
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        const startSec = nowSec - daysBack * 86400;
+
+        const hits = await searchAlgolia({
+          tags: 'story',
+          numericFilters: `points>=${minScore},created_at_i>=${startSec}`,
+          hitsPerPage: rawLimit,
+          byDate: true,
+        });
+
+        const { inserted, skipped } = await insertAlgoliaHits(db, hits, 'story', 'algolia_backfill');
+
+        if (inserted > 0) {
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+        }
+
+        await logEvent(db, {
+          event_type: 'trigger',
+          severity: 'info',
+          message: `Algolia backfill: ${inserted} inserted, ${skipped} skipped (min_score=${minScore}, days_back=${daysBack})`,
+          details: { sweep: 'algolia_backfill', inserted, skipped, min_score: minScore, days_back: daysBack, limit: rawLimit },
+        });
+
+        return new Response(JSON.stringify({ sweep: 'algolia_backfill', inserted, skipped, hits_fetched: hits.length }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage', 'algolia_backfill', 'content_drift'] }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });

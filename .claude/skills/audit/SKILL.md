@@ -161,7 +161,7 @@ Checks:
 ### Category 11: PROJECT_HYGIENE (all tags)
 
 Checks:
-- **HYG-01**: Conflicting config files — duplicate-purpose files (e.g., `todo.md` + `TODO.md`, `.eslintrc` + `.eslintrc.json`)
+- **HYG-01**: Conflicting config files — duplicate-purpose files (e.g., `.eslintrc` + `.eslintrc.json`)
 - **HYG-02**: Stale TODOs — TODO/FIXME comments referencing deleted code, closed issues, or completed work
 - **HYG-03**: Doc freshness — `CLAUDE.md`/`README.md` references to files, functions, or paths that no longer exist
 - **HYG-04**: Orphaned plan/scratch files — files in `.claude/plans/` or temp directories with no recent relevance

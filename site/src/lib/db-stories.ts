@@ -75,6 +75,9 @@ export interface Story {
   consensus_model_count: number | null;
   consensus_spread: number | null;
   consensus_updated_at: string | null;
+  // Content drift
+  content_hash: string | null;
+  content_last_fetched: string | null;
 }
 
 // Explicit column list for list-view queries — omits hcb_json and hn_text (large blobs not needed for cards)
@@ -985,4 +988,34 @@ export async function getStoryComments(
     .bind(hnId, limit)
     .all<StoryComment>();
   return results;
+}
+
+// --- Eval History (for audit trail on item page) ---
+
+export interface EvalHistoryRow {
+  eval_model: string;
+  hcb_weighted_mean: number | null;
+  hcb_classification: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  evaluated_at: string;
+}
+
+export async function getEvalHistoryForStory(
+  db: D1Database,
+  hnId: number,
+): Promise<EvalHistoryRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT eval_model, hcb_weighted_mean, hcb_classification,
+                input_tokens, output_tokens, evaluated_at
+         FROM eval_history WHERE hn_id = ? ORDER BY evaluated_at DESC`
+      )
+      .bind(hnId)
+      .all<EvalHistoryRow>();
+    return results;
+  } catch {
+    return [];
+  }
 }

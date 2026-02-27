@@ -3,16 +3,18 @@ import type { APIRoute } from 'astro';
 export const GET: APIRoute = async ({ locals }) => {
   const db = locals.runtime.env.DB;
   const baseUrl = 'https://hn-hrcb.pages.dev';
+  const buildDate = new Date().toISOString().slice(0, 10);
 
-  // Static pages
+  // Static pages with priority tiers
   const staticPages = [
     { loc: '/', priority: '1.0', changefreq: 'hourly' },
+    { loc: '/signals', priority: '0.8', changefreq: 'hourly' },
     { loc: '/about', priority: '0.5', changefreq: 'monthly' },
     { loc: '/rights', priority: '0.8', changefreq: 'daily' },
     { loc: '/rights/observatory', priority: '0.7', changefreq: 'daily' },
     { loc: '/rights/articles', priority: '0.7', changefreq: 'daily' },
     { loc: '/rights/network', priority: '0.6', changefreq: 'daily' },
-    { loc: '/sources', priority: '0.7', changefreq: 'daily' },
+    { loc: '/sources', priority: '0.8', changefreq: 'daily' },
     { loc: '/domains', priority: '0.7', changefreq: 'daily' },
     { loc: '/users', priority: '0.6', changefreq: 'daily' },
     { loc: '/factions', priority: '0.6', changefreq: 'daily' },
@@ -31,30 +33,34 @@ export const GET: APIRoute = async ({ locals }) => {
     staticPages.push({ loc: `/article/${i}`, priority: '0.6', changefreq: 'daily' });
   }
 
-  // Evaluated stories
+  // Evaluated stories with hn_score for priority tiering
   const { results: stories } = await db
     .prepare(
-      `SELECT hn_id, evaluated_at FROM stories
+      `SELECT hn_id, evaluated_at, hn_score FROM stories
        WHERE eval_status = 'done'
        ORDER BY evaluated_at DESC
        LIMIT 5000`
     )
-    .all<{ hn_id: number; evaluated_at: string | null }>();
+    .all<{ hn_id: number; evaluated_at: string | null; hn_score: number | null }>();
 
-  // Domains with evaluated stories
+  // Domains with 2+ evaluated stories
   const { results: domains } = await db
     .prepare(
-      `SELECT DISTINCT domain FROM stories
+      `SELECT domain FROM stories
        WHERE eval_status = 'done' AND domain IS NOT NULL
+       GROUP BY domain
+       HAVING COUNT(*) >= 2
        LIMIT 1000`
     )
     .all<{ domain: string }>();
 
-  // Users with evaluated stories
+  // Users with 2+ evaluated stories
   const { results: users } = await db
     .prepare(
-      `SELECT DISTINCT hn_by FROM stories
+      `SELECT hn_by FROM stories
        WHERE eval_status = 'done' AND hn_by IS NOT NULL
+       GROUP BY hn_by
+       HAVING COUNT(*) >= 2
        LIMIT 1000`
     )
     .all<{ hn_by: string }>();
@@ -63,6 +69,7 @@ export const GET: APIRoute = async ({ locals }) => {
     (p) =>
       `  <url>
     <loc>${baseUrl}${p.loc}</loc>
+    <lastmod>${buildDate}</lastmod>
     <changefreq>${p.changefreq}</changefreq>
     <priority>${p.priority}</priority>
   </url>`
@@ -70,11 +77,13 @@ export const GET: APIRoute = async ({ locals }) => {
 
   for (const story of stories) {
     const lastmod = story.evaluated_at ? `\n    <lastmod>${story.evaluated_at.split(' ')[0]}</lastmod>` : '';
+    // High HN score stories get higher priority
+    const priority = (story.hn_score ?? 0) >= 200 ? '0.7' : '0.6';
     urls.push(
       `  <url>
     <loc>${baseUrl}/item/${story.hn_id}</loc>${lastmod}
     <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
+    <priority>${priority}</priority>
   </url>`
     );
   }

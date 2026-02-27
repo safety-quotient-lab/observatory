@@ -51,7 +51,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 **Navigation:** `stories | signals | sources | rights | system | about` (6 hubs). `/trends` exists but is not in the nav.
 
 **Page taxonomy:**
-- **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]`
+- **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]` (merged audit trail: eval_history + events)
 - **Signals** (`/signals`): live data dashboard — 5 sections (Core HRCB summary, Derived Metrics cards, Supplementary Signals with global averages + 4 distribution charts, Fair Witness one-liner, Eval Modes one-liner). Every signal links to `/about#anchor` for reference details. Uses `getStatusCounts` + `getSignalOverview` for live data.
 - **Rights** (`/rights`): hub → `/rights/observatory` (research dashboard), `/rights/articles`, `/rights/network`, `/article/[n]`
 - **Sources** (`/sources`): hub → `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
@@ -68,7 +68,8 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/shared-eval.ts` — Barrel re-export from `eval-types.ts`, `models.ts`, `prompts.ts`, `eval-parse.ts`, `eval-write.ts`, `rater-health.ts`
 - `site/src/lib/eval-types.ts` — Type definitions, interfaces, ALL_SECTIONS constant
 - `site/src/lib/models.ts` — Model registry, provider types, queue bindings, `QUEUE_CONFIG` export (derived list of enabled model-to-queue mappings), `getEnabledModelsFromDb(db)` (D1 overlay — intersects DB-enabled list with MODEL_REGISTRY, falls back to static on error)
-- `site/src/lib/api-v1.ts` — Shared helpers for v1 public API routes: `corsHeaders()`, `checkRateLimit(kv, ip)` (200 req/hour KV counter), `jsonResponse()`, `errorResponse()`, `listCacheHeaders()`, `itemCacheHeaders()`
+- `site/src/lib/api-v1.ts` — Shared helpers for v0 and v1 public API routes: `corsHeaders()`, `checkRateLimit(kv, ip)` (200 req/hour KV counter), `jsonResponse()`, `errorResponse()`, `listCacheHeaders()`, `itemCacheHeaders()`
+- `site/src/pages/api/v0/` — HN Firebase API-compatible endpoints: `topstories.json.ts` (by HN score), `beststories.json.ts` (by HRCB weighted_mean), `newstories.json.ts` (by submit time), `item/[id].json.ts` (HN item format + `hcb` extension object with eval scores)
 - `site/src/lib/prompts.ts` — System prompts (full, slim, light)
 - `site/src/lib/eval-parse.ts` — Response parsing, validation, content fetching
 - `site/src/lib/eval-write.ts` — D1 write functions (eval results, DCP cache). `updateConsensusScore()` called at end of both write paths — computes weighted mean across all done rater_evals (full=1.0 weight, light=0.5), updates stories.consensus_score/count/spread. `requestArchive(db, kv, hnId, url)` — KV-rate-limited (10s TTL) fire-and-forget Wayback Machine preservation, stores memento URL in stories.archive_url. `writeLightRaterEvalResult()` does COALESCE fill-in UPDATE to stories after writing rater_evals (fills eq_score, so_score, td_score, et_primary_tone, et_valence, et_arousal where null), then calls `refreshDomainAggregate`.
@@ -77,6 +78,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
 - `site/src/lib/calibration.ts` — Full-model `CALIBRATION_SET` (hn_ids -1001..-1015) + light-model `LIGHT_CALIBRATION_SET` (hn_ids -2001..-2015) + per-model thresholds + parameterized `runCalibrationCheck(scores, calSet?, thresholds?)`
 - `site/src/lib/content-gate.ts` — Pre-eval content classification (paywall, captcha, bot protection, etc.)
+- `site/src/lib/content-drift.ts` — Content change detection: `computeContentHash()` + `checkContentDrift()` for re-evaluating stories whose content changed since last eval
 - `site/src/lib/colors.ts` — Score/SETL/confidence/gate color mapping
 - `site/src/lib/db-utils.ts` — `SETL_CASE_SQL(alias)` SQL fragment helper, `cachedQuery<T>(kv, key, fn, ttl)` KV-backed query cache, `safeBatch()` D1 batch chunker (≤100 statements)
 - `site/src/components/` — Reusable Astro components (Breadcrumb, EvalCard, DcpTable, etc.)
@@ -121,6 +123,14 @@ curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
 curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=coverage&strategy=domain_min_coverage"
 
+# Sweep: Algolia historical backfill (default min_score 500, days_back 365)
+curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=algolia_backfill&min_score=500&limit=50"
+
+# Sweep: content drift detection (re-evaluates stories whose content changed)
+curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=content_drift&limit=20"
+
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health
 
@@ -135,7 +145,7 @@ npx wrangler tail hn-hrcb-consumer-workers-ai --format pretty
 
 ## Event Types
 
-The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `rater_auto_disable`, `dcp_stale`, `r2_cleanup`, `story_flagged`.
+The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `rater_auto_disable`, `dcp_stale`, `r2_cleanup`, `story_flagged`, `content_drift`.
 
 ## Methodology Files
 
@@ -179,6 +189,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 ## Key Patterns
 
 - **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.
+- **Astro `.json.ts` routing**: Astro strips only the final `.ts` extension — so `topstories.json.ts` → `/api/v0/topstories.json`. Works for any compound extension. Dynamic `.json` routes like `[id].json.ts` → `/api/v0/item/{id}.json` where Astro captures the full `123.json` as `params.id` — strip `.json` suffix in the handler: `parseInt(params.id.replace(/\.json$/, ''), 10)`.
 - **`compatibility_date` must stay at `2024-09-23`** in `site/wrangler.toml`. Bumping to 2026-02-01 breaks Astro SSR — every page returns `[object Object]` instead of HTML due to incompatible Response handling in newer Cloudflare compat flags.
 - **Mobile responsiveness**: CSS utility classes in `global.css` handle mobile layout: `.insight-grid` (auto-fill grid → 2-col → 1-col), `.two-col` (2-col → stacked), `.stat-cards` (flex wrap → 50% → 100%). Nested table min-widths relaxed via `.hn-page table table { min-width: unset; }` (no `!important` — let inline styles win when needed). `word-break: break-word` scoped to `.titleline, .sitebit` only (never on scores/labels). Nav links use flex-wrap with plain text `' | '` separators (wrapping spans break flex layout). Breakpoints: 640px (mobile) and 400px (extra-small).
 - **Progressive disclosure**: `.collapsible-section` class in `global.css` styles `<details>/<summary>` for 3-tier content. Used on About page (Tier 1 always visible, Tier 2 `<details open>`, Tier 3 `<details>` collapsed) and System page (primary always visible, secondary `<details open>`, tertiary `<details>` collapsed). Custom `▸` marker rotates on open.
@@ -205,3 +216,6 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 - **Public REST API** (`/api/v1/`): Astro routes under `src/pages/api/v1/` — stories, story/[id], domains, domain/[domain]. Public read-only (no auth), IP-based rate limit (200 req/hr via KV), CORS `*`, Cache-Control. Helpers in `api-v1.ts`. No separate wrangler config — deploys with the site.
 - **Model registry D1 overlay**: `model_registry` table (migration 0037) lets you toggle models via `wrangler d1 execute` without a code deploy. `getEnabledModelsFromDb(db)` in models.ts intersects DB with MODEL_REGISTRY (belt-and-suspenders). Cron uses this at dispatch time.
 - **checkFlaggedStories** (was `checkDeadStories`): Runs every 10th minute (minute % 10 === 3). Emits `story_flagged` event. Returns `{ checked, flagged }`. CrawlResult field is `flagged_check`. Three distinct eval_error strings: "Story removed from HN", "Story flagged/killed on HN", "Story deleted on HN" — all with gate_category='hn_removed'.
+- **Content drift detection**: `content_hash` (SHA-256 first 16 bytes hex) written on primary eval via consumer-shared. `checkContentDrift()` in `content-drift.ts` re-fetches stories >7 days old, re-queues if hash changed. Triggered via `sweep=content_drift`. Self-posts excluded (user-mutable content).
+- **Audit trail on item page**: `/item/[id]` merges `eval_history` + `events` into a unified chronological audit trail. Eval entries show model, score, token count, and **score drift** (delta badge when same model re-evaluated). `getEvalHistoryForStory()` in `db-stories.ts`.
+- **Algolia backfill sweep**: `sweep=algolia_backfill` in cron.ts. Uses `searchAlgolia()` + `insertAlgoliaHits()` (now exported from `coverage-crawl.ts`). Parameters: `min_score` (default 500), `limit` (max 200), `days_back` (default 365).

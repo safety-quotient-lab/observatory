@@ -42,6 +42,7 @@ import {
 import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
 import { cleanHtml, hasReadableText } from '../src/lib/html-clean';
 import { classifyContent } from '../src/lib/content-gate';
+import { computeContentHash } from '../src/lib/content-drift';
 import { logEvent } from '../src/lib/events';
 import { checkCreditPause } from './rate-limit';
 
@@ -188,6 +189,7 @@ export async function handleRaterHealthSuccess(
 
 export interface PreparedContent {
   content: string;
+  contentHash: string | null;
   isPrimary: boolean;
   isLightMode: boolean;
   modelDef: ModelDefinition | undefined;
@@ -379,8 +381,17 @@ export async function prepareContent(
   const isLightMode = story.prompt_mode === 'light' || modelDef?.prompt_mode === 'light';
   const domain = story.domain || (story.url ? extractDomain(story.url) : null);
 
+  // Compute content hash for drift detection (skip self-posts — content is user-mutable)
+  let contentHash: string | null = null;
+  if (!isSelfPost && content.length >= 50) {
+    try {
+      contentHash = await computeContentHash(content);
+    } catch {}
+  }
+
   return {
     content,
+    contentHash,
     isPrimary,
     isLightMode,
     modelDef,
@@ -511,12 +522,12 @@ export async function processFullResult(
   // Write to rater tables (always) — writeRaterEvalResult also writes to stories/scores/fair_witness if primary
   await writeRaterEvalResult(db, story.hn_id, fullResult, prep.msgModelId, prep.provider, promptHash, methodologyHash, inputTokens, outputTokens);
 
-  // Primary model: write methodology hash + invalidate query caches
+  // Primary model: write methodology hash + content hash + invalidate query caches
   if (prep.isPrimary) {
     try {
       await db
-        .prepare(`UPDATE stories SET methodology_hash = ? WHERE hn_id = ?`)
-        .bind(methodologyHash, story.hn_id)
+        .prepare(`UPDATE stories SET methodology_hash = ?, content_hash = COALESCE(?, content_hash), content_last_fetched = datetime('now') WHERE hn_id = ?`)
+        .bind(methodologyHash, prep.contentHash, story.hn_id)
         .run();
     } catch {}
 

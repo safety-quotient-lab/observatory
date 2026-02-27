@@ -42,14 +42,12 @@ Work through each step. Skip any that don't apply to the changes described in $A
 - Update existing entries if they're now wrong
 - Don't duplicate what's already in CLAUDE.md — memory is for cross-session insights
 
-### 5. Update todo.md
+### 5. Update TODO.md
 
-- Read `todo.md` (operational backlog) and `TODO.md` (feature tracking)
-- Check off any items that were completed by the changes in this session
+- Read `TODO.md` (project backlog — open items only, no completed items)
+- Check off any items that were completed by the changes in this session, then remove them (completed items belong in git history, not the TODO)
 - Add any new TODO items that surfaced during development (bugs found, follow-up work needed, ideas)
-- Move items between Active/In Progress sections if their status changed
 - Remove items that are no longer relevant
-- If a completed item has sub-items, check those off too
 
 ### 6. Check for orphaned references and files
 

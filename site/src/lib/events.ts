@@ -30,7 +30,8 @@ export type EventType =
   | 'dlq_auto_replay'
   | 'auto_calibration'
   | 'dcp_stale'
-  | 'r2_cleanup';
+  | 'r2_cleanup'
+  | 'content_drift';
 
 export type Severity = 'info' | 'warn' | 'error';
 
