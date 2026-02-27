@@ -26,6 +26,7 @@ import {
   getRaterStatusBreakdown,
   getGlobalGateStats,
   getProviderStats,
+  getModelQueueStats,
 } from '../lib/db';
 import { CALIBRATION_SET, LIGHT_CALIBRATION_SET } from '../lib/calibration';
 
@@ -77,11 +78,13 @@ const [rateLimitSnapshot, dlqStats, dlqMessages, methodologyDist, driftStats, la
 let raterSummary: Awaited<ReturnType<typeof getRaterSummaryStats>> = [];
 let raterStatus: Awaited<ReturnType<typeof getRaterStatusBreakdown>> = [];
 let providerStats: Awaited<ReturnType<typeof getProviderStats>> = [];
+let modelQueueStats: Awaited<ReturnType<typeof getModelQueueStats>> = [];
 try {
-  [raterSummary, raterStatus, providerStats] = await Promise.all([
+  [raterSummary, raterStatus, providerStats, modelQueueStats] = await Promise.all([
     getRaterSummaryStats(db),
     getRaterStatusBreakdown(db),
     getProviderStats(db),
+    getModelQueueStats(db),
   ]);
 } catch {
   // rater_evals table may not exist yet
@@ -131,6 +134,21 @@ const PROVIDER_META: Record<string, { name: string; role: string }> = {
   'workers-ai':            { name: 'consumer-workers-ai', role: 'evaluate · Workers AI (~lite)' },
   'claude-code-standalone':{ name: 'standalone',          role: 'evaluate · local CLI' },
 };
+
+// Static queue → model → consumer mapping (mirrors wrangler configs + MODEL_QUEUE_BINDINGS)
+const QUEUE_CONFIG = [
+  { queue: 'hrcb-eval-queue',      model: 'claude-haiku-4-5-20251001', consumer: 'consumer-anthropic',  provider: 'anthropic'  },
+  { queue: 'hrcb-eval-deepseek',   model: 'deepseek-v3.2',             consumer: 'consumer-openrouter', provider: 'openrouter' },
+  { queue: 'hrcb-eval-trinity',    model: 'trinity-large',             consumer: 'consumer-openrouter', provider: 'openrouter' },
+  { queue: 'hrcb-eval-nemotron',   model: 'nemotron-nano-30b',         consumer: 'consumer-openrouter', provider: 'openrouter' },
+  { queue: 'hrcb-eval-step',       model: 'step-3.5-flash',            consumer: 'consumer-openrouter', provider: 'openrouter' },
+  { queue: 'hrcb-eval-qwen',       model: 'qwen3-next-80b',            consumer: 'consumer-openrouter', provider: 'openrouter' },
+  { queue: 'hrcb-eval-llama',      model: 'llama-3.3-70b',             consumer: 'consumer-openrouter', provider: 'openrouter' },
+  { queue: 'hrcb-eval-mistral',    model: 'mistral-small-3.1',         consumer: 'consumer-openrouter', provider: 'openrouter' },
+  { queue: 'hrcb-eval-hermes',     model: 'hermes-3-405b',             consumer: 'consumer-openrouter', provider: 'openrouter' },
+  { queue: 'hrcb-eval-workers-ai', model: 'llama-4-scout-wai',         consumer: 'consumer-workers-ai', provider: 'workers-ai' },
+  { queue: 'hrcb-eval-workers-ai', model: 'llama-3.3-70b-wai',         consumer: 'consumer-workers-ai', provider: 'workers-ai' },
+];
 
 const pctDone = status.total > 0 ? Math.round((status.done / status.total) * 100) : 0;
 const pctPending = status.total > 0 ? Math.round((status.pending / status.total) * 100) : 0;
@@ -278,6 +296,86 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                 <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
                 <td style={`padding: 4px 6px; text-align: right; color: ${dlqStats.pending > 0 ? '#dc2626' : '#5b7279'};`}>
                   {dlqStats.pending > 0 ? `${dlqStats.pending}p` : '—'}
+                </td>
+              </tr>
+            );
+          })()}
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  {/* Queue Breakdown */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+          Queues
+          <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px; font-size: var(--font-xs);">{QUEUE_CONFIG.length} queues + hrcb-eval-dlq</span>
+        </div>
+        <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+          <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+            <td style="padding: 2px 6px; width: 12px;"></td>
+            <td style="padding: 2px 6px;">Queue</td>
+            <td style="padding: 2px 6px;">Model</td>
+            <td style="padding: 2px 6px;">Consumer</td>
+            <td style="padding: 2px 6px; text-align: right;">Last Eval</td>
+            <td style="padding: 2px 6px; text-align: right; width: 55px;" title="Items in rater_evals with queued/evaluating status">In-flight</td>
+            <td style="padding: 2px 6px; text-align: right; width: 40px;">24h</td>
+            <td style="padding: 2px 6px; text-align: right; width: 40px;">7d</td>
+          </tr>
+
+          {QUEUE_CONFIG.map(qc => {
+            const stat = modelQueueStats.find(s => s.eval_model === qc.model);
+            const dot = workerDot(stat?.last_eval ?? null);
+            const isEnabled = MODEL_REGISTRY.find(r => r.id === qc.model)?.enabled ?? false;
+            return (
+              <tr style={`border-top: 1px solid #0d4655; ${!isEnabled ? 'opacity: 0.5;' : ''}`}>
+                <td style="padding: 3px 6px; text-align: center;">
+                  <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
+                </td>
+                <td style="padding: 3px 6px; color: #5b7279; font-family: monospace; white-space: nowrap;" title={qc.queue}>
+                  {qc.queue.replace('hrcb-eval-', '')}
+                </td>
+                <td style="padding: 3px 6px; color: #98a8a8; white-space: nowrap;">
+                  {modelDisplayName(qc.model)}
+                  {isLightMode(getModelDef(qc.model)?.prompt_mode ?? null) && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
+                  {!isEnabled && <span style="color: #1a5568; margin-left: 4px; font-size: 8px;">off</span>}
+                </td>
+                <td style="padding: 3px 6px; color: #5b7279; font-size: 9px;">{qc.consumer}</td>
+                <td style="padding: 3px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(stat?.last_eval ?? null)}</td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.in_flight ?? 0) > 0 ? '#eab308' : '#1a5568'};`}>
+                  {(stat?.in_flight ?? 0) > 0 ? stat!.in_flight : '—'}
+                </td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.evals_24h ?? 0) > 0 ? '#60a5fa' : '#1a5568'};`}>
+                  {(stat?.evals_24h ?? 0) > 0 ? stat!.evals_24h : '—'}
+                </td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.evals_7d ?? 0) > 0 ? '#5b7279' : '#1a5568'};`}>
+                  {(stat?.evals_7d ?? 0) > 0 ? stat!.evals_7d : '—'}
+                </td>
+              </tr>
+            );
+          })}
+
+          {/* DLQ row */}
+          {(() => {
+            const lastDlqEvent = recentPipelineEvents.find(e => e.event_type === 'dlq' || e.event_type === 'dlq_replay');
+            const dot = workerDot(lastDlqEvent?.created_at ?? null);
+            return (
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style="padding: 3px 6px; text-align: center;">
+                  <span style={`color: ${dlqStats.pending > 0 ? '#dc2626' : dot.color}; font-size: 8px;`} title={dlqStats.pending > 0 ? `${dlqStats.pending} pending` : dot.title}>●</span>
+                </td>
+                <td style="padding: 3px 6px; color: #5b7279; font-family: monospace;">eval-dlq</td>
+                <td style="padding: 3px 6px; color: #5b7279; font-size: 9px;">dead letters</td>
+                <td style="padding: 3px 6px; color: #5b7279; font-size: 9px;">hn-hrcb-dlq</td>
+                <td style="padding: 3px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(lastDlqEvent?.created_at ?? null)}</td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${dlqStats.pending > 0 ? '#dc2626' : '#1a5568'};`}>
+                  {dlqStats.pending > 0 ? `${dlqStats.pending}` : '—'}
+                </td>
+                <td style="padding: 3px 6px; text-align: right; color: #1a5568;">—</td>
+                <td style="padding: 3px 6px; text-align: right; color: #5b7279;">
+                  {dlqStats.total > 0 ? dlqStats.total : '—'}
                 </td>
               </tr>
             );

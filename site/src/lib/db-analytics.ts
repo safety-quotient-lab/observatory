@@ -652,6 +652,7 @@ export interface ProviderStat {
  * maps to a row showing its activity level and recency.
  */
 export async function getProviderStats(db: D1Database): Promise<ProviderStat[]> {
+
   const { results } = await db
     .prepare(
       `SELECT
@@ -669,5 +670,40 @@ export async function getProviderStats(db: D1Database): Promise<ProviderStat[]> 
        ORDER BY evals_total DESC`
     )
     .all<ProviderStat>();
+  return results;
+}
+
+// --- Per-model (queue-level) stats ---
+
+export interface ModelQueueStat {
+  eval_model: string;
+  eval_provider: string;
+  evals_24h: number;
+  evals_7d: number;
+  last_eval: string | null;
+  in_flight: number;
+}
+
+/**
+ * Per-model eval stats for the Queue Breakdown card.
+ * Each CF Queue maps to one (or two for workers-ai) eval_model values.
+ */
+export async function getModelQueueStats(db: D1Database): Promise<ModelQueueStat[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+         eval_model,
+         eval_provider,
+         COUNT(CASE WHEN eval_status = 'done'
+                     AND evaluated_at > datetime('now', '-1 day') THEN 1 END) as evals_24h,
+         COUNT(CASE WHEN eval_status = 'done'
+                     AND evaluated_at > datetime('now', '-7 days') THEN 1 END) as evals_7d,
+         MAX(CASE WHEN eval_status = 'done' THEN evaluated_at END) as last_eval,
+         COUNT(CASE WHEN eval_status IN ('queued', 'evaluating', 'pending') THEN 1 END) as in_flight
+       FROM rater_evals
+       GROUP BY eval_model, eval_provider
+       ORDER BY evals_7d DESC`
+    )
+    .all<ModelQueueStat>();
   return results;
 }
