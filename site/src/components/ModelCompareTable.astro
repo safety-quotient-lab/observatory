@@ -49,7 +49,8 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
   <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px;">
     <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
       <td style="padding: 4px 8px;">Model</td>
-      <td style="padding: 4px 8px;">Score</td>
+      <td style="padding: 4px 8px;">Editorial</td>
+      <td style="padding: 4px 8px;">Structural</td>
       <td style="padding: 4px 8px;">Class</td>
       <td style="padding: 4px 8px;">Conf</td>
       <td style="padding: 4px 8px;">SETL</td>
@@ -61,8 +62,11 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
           {modelDisplayName(ev.eval_model)}
           {isLightMode((ev as any).prompt_mode ?? null) && <span style="margin-left: 4px; color: #d56500; font-size: var(--font-xs); opacity: 0.8;" title="Light evaluation — editorial only, no per-section scores">lite</span>}
         </td>
-        <td style={`padding: 4px 8px; color: ${scoreToColor(ev.hcb_weighted_mean)}; font-weight: bold;`}>
-          {formatScore(ev.hcb_weighted_mean)}
+        <td style={`padding: 4px 8px; color: ${scoreToColor(ev.hcb_editorial_mean ?? ev.hcb_weighted_mean)}; font-weight: bold;`}>
+          {formatScore(ev.hcb_editorial_mean ?? ev.hcb_weighted_mean)}
+        </td>
+        <td style={`padding: 4px 8px; color: ${ev.hcb_structural_mean !== null && ev.hcb_structural_mean !== undefined ? scoreToColor(ev.hcb_structural_mean) : '#5b7279'};`}>
+          {ev.hcb_structural_mean !== null && ev.hcb_structural_mean !== undefined ? formatScore(ev.hcb_structural_mean) : 'ND'}
         </td>
         <td style="padding: 4px 8px; color: #8faaab; font-size: var(--font-sm);">{ev.hcb_classification || '—'}</td>
         <td style="padding: 4px 8px; color: #8faaab; font-size: var(--font-sm);">

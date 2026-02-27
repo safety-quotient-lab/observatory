@@ -242,8 +242,8 @@ function timeAgo(unixTime: number): string {
 
 <Base
   title={`${storyData.title} — ${isFailed ? 'Failed' : isPending ? 'Pending' : 'HRCB'}`}
-  ogTitle={isDone && aggregates ? `${formatScore(aggregates.weighted_mean)} ${storyData.title}` : storyData.title}
-  ogDescription={isDone && aggregates ? (executiveSummary || `HRCB: ${aggregates.classification} (${formatScore(aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}`) : isPending ? `Evaluation pending for ${storyData.title}` : `Evaluation failed for ${storyData.title}`}
+  ogTitle={isDone && aggregates ? `${formatScore(storyData.hcb_editorial_mean ?? aggregates.weighted_mean)} ${storyData.title}` : storyData.title}
+  ogDescription={isDone && aggregates ? (executiveSummary || `HRCB: ${aggregates.classification} (${formatScore(storyData.hcb_editorial_mean ?? aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}`) : isPending ? `Evaluation pending for ${storyData.title}` : `Evaluation failed for ${storyData.title}`}
   ogUrl={`${siteUrl}/item/${storyData.hn_id}`}
   canonicalUrl={`${siteUrl}/item/${storyData.hn_id}`}
 >
@@ -274,8 +274,8 @@ function timeAgo(unixTime: number): string {
              style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #2a2a3a; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #222;'}`}>
             {modelDisplayName(re.eval_model)}
             {isLightMode(re.prompt_mode) && <span style="color: #d56500; margin-left: 3px;" title="Light evaluation — editorial only, no per-section scores">lite</span>}
-            <span style={`margin-left: 4px; color: ${scoreToColor(re.hcb_weighted_mean)};`}>
-              {formatScore(re.hcb_weighted_mean)}
+            <span style={`margin-left: 4px; color: ${scoreToColor(re.hcb_editorial_mean ?? re.hcb_weighted_mean)};`}>
+              {formatScore(re.hcb_editorial_mean ?? re.hcb_weighted_mean)}
             </span>
           </a>
         );
@@ -390,9 +390,10 @@ function timeAgo(unixTime: number): string {
       <td valign="top" style="padding: 5px var(--space-lg) 0 0; text-align: center; width: 44px;">
         <span
           class="score-font"
-          style={`color: ${scoreToColor(aggregates.weighted_mean)}; font-size: var(--font-lg); font-weight: bold;`}
+          style={`color: ${scoreToColor(storyData.hcb_editorial_mean ?? aggregates.weighted_mean)}; font-size: var(--font-lg); font-weight: bold;`}
+          title={`Editorial: ${formatScore(storyData.hcb_editorial_mean)} | Weighted mean: ${formatScore(aggregates.weighted_mean)}`}
         >
-          {formatScore(aggregates.weighted_mean)}
+          {formatScore(storyData.hcb_editorial_mean ?? aggregates.weighted_mean)}
         </span>
       </td>
       <td>
@@ -405,7 +406,14 @@ function timeAgo(unixTime: number): string {
         </span>
         {storyData.domain && (
           <span class="sitebit" style="font-size: var(--font-sm); margin-left: 5px;">
-            (<a href={`https://${storyData.domain}`} target="_blank" rel="noopener">{storyData.domain}</a>)
+            (<a href={`https://${storyData.domain}`} target="_blank" rel="noopener">{storyData.domain}</a>{storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? (
+              <span style={`color: ${scoreToColor(storyData.hcb_structural_mean)}; margin-left: 4px;`}
+                    title={`Structural: ${formatScore(storyData.hcb_structural_mean)} (privacy, access, tracking)`}>
+                S:{formatScore(storyData.hcb_structural_mean)}
+              </span>
+            ) : isDone ? (
+              <span style="color: #5b7279; margin-left: 4px;" title="Structural: no data">S:ND</span>
+            ) : null})
           </span>
         )}
       </td>
@@ -500,7 +508,13 @@ function timeAgo(unixTime: number): string {
           <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr>
-              <td style="color: #5b7279;">Weighted Mean</td>
+              <td style="color: #5b7279;" title="Average editorial channel score across all UDHR sections">Editorial Mean</td>
+              <td class="score-font" style={`color: ${scoreToColor(storyData.hcb_editorial_mean)}`}>{storyData.hcb_editorial_mean !== null && storyData.hcb_editorial_mean !== undefined ? formatScore(storyData.hcb_editorial_mean) : 'ND'}</td>
+              <td style="color: #5b7279;" title="Average structural channel score across all UDHR sections">Structural Mean</td>
+              <td class="score-font" style={`color: ${storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? scoreToColor(storyData.hcb_structural_mean) : '#5b7279'}`}>{storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? formatScore(storyData.hcb_structural_mean) : 'ND'}</td>
+            </tr>
+            <tr>
+              <td style="color: #5b7279;" title="Evidence-weighted average of combined E+S+DCP final scores">Weighted Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(aggregates.weighted_mean)}`}>{formatScore(aggregates.weighted_mean)}</td>
               <td style="color: #5b7279;">Unweighted Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(aggregates.unweighted_mean)}`}>{formatScore(aggregates.unweighted_mean)}</td>
