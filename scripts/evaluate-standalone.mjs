@@ -141,12 +141,16 @@ if (!existsSync(CLAUDE_BIN)) { console.error(`claude binary not found at ${CLAUD
 
 // --- CLI args ---
 const args = process.argv.slice(2);
-const limit = parseInt(args[args.indexOf('--limit') + 1] ?? '10');
-const singleUrl = args[args.indexOf('--url') + 1];
-const singleHnId = parseInt(args[args.indexOf('--hn-id') + 1]);
+function argVal(flag) {
+  const i = args.indexOf(flag);
+  return i !== -1 ? args[i + 1] : undefined;
+}
+const limit = parseInt(argVal('--limit') ?? '10');
+const singleUrl = argVal('--url');
+const singleHnId = parseInt(argVal('--hn-id') ?? '0');
 const dryRun = args.includes('--dry-run');
-const mode = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'full'; // 'full' | 'light'
-const concurrency = parseInt(args[args.indexOf('--concurrency') + 1] ?? '3');
+const mode = argVal('--mode') ?? 'full'; // 'full' | 'light'
+const concurrency = parseInt(argVal('--concurrency') ?? '3');
 if (mode !== 'full' && mode !== 'light') {
   console.error(`Invalid --mode "${mode}". Must be "full" or "light".`);
   process.exit(1);
@@ -218,7 +222,10 @@ function callClaudeCode(userMessage) {
       '--system-prompt', SYSTEM_PROMPT,
       '--no-session-persistence',
       '--output-format', 'text',
-    ], { stdio: ['pipe', 'pipe', 'pipe'] });
+    ], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, CLAUDECODE: undefined },
+    });
 
     let stdout = '';
     let stderr = '';

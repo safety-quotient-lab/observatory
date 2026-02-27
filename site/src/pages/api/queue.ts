@@ -32,7 +32,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
              AND r.eval_provider = ?
              AND r.eval_status = 'done'
          )
-       ORDER BY s.score DESC
+       ORDER BY s.hn_score DESC
        LIMIT ?`
     )
     .bind(provider, limit)

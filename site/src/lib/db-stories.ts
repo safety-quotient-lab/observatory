@@ -14,6 +14,8 @@ export interface Story {
   hn_text: string | null;
   content_type: string;
   hcb_weighted_mean: number | null;
+  hcb_editorial_mean: number | null;
+  hcb_structural_mean: number | null;
   hcb_classification: string | null;
   hcb_signal_sections: number | null;
   hcb_nd_count: number | null;
@@ -264,14 +266,14 @@ export async function getFilteredStoriesWithScores(
   const selectCols = isAltModel
     ? `s.hn_id, s.url, s.title, s.domain, s.hn_score, s.hn_comments, s.hn_by,
               s.hn_time, s.hn_type, re.content_type,
-              re.hcb_weighted_mean, re.hcb_classification,
+              re.hcb_weighted_mean, re.hcb_editorial_mean, re.hcb_structural_mean, re.hcb_classification,
               re.hcb_signal_sections, re.hcb_nd_count, re.hcb_evidence_h, re.hcb_evidence_m, re.hcb_evidence_l,
               re.eval_model, s.eval_prompt_hash,
               re.eval_status, re.eval_error, re.evaluated_at, s.created_at, re.schema_version,
               re.hcb_theme_tag,
               SUBSTR(s.hn_text, 1, 100) as hn_text_preview${setlSelect}`
     : `s.hn_id, s.url, s.title, s.domain, s.hn_score, s.hn_comments, s.hn_by,
-              s.hn_time, s.hn_type, s.content_type, s.hcb_weighted_mean, s.hcb_classification,
+              s.hn_time, s.hn_type, s.content_type, s.hcb_weighted_mean, s.hcb_editorial_mean, s.hcb_structural_mean, s.hcb_classification,
               s.hcb_signal_sections, s.hcb_nd_count, s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l,
               s.eval_model, s.eval_prompt_hash,
               s.eval_status, s.eval_error, s.evaluated_at, s.created_at, s.schema_version,
