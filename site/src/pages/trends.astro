@@ -4,16 +4,19 @@ import { getSignalOverview } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
-let signals: { total_with_signals: number; avg_eq: number | null; avg_so: number | null; avg_sr: number | null; avg_td: number | null; avg_pt_count: number | null } | null = null;
+let signalCount = 0;
+let eqLabel = 'N/A';
+let soLabel = 'N/A';
+let srLabel = 'N/A';
+let tdLabel = 'N/A';
 try {
-  const overview = await getSignalOverview(db);
-  signals = overview;
+  const s = await getSignalOverview(db);
+  signalCount = s.total_with_signals;
+  eqLabel = s.avg_eq != null ? s.avg_eq.toFixed(2) : 'N/A';
+  soLabel = s.avg_so != null ? s.avg_so.toFixed(2) : 'N/A';
+  srLabel = s.avg_sr != null ? s.avg_sr.toFixed(2) : 'N/A';
+  tdLabel = s.avg_td != null ? s.avg_td.toFixed(2) : 'N/A';
 } catch { /* graceful fallback */ }
-
-function fmtSig(v: number | null | undefined): string {
-  if (v == null) return 'N/A';
-  return v.toFixed(2);
-}
 ---
 
 <Base title="Trends">
@@ -28,70 +31,57 @@ function fmtSig(v: number | null | undefined): string {
     </tr>
   </table>
 
-  {/* Signal overview */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td style="padding: 14px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
         <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
           Key Signals
-          {signals && (
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
-              4 of 9 dimensions · {signals.total_with_signals} stories
-            </span>
-          )}
+          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            4 of 9 dimensions · {signalCount} stories
+          </span>
         </div>
 
-        {signals ? (
-          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            {/* EQ */}
-            <div style="flex: 1; min-width: 100px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; text-align: center;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-                Epistemic Quality
-              </div>
-              <div style="color: #60a5fa; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
-                {fmtSig(signals.avg_eq)}
-              </div>
-              <div style="color: #1a5568; font-size: var(--font-xs);">avg EQ</div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 100px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; text-align: center;">
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              Epistemic Quality
             </div>
-
-            {/* SO */}
-            <div style="flex: 1; min-width: 100px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; text-align: center;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-                Solution Orientation
-              </div>
-              <div style="color: #34d399; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
-                {fmtSig(signals.avg_so)}
-              </div>
-              <div style="color: #1a5568; font-size: var(--font-xs);">avg SO</div>
+            <div style="color: #60a5fa; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
+              {eqLabel}
             </div>
-
-            {/* SR */}
-            <div style="flex: 1; min-width: 100px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; text-align: center;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-                Stakeholder Rep
-              </div>
-              <div style="color: #fbbf24; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
-                {fmtSig(signals.avg_sr)}
-              </div>
-              <div style="color: #1a5568; font-size: var(--font-xs);">avg SR</div>
-            </div>
-
-            {/* TD */}
-            <div style="flex: 1; min-width: 100px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; text-align: center;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
-                Transparency
-              </div>
-              <div style="color: #a78bfa; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
-                {fmtSig(signals.avg_td)}
-              </div>
-              <div style="color: #1a5568; font-size: var(--font-xs);">avg TD</div>
-            </div>
+            <div style="color: #1a5568; font-size: var(--font-xs);">avg EQ</div>
           </div>
-        ) : (
-          <div style="color: #5b7279; font-size: var(--font-sm);">
-            Signal data unavailable.
+
+          <div style="flex: 1; min-width: 100px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; text-align: center;">
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              Solution Orientation
+            </div>
+            <div style="color: #34d399; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
+              {soLabel}
+            </div>
+            <div style="color: #1a5568; font-size: var(--font-xs);">avg SO</div>
           </div>
-        )}
+
+          <div style="flex: 1; min-width: 100px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; text-align: center;">
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              Stakeholder Rep
+            </div>
+            <div style="color: #fbbf24; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
+              {srLabel}
+            </div>
+            <div style="color: #1a5568; font-size: var(--font-xs);">avg SR</div>
+          </div>
+
+          <div style="flex: 1; min-width: 100px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; text-align: center;">
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              Transparency
+            </div>
+            <div style="color: #a78bfa; font-size: var(--font-md); font-weight: bold; font-family: 'Fira Code', 'Courier New', monospace;">
+              {tdLabel}
+            </div>
+            <div style="color: #1a5568; font-size: var(--font-xs);">avg TD</div>
+          </div>
+        </div>
       </td>
     </tr>
   </table>

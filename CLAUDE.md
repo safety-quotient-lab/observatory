@@ -48,7 +48,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 ### Site (Astro + Cloudflare Pages)
 
-**Navigation:** `stories | signals | sources | rights | trends | system | about` (7 hubs)
+**Navigation:** `stories | signals | sources | rights | system | about` (6 hubs). `/trends` exists but is not in the nav.
 
 **Page taxonomy:**
 - **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]`
