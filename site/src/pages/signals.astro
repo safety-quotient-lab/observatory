@@ -79,103 +79,7 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
           <a href="/about#classification" style="color: #259d94; font-size: var(--font-xs); white-space: nowrap;">How it works &rarr;</a>
         </div>
 
-        {/* ═══ SECTION 2 — Derived Metrics ═══ */}
-
-        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 8px 0;">Derived Metrics</h2>
-
-        <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <a href="/about#setl" style="color: #22d3ee; font-weight: bold; text-decoration: none;">SETL</a>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Channel divergence — says one thing, does another.</span>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <a href="/about#evidence" style="color: #f59e0b; font-weight: bold; text-decoration: none;">Confidence</a>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Evidence-weighted strength across provisions.</span>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <a href="/about#volatility" style="color: #a855f7; font-weight: bold; text-decoration: none;">Volatility</a>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Score consistency across provisions.</span>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <a href="/about#consensus" style="color: #d56500; font-weight: bold; text-decoration: none;">Consensus</a>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Multi-model agreement score.</span>
-          </div>
-        </div>
-
-        {/* ═══ SECTION 3 — Supplementary Signals ═══ */}
-
-        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 4px 0;">Supplementary Signals</h2>
-        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">9 dimensions capturing how content communicates</p>
-
-        <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 14px;">
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(245,158,11,0.15); color: #f59e0b;">EQ</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Epistemic Quality</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Source quality, evidence reasoning, uncertainty handling, purpose transparency.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(220,38,38,0.15); color: #dc2626;">PT</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Propaganda Flags</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">count</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Detects 18 propaganda techniques: loaded language, fear appeals, ad hominem, and more.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">SO</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Solution Orientation</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Problem-only vs solution-oriented framing. High SO = content empowers, not just alarms.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7;">ET</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Emotional Tone</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">VAD</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Primary tone label + VAD: valence [-1,+1], arousal [0,1], dominance [0,1].</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">SR</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Stakeholder Voice</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Who speaks vs who is spoken about — perspective count, voice balance, power axis.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">TF</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Temporal Framing</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Retrospective, present, or prospective focus with time horizon.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">GS</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Geographic Scope</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Local, national, regional, or global scope with specific regions.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308;">CL</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Complexity Level</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Reading level, jargon density, and assumed knowledge requirements.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">TD</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Transparency &amp; Disclosure</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Author identified, conflicts of interest disclosed, funding sources disclosed.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-        </div>
+        {/* ═══ Global Averages ═══ */}
 
         {signalData && signalData.total_with_signals > 0 && (
           <div style="margin-bottom: 20px;">
@@ -303,6 +207,104 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
             )}
           </div>
         )}
+
+        {/* ═══ SECTION 2 — Derived Metrics ═══ */}
+
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 8px 0;">Derived Metrics</h2>
+
+        <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <a href="/about#setl" style="color: #22d3ee; font-weight: bold; text-decoration: none;">SETL</a>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Channel divergence — says one thing, does another.</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <a href="/about#evidence" style="color: #f59e0b; font-weight: bold; text-decoration: none;">Confidence</a>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Evidence-weighted strength across provisions.</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <a href="/about#volatility" style="color: #a855f7; font-weight: bold; text-decoration: none;">Volatility</a>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Score consistency across provisions.</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <a href="/about#consensus" style="color: #d56500; font-weight: bold; text-decoration: none;">Consensus</a>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Multi-model agreement score.</span>
+          </div>
+        </div>
+
+        {/* ═══ SECTION 3 — Supplementary Signals ═══ */}
+
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 4px 0;">Supplementary Signals</h2>
+        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">9 dimensions capturing how content communicates</p>
+
+        <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 14px;">
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(245,158,11,0.15); color: #f59e0b;">EQ</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Epistemic Quality</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Source quality, evidence reasoning, uncertainty handling, purpose transparency.</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(220,38,38,0.15); color: #dc2626;">PT</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Propaganda Flags</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">count</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Detects 18 propaganda techniques: loaded language, fear appeals, ad hominem, and more.</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">SO</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Solution Orientation</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Problem-only vs solution-oriented framing. High SO = content empowers, not just alarms.</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7;">ET</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Emotional Tone</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">VAD</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Primary tone label + VAD: valence [-1,+1], arousal [0,1], dominance [0,1].</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">SR</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Stakeholder Voice</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Who speaks vs who is spoken about — perspective count, voice balance, power axis.</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">TF</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Temporal Framing</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Retrospective, present, or prospective focus with time horizon.</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">GS</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Geographic Scope</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Local, national, regional, or global scope with specific regions.</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308;">CL</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Complexity Level</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Reading level, jargon density, and assumed knowledge requirements.</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">TD</span>
+            <b style="color: #98a8a8; margin-left: 4px;">Transparency &amp; Disclosure</b>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
+            <span style="color: #5b7279; font-size: var(--font-sm);">Author identified, conflicts of interest disclosed, funding sources disclosed.</span>
+            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          </div>
+        </div>
 
         {/* ═══ SECTION 4 — Fair Witness ═══ */}
 

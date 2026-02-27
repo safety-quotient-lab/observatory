@@ -1,34 +1,160 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getDomainStats, getStatusCounts, getGlobalGateStats } from '../lib/db';
+import { getStatusCounts, getDomainSignalProfiles, getGlobalGateStats } from '../lib/db';
+import type { DomainSignalProfile } from '../lib/db-entities';
 import { cachedQuery } from '../lib/db-utils';
+import { scoreToColor, formatScore, setlToColor, formatSetl, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../lib/colors';
+
 const db = Astro.locals.runtime.env.DB;
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
-const [topDomains, statusCounts, globalGate] = await Promise.all([
-  getDomainStats(db, 1),
-  getStatusCounts(db),
-  cachedQuery(kv, 'globalGateStats', () => getGlobalGateStats(db), 600),
-]);
+let statusCounts = { total: 0, done: 0, pending: 0, failed: 0 };
+let profiles: DomainSignalProfile[] = [];
+let globalGate = { gated: 0, total: 0, gate_pct: 0 };
 
-const totalDomains = await db
-  .prepare(`SELECT COUNT(DISTINCT domain) as cnt FROM stories WHERE eval_status = 'done' AND domain IS NOT NULL`)
-  .first<{ cnt: number }>();
+try {
+  const [sc, cached, gg] = await Promise.all([
+    getStatusCounts(db),
+    cachedQuery(kv, 'domainSignalProfiles', async () => {
+      const map = await getDomainSignalProfiles(db);
+      return [...map.values()];
+    }, 300),
+    cachedQuery(kv, 'globalGateStats', () => getGlobalGateStats(db), 600),
+  ]);
+  statusCounts = sc;
+  profiles = cached;
+  globalGate = gg;
+} catch {}
 
-const domainCount = totalDomains?.cnt ?? 0;
-const topDomain = topDomains.length > 0 ? topDomains[0] : null;
-const coverage = statusCounts.total > 0
-  ? Math.round((statusCounts.done / statusCounts.total) * 100)
-  : 0;
+const domainCount = profiles.length;
+const storyCount = profiles.reduce((s, p) => s + p.count, 0);
 
+// --- Aggregate metrics (single pass) ---
+let sumSetl = 0, cSetl = 0;
+let sumFw = 0, cFw = 0;
+let sumConf = 0, cConf = 0;
+let minHrcb = Infinity, maxHrcb = -Infinity;
+
+for (const p of profiles) {
+  if (p.avg_setl != null) { sumSetl += p.avg_setl; cSetl++; }
+  if (p.avg_fw_ratio != null) { sumFw += p.avg_fw_ratio; cFw++; }
+  if (p.avg_confidence != null) { sumConf += p.avg_confidence; cConf++; }
+  if (p.avg_hrcb != null) {
+    if (p.avg_hrcb < minHrcb) minHrcb = p.avg_hrcb;
+    if (p.avg_hrcb > maxHrcb) maxHrcb = p.avg_hrcb;
+  }
+}
+const avgSetl = cSetl > 0 ? sumSetl / cSetl : null;
+const avgFw = cFw > 0 ? sumFw / cFw : null;
+const avgConf = cConf > 0 ? sumConf / cConf : null;
+const hrcbSpreadMin = minHrcb === Infinity ? null : minHrcb;
+const hrcbSpreadMax = maxHrcb === -Infinity ? null : maxHrcb;
+
+// --- Signal Leaders (8 dimensions) ---
+interface SignalLeader {
+  label: string;
+  fullName: string;
+  color: string;
+  topDomain: string;
+  topVal: number;
+  bottomDomain: string;
+  bottomVal: number;
+  mean: number;
+  note: string;
+}
+
+type SignalKey = 'avg_eq' | 'avg_so' | 'avg_sr' | 'avg_td' | 'avg_pt_count' | 'avg_valence' | 'avg_arousal' | 'avg_fw_ratio';
+
+const signalDims: { key: SignalKey; label: string; fullName: string; color: string; note: string }[] = [
+  { key: 'avg_eq', label: 'EQ', fullName: 'Epistemic Quality', color: '#f59e0b', note: '' },
+  { key: 'avg_so', label: 'SO', fullName: 'Solution Orientation', color: '#16a34a', note: '' },
+  { key: 'avg_sr', label: 'SR', fullName: 'Stakeholder Voice', color: '#60a5fa', note: '' },
+  { key: 'avg_td', label: 'TD', fullName: 'Transparency', color: '#16a34a', note: '' },
+  { key: 'avg_pt_count', label: 'PT', fullName: 'Propaganda Flags', color: '#dc2626', note: 'inv' },
+  { key: 'avg_valence', label: 'VA', fullName: 'Valence', color: '#a855f7', note: '' },
+  { key: 'avg_arousal', label: 'AR', fullName: 'Arousal', color: '#818cf8', note: '' },
+  { key: 'avg_fw_ratio', label: 'FW', fullName: 'Fair Witness Ratio', color: '#22c55e', note: '' },
+];
+
+const leaders: SignalLeader[] = [];
+for (const dim of signalDims) {
+  let topDomain = '--', bottomDomain = '--';
+  let topVal = -Infinity, bottomVal = Infinity;
+  let sum = 0, cnt = 0;
+  for (const p of profiles) {
+    const v = p[dim.key];
+    if (v == null) continue;
+    sum += v; cnt++;
+    if (v > topVal) { topVal = v; topDomain = p.domain; }
+    if (v < bottomVal) { bottomVal = v; bottomDomain = p.domain; }
+  }
+  if (cnt > 0) {
+    leaders.push({
+      label: dim.label,
+      fullName: dim.fullName,
+      color: dim.color,
+      topDomain,
+      topVal,
+      bottomDomain,
+      bottomVal,
+      mean: sum / cnt,
+      note: dim.note,
+    });
+  }
+}
+
+// --- Dominant distributions ---
+const toneCounts: Record<string, number> = {};
+const scopeCounts: Record<string, number> = {};
+const levelCounts: Record<string, number> = {};
+for (const p of profiles) {
+  if (p.dominant_tone) toneCounts[p.dominant_tone] = (toneCounts[p.dominant_tone] || 0) + 1;
+  if (p.dominant_scope) scopeCounts[p.dominant_scope] = (scopeCounts[p.dominant_scope] || 0) + 1;
+  if (p.dominant_reading_level) levelCounts[p.dominant_reading_level] = (levelCounts[p.dominant_reading_level] || 0) + 1;
+}
+
+const toneEntries = Object.entries(toneCounts).sort((a, b) => b[1] - a[1]);
+const maxTone = toneEntries.length > 0 ? toneEntries[0][1] : 1;
+const scopeEntries = Object.entries(scopeCounts).sort((a, b) => b[1] - a[1]);
+const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
+const levelEntries = Object.entries(levelCounts).sort((a, b) => b[1] - a[1]);
+const maxLevel = levelEntries.length > 0 ? levelEntries[0][1] : 1;
+
+// --- HRCB Band Distribution ---
+interface HrcbBand {
+  label: string;
+  min: number;
+  max: number;
+  count: number;
+  color: string;
+}
+const bands: HrcbBand[] = [
+  { label: 'Strong Pos', min: 0.5, max: Infinity, count: 0, color: scoreToColor(0.9) },
+  { label: 'Mod Pos', min: 0.2, max: 0.5, count: 0, color: scoreToColor(0.55) },
+  { label: 'Mild Pos', min: 0.05, max: 0.2, count: 0, color: scoreToColor(0.25) },
+  { label: 'Neutral', min: -0.05, max: 0.05, count: 0, color: scoreToColor(0) },
+  { label: 'Mild Neg', min: -0.2, max: -0.05, count: 0, color: scoreToColor(-0.25) },
+  { label: 'Mod Neg', min: -0.5, max: -0.2, count: 0, color: scoreToColor(-0.55) },
+  { label: 'Strong Neg', min: -Infinity, max: -0.5, count: 0, color: scoreToColor(-0.9) },
+];
+for (const p of profiles) {
+  if (p.avg_hrcb == null) continue;
+  for (const b of bands) {
+    if (p.avg_hrcb >= b.min && p.avg_hrcb < b.max) { b.count++; break; }
+  }
+}
+// Edge case: exactly +0.5 goes to Mod Pos, adjust Strong Pos to include upper boundary
+// Actually the >= on min handles it: 0.5 >= 0.5 => Strong Pos. Good.
+const maxBand = Math.max(...bands.map(b => b.count), 1);
+
+// --- Hub cards ---
 interface SectionCard {
   title: string;
   href: string;
   description: string;
   accent: string;
 }
-
 const sections: SectionCard[] = [
   {
     title: 'Domains',
@@ -49,69 +175,243 @@ const sections: SectionCard[] = [
     accent: '#f59e0b',
   },
 ];
+
+// Pre-compute display values for metrics cards to avoid generics in JSX
+const hrcbSpreadDisplay = hrcbSpreadMin != null && hrcbSpreadMax != null
+  ? `${formatScore(hrcbSpreadMin)} .. ${formatScore(hrcbSpreadMax)}`
+  : 'ND';
+const hrcbSpreadColor = hrcbSpreadMin != null ? scoreToColor((hrcbSpreadMin + (hrcbSpreadMax ?? 0)) / 2) : '#4b5563';
+const setlDisplay = formatSetl(avgSetl);
+const setlColor = setlToColor(avgSetl);
+const fwDisplay = formatFwRatio(avgFw);
+const fwColor = fwRatioColor(avgFw);
+const confDisplay = formatConfidence(avgConf);
+const confColor = confidenceToColor(avgConf);
+
+// Format helper for signal values
+function fmtSig(val: number, note: string): string {
+  if (note === 'inv') return val.toFixed(1) + ' flags';
+  return val.toFixed(2);
+}
 ---
 
-<Base title="Sources">
+<Base title="Source Intelligence">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'sources' }]} />
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
+  <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Sources</span>
-        <div style="color: #5b7279; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
-          Who publishes what. Domains, users, and editorial clustering.
+        <h1 style="font-size: var(--font-md); color: #98a8a8; font-weight: bold; margin-bottom: 4px;">Source Intelligence</h1>
+        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 20px;">
+          Who publishes what — editorial character across {domainCount} profiled sources.
+        </p>
+
+        {/* ═══ SECTION 1 — Source Universe ═══ */}
+
+        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+          <span style="background: rgba(213,101,0,0.15); color: #d56500; border-radius: 3px; padding: 2px 7px; font-size: var(--font-xs); font-weight: bold; white-space: nowrap;">{domainCount} sources</span>
+          <span style="color: #98a8a8; font-size: var(--font-sm);">
+            <b>Source Intelligence</b> — {domainCount} domains with 3+ evaluated stories across {storyCount.toLocaleString()} total stories.
+            {globalGate.gate_pct > 0 && <span style="color: #5b7279;"> {globalGate.gate_pct}% gated.</span>}
+          </span>
+          <a href="/about#dcp" style="color: #259d94; font-size: var(--font-xs); white-space: nowrap;">How sources are profiled &rarr;</a>
         </div>
+
+        {/* ═══ SECTION 2 — Source Metrics ═══ */}
+
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 8px 0;">Source Metrics</h2>
+
+        <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <a href="/about#classification" style="text-decoration: none; font-weight: bold;" class="score-font">
+              <span style={`color: ${hrcbSpreadColor};`}>HRCB Spread</span>
+            </a><br>
+            <span style={`color: ${hrcbSpreadColor}; font-size: var(--font-md);`} class="score-font">{hrcbSpreadDisplay}</span><br>
+            <span style="color: #5b7279; font-size: var(--font-xs);">Min..Max domain HRCB</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <a href="/about#setl" style="text-decoration: none; font-weight: bold;">
+              <span style={`color: ${setlColor};`}>Avg SETL</span>
+            </a><br>
+            <span style={`color: ${setlColor}; font-size: var(--font-md);`} class="score-font">{setlDisplay}</span><br>
+            <span style="color: #5b7279; font-size: var(--font-xs);">Channel divergence</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <a href="/about#fair-witness" style="text-decoration: none; font-weight: bold;">
+              <span style={`color: ${fwColor};`}>Fair Witness</span>
+            </a><br>
+            <span style={`color: ${fwColor}; font-size: var(--font-md);`} class="score-font">{fwDisplay}</span><br>
+            <span style="color: #5b7279; font-size: var(--font-xs);">Observable fact ratio</span>
+          </div>
+          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <a href="/about#evidence" style="text-decoration: none; font-weight: bold;">
+              <span style={`color: ${confColor};`}>Avg Confidence</span>
+            </a><br>
+            <span style={`color: ${confColor}; font-size: var(--font-md);`} class="score-font">{confDisplay}</span><br>
+            <span style="color: #5b7279; font-size: var(--font-xs);">Evidence strength</span>
+          </div>
+        </div>
+
+        {/* ═══ SECTION 3 — Signal Leaders ═══ */}
+
+        {leaders.length > 0 && (
+          <div>
+            <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 4px 0;">Signal Leaders</h2>
+            <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">Top and bottom domains per editorial signal dimension</p>
+
+            <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
+              {leaders.map((l) => {
+                const topLabel = l.note === 'inv' ? 'Most flags' : 'Highest';
+                const bottomLabel = l.note === 'inv' ? 'Fewest flags' : 'Lowest';
+                return (
+                  <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                    <span class="badge" style={`background: ${l.color}22; color: ${l.color};`}>{l.label}</span>
+                    <b style="color: #98a8a8; margin-left: 4px;">{l.fullName}</b>
+                    <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">avg {fmtSig(l.mean, l.note)}</span>
+                    <div style="margin-top: 6px; font-size: var(--font-sm);">
+                      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+                        <span style="color: #5b7279; font-size: var(--font-xs); width: 72px;">{topLabel}</span>
+                        <a href={`/domain/${l.topDomain}`} style={`color: ${l.color}; text-decoration: none;`}>{l.topDomain}</a>
+                        <span style="color: #98a8a8; margin-left: auto; padding-left: 6px;" class="score-font">{fmtSig(l.topVal, l.note)}</span>
+                      </div>
+                      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <span style="color: #5b7279; font-size: var(--font-xs); width: 72px;">{bottomLabel}</span>
+                        <a href={`/domain/${l.bottomDomain}`} style="color: #5b7279; text-decoration: none;">{l.bottomDomain}</a>
+                        <span style="color: #5b7279; margin-left: auto; padding-left: 6px;" class="score-font">{fmtSig(l.bottomVal, l.note)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ SECTION 4 — Editorial Character ═══ */}
+
+        {(toneEntries.length > 0 || scopeEntries.length > 0 || levelEntries.length > 0) && (
+          <div>
+            <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 4px 0;">Editorial Character</h2>
+            <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">How sources distribute across tone, scope, and reading level</p>
+
+            <div class="insight-grid" style="margin-bottom: 20px;">
+
+              {toneEntries.length > 0 && (
+                <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Tone</p>
+                  <table cellpadding="0" cellspacing="0" width="100%">
+                    {toneEntries.map(([label, count]) => {
+                      const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
+                      return (
+                        <tr>
+                          <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 8px;">
+                            <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: #a855f7; border-radius: 3px;`}></div>
+                            </div>
+                          </td>
+                          <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                        </tr>
+                      );
+                    })}
+                  </table>
+                </div>
+              )}
+
+              {scopeEntries.length > 0 && (
+                <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
+                  <table cellpadding="0" cellspacing="0" width="100%">
+                    {scopeEntries.map(([label, count]) => {
+                      const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
+                      return (
+                        <tr>
+                          <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 8px;">
+                            <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: #22d3ee; border-radius: 3px;`}></div>
+                            </div>
+                          </td>
+                          <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                        </tr>
+                      );
+                    })}
+                  </table>
+                </div>
+              )}
+
+              {levelEntries.length > 0 && (
+                <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Reading Level</p>
+                  <table cellpadding="0" cellspacing="0" width="100%">
+                    {levelEntries.map(([label, count]) => {
+                      const pct = maxLevel > 0 ? Math.round((count / maxLevel) * 100) : 0;
+                      return (
+                        <tr>
+                          <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 8px;">
+                            <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: #eab308; border-radius: 3px;`}></div>
+                            </div>
+                          </td>
+                          <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                        </tr>
+                      );
+                    })}
+                  </table>
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
+        {/* ═══ SECTION 5 — Source HRCB Distribution ═══ */}
+
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 4px 0;">Source HRCB Distribution</h2>
+        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">How domains distribute across HRCB classification bands</p>
+
+        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; margin-bottom: 20px;">
+          <table cellpadding="0" cellspacing="0" width="100%">
+            {bands.map((b) => {
+              const pct = maxBand > 0 ? Math.round((b.count / maxBand) * 100) : 0;
+              return (
+                <tr>
+                  <td style={`padding: 2px 0; color: ${b.color}; font-size: var(--font-xs); width: 80px;`}>{b.label}</td>
+                  <td style="padding: 2px 8px;">
+                    <div style="height: 10px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: ${b.color}; opacity: 0.65; border-radius: 3px;`}></div>
+                    </div>
+                  </td>
+                  <td style="width: 36px; text-align: right; color: #98a8a8; font-size: var(--font-xs);" class="score-font">{b.count}</td>
+                </tr>
+              );
+            })}
+          </table>
+        </div>
+
+        {/* ═══ SECTION 6 — Deep Dive Cards ═══ */}
+
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 0 0 8px 0;">Deep Dives</h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
+          {sections.map(card => (
+            <a href={card.href} style="text-decoration: none; display: block;">
+              <div class="hub-card" style={`background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; border-left: 3px solid ${card.accent}; transition: border-color 0.15s;`}>
+                <div style={`color: ${card.accent}; font-size: var(--font-md); font-weight: bold;`}>{card.title}</div>
+                <div style="color: #5b7279; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
+                  {card.description}
+                </div>
+                <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 6px;">
+                  {card.href} &rarr;
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+
       </td>
     </tr>
   </table>
-
-  <!-- Summary stats -->
-  <div class="stat-cards" style="margin: 10px 0 18px 0;">
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px;">
-      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Total Domains</div>
-      <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{domainCount}</div>
-    </div>
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px;">
-      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Top Domain</div>
-      <div style="margin-top: 2px;">
-        {topDomain ? (
-          <a href={`/domain/${topDomain.domain}`} style="color: #98a8a8; font-size: var(--font-sm); font-weight: bold; text-decoration: none;">
-            {topDomain.domain}
-          </a>
-        ) : (
-          <span style="color: #5b7279; font-size: var(--font-sm);">--</span>
-        )}
-        {topDomain && (
-          <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">({topDomain.count} stories)</span>
-        )}
-      </div>
-    </div>
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px;">
-      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Eval Coverage</div>
-      <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{coverage}%</div>
-    </div>
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px;">
-      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Gated Content</div>
-      <div style="color: #d56500; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{globalGate.gate_pct}%</div>
-      <div style="color: #5b7279; font-size: var(--font-xs);">{globalGate.gated} of {globalGate.total} stories</div>
-    </div>
-  </div>
-
-  <!-- Section cards -->
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
-    {sections.map(card => (
-      <a href={card.href} style="text-decoration: none; display: block;">
-        <div class="hub-card" style={`background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; border-left: 3px solid ${card.accent}; transition: border-color 0.15s;`}>
-          <div style={`color: ${card.accent}; font-size: var(--font-md); font-weight: bold;`}>{card.title}</div>
-          <div style="color: #5b7279; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
-            {card.description}
-          </div>
-          <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 6px;">
-            {card.href} &rarr;
-          </div>
-        </div>
-      </a>
-    ))}
-  </div>
 
   <style>
     .hub-card:hover {
