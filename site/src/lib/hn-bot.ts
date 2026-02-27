@@ -401,6 +401,27 @@ export async function crawlUserProfiles(db: D1Database): Promise<number> {
   return stmts.length;
 }
 
+// ─── Adaptive evaluation depth ───
+
+/**
+ * Determine how deeply to evaluate a story based on engagement signals.
+ *
+ * - 'multi' : high-signal (score≥200 or comments≥100) — primary model only,
+ *             free models catch up via dispatchFreeModelEvals within 1 cron cycle
+ * - 'full'  : medium-signal (score≥50) — primary model only, no light preview
+ * - 'light' : low-signal — dual-dispatch (primary + Workers AI light eval for
+ *             fast feed presence via the ~lite label)
+ */
+export function determineEvalDepth(
+  story: { hn_score: number | null; hn_comments: number | null }
+): 'light' | 'full' | 'multi' {
+  const score = story.hn_score ?? 0;
+  const comments = story.hn_comments ?? 0;
+  if (score >= 200 || comments >= 100) return 'multi';
+  if (score >= 50) return 'full';
+  return 'light';
+}
+
 // ─── Queue dispatch ───
 
 export async function enqueueForEvaluation(
@@ -414,7 +435,7 @@ export async function enqueueForEvaluation(
 
   const { results: pending } = await db
     .prepare(
-      `SELECT hn_id, url, title, domain, hn_text FROM stories
+      `SELECT hn_id, url, title, domain, hn_text, hn_score, hn_comments FROM stories
        WHERE eval_status = 'pending'
          AND (url IS NOT NULL OR hn_text IS NOT NULL)
        ORDER BY
@@ -437,6 +458,8 @@ export async function enqueueForEvaluation(
       title: string;
       domain: string | null;
       hn_text: string | null;
+      hn_score: number | null;
+      hn_comments: number | null;
     }>();
 
   if (pending.length === 0) {
@@ -565,9 +588,13 @@ export async function enqueueForEvaluation(
     await queue.sendBatch(batch);
   }
 
-  // Dual-dispatch: light model for instant feed presence, full model for depth
+  // Selective light-dispatch: only low-signal stories get the Workers AI ~lite preview.
+  // High/medium-signal stories (full/multi depth) skip the light queue — they'll have
+  // a proper primary eval quickly and don't benefit from a transient ~lite label.
   if (lightQueue) {
     for (const msg of messages) {
+      const story = pending.find(p => p.hn_id === msg.body.hn_id);
+      if (!story || determineEvalDepth(story) !== 'light') continue;
       try {
         await lightQueue.send({
           hn_id: msg.body.hn_id,
