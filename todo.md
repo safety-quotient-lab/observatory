@@ -7,6 +7,8 @@
 - [x] **Factor out hn-bot** *(done)* — extracted HN crawling/fetching/story mgmt from cron.ts into `src/lib/hn-bot.ts` (1114 lines). cron.ts is now a thin orchestrator.
 - [x] **Unified CLI eval tool** *(done)* — `scripts/hn-hrcb-evaluate` replaces backfill-eval.sh + backfill-targeted.sh with flags: `--pending`, `--failed`, `--domain`, `--min-score`, `--dry-run`, `--recalc`, `--status`, positional IDs
 
+- [ ] **Backfill gate_category from eval_error** — No existing `Content gate:` entries found in DB (gate was added after all current skips). Consider a one-time SQL backfill from `events` table (`eval_skip` events with gate details in `details` JSON) or re-running content fetch for skipped stories to classify them without LLM calls.
+
 ## Data Sources
 
 - [ ] **Add Lobsters (lobste.rs) as a data source**

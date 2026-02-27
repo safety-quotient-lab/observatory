@@ -54,7 +54,7 @@ Cron Worker (1min) → Queue (hrcb-eval-queue) → Consumer Worker → D1 + R2
 
 - `site/src/lib/db.ts` — Barrel re-export from `db-stories.ts`, `db-entities.ts`, `db-analytics.ts`, `db-multi-model.ts`
 - `site/src/lib/db-stories.ts` — Story types, feed queries, dashboard stats, queue/failed stories
-- `site/src/lib/db-entities.ts` — Domain/user queries, signal profiles, DCP, pipeline health, events re-exports
+- `site/src/lib/db-entities.ts` — Domain/user queries, signal profiles, DCP, pipeline health, content gate stats, events re-exports
 - `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory
 - `site/src/lib/db-multi-model.ts` — Rater evals/scores/witness, model agreement, multi-model stories
 - `site/src/lib/shared-eval.ts` — Barrel re-export from `eval-types.ts`, `models.ts`, `prompts.ts`, `eval-parse.ts`, `eval-write.ts`, `rater-health.ts`
@@ -67,7 +67,8 @@ Cron Worker (1min) → Queue (hrcb-eval-queue) → Consumer Worker → D1 + R2
 - `site/src/lib/events.ts` — Structured event logger with typed event taxonomy
 - `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
 - `site/src/lib/calibration.ts` — 15-URL calibration set + drift detection
-- `site/src/lib/colors.ts` — Score/SETL/confidence color mapping
+- `site/src/lib/content-gate.ts` — Pre-eval content classification (paywall, captcha, bot protection, etc.)
+- `site/src/lib/colors.ts` — Score/SETL/confidence/gate color mapping
 - `site/src/components/` — Reusable Astro components (EvalCard, DcpTable, etc.)
 - `site/functions/rate-limit.ts` — Rate limit state, capacity checks, credit pause
 - `site/functions/providers.ts` — API call adapters (Anthropic, OpenRouter, Workers AI)
@@ -157,3 +158,4 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 - **DCP caching**: 7-day TTL in KV per domain, also persisted to `domain_dcp` table in D1.
 - **Light prompt mode**: Small/free models (Workers AI Llama 4 Scout 17B, Nemotron Nano 30B) use `METHODOLOGY_SYSTEM_PROMPT_LIGHT` — editorial-only single score + 4 supplementary scores (~200-400 output tokens vs ~4-5K for full). Schema `light-1.1`. Controlled by `ModelDefinition.prompt_mode: 'full' | 'light'`. No structural channel, no per-section scores, no DCP, no Fair Witness evidence. Results written to `rater_evals` with `prompt_mode = 'light'` (no `rater_scores`/`rater_witness`). DB column `prompt_mode` (migration 0023) enables filtering light vs full evals.
 - **Workers AI response format**: `ai.run()` may return `{ response: "string" }` or `{ response: { ...object } }` — consumer handles both.
+- **Content gate columns**: `stories.gate_category` (TEXT, nullable) and `stories.gate_confidence` (REAL, nullable) — migration 0024. NULL = content was accessible. Written by `markSkipped()` when content gate blocks a URL. Surfaced on `/domain/[domain]` (Access Barriers), `/domains` (Most Gatekept card), `/sources` (Gated Content card), `/system` (Content Gates box). Query functions: `getDomainGateStats`, `getMostGatekeptDomains`, `getGlobalGateStats` in `db-entities.ts`.

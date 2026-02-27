@@ -19,7 +19,8 @@ import Base from '../layouts/Base.astro';
           A cron worker crawls HN stories every 5 minutes across 6 lists (top, new, best, ask, show, job),
           tracking all stories but only auto-evaluating those in the top 7 pages (210 stories) of the
           front page plus the top 30 from the best, ask, and show feeds. Stories outside this range are tracked but skipped unless manually triggered.
-          Content is cleaned and dispatched via a Cloudflare Queue. A separate consumer worker
+          Fetched content passes through a content gate that classifies non-evaluable pages (paywalls, captchas, bot protection, etc.)
+          before dispatch. Evaluable content is cleaned and sent via a Cloudflare Queue. A separate consumer worker
           evaluates each URL against the UDHR methodology (v3.7) using Claude, with DCP caching per domain
           and content snapshots stored in R2. Results are displayed alongside standard HN metadata.
           The evaluator operates as a <b style="color: #d56500;">Fair Witness</b> — reporting only what is
