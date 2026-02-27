@@ -16,7 +16,7 @@ import {
   type EvalScore,
 } from '../src/lib/shared-eval';
 import { logEvent, pruneEvents } from '../src/lib/events';
-import { CALIBRATION_SET, runCalibrationCheck } from '../src/lib/calibration';
+import { CALIBRATION_SET, LIGHT_CALIBRATION_SET, LIGHT_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
 import { getPipelineHealth } from '../src/lib/db';
 import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions } from '../src/lib/coverage-crawl';
 import {
@@ -257,11 +257,44 @@ export default {
     }
 
     // POST /calibrate — enqueue 15 calibration URLs for evaluation (all enabled models)
+    // POST /calibrate?mode=light — insert light calibration URLs as pending for standalone evaluator
     if (path === '/calibrate' && request.method === 'POST') {
       const authErr = checkAuth();
       if (authErr) return authErr;
 
       const db = env.DB;
+      const mode = url.searchParams.get('mode');
+
+      // Light mode: insert LIGHT_CALIBRATION_SET stories as pending (hn_ids -2001 to -2015).
+      // Evaluation is done by the local evaluate-standalone.mjs script, not Cloudflare queues.
+      if (mode === 'light') {
+        for (let i = 0; i < LIGHT_CALIBRATION_SET.length; i++) {
+          const cal = LIGHT_CALIBRATION_SET[i];
+          const syntheticId = -(2000 + i + 1);
+          const domain = extractDomain(cal.url);
+          await db
+            .prepare(
+              `INSERT INTO stories (hn_id, title, url, domain, hn_score, hn_comments, hn_time, hn_type, eval_status)
+               VALUES (?, ?, ?, ?, 0, 0, ?, 'calibration', 'pending')
+               ON CONFLICT(hn_id) DO UPDATE SET eval_status = 'pending', evaluated_at = NULL`,
+            )
+            .bind(syntheticId, `[CAL-LIGHT] ${cal.label} (${cal.slot})`, cal.url, domain, Math.floor(Date.now() / 1000))
+            .run();
+        }
+        await logEvent(db, {
+          event_type: 'calibration',
+          severity: 'info',
+          message: `Light calibration queued: ${LIGHT_CALIBRATION_SET.length} URLs inserted as pending`,
+          details: { mode: 'light', calibration_ids: LIGHT_CALIBRATION_SET.map((_, i) => -(2000 + i + 1)) },
+        });
+        return new Response(JSON.stringify({
+          mode: 'light',
+          queued: LIGHT_CALIBRATION_SET.length,
+          calibration_ids: LIGHT_CALIBRATION_SET.map((_, i) => -(2000 + i + 1)),
+          note: 'Stories inserted as pending. Run: node scripts/evaluate-standalone.mjs --mode light',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
       let enqueued = 0;
       const enabledModels = getEnabledModels();
 
@@ -331,11 +364,85 @@ export default {
 
     // POST /calibrate/check — collect results and run drift check
     // Optional: ?model=deepseek-v3.2 to check a specific model's calibration from rater_evals
+    // Optional: ?mode=light to check the light-1.2 calibration set (hn_ids -2001 to -2015)
     if (path === '/calibrate/check' && request.method === 'POST') {
       const authErr = checkAuth();
       if (authErr) return authErr;
 
       const db = env.DB;
+      const modeParam = url.searchParams.get('mode');
+
+      // Light mode: read from rater_evals (prompt_mode='light') for hn_ids -2001 to -2015
+      if (modeParam === 'light') {
+        const lightScores = new Map<string, number | null>();
+        let lightPending = 0;
+
+        for (let i = 0; i < LIGHT_CALIBRATION_SET.length; i++) {
+          const cal = LIGHT_CALIBRATION_SET[i];
+          const syntheticId = -(2000 + i + 1);
+          const row = await db
+            .prepare(
+              `SELECT eval_status, hcb_weighted_mean FROM rater_evals
+               WHERE hn_id = ? AND prompt_mode = 'light'
+               ORDER BY evaluated_at DESC LIMIT 1`,
+            )
+            .bind(syntheticId)
+            .first<{ eval_status: string; hcb_weighted_mean: number | null }>();
+
+          if (row && row.eval_status === 'done' && row.hcb_weighted_mean !== null) {
+            lightScores.set(cal.url, row.hcb_weighted_mean);
+          } else {
+            lightScores.set(cal.url, null);
+            if (row && (row.eval_status === 'pending' || row.eval_status === 'queued')) lightPending++;
+          }
+        }
+
+        const lightSummary = runCalibrationCheck(lightScores, LIGHT_CALIBRATION_SET, LIGHT_DRIFT_THRESHOLDS);
+
+        await db
+          .prepare(
+            `INSERT INTO calibration_runs (model, methodology_hash, total_urls, passed, failed, skipped, status, details_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(
+            'light-1.2',
+            'light-1.2',
+            LIGHT_CALIBRATION_SET.length,
+            lightSummary.passed,
+            lightSummary.failed,
+            lightSummary.skipped,
+            lightSummary.status,
+            JSON.stringify({
+              results: lightSummary.results,
+              classOrderingOk: lightSummary.classOrderingOk,
+              pairChecks: lightSummary.pairChecks,
+              warned: lightSummary.warned,
+            }),
+          )
+          .run();
+
+        await logEvent(db, {
+          event_type: 'calibration',
+          severity: lightSummary.status === 'fail' ? 'error' : lightSummary.status === 'warn' ? 'warn' : 'info',
+          message: `Light calibration check: ${lightSummary.status} (${lightSummary.passed} pass, ${lightSummary.failed} fail, ${lightSummary.skipped} skip)`,
+          details: {
+            mode: 'light',
+            status: lightSummary.status,
+            passed: lightSummary.passed,
+            failed: lightSummary.failed,
+            warned: lightSummary.warned,
+            skipped: lightSummary.skipped,
+            classOrderingOk: lightSummary.classOrderingOk,
+            pending: lightPending,
+          },
+        });
+
+        return new Response(JSON.stringify({ ...lightSummary, pending: lightPending, model: 'light-1.2' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       const modelParam = url.searchParams.get('model');
 
       const scores = new Map<string, number | null>();

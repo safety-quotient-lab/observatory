@@ -73,7 +73,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/rater-health.ts` — Per-model health tracking, auto-disable/re-enable
 - `site/src/lib/events.ts` — Structured event logger with typed event taxonomy
 - `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
-- `site/src/lib/calibration.ts` — 15-URL calibration set + drift detection
+- `site/src/lib/calibration.ts` — Full-model `CALIBRATION_SET` (hn_ids -1001..-1015) + light-model `LIGHT_CALIBRATION_SET` (hn_ids -2001..-2015) + per-model thresholds + parameterized `runCalibrationCheck(scores, calSet?, thresholds?)`
 - `site/src/lib/content-gate.ts` — Pre-eval content classification (paywall, captcha, bot protection, etc.)
 - `site/src/lib/colors.ts` — Score/SETL/confidence/gate color mapping
 - `site/src/components/` — Reusable Astro components (EvalCard, DcpTable, etc.)
@@ -154,6 +154,11 @@ The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry
 - `scripts/validate-light.mjs` — 15-URL calibration validator for `light-1.2` model. Passes 15/15 against final calibration set (EP-1..5, EN-1..5, EX-1..5). Run: `node scripts/validate-light.mjs [--concurrency N]`.
 - `scripts/validate-light-dcp.mjs` — Two-step DCP-enhanced validator (root page → DCP profile → editorial eval). Passes 15/15. Adds ~17s per URL overhead. DCP limitation: archive.org profiled as "utility" (misses digital rights mission).
 
+**Light calibration workflow:**
+1. `curl -X POST .../calibrate?mode=light` — inserts hn_ids -2001..-2015 as pending
+2. `node scripts/evaluate-standalone.mjs --mode light` — evaluates and posts to /api/ingest
+3. `curl -X POST .../calibrate/check?mode=light` — reads rater_evals, runs check, writes to calibration_runs
+
 ## Factions Page
 
 The factions page (`site/src/pages/factions.astro`) clusters domains by **editorial character** using 8 supplementary signal dimensions (EQ, SO, SR, TD, PT inverted, AR, VA, FW) rather than the 31-dimension UDHR fingerprint.
@@ -172,7 +177,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 - **Consumer hash functions**: `hashString()` = SHA-256 first 16 bytes as hex (32 chars). Used for methodology_hash (system prompt only) and prompt_hash (system + user).
 - **Rate limiting**: Consumer reads `anthropic-ratelimit-*` headers proactively, self-throttles via KV state before hitting 429s. Circuit breaker at 3+ consecutive 429s.
 - **Content gate dual placement**: Runs in cron pre-fetch (primary — blocks before queueing, writes `gate_category`/`gate_confidence` to stories) AND consumer (safety net for KV cache misses). Pure regex, no LLM calls.
-- **Calibration IDs**: Synthetic hn_ids -1001 to -1015 for the 15 calibration URLs.
+- **Calibration IDs**: Full model: synthetic hn_ids -1001 to -1015 (`CALIBRATION_SET`). Light model: -2001 to -2015 (`LIGHT_CALIBRATION_SET`). Light cal enqueued via `POST /calibrate?mode=light` (inserts as pending for local evaluator), checked via `POST /calibrate/check?mode=light` (reads `rater_evals` with `prompt_mode='light'`). Both sets shown on `/system` (Calibration + Light Cal cards).
 - **DCP caching**: 7-day TTL in KV per domain, also persisted to `domain_dcp` table in D1.
 - **Light prompt mode**: Small/free models (Workers AI Llama 4 Scout 17B, Nemotron Nano 30B) use `METHODOLOGY_SYSTEM_PROMPT_LIGHT` — editorial-only single score + 3 supplementary scores (eq, so, td) + primary_tone (~200-400 output tokens vs ~4-5K for full). Schema `light-1.2`. Field `executive_summary` renamed to `short_description` (max 20 words). Controlled by `ModelDefinition.prompt_mode: 'full' | 'light'`. No structural channel, no per-section scores, no DCP, no Fair Witness evidence. Results written to `rater_evals` with `prompt_mode = 'light'` (no `rater_scores`/`rater_witness`). DB column `prompt_mode` (migration 0023) enables filtering light vs full evals.
 - **Workers AI response format**: `ai.run()` may return `{ response: "string" }` or `{ response: { ...object } }` — consumer handles both.

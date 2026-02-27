@@ -624,6 +624,20 @@ export async function getLatestCalibrationRun(
   }
 }
 
+export async function getLatestLightCalibrationRun(
+  db: D1Database,
+): Promise<CalibrationRun | null> {
+  try {
+    return await db
+      .prepare(
+        `SELECT * FROM calibration_runs WHERE model = 'light-1.2' ORDER BY created_at DESC LIMIT 1`,
+      )
+      .first<CalibrationRun>();
+  } catch {
+    return null;
+  }
+}
+
 export async function getCalibrationHistory(
   db: D1Database,
   limit = 10,

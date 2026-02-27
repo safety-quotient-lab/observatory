@@ -21,11 +21,12 @@ import {
   getMethodologyDistribution,
   getModelDriftStats,
   getLatestCalibrationRun,
+  getLatestLightCalibrationRun,
   getRaterSummaryStats,
   getRaterStatusBreakdown,
   getGlobalGateStats,
 } from '../lib/db';
-import { CALIBRATION_SET } from '../lib/calibration';
+import { CALIBRATION_SET, LIGHT_CALIBRATION_SET } from '../lib/calibration';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -60,13 +61,14 @@ try {
 }
 
 // Rate limit + measurement integrity data (graceful fallback if tables don't exist yet)
-const [rateLimitSnapshot, dlqStats, dlqMessages, methodologyDist, driftStats, lastCalibration, globalGate] = await Promise.all([
+const [rateLimitSnapshot, dlqStats, dlqMessages, methodologyDist, driftStats, lastCalibration, lastLightCalibration, globalGate] = await Promise.all([
   getLatestRateLimitSnapshot(db),
   getDlqStats(db),
   getDlqMessages(db, 'pending', 10),
   getMethodologyDistribution(db),
   getModelDriftStats(db),
   getLatestCalibrationRun(db),
+  getLatestLightCalibrationRun(db),
   getGlobalGateStats(db),
 ]);
 
@@ -558,7 +560,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               )}
             </div>
 
-            {/* Calibration Status */}
+            {/* Calibration Status (full model) */}
             <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${lastCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
               <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Calibration</div>
               {!lastCalibration ? (
@@ -573,6 +575,26 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   {lastCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastCalibration.failed} failed</span>}
                   <div style="color: #1a5568; font-size: 9px; margin-top: 2px;">
                     {lastCalibration.model.replace('claude-', '').replace('-20251001', '')} · {lastCalibration.created_at.slice(0, 10)}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Light Calibration Status (light-1.2 model) */}
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${lastLightCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Light Cal</div>
+              {!lastLightCalibration ? (
+                <div style="font-size: var(--font-xs);">
+                  <div style="color: #eab308;">No runs yet</div>
+                  <div style="color: #1a5568; font-size: 9px;">{LIGHT_CALIBRATION_SET.length} URLs defined</div>
+                </div>
+              ) : (
+                <div style="font-size: var(--font-xs);">
+                  <span style={`color: ${lastLightCalibration.status === 'pass' ? '#16a34a' : lastLightCalibration.status === 'fail' ? '#dc2626' : '#eab308'}; font-weight: bold; text-transform: uppercase;`}>{lastLightCalibration.status}</span>
+                  <span style="color: #5b7279;"> · {lastLightCalibration.passed}/{lastLightCalibration.total_urls} passed</span>
+                  {lastLightCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastLightCalibration.failed} failed</span>}
+                  <div style="color: #1a5568; font-size: 9px; margin-top: 2px;">
+                    light-1.2 · {lastLightCalibration.created_at.slice(0, 10)}
                   </div>
                 </div>
               )}
