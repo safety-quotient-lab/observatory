@@ -25,6 +25,7 @@ import {
   getRaterSummaryStats,
   getRaterStatusBreakdown,
   getGlobalGateStats,
+  getProviderStats,
 } from '../lib/db';
 import { CALIBRATION_SET, LIGHT_CALIBRATION_SET } from '../lib/calibration';
 
@@ -75,10 +76,12 @@ const [rateLimitSnapshot, dlqStats, dlqMessages, methodologyDist, driftStats, la
 // Multi-model rater summary stats (graceful fallback)
 let raterSummary: Awaited<ReturnType<typeof getRaterSummaryStats>> = [];
 let raterStatus: Awaited<ReturnType<typeof getRaterStatusBreakdown>> = [];
+let providerStats: Awaited<ReturnType<typeof getProviderStats>> = [];
 try {
-  [raterSummary, raterStatus] = await Promise.all([
+  [raterSummary, raterStatus, providerStats] = await Promise.all([
     getRaterSummaryStats(db),
     getRaterStatusBreakdown(db),
+    getProviderStats(db),
   ]);
 } catch {
   // rater_evals table may not exist yet
@@ -101,6 +104,32 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   calibration: '#8b5cf6', trigger: '#a78bfa',
   rater_validation_warn: '#f97316', rater_validation_fail: '#dc2626',
   rater_auto_disable: '#ef4444', rater_auto_enable: '#34d399',
+};
+
+// Worker health helpers
+function relativeTime(ts: string | null | undefined): string {
+  if (!ts) return 'never';
+  const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+function workerDot(ts: string | null | undefined): { color: string; title: string } {
+  if (!ts) return { color: '#1a5568', title: 'never active' };
+  const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (s < 600) return { color: '#16a34a', title: 'active (<10m)' };
+  if (s < 3600) return { color: '#eab308', title: 'idle (<1h)' };
+  if (s < 86400) return { color: '#5b7279', title: 'sleeping (<24h)' };
+  return { color: '#1a5568', title: 'inactive (>24h)' };
+}
+
+// Map eval_provider values to display names
+const PROVIDER_META: Record<string, { name: string; role: string }> = {
+  'anthropic':             { name: 'consumer-anthropic',  role: 'evaluate · Anthropic API' },
+  'openrouter':            { name: 'consumer-openrouter', role: 'evaluate · OpenRouter' },
+  'workers-ai':            { name: 'consumer-workers-ai', role: 'evaluate · Workers AI (~lite)' },
+  'claude-code-standalone':{ name: 'standalone',          role: 'evaluate · local CLI' },
 };
 
 const pctDone = status.total > 0 ? Math.round((status.done / status.total) * 100) : 0;
@@ -174,6 +203,86 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             )}
           </div>
         )}
+      </td>
+    </tr>
+  </table>
+
+  {/* Workers Health */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Workers</div>
+        <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+          <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+            <td style="padding: 2px 6px; width: 12px;"></td>
+            <td style="padding: 2px 6px;">Worker</td>
+            <td style="padding: 2px 6px;">Role</td>
+            <td style="padding: 2px 6px; text-align: right;">Last Active</td>
+            <td style="padding: 2px 6px; text-align: right; width: 50px;">24h</td>
+            <td style="padding: 2px 6px; text-align: right; width: 50px;">7d</td>
+            <td style="padding: 2px 6px; text-align: right; width: 50px;">Errs 24h</td>
+          </tr>
+
+          {/* Cron worker */}
+          {(() => {
+            const lastActive = cronRuns[0]?.cycle_start ?? null;
+            const dot = workerDot(lastActive);
+            return (
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style="padding: 4px 6px; text-align: center;">
+                  <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
+                </td>
+                <td style="padding: 4px 6px; color: #98a8a8; font-weight: bold;">hn-hrcb-cron</td>
+                <td style="padding: 4px 6px; color: #5b7279;">crawl HN · dispatch to queues</td>
+                <td style="padding: 4px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(lastActive)}</td>
+                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
+                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
+                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
+              </tr>
+            );
+          })()}
+
+          {/* Consumer workers (from rater_evals eval_provider) */}
+          {providerStats.map(ps => {
+            const meta = PROVIDER_META[ps.eval_provider] ?? { name: ps.eval_provider, role: 'evaluate' };
+            const dot = workerDot(ps.last_eval);
+            return (
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style="padding: 4px 6px; text-align: center;">
+                  <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
+                </td>
+                <td style="padding: 4px 6px; color: #98a8a8; font-weight: bold;">{meta.name}</td>
+                <td style="padding: 4px 6px; color: #5b7279;">{meta.role}</td>
+                <td style="padding: 4px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(ps.last_eval)}</td>
+                <td style={`padding: 4px 6px; text-align: right; color: ${ps.evals_24h > 0 ? '#60a5fa' : '#5b7279'};`}>{ps.evals_24h > 0 ? ps.evals_24h : '—'}</td>
+                <td style={`padding: 4px 6px; text-align: right; color: ${ps.evals_7d > 0 ? '#5b7279' : '#1a5568'};`}>{ps.evals_7d > 0 ? ps.evals_7d : '—'}</td>
+                <td style={`padding: 4px 6px; text-align: right; color: ${ps.failed_24h > 0 ? '#dc2626' : '#5b7279'};`}>{ps.failed_24h > 0 ? ps.failed_24h : '—'}</td>
+              </tr>
+            );
+          })}
+
+          {/* DLQ worker */}
+          {(() => {
+            const lastDlqEvent = recentPipelineEvents.find(e => e.event_type === 'dlq' || e.event_type === 'dlq_replay');
+            const lastActive = lastDlqEvent?.created_at ?? null;
+            const dot = workerDot(lastActive);
+            return (
+              <tr style="border-top: 1px solid #0d4655;">
+                <td style="padding: 4px 6px; text-align: center;">
+                  <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
+                </td>
+                <td style="padding: 4px 6px; color: #98a8a8; font-weight: bold;">hn-hrcb-dlq</td>
+                <td style="padding: 4px 6px; color: #5b7279;">dead letter handler</td>
+                <td style="padding: 4px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(lastActive)}</td>
+                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
+                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
+                <td style={`padding: 4px 6px; text-align: right; color: ${dlqStats.pending > 0 ? '#dc2626' : '#5b7279'};`}>
+                  {dlqStats.pending > 0 ? `${dlqStats.pending}p` : '—'}
+                </td>
+              </tr>
+            );
+          })()}
+        </table>
       </td>
     </tr>
   </table>

@@ -634,3 +634,40 @@ export async function getRegionDistribution(db: D1Database): Promise<{ regions: 
 
   return { regions, scopes, total: regionRows.length };
 }
+
+// --- Per-provider (worker) stats ---
+
+export interface ProviderStat {
+  eval_provider: string;
+  evals_total: number;
+  evals_24h: number;
+  evals_7d: number;
+  last_eval: string | null;
+  failed_24h: number;
+}
+
+/**
+ * Aggregate eval counts from rater_evals grouped by eval_provider.
+ * Each consumer worker (anthropic, openrouter, workers-ai, claude-code-standalone)
+ * maps to a row showing its activity level and recency.
+ */
+export async function getProviderStats(db: D1Database): Promise<ProviderStat[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT
+         eval_provider,
+         COUNT(CASE WHEN eval_status = 'done' THEN 1 END) as evals_total,
+         COUNT(CASE WHEN eval_status = 'done'
+                     AND evaluated_at > datetime('now', '-1 day') THEN 1 END) as evals_24h,
+         COUNT(CASE WHEN eval_status = 'done'
+                     AND evaluated_at > datetime('now', '-7 days') THEN 1 END) as evals_7d,
+         MAX(CASE WHEN eval_status = 'done' THEN evaluated_at END) as last_eval,
+         COUNT(CASE WHEN eval_status = 'failed'
+                     AND evaluated_at > datetime('now', '-1 day') THEN 1 END) as failed_24h
+       FROM rater_evals
+       GROUP BY eval_provider
+       ORDER BY evals_total DESC`
+    )
+    .all<ProviderStat>();
+  return results;
+}
