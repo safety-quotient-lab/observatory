@@ -611,14 +611,14 @@ export default {
             prompt_mode: model.prompt_mode,
           });
 
-          // UPSERT rater_evals as queued
+          // UPSERT rater_evals as queued (include prompt_mode so shell row is accurate)
           await db
             .prepare(
-              `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status)
-               VALUES (?, ?, ?, 'queued')
-               ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued'`
+              `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, prompt_mode)
+               VALUES (?, ?, ?, 'queued', ?)
+               ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued', prompt_mode = excluded.prompt_mode`
             )
-            .bind(syntheticId, model.id, model.provider)
+            .bind(syntheticId, model.id, model.provider, model.prompt_mode ?? 'full')
             .run();
           enqueued++;
         }

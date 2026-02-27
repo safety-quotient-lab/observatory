@@ -116,6 +116,18 @@
 
 ## Schema & Architecture
 
+- [ ] **Model soft-delete (DB-level flag)** *(meerkat phase 34)*
+  - New `model_registry` table in D1 with `enabled`, `deleted_at`, `disabled_reason` columns
+  - Seed from `MODEL_REGISTRY` in models.ts; `getEnabledModels(db)` replaces hardcoded array
+  - Disable/re-enable models via D1 query without code deploy
+  - Enables model personality profiles (bias_direction, calibration accuracy, topic strengths/weaknesses)
+
+- [ ] **HN-compatible + REST API** *(meerkat phase 35)*
+  - New `functions/api-public.ts` worker + `wrangler.api-public.toml`
+  - HN-compatible endpoints: `GET /v0/item/{id}.json`, `/v0/topstories.json`, `/v0/beststories.json`
+  - Extended endpoints: `GET /api/stories`, `/api/story/{id}`, `/api/domain/{domain}`, `/api/domains`, `/api/search`
+  - Rate-limited by IP; optional API key in KV; `Cache-Control: public, max-age=60` on list endpoints
+
 - [ ] **Cost attribution per model**
   - Compute daily cost per model from eval_history token counts + Anthropic pricing
   - Dashboard widget showing cost/eval by model, daily burn rate

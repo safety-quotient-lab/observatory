@@ -11,9 +11,7 @@ import {
   type LightEvalResponse,
   type ValidationResult,
 } from './eval-types';
-
-/** Max chars of raw HTML to fetch before cleaning. */
-const RAW_HTML_MAX_CHARS = 30_000;
+import { RAW_HTML_MAX_CHARS } from './shared-eval';
 
 /** Valid content type codes for light evals. */
 const LIGHT_CONTENT_TYPES = new Set(['ED', 'PO', 'LP', 'PR', 'AC', 'MI', 'AD', 'HR', 'CO', 'ME', 'MX']);
