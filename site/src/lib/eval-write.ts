@@ -267,11 +267,24 @@ export async function markFailed(db: D1Database, hnId: number, error: string): P
     .run();
 }
 
-export async function markSkipped(db: D1Database, hnId: number, reason: string): Promise<void> {
-  await db
-    .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = ? WHERE hn_id = ?`)
-    .bind(reason, hnId)
-    .run();
+export async function markSkipped(
+  db: D1Database,
+  hnId: number,
+  reason: string,
+  gateCategory?: string,
+  gateConfidence?: number,
+): Promise<void> {
+  if (gateCategory != null) {
+    await db
+      .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = ?, gate_category = ?, gate_confidence = ? WHERE hn_id = ?`)
+      .bind(reason, gateCategory, gateConfidence ?? null, hnId)
+      .run();
+  } else {
+    await db
+      .prepare(`UPDATE stories SET eval_status = 'skipped', eval_error = ? WHERE hn_id = ?`)
+      .bind(reason, hnId)
+      .run();
+  }
 }
 
 // --- DCP Cache helpers ---

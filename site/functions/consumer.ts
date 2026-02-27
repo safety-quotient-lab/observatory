@@ -56,6 +56,7 @@ import {
 
 import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
 import { cleanHtml, hasReadableText } from '../src/lib/html-clean';
+import { classifyContent } from '../src/lib/content-gate';
 import { logEvent } from '../src/lib/events';
 
 import {
@@ -313,6 +314,25 @@ export default {
             console.log(`[consumer] KV cache hit for hn_id=${story.hn_id}`);
           } else {
             const rawHtml = await fetchUrlContent(story.url!);
+
+            // Content gate: classify fetched content before eval
+            const gate = classifyContent(rawHtml, story.url!);
+            if (gate.blocked) {
+              if (isPrimary) {
+                await markSkipped(db, story.hn_id,
+                  `Content gate: ${gate.category} (${gate.confidence.toFixed(2)})`,
+                  gate.category, gate.confidence);
+              }
+              await markRaterFailed(db, story.hn_id, msgModelId, provider,
+                `Skipped: ${gate.category} (${gate.signals.join('; ')})`).catch(() => {});
+              await logEvent(db, {
+                hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info',
+                message: `Content gate: ${gate.category}`,
+                details: { reason: gate.category, confidence: gate.confidence, signals: gate.signals, model: msgModelId },
+              });
+              msg.ack();
+              continue;
+            }
 
             // Pre-check: does the page have any human-readable text?
             // JS-rendered SPAs return script bundles but no server-side prose.

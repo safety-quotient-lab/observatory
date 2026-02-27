@@ -23,6 +23,7 @@ import {
   getLatestCalibrationRun,
   getRaterSummaryStats,
   getRaterStatusBreakdown,
+  getGlobalGateStats,
 } from '../lib/db';
 import { CALIBRATION_SET } from '../lib/calibration';
 
@@ -59,13 +60,14 @@ try {
 }
 
 // Rate limit + measurement integrity data (graceful fallback if tables don't exist yet)
-const [rateLimitSnapshot, dlqStats, dlqMessages, methodologyDist, driftStats, lastCalibration] = await Promise.all([
+const [rateLimitSnapshot, dlqStats, dlqMessages, methodologyDist, driftStats, lastCalibration, globalGate] = await Promise.all([
   getLatestRateLimitSnapshot(db),
   getDlqStats(db),
   getDlqMessages(db, 'pending', 10),
   getMethodologyDistribution(db),
   getModelDriftStats(db),
   getLatestCalibrationRun(db),
+  getGlobalGateStats(db),
 ]);
 
 // Multi-model rater summary stats (graceful fallback)
@@ -572,6 +574,27 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   <div style="color: #1a5568; font-size: 9px; margin-top: 2px;">
                     {lastCalibration.model.replace('claude-', '').replace('-20251001', '')} · {lastCalibration.created_at.slice(0, 10)}
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Content Gates */}
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${globalGate.gate_pct > 20 ? '#eab30840' : '#0d4655'}; border-radius: 4px;`}>
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Gates</div>
+              <div style="font-size: var(--font-xs);">
+                <span style={`color: ${globalGate.gate_pct > 20 ? '#eab308' : '#5b7279'}; font-weight: bold;`}>{globalGate.gate_pct}%</span>
+                <span style="color: #5b7279;"> gated ({globalGate.gated}/{globalGate.total})</span>
+              </div>
+              {globalGate.breakdown.length > 0 && (
+                <div style="margin-top: 3px; font-size: 9px;">
+                  {globalGate.breakdown.slice(0, 4).map(b => (
+                    <div style="color: #5b7279;">
+                      <span style={`color: ${b.gate_category === 'paywall' ? '#d56500' : b.gate_category === 'bot_protection' ? '#dc2626' : b.gate_category === 'error_page' ? '#5b7279' : '#eab308'};`}>
+                        {b.gate_category.replace(/_/g, ' ')}
+                      </span>
+                      <span style="color: #1a5568;"> · {b.cnt}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

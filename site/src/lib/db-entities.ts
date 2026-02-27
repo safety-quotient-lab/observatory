@@ -818,6 +818,114 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
   }
 }
 
+// --- Content Gate queries ---
+
+export interface DomainGateStats {
+  total: number;
+  gated: number;
+  gate_pct: number;
+  breakdown: { gate_category: string; cnt: number }[];
+}
+
+export async function getDomainGateStats(db: D1Database, domain: string): Promise<DomainGateStats> {
+  try {
+    const [counts, breakdown] = await Promise.all([
+      db.prepare(
+        `SELECT COUNT(*) as total,
+                SUM(CASE WHEN gate_category IS NOT NULL THEN 1 ELSE 0 END) as gated
+         FROM stories WHERE domain = ?`
+      ).bind(domain).first<{ total: number; gated: number }>(),
+      db.prepare(
+        `SELECT gate_category, COUNT(*) as cnt
+         FROM stories
+         WHERE domain = ? AND gate_category IS NOT NULL
+         GROUP BY gate_category
+         ORDER BY cnt DESC`
+      ).bind(domain).all<{ gate_category: string; cnt: number }>(),
+    ]);
+    const total = counts?.total ?? 0;
+    const gated = counts?.gated ?? 0;
+    return {
+      total,
+      gated,
+      gate_pct: total > 0 ? Math.round((gated / total) * 1000) / 10 : 0,
+      breakdown: breakdown.results,
+    };
+  } catch {
+    return { total: 0, gated: 0, gate_pct: 0, breakdown: [] };
+  }
+}
+
+export interface GatekeptDomain {
+  domain: string;
+  total: number;
+  gated: number;
+  gate_pct: number;
+  top_category: string | null;
+}
+
+export async function getMostGatekeptDomains(db: D1Database, minStories = 5, limit = 5): Promise<GatekeptDomain[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT domain,
+                COUNT(*) as total,
+                SUM(CASE WHEN gate_category IS NOT NULL THEN 1 ELSE 0 END) as gated,
+                ROUND(100.0 * SUM(CASE WHEN gate_category IS NOT NULL THEN 1 ELSE 0 END) / COUNT(*), 1) as gate_pct,
+                (SELECT gate_category FROM stories s2
+                 WHERE s2.domain = s.domain AND s2.gate_category IS NOT NULL
+                 GROUP BY gate_category ORDER BY COUNT(*) DESC LIMIT 1) as top_category
+         FROM stories s
+         WHERE domain IS NOT NULL
+         GROUP BY domain
+         HAVING COUNT(*) >= ? AND SUM(CASE WHEN gate_category IS NOT NULL THEN 1 ELSE 0 END) > 0
+         ORDER BY gate_pct DESC
+         LIMIT ?`
+      )
+      .bind(minStories, limit)
+      .all<GatekeptDomain>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+export interface GlobalGateStats {
+  total: number;
+  gated: number;
+  gate_pct: number;
+  breakdown: { gate_category: string; cnt: number }[];
+}
+
+export async function getGlobalGateStats(db: D1Database): Promise<GlobalGateStats> {
+  try {
+    const [counts, breakdown] = await Promise.all([
+      db.prepare(
+        `SELECT COUNT(*) as total,
+                SUM(CASE WHEN gate_category IS NOT NULL THEN 1 ELSE 0 END) as gated
+         FROM stories`
+      ).first<{ total: number; gated: number }>(),
+      db.prepare(
+        `SELECT gate_category, COUNT(*) as cnt
+         FROM stories
+         WHERE gate_category IS NOT NULL
+         GROUP BY gate_category
+         ORDER BY cnt DESC`
+      ).all<{ gate_category: string; cnt: number }>(),
+    ]);
+    const total = counts?.total ?? 0;
+    const gated = counts?.gated ?? 0;
+    return {
+      total,
+      gated,
+      gate_pct: total > 0 ? Math.round((gated / total) * 1000) / 10 : 0,
+      breakdown: breakdown.results,
+    };
+  } catch {
+    return { total: 0, gated: 0, gate_pct: 0, breakdown: [] };
+  }
+}
+
 // --- User Intelligence ---
 
 export interface UserIntelligence {

@@ -159,6 +159,24 @@ export function modifierColor(mod: number | null): string {
   return scoreToColor(scaled);
 }
 
+/** Content gate category color */
+export function gateToColor(category: string): string {
+  switch (category) {
+    case 'paywall': return '#d56500';
+    case 'bot_protection': return '#dc2626';
+    case 'captcha': return '#eab308';
+    case 'login_wall': return '#a78bfa';
+    case 'cookie_wall': return '#60a5fa';
+    case 'geo_restriction': return '#22d3ee';
+    case 'rate_limited': return '#f97316';
+    case 'error_page': return '#5b7279';
+    case 'age_gate': return '#e879f9';
+    case 'app_gate': return '#34d399';
+    case 'redirect_or_js_required': return '#5b7279';
+    default: return '#5b7279';
+  }
+}
+
 /** Fair Witness ratio color: maps 0–1 to purple(0) → green(1) */
 export function fwRatioColor(ratio: number | null): string {
   if (ratio === null) return '#4b5563';

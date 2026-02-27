@@ -1,13 +1,14 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getDomainStats, getStatusCounts } from '../lib/db';
+import { getDomainStats, getStatusCounts, getGlobalGateStats } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [topDomains, statusCounts] = await Promise.all([
+const [topDomains, statusCounts, globalGate] = await Promise.all([
   getDomainStats(db, 5),
   getStatusCounts(db),
+  getGlobalGateStats(db),
 ]);
 
 const totalDomains = await db
@@ -85,6 +86,11 @@ const sections: SectionCard[] = [
     <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
       <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Eval Coverage</div>
       <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{coverage}%</div>
+    </div>
+    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.5px;">Gated Content</div>
+      <div style="color: #d56500; font-size: var(--font-md); font-weight: bold; margin-top: 2px;">{globalGate.gate_pct}%</div>
+      <div style="color: #5b7279; font-size: var(--font-xs);">{globalGate.gated} of {globalGate.total} stories</div>
     </div>
   </div>
 

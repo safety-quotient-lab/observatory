@@ -2,8 +2,8 @@
 import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
 import DcpTable from '../../components/DcpTable.astro';
-import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp, getDomainSetlHistory, getDomainSignals } from '../../lib/db';
-import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
+import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp, getDomainSetlHistory, getDomainSignals, getDomainGateStats } from '../../lib/db';
+import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence, gateToColor } from '../../lib/colors';
 
 const { domain } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
@@ -17,7 +17,7 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
-const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, setlHistory, signals] = await Promise.all([
+const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, setlHistory, signals, gateStats] = await Promise.all([
   getStoriesByDomain(db, domain, PER_PAGE + 1, offset),
   getDomainSetl(db, domain),
   getDomainDetailStats(db, domain),
@@ -25,6 +25,7 @@ const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, 
   getDomainDcp(db, domain),
   getDomainSetlHistory(db, domain),
   getDomainSignals(db, domain),
+  getDomainGateStats(db, domain),
 ]);
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
@@ -205,6 +206,52 @@ if (dcpJson) {
             <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">cached from evaluation</span>
           </div>
           <DcpTable elements={dcpElements} />
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Access Barriers */}
+  {gateStats.gated > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Access Barriers
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+              {gateStats.gated} of {gateStats.total} stories blocked ({gateStats.gate_pct}%)
+            </span>
+          </div>
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+            {gateStats.breakdown.map(b => {
+              const pct = gateStats.gated > 0 ? Math.round((b.cnt / gateStats.gated) * 100) : 0;
+              const color = gateToColor(b.gate_category);
+              return (
+                <tr>
+                  <td style="width: 160px; color: #98a8a8;">{b.gate_category.replace(/_/g, ' ')}</td>
+                  <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <div style={`height: 8px; border-radius: 2px; background: ${color}; width: ${Math.max(pct, 3)}%;`}></div>
+                      <span class="score-font" style={`color: ${color};`}>{b.cnt}</span>
+                      <span style="color: #5b7279; font-size: var(--font-xs);">({pct}%)</span>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+          {/* DCP cross-validation: check access_model vs gate data */}
+          {dcpElements && (() => {
+            const accessModel = Array.isArray(dcpElements) ? dcpElements.find((e: any) => e.element === 'access_model' || e[0] === 'access_model') : (dcpElements as any)?.access_model;
+            const accessNote = typeof accessModel === 'object' && accessModel !== null ? (accessModel.note || accessModel.description || '') : '';
+            const claimsOpen = /\b(open|free|no.?paywall|unrestricted)\b/i.test(String(accessNote));
+            const hasPaywall = gateStats.breakdown.some(b => b.gate_category === 'paywall');
+            return claimsOpen && hasPaywall ? (
+              <div style="margin-top: 8px; padding: 6px 10px; background: #eab30815; border: 1px solid #eab30840; border-radius: 4px; font-size: var(--font-xs); color: #eab308;">
+                DCP access_model claims open/free access, but {gateStats.breakdown.find(b => b.gate_category === 'paywall')?.cnt} stories hit a paywall gate
+              </div>
+            ) : null;
+          })()}
         </td>
       </tr>
     </table>
