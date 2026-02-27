@@ -473,6 +473,9 @@ export interface SignalOverview {
   avg_sr: number | null;
   avg_td: number | null;
   avg_pt_count: number | null;
+  avg_valence: number | null;
+  avg_arousal: number | null;
+  avg_dominance: number | null;
   top_pt_technique: string | null;
   technique_distribution: Record<string, number>;
   tone_distribution: Record<string, number>;
@@ -651,11 +654,14 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
           AVG(so_score) as avg_so,
           AVG(sr_score) as avg_sr,
           AVG(td_score) as avg_td,
-          AVG(pt_flag_count) as avg_pt_count
+          AVG(pt_flag_count) as avg_pt_count,
+          AVG(et_valence) as avg_valence,
+          AVG(et_arousal) as avg_arousal,
+          AVG(et_dominance) as avg_dominance
         FROM stories
         WHERE eval_status = 'done' AND eq_score IS NOT NULL`
       )
-      .first<{ total_with_signals: number; avg_eq: number | null; avg_so: number | null; avg_sr: number | null; avg_td: number | null; avg_pt_count: number | null }>();
+      .first<{ total_with_signals: number; avg_eq: number | null; avg_so: number | null; avg_sr: number | null; avg_td: number | null; avg_pt_count: number | null; avg_valence: number | null; avg_arousal: number | null; avg_dominance: number | null }>();
 
     // Tone distribution
     const tones = await db
@@ -733,6 +739,9 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
       avg_sr: agg?.avg_sr ?? null,
       avg_td: agg?.avg_td ?? null,
       avg_pt_count: agg?.avg_pt_count ?? null,
+      avg_valence: agg?.avg_valence ?? null,
+      avg_arousal: agg?.avg_arousal ?? null,
+      avg_dominance: agg?.avg_dominance ?? null,
       top_pt_technique: topPtTechnique,
       technique_distribution: techCounts,
       tone_distribution: toneDistribution,
@@ -744,7 +753,8 @@ export async function getSignalOverview(db: D1Database): Promise<SignalOverview>
     return {
       total_with_signals: 0,
       avg_eq: null, avg_so: null, avg_sr: null, avg_td: null,
-      avg_pt_count: null, top_pt_technique: null,
+      avg_pt_count: null, avg_valence: null, avg_arousal: null, avg_dominance: null,
+      top_pt_technique: null,
       technique_distribution: {},
       tone_distribution: {}, scope_distribution: {}, reading_level_distribution: {},
     };

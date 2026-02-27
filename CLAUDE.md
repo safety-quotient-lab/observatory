@@ -52,7 +52,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 **Page taxonomy:**
 - **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]`
-- **Signals** (`/signals`): signal reference catalog — 9 sections (Core HRCB, Derived Metrics, Per-Provision Scoring, Supplementary Signals, Fair Witness, DCP, Content Gate, Labels & Metadata, Evaluation Modes). Uses `getStatusCounts` + `getSignalOverview` for live data.
+- **Signals** (`/signals`): signal reference catalog — 9 sections (Core HRCB, Derived Metrics, Per-Provision Scoring, Supplementary Signals, Fair Witness, DCP, Content Gate, Labels & Metadata, Evaluation Modes). Uses `getStatusCounts` + `getSignalOverview` for live data. Supplementary section includes live Global Averages bars (8 signals: EQ, SO, SR, TD, PT, VA, AR, DO) and 4 distribution charts (tone, geographic scope, reading level, top PT techniques).
 - **Rights** (`/rights`): hub → `/rights/observatory` (research dashboard), `/rights/articles`, `/rights/network`, `/article/[n]`
 - **Sources** (`/sources`): hub → `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
 - **Trends** (`/trends`): hub → `/seldon`, `/velocity`, `/dynamics`

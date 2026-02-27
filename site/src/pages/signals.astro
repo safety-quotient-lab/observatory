@@ -22,14 +22,41 @@ const avgSo = signalData?.avg_so ?? 0;
 const avgSr = signalData?.avg_sr ?? 0;
 const avgTd = signalData?.avg_td ?? 0;
 const avgPt = signalData?.avg_pt_count ?? 0;
+const avgValence = signalData?.avg_valence ?? null;
+const avgArousal = signalData?.avg_arousal ?? null;
+const avgDominance = signalData?.avg_dominance ?? null;
 
 const barSignals = [
-  { label: 'EQ', value: avgEq, max: 1, color: '#f59e0b' },
-  { label: 'SO', value: avgSo, max: 1, color: '#16a34a' },
-  { label: 'SR', value: avgSr, max: 1, color: '#60a5fa' },
-  { label: 'TD', value: avgTd, max: 1, color: '#16a34a' },
-  { label: 'PT', value: Math.max(0, 1 - avgPt / 5), max: 1, color: '#dc2626', note: 'inv' },
+  { label: 'EQ', value: avgEq, barW: avgEq, color: '#f59e0b', note: '' },
+  { label: 'SO', value: avgSo, barW: avgSo, color: '#16a34a', note: '' },
+  { label: 'SR', value: avgSr, barW: avgSr, color: '#60a5fa', note: '' },
+  { label: 'TD', value: avgTd, barW: avgTd, color: '#16a34a', note: '' },
+  { label: 'PT', value: avgPt, barW: Math.max(0, 1 - avgPt / 5), color: '#dc2626', note: 'inv' },
+  { label: 'VA', value: avgValence, barW: avgValence !== null ? (avgValence + 1) / 2 : 0, color: '#a855f7', note: 'val' },
+  { label: 'AR', value: avgArousal, barW: avgArousal ?? 0, color: '#818cf8', note: '' },
+  { label: 'DO', value: avgDominance, barW: avgDominance ?? 0, color: '#38bdf8', note: '' },
 ];
+
+// Distribution data — sorted entry arrays for rendering
+const toneEntries = signalData?.tone_distribution
+  ? Object.entries(signalData.tone_distribution).sort((a, b) => b[1] - a[1])
+  : [];
+const maxTone = toneEntries.length > 0 ? toneEntries[0][1] : 1;
+
+const scopeEntries = signalData?.scope_distribution
+  ? Object.entries(signalData.scope_distribution).sort((a, b) => b[1] - a[1])
+  : [];
+const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
+
+const levelEntries = signalData?.reading_level_distribution
+  ? Object.entries(signalData.reading_level_distribution).sort((a, b) => b[1] - a[1])
+  : [];
+const maxLevel = levelEntries.length > 0 ? levelEntries[0][1] : 1;
+
+const techEntries = signalData?.technique_distribution
+  ? Object.entries(signalData.technique_distribution).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  : [];
+const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
 ---
 
 <Base title="Signals">
@@ -247,14 +274,16 @@ const barSignals = [
               <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7;">ET</span>
               <b style="color: #98a8a8; margin-left: 4px;">Emotional Tone</b>
               <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">VAD dimensions</span><br>
-              <span style="color: #5b7279; font-size: var(--font-sm);">Primary tone label + three dimensions: valence (pleasant-unpleasant), arousal (calm-excited), dominance (submissive-dominant). Each [0-1].</span><br>
+              <span style="color: #5b7279; font-size: var(--font-sm);">Primary tone label + three VAD dimensions: valence [-1,+1] (negative-positive), arousal [0,1] (calm-excited), dominance [0,1] (submissive-dominant).</span><br>
+              <span style="color: #5b7279; font-size: var(--font-xs);">Labels: measured, urgent, alarmist, hopeful, cynical, detached, empathetic, confrontational, celebratory, solemn.</span><br>
               <span style="color: #5b7279; font-size: var(--font-xs);">Source: Russell's Circumplex Model of Affect</span>
             </div>
             <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
               <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">SR</span>
               <b style="color: #98a8a8; margin-left: 4px;">Stakeholder Voice</b>
               <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1] composite</span><br>
-              <span style="color: #5b7279; font-size: var(--font-sm);">Who speaks vs who is spoken about. Sub-fields: perspective_count, voice_balance, power_axis. UDHR rights-holder/duty-bearer framework.</span>
+              <span style="color: #5b7279; font-size: var(--font-sm);">Who speaks vs who is spoken about. Sub-fields: perspective_count, voice_balance, power_axis. UDHR rights-holder/duty-bearer framework.</span><br>
+              <span style="color: #5b7279; font-size: var(--font-xs);">Categories: government, corporation, institution, military_security, individuals, workers, marginalized, children, community.</span>
             </div>
             <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
               <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">TF</span>
@@ -289,22 +318,123 @@ const barSignals = [
               </p>
               <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
                 <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm);">
-                  {barSignals.map((s) => (
-                    <tr>
-                      <td style={`color: ${s.color}; width: 30px;`} class="score-font">{s.label}</td>
-                      <td style="padding: 0 8px; width: 200px;">
-                        <div style="background: #002d38; border-radius: 3px; height: 14px; width: 100%; position: relative;">
-                          <div style={`background: ${s.color}; opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.min(s.value / s.max, 1) * 100}%;`}></div>
-                        </div>
-                      </td>
-                      <td style="color: #98a8a8;" class="score-font">
-                        {s.note === 'inv' ? `${avgPt.toFixed(1)} flags` : s.value.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
+                  {barSignals.map((s) => {
+                    const displayVal = s.note === 'inv'
+                      ? `${avgPt.toFixed(1)} flags`
+                      : s.value !== null
+                        ? (typeof s.value === 'number' ? s.value.toFixed(2) : 'n/a')
+                        : 'n/a';
+                    const barPct = Math.min(Math.max(s.barW, 0), 1) * 100;
+                    return (
+                      <tr>
+                        <td style={`color: ${s.color}; width: 30px;`} class="score-font">{s.label}</td>
+                        <td style="padding: 0 8px; width: 200px;">
+                          <div style="background: #002d38; border-radius: 3px; height: 14px; width: 100%; position: relative;">
+                            <div style={`background: ${s.color}; opacity: 0.5; border-radius: 3px; height: 14px; width: ${barPct}%;`}></div>
+                          </div>
+                        </td>
+                        <td style="color: #98a8a8;" class="score-font">{displayVal}</td>
+                      </tr>
+                    );
+                  })}
                 </table>
               </div>
-              <p style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px;">PT bar shows inverted count (lower = better).</p>
+              <p style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px;">PT bar inverted (lower = better). VA bar normalized from [-1,+1] to [0,1]; actual value shown.</p>
+
+              {(toneEntries.length > 0 || scopeEntries.length > 0 || levelEntries.length > 0 || techEntries.length > 0) && (
+                <div class="insight-grid" style="margin-top: 14px;">
+
+                  {toneEntries.length > 0 && (
+                    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                      <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Tone Distribution</p>
+                      <table cellpadding="0" cellspacing="0" width="100%">
+                        {toneEntries.map(([label, count]) => {
+                          const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
+                          return (
+                            <tr>
+                              <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                              <td style="padding: 2px 8px;">
+                                <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                                  <div style={`width: ${pct}%; height: 100%; background: #a855f7; border-radius: 3px;`}></div>
+                                </div>
+                              </td>
+                              <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                            </tr>
+                          );
+                        })}
+                      </table>
+                    </div>
+                  )}
+
+                  {scopeEntries.length > 0 && (
+                    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                      <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
+                      <table cellpadding="0" cellspacing="0" width="100%">
+                        {scopeEntries.map(([label, count]) => {
+                          const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
+                          return (
+                            <tr>
+                              <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                              <td style="padding: 2px 8px;">
+                                <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                                  <div style={`width: ${pct}%; height: 100%; background: #22d3ee; border-radius: 3px;`}></div>
+                                </div>
+                              </td>
+                              <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                            </tr>
+                          );
+                        })}
+                      </table>
+                    </div>
+                  )}
+
+                  {levelEntries.length > 0 && (
+                    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                      <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Reading Level</p>
+                      <table cellpadding="0" cellspacing="0" width="100%">
+                        {levelEntries.map(([label, count]) => {
+                          const pct = maxLevel > 0 ? Math.round((count / maxLevel) * 100) : 0;
+                          return (
+                            <tr>
+                              <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                              <td style="padding: 2px 8px;">
+                                <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                                  <div style={`width: ${pct}%; height: 100%; background: #eab308; border-radius: 3px;`}></div>
+                                </div>
+                              </td>
+                              <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                            </tr>
+                          );
+                        })}
+                      </table>
+                    </div>
+                  )}
+
+                  {techEntries.length > 0 && (
+                    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                      <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Top Propaganda Techniques</p>
+                      <table cellpadding="0" cellspacing="0" width="100%">
+                        {techEntries.map(([technique, count]) => {
+                          const pct = maxTech > 0 ? Math.round((count / maxTech) * 100) : 0;
+                          const displayName = technique.replace(/_/g, ' ');
+                          return (
+                            <tr>
+                              <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{displayName}</td>
+                              <td style="padding: 2px 8px;">
+                                <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                                  <div style={`width: ${pct}%; height: 100%; background: #f87171; border-radius: 3px;`}></div>
+                                </div>
+                              </td>
+                              <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                            </tr>
+                          );
+                        })}
+                      </table>
+                    </div>
+                  )}
+
+                </div>
+              )}
             </div>
           )}
         </details>
@@ -363,15 +493,14 @@ const barSignals = [
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">paywall</td><td style="color: #5b7279; padding: 2px 8px;">Subscription wall blocks content access</td></tr>
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">bot_protection</td><td style="color: #5b7279; padding: 2px 8px;">Cloudflare/Akamai challenge pages</td></tr>
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">captcha</td><td style="color: #5b7279; padding: 2px 8px;">CAPTCHA or verification required</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">login_required</td><td style="color: #5b7279; padding: 2px 8px;">Authentication wall</td></tr>
+            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">login_wall</td><td style="color: #5b7279; padding: 2px 8px;">Authentication wall</td></tr>
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">cookie_wall</td><td style="color: #5b7279; padding: 2px 8px;">Cookie consent blocks content</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">geo_blocked</td><td style="color: #5b7279; padding: 2px 8px;">Region-restricted content</td></tr>
+            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">geo_restriction</td><td style="color: #5b7279; padding: 2px 8px;">Region-restricted content</td></tr>
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">age_gate</td><td style="color: #5b7279; padding: 2px 8px;">Age verification required</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">app_only</td><td style="color: #5b7279; padding: 2px 8px;">Content only available in mobile app</td></tr>
+            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">app_gate</td><td style="color: #5b7279; padding: 2px 8px;">Content only available in mobile app</td></tr>
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">rate_limited</td><td style="color: #5b7279; padding: 2px 8px;">Rate limit or throttle page</td></tr>
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">error_page</td><td style="color: #5b7279; padding: 2px 8px;">404, 500, or other error pages</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">redirect_loop</td><td style="color: #5b7279; padding: 2px 8px;">Redirect chains or dead ends</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">empty_content</td><td style="color: #5b7279; padding: 2px 8px;">Page has no readable text content</td></tr>
+            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">redirect_or_js_required</td><td style="color: #5b7279; padding: 2px 8px;">Redirect chains, dead ends, or JavaScript-only SPAs</td></tr>
           </table>
           </div>
           <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">Runs at two points: cron pre-fetch (primary) and consumer (safety net). Writes <span class="score-font">gate_category</span> and <span class="score-font">gate_confidence</span> to the stories table.</p>
@@ -422,7 +551,7 @@ const barSignals = [
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Provisions</td><td style="color: #5b7279; padding: 4px 8px;">31 per-provision scores</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">Single aggregate score</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">DCP</td><td style="color: #5b7279; padding: 4px 8px;">Yes (8 domain elements)</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">No</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Fair Witness</td><td style="color: #5b7279; padding: 4px 8px;">Yes (facts + inferences)</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">No</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Supplementary</td><td style="color: #5b7279; padding: 4px 8px;">All 9 signals</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">3 (EQ, SO, TD) + tone</td></tr>
+            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Supplementary</td><td style="color: #5b7279; padding: 4px 8px;">All 9 signals</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">5 (EQ, SO, TD, valence, arousal) + tone</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">SETL</td><td style="color: #5b7279; padding: 4px 8px;">Yes</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">No (single channel)</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Confidence</td><td style="color: #5b7279; padding: 4px 8px;">Evidence-weighted</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">N/A</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Output tokens</td><td style="color: #5b7279; padding: 4px 8px;">~4-5K</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">~200-400</td></tr>
