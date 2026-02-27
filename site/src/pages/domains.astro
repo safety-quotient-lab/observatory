@@ -85,9 +85,29 @@ function buildDomainUrl(params: Record<string, string>): string {
   const qs = p.toString();
   return qs ? `/domains?${qs}` : '/domains';
 }
+
+const siteUrl = url.origin;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'HN HRCB — Domain Signal Profiles',
+  description: `Aggregated HRCB scores and supplementary signals for ${allDomains.length} domains from Hacker News stories`,
+  url: `${siteUrl}/domains`,
+  numberOfItems: allDomains.length,
+  itemListElement: allDomains.slice(0, 20).map((d, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'Organization',
+      name: d.domain,
+      url: `${siteUrl}/domain/${d.domain}`,
+    },
+  })),
+};
 ---
 
 <Base title="Domains">
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'sources', href: '/sources' }, { label: 'domains' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>

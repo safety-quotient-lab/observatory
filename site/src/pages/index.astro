@@ -57,6 +57,25 @@ function buildUrl(params: Record<string, string>): string {
 
 const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN' : safeType === 'job' ? 'Jobs' : 'HN HRCB';
 
+// JSON-LD: ItemList of evaluated stories (first page, default view only)
+const jsonLd = (safeSort === 'top' && safeFilter === 'all' && safeType === 'all' && safeModel === 'any' && page === 1) ? {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'HN HRCB — Latest Evaluated Stories',
+  description: `Hacker News stories evaluated for human rights compatibility bias. ${evaluatedCount} stories evaluated.`,
+  url: `${url.origin}/`,
+  numberOfItems: evaluatedCount,
+  itemListElement: displayStories
+    .filter(s => s.eval_status === 'done')
+    .slice(0, 10)
+    .map((s, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `${url.origin}/item/${s.hn_id}`,
+      name: s.title,
+    })),
+} : null;
+
 // Canonical URL: include sort/filter/type/model but exclude pagination
 const canonicalParams = new URLSearchParams();
 if (safeSort !== 'top') canonicalParams.set('sort', safeSort);
@@ -96,6 +115,7 @@ function modelLabel(id: string): string {
 ---
 
 <Base title={pageTitle} canonicalUrl={canonicalUrl}>
+  {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
   {/* Filter/sort bar */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>

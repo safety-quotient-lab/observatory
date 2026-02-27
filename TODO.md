@@ -85,10 +85,14 @@
   - `/api/v0/` HN Firebase-compatible: topstories.json, beststories.json, newstories.json, item/[id].json (with `hcb` extension)
   - Still TODO: `/api/v1/search` full-text search endpoint
 
-- [ ] **Structured Knowledge Base** *(requires REST API)*
-  - JSON-LD with Schema.org annotations
-  - Export endpoints, bulk CSV as daily R2 snapshot
-  - Domain profile versioning
+- [ ] **Structured Knowledge Base** *(Phase 39A — partially done 2026-02-27)*
+  - [x] JSON-LD on all major pages (index, item, article, domain, domains, about, sources)
+  - [x] Domain profile versioning — `domain_profile_snapshots` table (migration 0039), daily cron snapshot, `/api/v1/domain/[domain]/history` endpoint
+  - [x] `/data` stub page with live API table + greyed-out export table
+  - [x] Export endpoint stubs returning 501 (`/api/v1/export/stories.csv`, `.jsonl`, `domains.csv`, `rater-evals.jsonl`)
+  - [ ] License decision pending — Opus recommends CC BY-NC-SA 4.0 (non-commercial + share-alike); needs user confirmation before publishing to `/data`
+  - [ ] Full-text search endpoint (`/api/v1/search` via FTS5 virtual table) — Phase 39B
+  - [ ] Bulk export implementation (CSV/JSONL to R2 daily snapshot) — R2 only bound to cron worker, not Pages site
 
 - [ ] **Cost attribution per model**
   - Daily cost per model from eval_history token counts + pricing

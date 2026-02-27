@@ -459,6 +459,38 @@ export default {
       }
     }
 
+    // ─── Daily domain profile snapshots (once per day, KV-guarded) ───
+
+    if (minute === 5) {
+      try {
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+        const snapKey = `snapshot:domain:${today}`;
+        const alreadyRan = await env.CONTENT_CACHE.get(snapKey);
+        if (!alreadyRan) {
+          await env.CONTENT_CACHE.put(snapKey, '1', { expirationTtl: 25 * 3600 }); // 25h: covers DST edge
+
+          await db
+            .prepare(
+              `INSERT OR IGNORE INTO domain_profile_snapshots
+                 (domain, snapshot_date, story_count, evaluated_count,
+                  avg_hrcb, avg_setl, avg_editorial, avg_structural,
+                  avg_eq, avg_so, avg_td, avg_valence, avg_arousal, dominant_tone)
+               SELECT domain, ?, story_count, evaluated_count,
+                      avg_hrcb, avg_setl, avg_editorial, avg_structural,
+                      avg_eq, avg_so, avg_td, avg_valence, avg_arousal, dominant_tone
+               FROM domain_aggregates
+               WHERE evaluated_count >= 1`
+            )
+            .bind(today)
+            .run();
+
+          console.log(`[domain-snapshot] Inserted domain profile snapshots for ${today}`);
+        }
+      } catch (err) {
+        console.error('[domain-snapshot] Failed (non-fatal):', err);
+      }
+    }
+
     // ─── Event pruning (90-day retention, once per hour) ───
 
     if (minute === 0) {

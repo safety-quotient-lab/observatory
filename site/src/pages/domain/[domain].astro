@@ -37,6 +37,32 @@ const avgPosterKarma = karmaRow?.avg_karma ?? null;
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
+// JSON-LD: Organization + AggregateRating
+const jsonLd = detail.evaluatedCount > 0 ? {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: domain,
+  url: `https://${domain}`,
+  sameAs: `https://${domain}`,
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: avgScore !== null ? Math.round(avgScore * 1000) / 1000 : undefined,
+    bestRating: 1.0,
+    worstRating: -1.0,
+    reviewCount: detail.evaluatedCount,
+    ratingCount: total,
+    description: `Average HRCB score across ${detail.evaluatedCount} evaluated stories`,
+  },
+  ...(signals.avg_eq != null || signals.avg_so != null ? {
+    additionalProperty: [
+      signals.avg_eq != null ? { '@type': 'PropertyValue', name: 'Epistemic Quality', value: Math.round(signals.avg_eq * 100) / 100 } : null,
+      signals.avg_so != null ? { '@type': 'PropertyValue', name: 'Solution Orientation', value: Math.round(signals.avg_so * 100) / 100 } : null,
+      signals.avg_td != null ? { '@type': 'PropertyValue', name: 'Transparency/Disclosure', value: Math.round(signals.avg_td * 100) / 100 } : null,
+      signals.avg_valence != null ? { '@type': 'PropertyValue', name: 'Emotional Valence', value: Math.round(signals.avg_valence * 100) / 100 } : null,
+    ].filter(Boolean),
+  } : {}),
+} : null;
+
 const fp = fingerprints.get(domain);
 let dcpElements: any[] | null = null;
 if (dcpJson) {
@@ -48,6 +74,7 @@ if (dcpJson) {
 ---
 
 <Base title={`${domain} — HN HRCB`} canonicalUrl={`${url.origin}/domain/${domain}`}>
+  {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
   <Breadcrumb crumbs={[
     { label: 'home', href: '/' },
     { label: 'domains', href: '/domains' },

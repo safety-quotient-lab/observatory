@@ -1,0 +1,72 @@
+import type { APIContext } from 'astro';
+import { corsHeaders, checkRateLimit, jsonResponse, errorResponse, listCacheHeaders } from '../../../../../lib/api-v1';
+
+export const prerender = false;
+
+interface SnapshotRow {
+  snapshot_date: string;
+  story_count: number;
+  evaluated_count: number;
+  avg_hrcb: number | null;
+  avg_setl: number | null;
+  avg_editorial: number | null;
+  avg_structural: number | null;
+  avg_eq: number | null;
+  avg_so: number | null;
+  avg_td: number | null;
+  avg_valence: number | null;
+  avg_arousal: number | null;
+  dominant_tone: string | null;
+}
+
+/**
+ * GET /api/v1/domain/{domain}/history
+ * Returns daily HRCB profile snapshots for a domain.
+ * Params: ?days=30 (1–365, default 30)
+ */
+export async function GET(context: APIContext): Promise<Response> {
+  const env = (context.locals as any).runtime?.env;
+  if (!env?.DB) return errorResponse('Service unavailable', 503);
+
+  const domain = context.params.domain ?? '';
+  if (!domain) return errorResponse('Domain required', 400);
+
+  const rawDays = parseInt(context.url.searchParams.get('days') ?? '30', 10);
+  const days = isNaN(rawDays) || rawDays < 1 ? 30 : Math.min(rawDays, 365);
+
+  const ip = context.request.headers.get('cf-connecting-ip') ?? 'unknown';
+  if (env.CONTENT_CACHE && !(await checkRateLimit(env.CONTENT_CACHE, ip))) {
+    return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+      status: 429,
+      headers: { ...corsHeaders(), 'Content-Type': 'application/json', 'Retry-After': '3600' },
+    });
+  }
+
+  const { results } = await env.DB
+    .prepare(
+      `SELECT snapshot_date, story_count, evaluated_count,
+              avg_hrcb, avg_setl, avg_editorial, avg_structural,
+              avg_eq, avg_so, avg_td, avg_valence, avg_arousal, dominant_tone
+       FROM domain_profile_snapshots
+       WHERE domain = ?
+         AND snapshot_date >= date('now', ? || ' days')
+       ORDER BY snapshot_date DESC`
+    )
+    .bind(domain, `-${days}`)
+    .all<SnapshotRow>();
+
+  if (results.length === 0) {
+    // Check if domain exists at all
+    const exists = await env.DB
+      .prepare(`SELECT 1 FROM domain_aggregates WHERE domain = ? LIMIT 1`)
+      .bind(domain)
+      .first();
+    if (!exists) return errorResponse('Domain not found', 404);
+  }
+
+  return jsonResponse({ domain, days, snapshots: results }, 200, listCacheHeaders());
+}
+
+export async function OPTIONS(): Promise<Response> {
+  return new Response(null, { status: 204, headers: corsHeaders() });
+}

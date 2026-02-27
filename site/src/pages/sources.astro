@@ -193,9 +193,24 @@ function fmtSig(val: number, note: string): string {
   if (note === 'inv') return val.toFixed(1) + ' flags';
   return val.toFixed(2);
 }
+
+const siteUrl = new URL(Astro.request.url).origin;
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Source Intelligence — HN HRCB',
+  description: `Signal profiles and factions analysis for ${domainCount} domains and ${storyCount} evaluated stories`,
+  url: `${siteUrl}/sources`,
+  hasPart: [
+    { '@type': 'WebPage', name: 'Domains', url: `${siteUrl}/domains` },
+    { '@type': 'WebPage', name: 'Users', url: `${siteUrl}/users` },
+    { '@type': 'WebPage', name: 'Factions', url: `${siteUrl}/factions` },
+  ],
+};
 ---
 
 <Base title="Source Intelligence">
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'sources' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
