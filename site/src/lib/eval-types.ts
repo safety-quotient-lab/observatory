@@ -202,7 +202,7 @@ export interface LightEvalResponse {
   };
   theme_tag: string;
   sentiment_tag: string;
-  executive_summary: string;
+  short_description: string;
   eq_score: number | null;
   so_score: number | null;
   td_score: number | null;

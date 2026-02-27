@@ -661,7 +661,7 @@ export async function writeLightRaterEvalResult(
       light.schema_version || 'light-1.1',
       light.theme_tag || null,
       light.sentiment_tag || null,
-      light.executive_summary || null,
+      light.short_description || null,
       null, // fw_ratio
       0,    // fw_observable_count
       0,    // fw_inference_count

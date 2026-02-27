@@ -7,7 +7,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
   const { results: stories } = await db
     .prepare(
-      `SELECT hn_id, title, url, domain, hcb_weighted_mean, hcb_classification,
+      `SELECT hn_id, title, url, domain, hcb_weighted_mean, hcb_editorial_mean, hcb_classification,
               hcb_signal_sections, hcb_nd_count, evaluated_at, hn_by, hn_score, content_type
        FROM stories
        WHERE eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
@@ -20,6 +20,7 @@ export const GET: APIRoute = async ({ locals }) => {
       url: string | null;
       domain: string | null;
       hcb_weighted_mean: number | null;
+      hcb_editorial_mean: number | null;
       hcb_classification: string | null;
       hcb_signal_sections: number | null;
       hcb_nd_count: number | null;
@@ -37,7 +38,7 @@ export const GET: APIRoute = async ({ locals }) => {
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const entries = stories.map(s => {
-    const score = formatScore(s.hcb_weighted_mean);
+    const score = formatScore(s.hcb_editorial_mean ?? s.hcb_weighted_mean);
     const link = `${baseUrl}/item/${s.hn_id}`;
     const pubDate = s.evaluated_at ? new Date(s.evaluated_at).toISOString() : updated;
     const summary = `HRCB: ${score} (${s.hcb_classification || 'Unknown'}) — ${s.hcb_signal_sections ?? 0} of 31 UDHR provisions scored. ${s.domain || 'self-post'}`;

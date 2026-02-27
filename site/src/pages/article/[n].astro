@@ -205,8 +205,8 @@ const jsonLd = udhrSection ? {
             <td align="center" style="color: #5b7279; font-size: var(--font-sm);" data-val={row.evidence === 'H' ? 3 : row.evidence === 'M' ? 2 : row.evidence === 'L' ? 1 : 0}>
               {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
             </td>
-            <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_weighted_mean)}; font-size: var(--font-sm);`} data-val={row.hcb_weighted_mean ?? -999}>
-              {formatScore(row.hcb_weighted_mean)}
+            <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_editorial_mean ?? row.hcb_weighted_mean)}; font-size: var(--font-sm);`} data-val={(row.hcb_editorial_mean ?? row.hcb_weighted_mean) ?? -999}>
+              {formatScore(row.hcb_editorial_mean ?? row.hcb_weighted_mean)}
             </td>
           </tr>
           );

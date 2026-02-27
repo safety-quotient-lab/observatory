@@ -384,6 +384,7 @@ export interface VelocityCorrelation {
   domain: string | null;
   velocity: number;
   hcb_weighted_mean: number | null;
+  hcb_editorial_mean: number | null;
   hcb_classification: string | null;
 }
 
@@ -391,7 +392,7 @@ export async function getVelocityVsHrcb(db: D1Database, limit = 100): Promise<Ve
   try {
     const { results } = await db
       .prepare(
-        `SELECT s.hn_id, s.title, s.domain, s.hcb_weighted_mean, s.hcb_classification,
+        `SELECT s.hn_id, s.title, s.domain, s.hcb_weighted_mean, s.hcb_editorial_mean, s.hcb_classification,
                 CAST(MAX(snap.hn_score) - MIN(snap.hn_score) AS REAL)
                 / MAX((MAX(snap.snapshot_unix) - MIN(snap.snapshot_unix)) / 3600.0, 0.1) as velocity
          FROM stories s
@@ -530,12 +531,13 @@ export interface PropagandaStory {
   pt_flag_count: number;
   pt_flags_json: string | null;
   hcb_weighted_mean: number | null;
+  hcb_editorial_mean: number | null;
 }
 
 export async function getTopPropagandaStories(db: D1Database, limit = 10): Promise<PropagandaStory[]> {
   const { results } = await db
     .prepare(
-      `SELECT hn_id, title, url, domain, pt_flag_count, pt_flags_json, hcb_weighted_mean
+      `SELECT hn_id, title, url, domain, pt_flag_count, pt_flags_json, hcb_weighted_mean, hcb_editorial_mean
        FROM stories
        WHERE eval_status = 'done' AND pt_flag_count > 0
        ORDER BY pt_flag_count DESC

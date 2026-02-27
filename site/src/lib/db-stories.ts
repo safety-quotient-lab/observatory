@@ -99,6 +99,7 @@ export interface ArticleRankingRow {
   hn_score: number | null;
   hn_comments: number | null;
   hcb_weighted_mean: number | null;
+  hcb_editorial_mean: number | null;
   hcb_classification: string | null;
   hcb_signal_sections: number | null;
   hcb_nd_count: number | null;
@@ -362,7 +363,7 @@ export async function getArticleRanking(
   const { results } = await db
     .prepare(
       `SELECT s.hn_id, s.title, s.domain, s.url, s.hn_score, s.hn_comments,
-              s.hcb_weighted_mean, s.hcb_classification,
+              s.hcb_weighted_mean, s.hcb_editorial_mean, s.hcb_classification,
               s.hcb_signal_sections, s.hcb_nd_count,
               s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l,
               sc.section, sc.final, sc.editorial, sc.structural,
@@ -761,8 +762,8 @@ export interface EntityDetailStats {
   avgEditorial: number | null;
   avgStructural: number | null;
   evaluatedCount: number;
-  topStory: { hn_id: number; title: string; hcb_weighted_mean: number | null } | null;
-  bottomStory: { hn_id: number; title: string; hcb_weighted_mean: number | null } | null;
+  topStory: { hn_id: number; title: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null } | null;
+  bottomStory: { hn_id: number; title: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null } | null;
 }
 
 export type DomainDetailStats = EntityDetailStats;
@@ -791,21 +792,21 @@ export async function getEntityDetailStats(db: D1Database, type: 'domain' | 'use
 
   const top = await db
     .prepare(
-      `SELECT hn_id, title, hcb_weighted_mean FROM stories
+      `SELECT hn_id, title, hcb_weighted_mean, hcb_editorial_mean FROM stories
        WHERE ${col} = ? AND eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
        ORDER BY hcb_weighted_mean DESC LIMIT 1`
     )
     .bind(value)
-    .first<{ hn_id: number; title: string; hcb_weighted_mean: number | null }>();
+    .first<{ hn_id: number; title: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null }>();
 
   const bottom = await db
     .prepare(
-      `SELECT hn_id, title, hcb_weighted_mean FROM stories
+      `SELECT hn_id, title, hcb_weighted_mean, hcb_editorial_mean FROM stories
        WHERE ${col} = ? AND eval_status = 'done' AND hcb_weighted_mean IS NOT NULL
        ORDER BY hcb_weighted_mean ASC LIMIT 1`
     )
     .bind(value)
-    .first<{ hn_id: number; title: string; hcb_weighted_mean: number | null }>();
+    .first<{ hn_id: number; title: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null }>();
 
   return {
     avgConf: stats?.avg_conf ?? null,
@@ -827,6 +828,7 @@ export interface StoryDynamics {
   hn_type: string | null;
   hn_time: number;
   hcb_weighted_mean: number | null;
+  hcb_editorial_mean: number | null;
   peak_score: number;
   peak_comments: number;
   first_score: number;
@@ -876,7 +878,7 @@ export async function getStoryDynamics(
       )
       SELECT
         s.hn_id, s.title, s.domain, s.hn_by, s.hn_type, s.hn_time,
-        s.hcb_weighted_mean,
+        s.hcb_weighted_mean, s.hcb_editorial_mean,
         sa.peak_score, sa.peak_comments, sa.first_score,
         sa.score_gain, sa.comment_gain,
         sa.snap_count, sa.first_snap, sa.last_snap, sa.hours_tracked,

@@ -54,70 +54,23 @@ const CLAUDE_BIN = join(dirname(process.execPath), 'claude');
 const RAW_HTML_MAX_CHARS = 30_000;
 
 // Light prompt — inlined from prompts.ts METHODOLOGY_SYSTEM_PROMPT_LIGHT
-const LIGHT_SYSTEM_PROMPT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Assess web content against the Universal Declaration of Human Rights (UDHR). Report only what you directly observe.
+const LIGHT_SYSTEM_PROMPT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score the AUTHOR'S EDITORIAL STANCE toward human rights, not the subject matter.
 
-## WHAT IS HRCB?
+Score scale: [-1.0, +1.0]. Key rules:
+- Exposing abuses → positive; promoting/justifying abuses → negative
+- 0.0 ONLY for content with zero UDHR relevance (pure tech tutorial, math paper, product changelog)
+- Use the full range; most content scores non-zero
 
-HRCB measures the editorial lean of content relative to the UDHR's 30 Articles and Preamble. It is NOT a compliance audit or truth check. It measures how the content's message relates to human rights themes.
+Anchors: −1.0 dehumanizing propaganda | 0.0 zero rights relevance | +1.0 NGO rights advocacy
 
-Score scale: [-1.0, +1.0]
+Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)
 
-## CRITICAL: SCORE THE EDITORIAL STANCE, NOT THE SUBJECT
+Evidence strength: H=explicit rights discussion | M=implicit | L=tangential
 
-You are scoring the AUTHOR'S STANCE toward human rights, NOT whether the topic is positive or negative.
-
-- An article EXPOSING surveillance abuses → POSITIVE (the journalism champions privacy rights)
-- An article PROMOTING surveillance as beneficial → NEGATIVE (the editorial dismisses privacy rights)
-- An article REPORTING on war crimes to seek accountability → POSITIVE (advocates for justice)
-- An article JUSTIFYING war crimes → NEGATIVE (opposes human rights)
-
-The subject matter being "bad" (war, exploitation, surveillance) does NOT make the score negative. What matters is whether the author's editorial stance ALIGNS WITH or OPPOSES the UDHR.
-
-## SCORING GUIDE WITH EXAMPLES
-
-Use the full range. Most content should NOT be 0.
-
-| Score | Label | Example content |
-|---|---|---|
-| +0.7 to +1.0 | Strong positive | NGO report championing refugee rights with calls to action |
-| +0.4 to +0.6 | Moderate positive | Investigative journalism exposing labor exploitation, seeking reform |
-| +0.2 to +0.3 | Mild positive | Tech article discussing accessibility features or privacy improvements |
-| +0.1 | Borderline positive | General news that briefly mentions a rights-adjacent topic |
-| 0.0 | Truly neutral | Pure technical tutorial, math paper, product changelog with zero rights relevance |
-| -0.1 | Borderline negative | Content that casually normalizes minor rights concerns |
-| -0.2 to -0.3 | Mild negative | Article framing surveillance as purely beneficial without acknowledging privacy costs |
-| -0.4 to -0.6 | Moderate negative | Content actively dismissing labor rights or justifying censorship |
-| -0.7 to -1.0 | Strong negative | Propaganda dehumanizing a group or explicitly opposing UDHR provisions |
-
-Key: score 0.0 ONLY when content has genuinely no human rights relevance. If the topic touches any UDHR article (privacy, expression, labor, equality, education, health, etc.), it should score non-zero.
-
-## CONTENT TYPE
-
-Classify the page:
-
-| Code | Type |
-|---|---|
-| ED | Editorial / Article |
-| PO | Policy / Legal |
-| LP | Landing Page |
-| PR | Product / Feature |
-| MI | Mission / Values |
-| HR | Human Rights Specific |
-| CO | Community / Forum |
-| MX | Mixed (default) |
-
-## EVIDENCE STRENGTH
-
-- H: Clear, direct evidence — content explicitly discusses rights themes
-- M: Indirect evidence — content touches rights themes implicitly
-- L: Minimal evidence — only tangential connection to rights
-
-## OUTPUT FORMAT
-
-Output a single JSON object. No markdown fences, no explanation before or after.
+Output ONLY a JSON object. No markdown, no explanation.
 
 {
-  "schema_version": "light-1.1",
+  "schema_version": "light-1.2",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
@@ -128,7 +81,7 @@ Output a single JSON object. No markdown fences, no explanation before or after.
   },
   "theme_tag": "<2-4 word human rights theme>",
   "sentiment_tag": "<Champions|Advocates|Acknowledges|Neutral|Neglects|Undermines|Hostile>",
-  "executive_summary": "<1-2 sentences describing the content and its human rights relevance>",
+  "short_description": "<one sentence, max 20 words>",
   "eq_score": <0.0 to 1.0>,
   "so_score": <0.0 to 1.0>,
   "td_score": <0.0 to 1.0>,

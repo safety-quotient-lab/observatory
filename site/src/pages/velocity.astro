@@ -27,7 +27,7 @@ const scatterData = JSON.stringify(velocityHrcb.map(v => ({
   title: v.title.slice(0, 60),
   domain: v.domain,
   vel: v.velocity,
-  hrcb: v.hcb_weighted_mean,
+  hrcb: v.hcb_editorial_mean ?? v.hcb_weighted_mean,
 })));
 ---
 
@@ -92,8 +92,8 @@ const scatterData = JSON.stringify(velocityHrcb.map(v => ({
                   {' '}
                   <a href={`/item/${s.hn_id}`} style="color: #d56500; font-size: var(--font-xs);">hrcb</a>
                 </td>
-                <td style={`text-align: right; color: ${s.hcb_weighted_mean !== null ? scoreToColor(s.hcb_weighted_mean) : '#5b7279'};`} class="score-font">
-                  {formatScore(s.hcb_weighted_mean)}
+                <td style={`text-align: right; color: ${(s.hcb_editorial_mean ?? s.hcb_weighted_mean) !== null ? scoreToColor(s.hcb_editorial_mean ?? s.hcb_weighted_mean) : '#5b7279'};`} class="score-font">
+                  {formatScore(s.hcb_editorial_mean ?? s.hcb_weighted_mean)}
                 </td>
                 <td style="text-align: right; color: #8faaab;" class="score-font">{s.hn_score ?? '—'}</td>
                 <td style="color: #5b7279; white-space: nowrap;">{timeAgo(s.hn_time)}</td>

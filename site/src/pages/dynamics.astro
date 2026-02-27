@@ -266,8 +266,8 @@ const sortLabels: SortLabels = {
                   <td align="center" class="score-font" style={`color: ${(d.comment_ratio || 0) > 1.0 ? '#e2b340' : '#5b7279'};`}>
                     {d.comment_ratio !== null ? d.comment_ratio.toFixed(2) : '—'}
                   </td>
-                  <td align="center" class="score-font" style={`color: ${scoreToColor(d.hcb_weighted_mean)};`}>
-                    {d.hcb_weighted_mean !== null ? formatScore(d.hcb_weighted_mean) : <span style="color: #5b7279;">—</span>}
+                  <td align="center" class="score-font" style={`color: ${scoreToColor(d.hcb_editorial_mean ?? d.hcb_weighted_mean)};`}>
+                    {(d.hcb_editorial_mean ?? d.hcb_weighted_mean) !== null ? formatScore(d.hcb_editorial_mean ?? d.hcb_weighted_mean) : <span style="color: #5b7279;">—</span>}
                   </td>
                   <td align="center">
                     <div style="display: flex; align-items: center; gap: 2px;" title={`Started at ${d.first_score}, gained ${d.score_gain} over ${d.hours_tracked}h`}>

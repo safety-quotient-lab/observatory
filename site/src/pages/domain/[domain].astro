@@ -179,12 +179,12 @@ if (dcpJson) {
               <div style="display: flex; gap: 16px; flex-wrap: wrap;">
                 <span>
                   <span style="color: #5b7279;">best:</span>
-                  <span class="score-font" style={`color: ${scoreToColor(detail.topStory.hcb_weighted_mean)};`}>{formatScore(detail.topStory.hcb_weighted_mean)}</span>
+                  <span class="score-font" style={`color: ${scoreToColor(detail.topStory.hcb_editorial_mean ?? detail.topStory.hcb_weighted_mean)};`}>{formatScore(detail.topStory.hcb_editorial_mean ?? detail.topStory.hcb_weighted_mean)}</span>
                   <a href={`/item/${detail.topStory.hn_id}`} style="color: #5b7279; margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
                 </span>
                 <span>
                   <span style="color: #5b7279;">worst:</span>
-                  <span class="score-font" style={`color: ${scoreToColor(detail.bottomStory.hcb_weighted_mean)};`}>{formatScore(detail.bottomStory.hcb_weighted_mean)}</span>
+                  <span class="score-font" style={`color: ${scoreToColor(detail.bottomStory.hcb_editorial_mean ?? detail.bottomStory.hcb_weighted_mean)};`}>{formatScore(detail.bottomStory.hcb_editorial_mean ?? detail.bottomStory.hcb_weighted_mean)}</span>
                   <a href={`/item/${detail.bottomStory.hn_id}`} style="color: #5b7279; margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
                 </span>
               </div>

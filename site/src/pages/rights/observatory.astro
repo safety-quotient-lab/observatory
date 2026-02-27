@@ -366,7 +366,7 @@ const groupColors: Record<string, string> = {
                   {s.pt_flag_count}
                 </td>
                 <td style="width: 60px; text-align: right; padding: 4px 0;">
-                  <span style={`color: ${scoreToColor(s.hcb_weighted_mean)};`} class="score-font">{formatScore(s.hcb_weighted_mean)}</span>
+                  <span style={`color: ${scoreToColor(s.hcb_editorial_mean ?? s.hcb_weighted_mean)};`} class="score-font">{formatScore(s.hcb_editorial_mean ?? s.hcb_weighted_mean)}</span>
                 </td>
               </tr>
             ))}
