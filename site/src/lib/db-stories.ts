@@ -248,7 +248,8 @@ export async function getFilteredStoriesWithScores(
 
   // SETL subquery uses rater_scores for alt models
   const setlScoreTable = isAltModel ? 'rater_scores' : 'scores';
-  const setlExtraWhere = isAltModel ? ` AND sc2.eval_model = '${model.replace(/'/g, "''")}'` : '';
+  const setlExtraWhere = isAltModel ? ` AND sc2.eval_model = ?` : '';
+  const setlBindParams: (string | number)[] = isAltModel && joinSetl ? [model] : [];
   const setlSelect = joinSetl ? `,
               (SELECT AVG(
                 CASE WHEN sc2.editorial >= sc2.structural
@@ -286,7 +287,7 @@ export async function getFilteredStoriesWithScores(
       `SELECT ${selectCols}
        FROM stories s ${joinClause} WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
-    .bind(...bindParams, limit, offset)
+    .bind(...setlBindParams, ...bindParams, limit, offset)
     .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>();
 
   // Fetch mini scores (final only) for evaluated stories
@@ -700,7 +701,7 @@ export async function getStoriesByEntity(
   const { results: storyRows } = await db
     .prepare(
       `SELECT hn_id, url, title, domain, hn_score, hn_comments, hn_by,
-              hn_time, hn_type, content_type, hcb_weighted_mean, hcb_classification,
+              hn_time, hn_type, content_type, hcb_weighted_mean, hcb_editorial_mean, hcb_structural_mean, hcb_classification,
               hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
               eval_model, eval_prompt_hash,
               eval_status, eval_error, evaluated_at, created_at, schema_version,

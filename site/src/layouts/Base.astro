@@ -21,8 +21,6 @@ const {
   canonicalUrl,
 } = Astro.props;
 
-const triggerSecret = Astro.locals.runtime?.env?.TRIGGER_SECRET || '';
-
 // Last evaluation timestamp for footer
 let lastEvaluatedAt: string | null = null;
 try {
@@ -57,7 +55,7 @@ try {
     <meta name="twitter:title" content={ogTitle || title} />
     <meta name="twitter:description" content={ogDescription || description} />
   </head>
-  <body data-ts={triggerSecret}>
+  <body>
     <center>
       <table id="hnmain" width="85%" cellpadding="0" cellspacing="0" style="background-color: #002d38; max-width: 1280px;">
         <tr>
@@ -230,10 +228,7 @@ try {
         setStatus('connecting...', '#60a5fa');
 
         try {
-          const ts = document.body.dataset.ts;
-          const headers: Record<string, string> = {};
-          if (ts) headers['Authorization'] = `Bearer ${ts}`;
-          const res = await fetch(`/api/trigger/${hnId}`, { method: 'POST', headers });
+          const res = await fetch(`/api/trigger/${hnId}`, { method: 'POST' });
 
           // Check if we got an SSE stream or a plain JSON error
           const contentType = res.headers.get('content-type') || '';

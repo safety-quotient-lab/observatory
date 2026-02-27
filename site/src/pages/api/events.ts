@@ -3,9 +3,26 @@ import type { APIRoute } from 'astro';
 /**
  * SSE endpoint for real-time evaluation updates.
  * Polls D1 for recently completed evaluations and streams them to clients.
- * No Durable Objects needed — uses server-sent events with short polling.
+ * Restricted to same-origin requests (browser) or Bearer token (CLI).
  */
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ locals, request }) => {
+  // Auth: EventSource can't send custom headers, so check Referer for same-origin
+  const triggerSecret = locals.runtime.env.TRIGGER_SECRET;
+  const auth = request.headers.get('Authorization') ?? '';
+  const referer = request.headers.get('Referer') || '';
+  const siteHost = new URL(request.url).host;
+  let isSameOrigin = false;
+  try {
+    if (referer) isSameOrigin = new URL(referer).host === siteHost;
+  } catch { /* invalid referer URL */ }
+
+  if (triggerSecret && !isSameOrigin && auth !== `Bearer ${triggerSecret}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const db = locals.runtime.env.DB;
   const encoder = new TextEncoder();
 

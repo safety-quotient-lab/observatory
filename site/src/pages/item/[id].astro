@@ -10,6 +10,7 @@ import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getRaterEv
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
 import { modelDisplayName, PRIMARY_MODEL_ID, isLightMode } from '../../lib/shared-eval';
+import { sanitizeHtml } from '../../lib/sanitize';
 
 const { id } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
@@ -614,7 +615,7 @@ function timeAgo(unixTime: number): string {
                    target="_blank" rel="noopener"
                    style="color: #5b7279; margin-left: 6px;">link</a>
               </div>
-              <div style="color: #8faaab; font-size: var(--font-sm); line-height: 1.5;" set:html={c.text} />
+              <div style="color: #8faaab; font-size: var(--font-sm); line-height: 1.5;" set:html={sanitizeHtml(c.text)} />
             </div>
           ))}
         </td>
@@ -1102,20 +1103,55 @@ function timeAgo(unixTime: number): string {
 
         var hnId = this.getAttribute('data-hn-id');
         this.disabled = true;
-        this.textContent = 'Submitting...';
-        fetch('/api/trigger', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hn_id: parseInt(hnId) })
-        }).then(function(r) { return r.json(); }).then(function(d) {
-          if (d.ok) {
-            btn.textContent = 'Queued';
-            btn.style.color = '#eab308';
-            btn.style.borderColor = 'rgba(234,179,8,0.3)';
-            btn.style.background = 'rgba(234,179,8,0.15)';
+        this.textContent = 'Retrying...';
+        fetch('/api/trigger/' + hnId, {
+          method: 'POST'
+        }).then(function(r) {
+          var ct = r.headers.get('content-type') || '';
+          if (ct.indexOf('text/event-stream') !== -1) {
+            // SSE stream — read until done/error
+            var reader = r.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+            function read() {
+              reader.read().then(function(chunk) {
+                if (chunk.done) return;
+                buffer += decoder.decode(chunk.value, { stream: true });
+                var parts = buffer.split('\n\n');
+                buffer = parts.pop() || '';
+                for (var i = 0; i < parts.length; i++) {
+                  var lines = parts[i].split('\n');
+                  var evType = '', evData = '';
+                  for (var l = 0; l < lines.length; l++) {
+                    if (lines[l].indexOf('event: ') === 0) evType = lines[l].slice(7);
+                    if (lines[l].indexOf('data: ') === 0) evData = lines[l].slice(6);
+                  }
+                  if (!evData) continue;
+                  try {
+                    var d = JSON.parse(evData);
+                    if (evType === 'status') {
+                      btn.textContent = d.message.slice(0, 30) + '...';
+                    } else if (evType === 'done') {
+                      btn.textContent = 'Done: ' + (d.score !== undefined ? d.score.toFixed(2) : '?');
+                      btn.style.color = '#16a34a';
+                      btn.style.borderColor = 'rgba(22,163,106,0.3)';
+                      btn.style.background = 'rgba(22,163,106,0.15)';
+                      setTimeout(function() { location.reload(); }, 1500);
+                    } else if (evType === 'error') {
+                      btn.textContent = 'Error: ' + (d.error || 'unknown');
+                      btn.disabled = false;
+                    }
+                  } catch(e) {}
+                }
+                read();
+              });
+            }
+            read();
           } else {
-            btn.textContent = 'Error: ' + (d.error || 'unknown');
-            btn.disabled = false;
+            return r.json().then(function(d) {
+              btn.textContent = 'Error: ' + (d.error || 'unknown');
+              btn.disabled = false;
+            });
           }
         }).catch(function() { btn.textContent = 'Network error'; btn.disabled = false; });
       });

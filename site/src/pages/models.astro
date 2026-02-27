@@ -351,7 +351,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
               {topDivergent.map(d => (
                 <tr style="border-top: 1px solid #0d4655;">
                   <td style="padding: 4px 6px; font-size: var(--font-xs);">
-                    <a href={`/article/${d.idx === 0 ? 'preamble' : d.idx}`} style="color: #8faaab; text-decoration: none;">{d.section}</a>
+                    <a href={`/article/${d.idx}`} style="color: #8faaab; text-decoration: none;">{d.section}</a>
                   </td>
                   <td style="padding: 4px 6px; color: #5b7279; font-size: var(--font-xs); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={d.title}>
                     {d.title.length > 30 ? d.title.slice(0, 30) + '...' : d.title}
@@ -480,7 +480,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                   return (
                     <tr style="border-top: 1px solid #0d4655;">
                       <td style="padding: 2px 6px; color: #8faaab; font-size: var(--font-xs);" title={title}>
-                        <a href={`/article/${idx === 0 ? 'preamble' : idx}`} style="color: #8faaab; text-decoration: none;">{section}</a>
+                        <a href={`/article/${idx}`} style="color: #8faaab; text-decoration: none;">{section}</a>
                       </td>
                       {vals.map(v => (
                         <td style={`padding: 2px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : '#5b7279'}; font-size: var(--font-sm);`}>

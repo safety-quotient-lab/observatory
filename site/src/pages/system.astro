@@ -1040,9 +1040,16 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
         const d = JSON.parse(e.data);
         const score = d.hcb_weighted_mean !== null ? d.hcb_weighted_mean.toFixed(2) : '?';
         const toast = document.createElement('div');
-        toast.style.cssText = 'background:#093946;border:1px solid #1a5568;border-radius:4px;padding:6px 10px;font-size:8pt;color:#8faaab;animation:fadeIn 0.3s;';
-        toast.innerHTML = '<a href="/item/' + d.hn_id + '" style="color:#98a8a8;">' + d.title.slice(0, 40) + '</a>' +
-          ' <span style="color:' + (d.hcb_weighted_mean > 0.05 ? '#16a34a' : d.hcb_weighted_mean < -0.05 ? '#dc2626' : '#eab308') + ';font-family:monospace;">' + score + '</span>';
+        toast.style.cssText = 'background:#093946;border:1px solid #1a5568;border-radius:4px;padding:6px 10px;font-size:8pt;color:#8faaab;';
+        const link = document.createElement('a');
+        link.href = '/item/' + d.hn_id;
+        link.style.color = '#98a8a8';
+        link.textContent = (d.title || '').slice(0, 40);
+        const scoreSpan = document.createElement('span');
+        scoreSpan.style.cssText = 'color:' + (d.hcb_weighted_mean > 0.05 ? '#16a34a' : d.hcb_weighted_mean < -0.05 ? '#dc2626' : '#eab308') + ';font-family:monospace;';
+        scoreSpan.textContent = ' ' + score;
+        toast.appendChild(link);
+        toast.appendChild(scoreSpan);
         if (feed) {
           feed.appendChild(toast);
           setTimeout(function() { toast.remove(); }, 15000);

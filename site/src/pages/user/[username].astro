@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
 import { getStoriesByUser, getUserSetl, getUserDetailStats, getHnUser, getUserFingerprint, getUserSetlHistory } from '../../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
+import { sanitizeHtml } from '../../lib/sanitize';
 
 const { username } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
@@ -45,7 +46,7 @@ const accountAgeDays = hnUser?.created
   <div style="padding: 4px 0; font-size: var(--font-xs); color: #5b7279;">
     <a href="/" style="color: #5b7279;">home</a>
     <span style="color: #0d4655;"> / </span>
-    <span style="color: #5b7279;">user</span>
+    <a href="/users" style="color: #5b7279;">users</a>
     <span style="color: #0d4655;"> / </span>
     <span style="color: #5b7279;">{username}</span>
   </div>
@@ -84,7 +85,7 @@ const accountAgeDays = hnUser?.created
 
           {/* About text */}
           {hnUser?.about && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; color: #5b7279; font-size: var(--font-sm); line-height: 1.5;" set:html={hnUser.about} />
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; color: #5b7279; font-size: var(--font-sm); line-height: 1.5;" set:html={sanitizeHtml(hnUser.about)} />
           )}
 
           {/* Stats row */}
@@ -309,12 +310,9 @@ const accountAgeDays = hnUser?.created
         bar.style.width = (done / total * 100) + '%';
       }
 
-      var ts = document.body.dataset.ts;
-
       async function evalOne(hnId) {
         status.textContent = 'Evaluating #' + hnId + '...';
         var headers = {};
-        if (ts) headers['Authorization'] = 'Bearer ' + ts;
 
         try {
           var res = await fetch('/api/trigger/' + hnId, { method: 'POST', headers: headers });

@@ -5,22 +5,25 @@ import { logEvent } from '../../../lib/events';
 export const POST: APIRoute = async ({ params, locals, request }) => {
   const hnId = parseInt(params.id!, 10);
   if (isNaN(hnId)) {
-    return new Response(JSON.stringify({ error: 'Invalid ID' }), { status: 400 });
+    return new Response(JSON.stringify({ error: 'Invalid ID' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
   const triggerSecret = locals.runtime.env.TRIGGER_SECRET;
-  if (triggerSecret) {
-    const auth = request.headers.get('Authorization');
-    if (auth !== `Bearer ${triggerSecret}`) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
+  const auth = request.headers.get('Authorization');
+  const origin = request.headers.get('Origin') || '';
+  const siteHost = new URL(request.url).host;
+  const isSameOrigin = origin ? new URL(origin).host === siteHost : false;
+
+  // Allow same-origin requests (browser) OR valid Bearer token (external/CLI)
+  if (triggerSecret && !isSameOrigin && auth !== `Bearer ${triggerSecret}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
 
   const db = locals.runtime.env.DB;
   const apiKey = locals.runtime.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API key not configured' }), { status: 500 });
+    return new Response(JSON.stringify({ error: 'Service unavailable' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
 
   const story = await db
@@ -29,15 +32,15 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     .first<{ hn_id: number; url: string | null; title: string; hn_text: string | null; eval_status: string }>();
 
   if (!story) {
-    return new Response(JSON.stringify({ error: 'Story not found' }), { status: 404 });
+    return new Response(JSON.stringify({ error: 'Story not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
   }
 
   if (story.eval_status === 'done') {
-    return new Response(JSON.stringify({ error: 'Already evaluated' }), { status: 409 });
+    return new Response(JSON.stringify({ error: 'Already evaluated' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
   }
 
   if (story.eval_status === 'evaluating') {
-    return new Response(JSON.stringify({ error: 'Already in progress' }), { status: 409 });
+    return new Response(JSON.stringify({ error: 'Already in progress' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Stream progress via SSE
