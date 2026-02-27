@@ -3,14 +3,20 @@ import Base from '../layouts/Base.astro';
 import { getAllDomainStats, getDomainSignalProfiles } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 import type { DomainSignalProfile } from '../lib/db';
+import { cachedQuery } from '../lib/db-utils';
 
 const db = Astro.locals.runtime.env.DB;
+const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 // --- 1. Parallel fetch ---
-const [domains, signalProfiles] = await Promise.all([
-  getAllDomainStats(db, 'count', 50),
-  getDomainSignalProfiles(db),
+const [domains, signalProfilesArr] = await Promise.all([
+  cachedQuery(kv, 'allDomainStats:count:50', () => getAllDomainStats(db, 'count', 50)),
+  cachedQuery<DomainSignalProfile[]>(kv, 'domainSignalProfiles', async () => {
+    const m = await getDomainSignalProfiles(db);
+    return [...m.values()];
+  }),
 ]);
+const signalProfiles = new Map(signalProfilesArr.map(p => [p.domain, p]));
 
 const evaluatedDomains = domains.filter(d => d.avg_score !== null && d.count >= 3);
 const domainScoreMap = new Map(evaluatedDomains.map(d => [d.domain, d.avg_score]));

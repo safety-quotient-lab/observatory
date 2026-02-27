@@ -39,11 +39,11 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/functions/consumer-workers-ai.ts` — Workers AI queue handler. Free tier, no API key. Uses `callWorkersAi` from providers.ts.
 - `site/functions/dlq-consumer.ts` — Captures dead-lettered messages. Also serves `/replay` and `/replay/:id`.
 
-**Wrangler configs:** `site/wrangler.cron.toml`, `site/wrangler.consumer-anthropic.toml`, `site/wrangler.consumer-openrouter.toml`, `site/wrangler.consumer-workers-ai.toml`, `site/wrangler.dlq.toml`
+**Wrangler configs:** `site/wrangler.toml` (Pages site — has DB + CONTENT_CACHE bindings), `site/wrangler.cron.toml`, `site/wrangler.consumer-anthropic.toml`, `site/wrangler.consumer-openrouter.toml`, `site/wrangler.consumer-workers-ai.toml`, `site/wrangler.dlq.toml`
 
 **Storage:**
-- **D1** (`hrcb-db`): stories, scores, events, eval_history, fair_witness, domain_dcp, dlq_messages, calibration_runs, ratelimit_snapshots
-- **KV** (`CONTENT_CACHE`): content cache, DCP cache, rate limit state per model
+- **D1** (`hrcb-db`): stories, scores, events, eval_history, fair_witness, domain_dcp, dlq_messages, calibration_runs, ratelimit_snapshots, domain_aggregates (materialized per-domain signal averages, updated at eval write time via `refreshDomainAggregate()`)
+- **KV** (`CONTENT_CACHE`): content cache, DCP cache, rate limit state per model, query result cache (keys `q:*`, TTL 300-600s, invalidated after each primary eval)
 - **R2** (`hrcb-content-snapshots`): content snapshots for audit trail
 
 ### Site (Astro + Cloudflare Pages)
@@ -76,7 +76,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/calibration.ts` — Full-model `CALIBRATION_SET` (hn_ids -1001..-1015) + light-model `LIGHT_CALIBRATION_SET` (hn_ids -2001..-2015) + per-model thresholds + parameterized `runCalibrationCheck(scores, calSet?, thresholds?)`
 - `site/src/lib/content-gate.ts` — Pre-eval content classification (paywall, captcha, bot protection, etc.)
 - `site/src/lib/colors.ts` — Score/SETL/confidence/gate color mapping
-- `site/src/lib/db-utils.ts` — `safeBatch()` helper: chunks D1 batch writes into ≤100 statements
+- `site/src/lib/db-utils.ts` — `SETL_CASE_SQL(alias)` SQL fragment helper, `cachedQuery<T>(kv, key, fn, ttl)` KV-backed query cache, `safeBatch()` D1 batch chunker (≤100 statements)
 - `site/src/components/` — Reusable Astro components (EvalCard, DcpTable, etc.)
 - `site/functions/rate-limit.ts` — Rate limit state, capacity checks, credit pause (KV TTL: 600s)
 - `site/functions/providers.ts` — API call adapters (Anthropic, OpenRouter, Workers AI) with 15s AbortController timeout
@@ -170,7 +170,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 
 **Archetype naming:** ~22 pattern rules (e.g., high EQ + TD + low PT → "Rigorous Analysts"), fallback to readable "High X/Y · Low Z" names.
 
-**Key data flow:** `getDomainSignalProfiles(db)` → build raw vectors → z-normalize → cluster → enrich with archetypes, insights, radar data → render. The `getDomainSignalProfiles` query uses `AVG(s.hcb_setl)`, `AVG(s.hcb_editorial_mean)`, `AVG(s.hcb_structural_mean)` from materialized columns (not correlated subqueries).
+**Key data flow:** `getDomainSignalProfiles(db)` → build raw vectors → z-normalize → cluster → enrich with archetypes, insights, radar data → render. `getDomainSignalProfiles` reads from `domain_aggregates` (simple table scan, ~50ms vs old correlated-subquery ~2-5s). Results cached in KV (`q:domainSignalProfiles`, 5-min TTL). Note: `Map<string, DomainSignalProfile>` is not JSON-serializable — factions.astro caches `DomainSignalProfile[]` and reconstructs the Map.
 
 ## Key Patterns
 

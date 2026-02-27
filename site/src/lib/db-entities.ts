@@ -1,18 +1,14 @@
 import type { Story, MiniScore, StoryWithMiniScores, DomainStat } from './db-stories';
 import { getStoriesByEntity, getEntityDetailStats, type EntityDetailStats, type DomainDetailStats } from './db-stories';
 import { PRIMARY_MODEL_ID, getEnabledModels } from './shared-eval';
+import { SETL_CASE_SQL } from './db-utils';
 
 // --- SETL queries ---
 
 export async function getMeanSetl(db: D1Database): Promise<number | null> {
   const row = await db
     .prepare(
-      `SELECT AVG(
-        CASE WHEN sc.editorial >= sc.structural
-          THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-          ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-        END
-       ) as mean_setl
+      `SELECT AVG(${SETL_CASE_SQL('sc')}) as mean_setl
        FROM scores sc
        WHERE sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
          AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)`
@@ -24,12 +20,7 @@ export async function getMeanSetl(db: D1Database): Promise<number | null> {
 export async function getDomainSetl(db: D1Database, domain: string): Promise<number | null> {
   const row = await db
     .prepare(
-      `SELECT AVG(
-        CASE WHEN sc.editorial >= sc.structural
-          THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-          ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-        END
-       ) as setl
+      `SELECT AVG(${SETL_CASE_SQL('sc')}) as setl
        FROM scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
        WHERE s.domain = ?
@@ -111,6 +102,7 @@ export async function getDomainIntelligence(
   minStories = 2,
   limit = 100
 ): Promise<DomainIntelligence[]> {
+  const t0 = Date.now();
   let orderBy: string;
   switch (sort) {
     case 'score': orderBy = 'total_hn_score DESC'; break;
@@ -159,6 +151,8 @@ export async function getDomainIntelligence(
     )
     .bind(minStories, limit)
     .all<DomainIntelligence>();
+  const ms = Date.now() - t0;
+  if (ms > 200) console.warn(`[getDomainIntelligence] slow query: ${ms}ms, ${results.length} rows`);
   return results;
 }
 
@@ -231,43 +225,17 @@ export async function getDomainSignalProfiles(db: D1Database): Promise<Map<strin
     const { results } = await db
       .prepare(
         `SELECT
-           s.domain,
-           COUNT(*) as count,
-           AVG(s.eq_score) as avg_eq,
-           AVG(s.so_score) as avg_so,
-           AVG(s.sr_score) as avg_sr,
-           AVG(s.td_score) as avg_td,
-           AVG(s.pt_flag_count) as avg_pt_count,
-           AVG(s.et_valence) as avg_valence,
-           AVG(s.et_arousal) as avg_arousal,
-           AVG(s.et_dominance) as avg_dominance,
-           AVG(s.fw_ratio) as avg_fw_ratio,
-           AVG(s.hn_score) as avg_hn_score,
-           AVG(s.hn_comments) as avg_hn_comments,
-           AVG(u.karma) as avg_poster_karma,
-           AVG(s.hcb_setl) as avg_setl,
-           AVG(s.hcb_weighted_mean) as avg_hrcb,
-           AVG(s.hcb_editorial_mean) as avg_editorial,
-           AVG(s.hcb_structural_mean) as avg_structural,
-           AVG(s.hcb_confidence) as avg_confidence,
-           (SELECT s2.et_primary_tone FROM stories s2
-            WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.et_primary_tone IS NOT NULL
-            GROUP BY s2.et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1) as dominant_tone,
-           (SELECT s2.gs_scope FROM stories s2
-            WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.gs_scope IS NOT NULL
-            GROUP BY s2.gs_scope ORDER BY COUNT(*) DESC LIMIT 1) as dominant_scope,
-           (SELECT s2.cl_reading_level FROM stories s2
-            WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.cl_reading_level IS NOT NULL
-            GROUP BY s2.cl_reading_level ORDER BY COUNT(*) DESC LIMIT 1) as dominant_reading_level,
-           (SELECT s2.hcb_sentiment_tag FROM stories s2
-            WHERE s2.domain = s.domain AND s2.eval_status = 'done' AND s2.hcb_sentiment_tag IS NOT NULL
-            GROUP BY s2.hcb_sentiment_tag ORDER BY COUNT(*) DESC LIMIT 1) as dominant_sentiment
-         FROM stories s
-         LEFT JOIN hn_users u ON s.hn_by = u.username
-         WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
-         GROUP BY s.domain
-         HAVING COUNT(*) >= 3
-         ORDER BY COUNT(*) DESC`
+           story_count as count,
+           domain,
+           avg_eq, avg_so, avg_sr, avg_td, avg_pt_count,
+           avg_valence, avg_arousal, avg_dominance, avg_fw_ratio,
+           avg_hn_score, avg_hn_comments,
+           NULL as avg_poster_karma,
+           avg_setl, avg_hrcb, avg_editorial, avg_structural, avg_confidence,
+           dominant_tone, dominant_scope, dominant_reading_level, dominant_sentiment
+         FROM domain_aggregates
+         WHERE evaluated_count >= 3
+         ORDER BY evaluated_count DESC`
       )
       .all<DomainSignalProfile>();
 
@@ -298,12 +266,7 @@ export async function getDomainSetlHistory(db: D1Database, domain: string, limit
     const { results } = await db
       .prepare(
         `SELECT DATE(s.evaluated_at) as day,
-                AVG(
-                  CASE WHEN sc.editorial >= sc.structural
-                    THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                    ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                  END
-                ) as avg_setl,
+                AVG(${SETL_CASE_SQL('sc')}) as avg_setl,
                 AVG(sc.editorial) as avg_editorial,
                 AVG(sc.structural) as avg_structural,
                 COUNT(DISTINCT s.hn_id) as count
@@ -364,12 +327,7 @@ export function getUserDetailStats(db: D1Database, username: string) {
 export async function getUserSetl(db: D1Database, username: string): Promise<number | null> {
   const row = await db
     .prepare(
-      `SELECT AVG(
-        CASE WHEN sc.editorial >= sc.structural
-          THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-          ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-        END
-       ) as setl
+      `SELECT AVG(${SETL_CASE_SQL('sc')}) as setl
        FROM scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
        WHERE s.hn_by = ?
@@ -416,12 +374,7 @@ export async function getUserSetlHistory(db: D1Database, username: string, limit
     const { results } = await db
       .prepare(
         `SELECT DATE(s.evaluated_at) as day,
-                AVG(
-                  CASE WHEN sc.editorial >= sc.structural
-                    THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                    ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                  END
-                ) as avg_setl,
+                AVG(${SETL_CASE_SQL('sc')}) as avg_setl,
                 AVG(sc.editorial) as avg_editorial,
                 AVG(sc.structural) as avg_structural,
                 COUNT(DISTINCT s.hn_id) as count
@@ -452,12 +405,7 @@ export async function getGlobalSetlHistory(db: D1Database, limit = 90): Promise<
     const { results } = await db
       .prepare(
         `SELECT DATE(s.evaluated_at) as day,
-                AVG(
-                  CASE WHEN sc.editorial >= sc.structural
-                    THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                    ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                  END
-                ) as avg_setl,
+                AVG(${SETL_CASE_SQL('sc')}) as avg_setl,
                 AVG(sc.editorial) as avg_editorial,
                 AVG(sc.structural) as avg_structural,
                 COUNT(DISTINCT s.hn_id) as count
@@ -945,6 +893,7 @@ export async function getUserIntelligence(
   minStories = 3,
   limit = 150
 ): Promise<UserIntelligence[]> {
+  const t0 = Date.now();
   let orderBy: string;
   switch (sort) {
     case 'score': orderBy = 'total_hn_score DESC'; break;
@@ -1007,5 +956,7 @@ export async function getUserIntelligence(
     )
     .bind(minStories, limit)
     .all<UserIntelligence>();
+  const ms = Date.now() - t0;
+  if (ms > 200) console.warn(`[getUserIntelligence] slow query: ${ms}ms, ${results.length} rows`);
   return results;
 }

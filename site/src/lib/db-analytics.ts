@@ -114,6 +114,7 @@ export interface ArticlePairData {
 }
 
 export async function getArticlePairStats(db: D1Database): Promise<ArticlePairData> {
+  const t0 = Date.now();
   const { results } = await db
     .prepare(
       `SELECT a.section as section_a, b.section as section_b,
@@ -154,6 +155,8 @@ export async function getArticlePairStats(db: D1Database): Promise<ArticlePairDa
     }
   }
 
+  const ms = Date.now() - t0;
+  if (ms > 200) console.warn(`[getArticlePairStats] slow query: ${ms}ms`);
   return { cooccurrence, correlation, maxCooccurrence: maxCo };
 }
 
@@ -180,13 +183,10 @@ export async function getScoreHistogram(db: D1Database): Promise<HistogramBin[]>
 export async function getMeanConfidence(db: D1Database): Promise<number | null> {
   const row = await db
     .prepare(
-      `SELECT AVG(
-        CAST((COALESCE(hcb_evidence_h,0)*1.0 + COALESCE(hcb_evidence_m,0)*0.6 + COALESCE(hcb_evidence_l,0)*0.2) AS REAL)
-        / MAX(COALESCE(hcb_evidence_h,0) + COALESCE(hcb_evidence_m,0) + COALESCE(hcb_evidence_l,0) + COALESCE(hcb_nd_count,0), 1)
-       ) as mean_conf
+      `SELECT AVG(hcb_confidence) as mean_conf
        FROM stories
        WHERE eval_status = 'done'
-         AND (hcb_evidence_h IS NOT NULL OR hcb_evidence_m IS NOT NULL OR hcb_evidence_l IS NOT NULL)`
+         AND hcb_confidence IS NOT NULL`
     )
     .first<{ mean_conf: number | null }>();
   return row?.mean_conf ?? null;
@@ -254,11 +254,9 @@ export async function getVelocityStats(db: D1Database, pendingCount: number): Pr
 export async function getTopConfidenceStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
     .prepare(
-      `SELECT *,
-              CAST((COALESCE(hcb_evidence_h,0)*1.0 + COALESCE(hcb_evidence_m,0)*0.6 + COALESCE(hcb_evidence_l,0)*0.2) AS REAL)
-              / MAX(COALESCE(hcb_evidence_h,0) + COALESCE(hcb_evidence_m,0) + COALESCE(hcb_evidence_l,0) + COALESCE(hcb_nd_count,0), 1) as conf
+      `SELECT *, hcb_confidence as conf
        FROM stories WHERE eval_status = 'done'
-         AND (hcb_evidence_h IS NOT NULL OR hcb_evidence_m IS NOT NULL OR hcb_evidence_l IS NOT NULL)
+         AND hcb_confidence IS NOT NULL
        ORDER BY conf DESC LIMIT ?`
     )
     .bind(limit)
@@ -269,11 +267,9 @@ export async function getTopConfidenceStories(db: D1Database, limit = 5): Promis
 export async function getBottomConfidenceStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
     .prepare(
-      `SELECT *,
-              CAST((COALESCE(hcb_evidence_h,0)*1.0 + COALESCE(hcb_evidence_m,0)*0.6 + COALESCE(hcb_evidence_l,0)*0.2) AS REAL)
-              / MAX(COALESCE(hcb_evidence_h,0) + COALESCE(hcb_evidence_m,0) + COALESCE(hcb_evidence_l,0) + COALESCE(hcb_nd_count,0), 1) as conf
+      `SELECT *, hcb_confidence as conf
        FROM stories WHERE eval_status = 'done'
-         AND (hcb_evidence_h IS NOT NULL OR hcb_evidence_m IS NOT NULL OR hcb_evidence_l IS NOT NULL)
+         AND hcb_confidence IS NOT NULL
        ORDER BY conf ASC LIMIT ?`
     )
     .bind(limit)
@@ -325,13 +321,13 @@ export interface StoryScatterPoint {
 }
 
 export async function getStoryScatterData(db: D1Database, limit = 500): Promise<StoryScatterPoint[]> {
+  const t0 = Date.now();
   const { results } = await db
     .prepare(
       `SELECT s.hn_id, s.title, s.domain, s.hcb_weighted_mean,
               AVG(sc.editorial) as avg_editorial,
               AVG(sc.structural) as avg_structural,
-              CAST((COALESCE(s.hcb_evidence_h,0)*1.0 + COALESCE(s.hcb_evidence_m,0)*0.6 + COALESCE(s.hcb_evidence_l,0)*0.2) AS REAL)
-              / MAX(COALESCE(s.hcb_evidence_h,0) + COALESCE(s.hcb_evidence_m,0) + COALESCE(s.hcb_evidence_l,0) + COALESCE(s.hcb_nd_count,0), 1) as conf
+              s.hcb_confidence as conf
        FROM stories s JOIN scores sc ON s.hn_id = sc.hn_id
        WHERE s.eval_status = 'done' AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
        GROUP BY s.hn_id
@@ -340,6 +336,8 @@ export async function getStoryScatterData(db: D1Database, limit = 500): Promise<
     )
     .bind(limit)
     .all<StoryScatterPoint>();
+  const ms = Date.now() - t0;
+  if (ms > 200) console.warn(`[getStoryScatterData] slow query: ${ms}ms, ${results.length} rows`);
   return results;
 }
 

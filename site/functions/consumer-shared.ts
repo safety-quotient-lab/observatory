@@ -467,7 +467,7 @@ export async function processFullResult(
   // Write to rater tables (always) — writeRaterEvalResult also writes to stories/scores/fair_witness if primary
   await writeRaterEvalResult(db, story.hn_id, fullResult, prep.msgModelId, prep.provider, promptHash, methodologyHash, inputTokens, outputTokens);
 
-  // Primary model: write methodology hash
+  // Primary model: write methodology hash + invalidate query caches
   if (prep.isPrimary) {
     try {
       await db
@@ -475,6 +475,24 @@ export async function processFullResult(
         .bind(methodologyHash, story.hn_id)
         .run();
     } catch {}
+
+    // Invalidate KV query caches for pages that show domain/article aggregates
+    const cacheKeys = [
+      'q:allDomainStats:count:50',
+      'q:allDomainStats:count:200',
+      'q:allDomainStats:score:200',
+      'q:allDomainStats:setl:200',
+      'q:allDomainStats:conf:200',
+      'q:domainSignalProfiles',
+      'q:domainIntelligence',
+      'q:mostGatekeptDomains',
+      'q:articleDetailedStats',
+      'q:articleSparklines:30',
+      'q:globalGateStats',
+    ];
+    for (const key of cacheKeys) {
+      env.CONTENT_CACHE.delete(key).catch(() => {});
+    }
   }
 
   // R2 snapshot (primary only)

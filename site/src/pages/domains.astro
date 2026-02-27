@@ -3,8 +3,10 @@ import Base from '../layouts/Base.astro';
 import { getAllDomainStats, getDomainIntelligence, getMostGatekeptDomains } from '../lib/db';
 import type { DomainSortOption } from '../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../lib/colors';
+import { cachedQuery } from '../lib/db-utils';
 
 const db = Astro.locals.runtime.env.DB;
+const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'count') as DomainSortOption;
@@ -17,9 +19,9 @@ const safeClassify = validClassify.includes(classify) ? classify : 'all';
 
 // Fetch more to allow filtering
 const [allDomains, intelDomains, gatekeptDomains] = await Promise.all([
-  getAllDomainStats(db, safeSort, 200),
-  getDomainIntelligence(db, 'stories', 3, 150),
-  getMostGatekeptDomains(db),
+  cachedQuery(kv, `allDomainStats:${safeSort}:200`, () => getAllDomainStats(db, safeSort, 200)),
+  cachedQuery(kv, 'domainIntelligence', () => getDomainIntelligence(db, 'stories', 3, 150)),
+  cachedQuery(kv, 'mostGatekeptDomains', () => getMostGatekeptDomains(db)),
 ]);
 
 // Insight cards from domain-intel

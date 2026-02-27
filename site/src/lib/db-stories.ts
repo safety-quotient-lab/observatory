@@ -1,5 +1,6 @@
 import type { Score } from './types';
 import { PRIMARY_MODEL_ID, getEnabledModels } from './shared-eval';
+import { SETL_CASE_SQL } from './db-utils';
 
 export interface Story {
   hn_id: number;
@@ -274,12 +275,7 @@ export async function getFilteredStoriesWithScores(
   const setlExtraWhere = isAltModel ? ` AND sc2.eval_model = ?` : '';
   const setlBindParams: (string | number)[] = isAltModel && joinSetl ? [model] : [];
   const setlSelect = joinSetl ? `,
-              (SELECT AVG(
-                CASE WHEN sc2.editorial >= sc2.structural
-                  THEN  SQRT(ABS(sc2.editorial - sc2.structural) * MAX(ABS(sc2.editorial), ABS(sc2.structural)))
-                  ELSE -SQRT(ABS(sc2.editorial - sc2.structural) * MAX(ABS(sc2.editorial), ABS(sc2.structural)))
-                END
-               )
+              (SELECT AVG(${SETL_CASE_SQL('sc2')})
                FROM ${setlScoreTable} sc2
                WHERE sc2.hn_id = s.hn_id
                  AND sc2.editorial IS NOT NULL AND sc2.structural IS NOT NULL
@@ -580,12 +576,7 @@ export async function getTopSetlStories(db: D1Database, limit = 5): Promise<Setl
   const { results } = await db
     .prepare(
       `SELECT s.*,
-              (SELECT AVG(
-                CASE WHEN sc.editorial >= sc.structural
-                  THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                  ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                END
-               )
+              (SELECT AVG(${SETL_CASE_SQL('sc')})
                FROM scores sc
                WHERE sc.hn_id = s.hn_id
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
@@ -603,12 +594,7 @@ export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<S
   const { results } = await db
     .prepare(
       `SELECT s.*,
-              (SELECT AVG(
-                CASE WHEN sc.editorial >= sc.structural
-                  THEN  SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                  ELSE -SQRT(ABS(sc.editorial - sc.structural) * MAX(ABS(sc.editorial), ABS(sc.structural)))
-                END
-               )
+              (SELECT AVG(${SETL_CASE_SQL('sc')})
                FROM scores sc
                WHERE sc.hn_id = s.hn_id
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
@@ -793,8 +779,7 @@ export async function getEntityDetailStats(db: D1Database, type: 'domain' | 'use
   const stats = await db
     .prepare(
       `SELECT
-        AVG(CAST((COALESCE(hcb_evidence_h,0)*1.0 + COALESCE(hcb_evidence_m,0)*0.6 + COALESCE(hcb_evidence_l,0)*0.2) AS REAL)
-            / MAX(COALESCE(hcb_evidence_h,0) + COALESCE(hcb_evidence_m,0) + COALESCE(hcb_evidence_l,0) + COALESCE(hcb_nd_count,0), 1)) as avg_conf,
+        AVG(hcb_confidence) as avg_conf,
         SUM(CASE WHEN eval_status = 'done' THEN 1 ELSE 0 END) as evaluated_count
        FROM stories WHERE ${col} = ? AND eval_status = 'done'`
     )

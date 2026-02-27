@@ -1,12 +1,14 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDomainStats, getStatusCounts, getGlobalGateStats } from '../lib/db';
+import { cachedQuery } from '../lib/db-utils';
 const db = Astro.locals.runtime.env.DB;
+const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const [topDomains, statusCounts, globalGate] = await Promise.all([
   getDomainStats(db, 1),
   getStatusCounts(db),
-  getGlobalGateStats(db),
+  cachedQuery(kv, 'globalGateStats', () => getGlobalGateStats(db), 600),
 ]);
 
 const totalDomains = await db

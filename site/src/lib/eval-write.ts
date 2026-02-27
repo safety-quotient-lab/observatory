@@ -255,6 +255,10 @@ export async function writeEvalResult(
       await db.batch(fwStmts);
     }
   }
+
+  // Refresh materialized domain aggregate (best-effort)
+  const domain = result.evaluation?.domain;
+  if (domain) await refreshDomainAggregate(db, domain);
 }
 
 // --- Consensus scoring ---
@@ -301,6 +305,87 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
   } catch (err) {
     // Non-throwing — consensus is best-effort
     console.error(`[eval-write] updateConsensusScore failed for hn_id=${hnId}:`, err);
+  }
+}
+
+// --- Domain aggregates (materialized per-domain signal summary) ---
+
+export async function refreshDomainAggregate(db: D1Database, domain: string): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `INSERT INTO domain_aggregates (
+           domain, story_count, evaluated_count,
+           avg_hrcb, avg_setl, avg_editorial, avg_structural, avg_confidence,
+           avg_eq, avg_so, avg_sr, avg_td, avg_pt_count,
+           avg_valence, avg_arousal, avg_dominance, avg_fw_ratio,
+           avg_hn_score, avg_hn_comments,
+           dominant_tone, dominant_scope, dominant_reading_level, dominant_sentiment,
+           last_updated_at
+         )
+         SELECT
+           domain,
+           COUNT(*),
+           SUM(CASE WHEN eval_status = 'done' THEN 1 ELSE 0 END),
+           AVG(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END),
+           AVG(CASE WHEN eval_status = 'done' THEN hcb_setl END),
+           AVG(CASE WHEN eval_status = 'done' THEN hcb_editorial_mean END),
+           AVG(CASE WHEN eval_status = 'done' THEN hcb_structural_mean END),
+           AVG(CASE WHEN eval_status = 'done' THEN hcb_confidence END),
+           AVG(CASE WHEN eval_status = 'done' THEN eq_score END),
+           AVG(CASE WHEN eval_status = 'done' THEN so_score END),
+           AVG(CASE WHEN eval_status = 'done' THEN sr_score END),
+           AVG(CASE WHEN eval_status = 'done' THEN td_score END),
+           AVG(CASE WHEN eval_status = 'done' THEN pt_flag_count END),
+           AVG(CASE WHEN eval_status = 'done' THEN et_valence END),
+           AVG(CASE WHEN eval_status = 'done' THEN et_arousal END),
+           AVG(CASE WHEN eval_status = 'done' THEN et_dominance END),
+           AVG(CASE WHEN eval_status = 'done' THEN fw_ratio END),
+           AVG(hn_score),
+           AVG(hn_comments),
+           (SELECT et_primary_tone FROM stories
+            WHERE domain = ? AND eval_status = 'done' AND et_primary_tone IS NOT NULL
+            GROUP BY et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1),
+           (SELECT gs_scope FROM stories
+            WHERE domain = ? AND eval_status = 'done' AND gs_scope IS NOT NULL
+            GROUP BY gs_scope ORDER BY COUNT(*) DESC LIMIT 1),
+           (SELECT cl_reading_level FROM stories
+            WHERE domain = ? AND eval_status = 'done' AND cl_reading_level IS NOT NULL
+            GROUP BY cl_reading_level ORDER BY COUNT(*) DESC LIMIT 1),
+           (SELECT hcb_sentiment_tag FROM stories
+            WHERE domain = ? AND eval_status = 'done' AND hcb_sentiment_tag IS NOT NULL
+            GROUP BY hcb_sentiment_tag ORDER BY COUNT(*) DESC LIMIT 1),
+           datetime('now')
+         FROM stories WHERE domain = ?
+         ON CONFLICT(domain) DO UPDATE SET
+           story_count = excluded.story_count,
+           evaluated_count = excluded.evaluated_count,
+           avg_hrcb = excluded.avg_hrcb,
+           avg_setl = excluded.avg_setl,
+           avg_editorial = excluded.avg_editorial,
+           avg_structural = excluded.avg_structural,
+           avg_confidence = excluded.avg_confidence,
+           avg_eq = excluded.avg_eq,
+           avg_so = excluded.avg_so,
+           avg_sr = excluded.avg_sr,
+           avg_td = excluded.avg_td,
+           avg_pt_count = excluded.avg_pt_count,
+           avg_valence = excluded.avg_valence,
+           avg_arousal = excluded.avg_arousal,
+           avg_dominance = excluded.avg_dominance,
+           avg_fw_ratio = excluded.avg_fw_ratio,
+           avg_hn_score = excluded.avg_hn_score,
+           avg_hn_comments = excluded.avg_hn_comments,
+           dominant_tone = excluded.dominant_tone,
+           dominant_scope = excluded.dominant_scope,
+           dominant_reading_level = excluded.dominant_reading_level,
+           dominant_sentiment = excluded.dominant_sentiment,
+           last_updated_at = excluded.last_updated_at`
+      )
+      .bind(domain, domain, domain, domain, domain)
+      .run();
+  } catch (err) {
+    console.error(`[eval-write] refreshDomainAggregate failed for ${domain}:`, err);
   }
 }
 
@@ -592,6 +677,12 @@ export async function writeRaterEvalResult(
 
   // Update ensemble consensus score (best-effort, non-blocking)
   await updateConsensusScore(db, hnId);
+
+  // Refresh materialized domain aggregate (best-effort, skipped if primary already did it)
+  if (modelId !== PRIMARY_MODEL_ID) {
+    const domain = result.evaluation?.domain;
+    if (domain) await refreshDomainAggregate(db, domain);
+  }
 }
 
 export async function markRaterFailed(

@@ -3,12 +3,14 @@ import Base from '../../layouts/Base.astro';
 import { scoreToColor, formatScore, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ARTICLE_GROUPS, SECTIONS } from '../../lib/udhr';
 import { getArticleDetailedStats, getArticleSparklines } from '../../lib/db';
+import { cachedQuery } from '../../lib/db-utils';
 
 const db = Astro.locals.runtime.env.DB;
+const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const [articleStats, sparklines] = await Promise.all([
-  getArticleDetailedStats(db),
-  getArticleSparklines(db, 30),
+  cachedQuery(kv, 'articleDetailedStats', () => getArticleDetailedStats(db), 600),
+  cachedQuery(kv, 'articleSparklines:30', () => getArticleSparklines(db, 30), 600),
 ]);
 
 const statsMap = new Map(articleStats.map(a => [a.section, a]));
