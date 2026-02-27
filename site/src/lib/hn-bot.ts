@@ -16,7 +16,8 @@
  */
 
 import { extractDomain, markSkipped, fetchUrlContent, getEnabledFreeModels, getModelQueue } from './shared-eval';
-import { cleanHtml } from './html-clean';
+import { cleanHtml, hasReadableText } from './html-clean';
+import { classifyContent } from './content-gate';
 import { logEvent } from './events';
 
 // ─── Types ───
@@ -476,10 +477,12 @@ export async function enqueueForEvaluation(
     return;
   }
 
-  // Pre-fetch URL content and store in KV for consumer to use
+  // Pre-fetch URL content, run content gate, and store in KV for consumer
   let prefetchedCount = 0;
   let prefetchFailed = 0;
   let circuitBroken = 0;
+  let gatedCount = 0;
+  const gatedIds = new Set<number>();
   for (const msg of messages) {
     if (!msg.body.url) continue;
     const domain = msg.body.domain;
@@ -498,6 +501,31 @@ export async function enqueueForEvaluation(
       const existing = await kv.get(kvKey);
       if (existing) continue;
       const rawHtml = await fetchUrlContent(msg.body.url);
+
+      // Content gate: classify before cleaning/caching
+      const gate = classifyContent(rawHtml, msg.body.url);
+      if (gate.blocked) {
+        gatedCount++;
+        gatedIds.add(msg.body.hn_id);
+        await markSkipped(db, msg.body.hn_id,
+          `Content gate: ${gate.category} (${gate.confidence.toFixed(2)})`,
+          gate.category, gate.confidence);
+        await logEvent(db, {
+          hn_id: msg.body.hn_id, event_type: 'eval_skip', severity: 'info',
+          message: `Content gate: ${gate.category}`,
+          details: { reason: gate.category, confidence: gate.confidence, signals: gate.signals, phase: 'prefetch' },
+        });
+        continue;
+      }
+
+      // Pre-check: readable text?
+      if (!hasReadableText(rawHtml)) {
+        gatedIds.add(msg.body.hn_id);
+        await markSkipped(db, msg.body.hn_id, 'No readable content (JavaScript-only page)');
+        await logEvent(db, { hn_id: msg.body.hn_id, event_type: 'eval_skip', severity: 'info', message: 'Skipped: no readable text (pre-fetch)', details: { reason: 'no_readable_text', raw_length: rawHtml.length, phase: 'prefetch' } });
+        continue;
+      }
+
       const cleaned = cleanHtml(rawHtml, 20000);
       if (cleaned.length >= 50) {
         await kv.put(kvKey, cleaned, { expirationTtl: 86400 });
@@ -515,8 +543,18 @@ export async function enqueueForEvaluation(
       }
     }
   }
-  if (prefetchedCount > 0 || prefetchFailed > 0) {
-    console.log(`[queue] Pre-fetch: ${prefetchedCount} ok, ${prefetchFailed} failed, ${circuitBroken} circuit-broken`);
+  if (prefetchedCount > 0 || prefetchFailed > 0 || gatedCount > 0) {
+    console.log(`[queue] Pre-fetch: ${prefetchedCount} ok, ${prefetchFailed} failed, ${circuitBroken} circuit-broken, ${gatedCount} gated`);
+  }
+
+  // Remove gated stories from queue dispatch
+  if (gatedIds.size > 0) {
+    const filteredMessages = messages.filter(m => !gatedIds.has(m.body.hn_id));
+    const filteredIds = enqueuedIds.filter(id => !gatedIds.has(id));
+    messages.length = 0;
+    messages.push(...filteredMessages);
+    enqueuedIds.length = 0;
+    enqueuedIds.push(...filteredIds);
   }
 
   // Send to queue in batches of 25 (Queue.sendBatch limit)
