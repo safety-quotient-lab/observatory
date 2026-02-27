@@ -275,7 +275,7 @@ export async function prepareContent(
   // Skip binary content
   if (story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
     if (isPrimary) {
-      await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
+      await markSkipped(db, story.hn_id, 'Binary/unsupported content type', 'binary_content', 1.0);
     }
     await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: binary/unsupported content type').catch(() => {});
     await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: binary/unsupported content type`, details: { reason: 'binary', url: story.url, model: msgModelId } });
@@ -340,10 +340,17 @@ export async function prepareContent(
             message: `Content gate: ${gate.category}`,
             details: { reason: gate.category, confidence: gate.confidence, signals: gate.signals, model: msgModelId },
           });
+        } else if (rawHtml.startsWith('[error:binary]')) {
+          // Binary content-type (PDF, zip, video, etc.)
+          if (isPrimary) {
+            await markSkipped(db, story.hn_id, 'Binary/unsupported content type', 'binary_content', 1.0);
+          }
+          await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: binary content').catch(() => {});
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: binary content type`, details: { reason: 'binary', raw_length: rawHtml.length, model: msgModelId } });
         } else {
           // Error response or no readable text
           if (isPrimary) {
-            await markSkipped(db, story.hn_id, 'No readable content (JavaScript-only page)');
+            await markSkipped(db, story.hn_id, 'No readable content (JavaScript-only page)', 'js_rendered', 0.9);
           }
           await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: no readable content').catch(() => {});
           await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: no readable text in HTML (likely JS-rendered SPA)`, details: { reason: 'no_readable_text', raw_length: rawHtml.length, model: msgModelId } });

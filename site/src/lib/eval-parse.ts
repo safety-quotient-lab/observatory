@@ -436,6 +436,16 @@ export async function fetchUrlContent(url: string, timeoutMs = 15000): Promise<s
         'Accept': 'text/html,application/xhtml+xml,text/plain',
       },
     });
+    // Reject binary content-types before consuming the body
+    const contentType = res.headers.get('content-type') ?? '';
+    const ct = contentType.split(';')[0].trim().toLowerCase();
+    const BINARY_PREFIXES = ['application/pdf', 'application/zip', 'application/x-tar',
+      'application/gzip', 'application/octet-stream', 'application/x-7z',
+      'application/x-rar', 'video/', 'audio/'];
+    if (BINARY_PREFIXES.some(p => ct.startsWith(p))) {
+      return `[error:binary] Content-Type: ${ct} for ${url}`;
+    }
+
     const text = await res.text();
     if (!res.ok) {
       const slug = errorSlugFromStatus(res.status);

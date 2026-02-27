@@ -547,6 +547,10 @@ import Breadcrumb from '../components/Breadcrumb.astro';
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">rate_limited</td><td style="color: #5b7279; padding: 2px 8px;">Rate limit or throttle page</td></tr>
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">error_page</td><td style="color: #5b7279; padding: 2px 8px;">404, 500, or other error pages</td></tr>
             <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">redirect_or_js_required</td><td style="color: #5b7279; padding: 2px 8px;">Redirect chains, dead ends, or JavaScript-only SPAs</td></tr>
+            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">binary_content</td><td style="color: #5b7279; padding: 2px 8px;">PDF, binary, or non-text content type (detected via Content-Type header)</td></tr>
+            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">js_rendered</td><td style="color: #5b7279; padding: 2px 8px;">URL fetched successfully but returned no readable text (JS-rendered SPA)</td></tr>
+            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">no_content</td><td style="color: #5b7279; padding: 2px 8px;">Story has no URL and no self-text (cannot evaluate)</td></tr>
+            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">hn_removed</td><td style="color: #5b7279; padding: 2px 8px;">Story flagged, deleted, or removed from HN after submission</td></tr>
           </table>
           </div>
 

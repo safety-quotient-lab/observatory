@@ -1,78 +1,140 @@
 # TODO
 
-## Implemented (see IDEAS.md for inspiration sources)
+## Data Model / Taxonomy
 
-### Job Stories Feed (TANSTAAFL)
-- [x] Cron fetches /v0/jobstories.json
-- [x] Job type filter on feed page and nav
+- [ ] **Comprehensive data model audit** *(big effort — needs separate plan)*
+  - Inventory all computed/stored fields — which are displayed, internal-only, or orphaned
+  - Map entity relationships — stories ↔ users ↔ domains ↔ articles ↔ feeds ↔ comments ↔ evals ↔ events
+  - Identify missing vocabulary — concepts we measure but don't name/surface
+  - Taxonomy gaps — what dimensions have no UI representation?
+  - Network analysis gaps — user↔domain posting patterns, article co-occurrence, cross-feed correlation
+  - **Output:** `.claude/plans/data-model-audit-YYYY-MM-DD.md`
 
-### HN User Profiles (Competent Man)
-- [x] Migration 0008: hn_users table
-- [x] Cron crawls user profiles every 15 minutes
-- [x] DB queries for poster stats
-- [x] User profile page at /user/[username] (with fingerprint + SETL history)
-- [x] Karma vs HRCB correlation analysis on dashboard
+## Data Sources
 
-### Feed Source Tracking (Seldon Index)
-- [x] Migration 0009: story_feeds junction table
-- [x] Cron records feed memberships (top/new/best/ask/show/job)
-- [x] Per-feed HRCB stats query
-- [x] Per-feed chart on Seldon Dashboard
+- [ ] **Add Lobsters (lobste.rs) as a data source**
+  - Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`
+  - Need: `source` column on stories, cron extension, top-N auto-eval logic
 
-### Enhanced Comments (Fnord Detector)
-- [x] Migration 0010: depth + hn_score on story_comments
-- [x] 2-level deep comment crawling
-- [x] Threaded comment display on item page
-- [ ] Deep comment crawling: recursive depth 2+ for high-engagement stories
-- [ ] Comment refresh: re-crawl comments periodically for active discussions
-- [ ] Comment score tracking over time
-- [ ] Comment-level HRCB evaluation (divergence scoring)
-- [ ] Aggregate comment sentiment vs story HRCB comparison
+## Monitoring & Alerting
 
-### Rights Correlation Network (Stephenson Rights Graph)
-- [x] Force-directed graph at /network
-- [x] Pearson correlation edges with threshold
-- [x] Strongest correlations table
-- [ ] Cluster detection (community finding algorithm)
-- [ ] Temporal network evolution (how correlations shift)
+- [ ] **Rate limit exhaustion forecasting**
+  - Project time-to-exhaustion from rolling 1h token usage window
+  - Alert event when projected exhaustion <24h
+  - Dashboard headroom widget
 
-### Domain Factions (Stackpole BattleTech)
-- [x] Cosine similarity on 31-dim fingerprints at /factions
-- [x] Greedy faction clustering
-- [x] Alliance and rival tables
-- [ ] Faction drift tracking over time
-- [ ] Force-directed faction network visualization
+## Data Quality
 
-### SETL Temporal Tracking (Chapel Perilous)
-- [x] getDomainSetlHistory query
-- [x] E/S/SETL line chart on domain detail pages
-- [x] Global SETL trend on Seldon dashboard (with 7-day rolling average)
-- [ ] Alert system for sudden SETL spikes
+- [ ] **Content type classification validation**
+  - Flag content_type=PO with 0 structural evidence as likely misclassification
+  - Track misclassification rate per model over time
 
-### Seldon Dashboard (Psychohistory)
-- [x] Rolling 7-day and 30-day averages
-- [x] Regime change detection (crossover points)
-- [x] Per-feed HRCB chart
-- [x] Per-content-type HRCB chart
-- [ ] Per-article daily trends
-- [ ] Confidence interval bands
-- [ ] Real-world event annotation layer
+- [ ] **Eval consistency check for re-evaluations**
+  - Compare hcb_weighted_mean across models for same URL
+  - Alert if divergence > ±0.25
 
-### Velocity Tracking (Cayce Pollard)
-- [x] Velocity queries from story_snapshots
-- [x] Velocity vs HRCB scatter plot at /velocity
-- [x] Fastest-rising stories table
-- [x] Velocity sort on main feed
-- [ ] Velocity alerts (stories hitting threshold)
-- [ ] Velocity decay analysis
+## User-Facing Features
 
-## Future Phases
+- [ ] **Story comparison view** (`/compare/[id1]/[id2]`)
+  - Side-by-side scores, classification, sentiment
+  - Section-by-section score differences, E vs S channel divergence
 
-### Local Image Generation
-Set up local Stable Diffusion image generation using Hugging Face `diffusers` library.
+- [ ] **Story audit trail in UI**
+  - Full event chain on `/item/[id]` (created → queued → evaluating → done)
+  - Content fetch latency, token usage, model used
 
-- Install dependencies: `pip install diffusers transformers accelerate torch`
-- Write a Python script for text-to-image generation
-- Generate a pixelated PNG of a "nanite panther" in MTG artist style, modest resolution
-- Save output to `test.png`
-- Requires GPU with 6GB+ VRAM (12GB+ for FLUX.1 models)
+- [ ] **Temporal trend analysis**
+  - Rolling 7-day avg hcb_weighted_mean line chart
+  - Eval velocity (stories/day), model mix over time (stacked bar)
+
+- [ ] **Article deep dive enhancements** (`/article/[n]`)
+  - Stddev distribution, evidence strength breakdown
+  - Top 3 positive/negative stories per article
+  - Directionality marker distribution, theme tag word cloud
+
+- [ ] **Enhanced comments**
+  - Deep comment crawling (recursive depth 2+ for high-engagement stories)
+  - Comment refresh for active discussions
+  - Comment score tracking over time
+  - Comment-level HRCB divergence scoring
+  - Aggregate comment sentiment vs story HRCB comparison
+
+- [ ] **Rights network enhancements**
+  - Cluster detection (community finding algorithm)
+  - Temporal network evolution (how correlations shift)
+
+- [ ] **Domain factions enhancements**
+  - Faction drift tracking over time
+  - Force-directed faction network visualization
+
+- [ ] **Seldon dashboard enhancements**
+  - Per-article daily trends
+  - Confidence interval bands
+  - Real-world event annotation layer
+
+- [ ] **SETL spike alerting**
+  - Alert system for sudden SETL spikes
+
+- [ ] **Velocity enhancements**
+  - Velocity alerts (stories hitting threshold)
+  - Velocity decay analysis
+
+## Schema & Architecture
+
+- [x] **Model soft-delete (DB-level flag)** *(done 2026-02-27 — Phase 34)*
+  - `model_registry` table (migration 0037), `getEnabledModelsFromDb(db)` in models.ts
+  - Toggle via `wrangler d1 execute hrcb-db --remote --command "UPDATE model_registry SET enabled=0 WHERE model_id='...'"` — no deploy needed
+
+- [ ] **HN-compatible REST API extensions**
+  - REST endpoints done: `/api/v1/stories`, `/api/v1/story/[id]`, `/api/v1/domains`, `/api/v1/domain/[domain]` *(Phase 35, 2026-02-27)*
+  - Still TODO: HN-compatible `/v0/item/{id}.json`, `/v0/topstories.json`, `/api/search`
+
+- [ ] **Structured Knowledge Base** *(requires REST API)*
+  - JSON-LD with Schema.org annotations
+  - Export endpoints, bulk CSV as daily R2 snapshot
+  - Domain profile versioning
+
+- [ ] **Cost attribution per model**
+  - Daily cost per model from eval_history token counts + pricing
+  - Dashboard widget: cost/eval by model, daily burn rate
+
+- [ ] **Eval batch tracking**
+  - `eval_batch_id` to link related evals from same cron cycle
+
+- [ ] **Story priority scoring**
+  - Composite of HN score, comment count, time-decay, feed membership
+  - `eval_priority_score` computed by cron
+
+- [ ] **A/B testing framework for methodology**
+  - `eval_variant` column, dashboard comparing outcome distributions
+
+## HN Crawler Expansion
+
+- [ ] **Comment-level HRCB divergence**
+  - Lightweight sentiment on top comments (light prompt mode)
+  - Per-comment HRCB lean score — compare aggregate comment lean vs story HRCB
+  - Flag stories where comments strongly disagree with assessment
+  - UI: divergence badge on item page, comment sentiment distribution chart
+  - Prerequisite: deep comment crawling (recursive depth 2+) from Enhanced Comments TODO
+
+- [ ] **Algolia historical backfill**
+  - Backfill high-scoring historical stories (score >= 500 from past year)
+  - Periodic: daily fetch of yesterday's top stories
+
+- [ ] **Story velocity tracking**
+  - Score acceleration from rank snapshots
+  - Factor into eval priority score
+
+- [ ] **User karma-weighted priority**
+  - Factor submitter karma into eval priority
+  - `priority += log10(karma) * 0.1`
+
+- [ ] **Content change detection**
+  - Compare R2 snapshot with fresh fetch for stories >7d old
+  - Re-evaluate if >30% diff (weekly cron step, 20 stories/cycle)
+
+## Operational Endpoints
+
+- [ ] **Bulk re-evaluation endpoint**
+  - Re-enqueue by domain, date range, model, methodology_hash
+  - Rate-limited to prevent queue flooding

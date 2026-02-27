@@ -3,9 +3,13 @@ import type { APIRoute } from 'astro';
 /**
  * GET /api/queue — returns pending stories for the standalone evaluator on gray-box.
  * Auth: Authorization: Bearer <TRIGGER_SECRET>
+ *
+ * KV reservation: served hn_ids are marked in-flight (queue:inflight:<provider>:<id>, TTL 300s)
+ * so that concurrent evaluator instances don't double-evaluate the same story.
+ * Fail-open: if CONTENT_CACHE is unavailable, proceeds without reservation.
  */
 export const GET: APIRoute = async ({ locals, request }) => {
-  const env = locals.runtime.env as { DB: D1Database; TRIGGER_SECRET?: string };
+  const env = locals.runtime.env as { DB: D1Database; TRIGGER_SECRET?: string; CONTENT_CACHE?: KVNamespace };
 
   const auth = request.headers.get('Authorization') ?? '';
   if (!env.TRIGGER_SECRET || auth !== `Bearer ${env.TRIGGER_SECRET}`) {
@@ -21,6 +25,25 @@ export const GET: APIRoute = async ({ locals, request }) => {
 
   const provider = url.searchParams.get('provider') ?? 'claude-code-standalone';
 
+  // Collect currently in-flight hn_ids from KV to exclude from this batch
+  let inflightFilter = '';
+  let inflightIds: number[] = [];
+  if (env.CONTENT_CACHE) {
+    try {
+      const listed = await env.CONTENT_CACHE.list({ prefix: `queue:inflight:${provider}:` });
+      inflightIds = listed.keys
+        .map(k => parseInt(k.name.split(':').pop() ?? '', 10))
+        .filter(n => !isNaN(n));
+    } catch {
+      // KV unavailable — skip exclusion, proceed without reservation
+    }
+  }
+
+  if (inflightIds.length > 0) {
+    const placeholders = inflightIds.map(() => '?').join(',');
+    inflightFilter = `AND s.hn_id NOT IN (${placeholders})`;
+  }
+
   const { results } = await env.DB
     .prepare(
       `SELECT s.hn_id, s.url, s.title
@@ -33,11 +56,21 @@ export const GET: APIRoute = async ({ locals, request }) => {
              AND r.eval_provider = ?
              AND r.eval_status = 'done'
          )
+         ${inflightFilter}
        ORDER BY CASE WHEN s.hn_type = 'calibration' THEN 0 ELSE 1 END ASC, s.hn_score DESC
        LIMIT ?`
     )
-    .bind(provider, limit)
+    .bind(provider, ...inflightIds, limit)
     .all<{ hn_id: number; url: string; title: string }>();
+
+  // Mark returned stories as in-flight (TTL 300s = 5 min)
+  if (env.CONTENT_CACHE && results.length > 0) {
+    await Promise.allSettled(
+      results.map(s =>
+        env.CONTENT_CACHE!.put(`queue:inflight:${provider}:${s.hn_id}`, '1', { expirationTtl: 300 })
+      )
+    );
+  }
 
   return new Response(JSON.stringify({ stories: results }), {
     status: 200,

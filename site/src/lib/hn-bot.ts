@@ -62,7 +62,7 @@ export interface CrawlResult {
   comments: number;
   users: number;
   re_evals: number;
-  dead_check: { checked: number; dead: number };
+  flagged_check: { checked: number; flagged: number };
   enqueued: boolean;
   duration_ms: number;
 }
@@ -170,23 +170,31 @@ export async function refreshFromUpdates(db: D1Database): Promise<number> {
 
   const items = await fetchItemsBatched(ourIds);
 
-  // Separate dead/deleted items from live ones
-  const deadIds = items.filter(item => item.dead || item.deleted).map(item => item.id);
+  // Separate flagged/deleted items from live ones
+  const flaggedItems = items.filter(item => item.dead && !item.deleted);
+  const deletedItems = items.filter(item => item.deleted);
   const liveItems = items.filter(item => !item.dead && !item.deleted);
 
   const stmts: D1PreparedStatement[] = [];
 
-  // Mark dead/deleted stories as skipped
-  for (const id of deadIds) {
-    stmts.push(
-      db.prepare(
-        `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story dead/deleted on HN'
-         WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'skipped')`
-      ).bind(id)
-    );
+  // Mark flagged and deleted stories as skipped with distinct errors
+  for (const item of flaggedItems) {
+    stmts.push(db.prepare(
+      `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story flagged/killed on HN',
+         gate_category = 'hn_removed', gate_confidence = 1.0
+       WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'skipped')`
+    ).bind(item.id));
   }
-  if (deadIds.length > 0) {
-    console.log(`[score-refresh] ${deadIds.length} stories now dead/deleted on HN`);
+  for (const item of deletedItems) {
+    stmts.push(db.prepare(
+      `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story deleted on HN',
+         gate_category = 'hn_removed', gate_confidence = 1.0
+       WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'skipped')`
+    ).bind(item.id));
+  }
+  const flaggedCount = flaggedItems.length + deletedItems.length;
+  if (flaggedCount > 0) {
+    console.log(`[score-refresh] ${flaggedCount} stories now flagged/deleted on HN (${flaggedItems.length} flagged, ${deletedItems.length} deleted)`);
   }
 
   // Update scores for live items
@@ -475,13 +483,13 @@ export async function enqueueForEvaluation(
   for (const story of pending) {
     // Skip binary content
     if (story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
-      await markSkipped(db, story.hn_id, 'Binary/unsupported content type');
+      await markSkipped(db, story.hn_id, 'Binary/unsupported content type', 'binary_content', 1.0);
       continue;
     }
 
     // Skip self-posts with no text
     if (!story.url && (!story.hn_text || story.hn_text.length < 50)) {
-      await markSkipped(db, story.hn_id, 'No URL and no text');
+      await markSkipped(db, story.hn_id, 'No URL and no text', 'no_content', 1.0);
       continue;
     }
 
@@ -546,7 +554,7 @@ export async function enqueueForEvaluation(
       // Pre-check: readable text?
       if (!hasReadableText(rawHtml)) {
         gatedIds.add(msg.body.hn_id);
-        await markSkipped(db, msg.body.hn_id, 'No readable content (JavaScript-only page)');
+        await markSkipped(db, msg.body.hn_id, 'No readable content (JavaScript-only page)', 'js_rendered', 0.9);
         await logEvent(db, { hn_id: msg.body.hn_id, event_type: 'eval_skip', severity: 'info', message: 'Skipped: no readable text (pre-fetch)', details: { reason: 'no_readable_text', raw_length: rawHtml.length, phase: 'prefetch' } });
         continue;
       }
@@ -793,7 +801,7 @@ async function recordFeedSnapshots(
 
 // ─── Dead/deleted story detection ───
 
-export async function checkDeadStories(db: D1Database): Promise<{ checked: number; dead: number }> {
+export async function checkFlaggedStories(db: D1Database): Promise<{ checked: number; flagged: number }> {
   // Sample 30 stories: prioritize pending/queued, then done/evaluating, last 30 days
   const { results: candidates } = await db
     .prepare(
@@ -808,47 +816,51 @@ export async function checkDeadStories(db: D1Database): Promise<{ checked: numbe
     )
     .all<{ hn_id: number }>();
 
-  if (candidates.length === 0) return { checked: 0, dead: 0 };
+  if (candidates.length === 0) return { checked: 0, flagged: 0 };
 
   const ids = candidates.map(r => r.hn_id);
   const items = await fetchItemsBatched(ids);
 
-  // IDs that returned null (deleted/missing) or have dead/deleted flags
+  // Classify: null-return (hard-removed), flagged, deleted
   const fetchedIds = new Set(items.map(i => i.id));
-  const deadIds: number[] = [];
+  const removedIds = ids.filter(id => !fetchedIds.has(id));           // API returned nothing
+  const flaggedItems = items.filter(i => i.dead && !i.deleted);       // moderator-killed
+  const deletedItems = items.filter(i => i.deleted);                  // author-deleted
 
-  // Items that came back null (not in fetched set)
-  for (const id of ids) {
-    if (!fetchedIds.has(id)) deadIds.push(id);
-  }
+  const totalFlagged = removedIds.length + flaggedItems.length + deletedItems.length;
+  if (totalFlagged === 0) return { checked: candidates.length, flagged: 0 };
 
-  // Items that came back with dead/deleted flags
-  for (const item of items) {
-    if (item.dead || item.deleted) deadIds.push(item.id);
-  }
-
-  if (deadIds.length === 0) return { checked: candidates.length, dead: 0 };
-
-  const stmts = deadIds.map(id =>
-    db.prepare(
-      `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story dead/deleted on HN'
+  const stmts: D1PreparedStatement[] = [
+    ...removedIds.map(id => db.prepare(
+      `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story removed from HN',
+         gate_category = 'hn_removed', gate_confidence = 1.0
        WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'done', 'evaluating')`
-    ).bind(id)
-  );
+    ).bind(id)),
+    ...flaggedItems.map(i => db.prepare(
+      `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story flagged/killed on HN',
+         gate_category = 'hn_removed', gate_confidence = 1.0
+       WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'done', 'evaluating')`
+    ).bind(i.id)),
+    ...deletedItems.map(i => db.prepare(
+      `UPDATE stories SET eval_status = 'skipped', eval_error = 'Story deleted on HN',
+         gate_category = 'hn_removed', gate_confidence = 1.0
+       WHERE hn_id = ? AND eval_status IN ('pending', 'queued', 'done', 'evaluating')`
+    ).bind(i.id)),
+  ];
 
   for (let i = 0; i < stmts.length; i += 100) {
     await db.batch(stmts.slice(i, i + 100));
   }
 
-  console.log(`[dead-check] Checked ${candidates.length} stories, found ${deadIds.length} dead/deleted`);
+  console.log(`[flagged-check] Checked ${candidates.length}, found ${totalFlagged} (${removedIds.length} removed, ${flaggedItems.length} flagged, ${deletedItems.length} deleted)`);
   await logEvent(db, {
-    event_type: 'story_dead',
+    event_type: 'story_flagged',
     severity: 'info',
-    message: `Dead check: ${deadIds.length} stories marked dead/deleted`,
-    details: { checked: candidates.length, dead: deadIds.length, hn_ids: deadIds },
+    message: `Flagged check: ${totalFlagged} stories marked flagged/deleted/removed`,
+    details: { checked: candidates.length, flagged: totalFlagged, removed: removedIds.length, flagged_killed: flaggedItems.length, deleted: deletedItems.length },
   });
 
-  return { checked: candidates.length, dead: deadIds.length };
+  return { checked: candidates.length, flagged: totalFlagged };
 }
 
 // ─── Content cache preloader ───
@@ -930,7 +942,7 @@ export async function runCrawlCycle(
     comments: 0,
     users: 0,
     re_evals: 0,
-    dead_check: { checked: 0, dead: 0 },
+    flagged_check: { checked: 0, flagged: 0 },
     enqueued: false,
     duration_ms: 0,
   };
@@ -1119,6 +1131,7 @@ export async function runCrawlCycle(
         .prepare(
           `UPDATE stories SET eval_status = 'pending', eval_error = NULL
            WHERE eval_status = 'skipped'
+             AND gate_category IS NULL
              AND hn_id IN (${chunk.map(() => '?').join(',')})`
         )
         .bind(...chunk)
@@ -1205,16 +1218,16 @@ export async function runCrawlCycle(
     await logEvent(db, { event_type: 'crawl_error', severity: 'warn', message: `User profile crawling failed`, details: { phase: 'users', error: String(err) } });
   }
 
-  // ─── STEP 4.75: Check for dead/deleted stories ───
+  // ─── STEP 4.75: Check for flagged/deleted stories ───
 
   try {
     if (minute % 10 === 3) {
-      const deadResult = await checkDeadStories(db);
-      result.dead_check = deadResult;
+      const flaggedResult = await checkFlaggedStories(db);
+      result.flagged_check = flaggedResult;
     }
   } catch (err) {
-    console.error('Dead story check failed (non-fatal):', err);
-    await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Dead story check failed`, details: { phase: 'dead_check', error: String(err) } });
+    console.error('Flagged story check failed (non-fatal):', err);
+    await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Flagged story check failed`, details: { phase: 'flagged_check', error: String(err) } });
   }
 
   // ─── STEP 4.8: Re-evaluate viral stories ───
@@ -1246,7 +1259,8 @@ export async function runCrawlCycle(
   // Skip self-posts with no text AND no URL
   await db
     .prepare(
-      `UPDATE stories SET eval_status = 'skipped', eval_error = 'No URL and no text'
+      `UPDATE stories SET eval_status = 'skipped', eval_error = 'No URL and no text',
+         gate_category = 'no_content', gate_confidence = 1.0
        WHERE eval_status = 'pending' AND url IS NULL AND (hn_text IS NULL OR LENGTH(hn_text) < 50)`
     )
     .run();

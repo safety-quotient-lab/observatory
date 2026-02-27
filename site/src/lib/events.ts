@@ -25,7 +25,7 @@ export type EventType =
   | 'rater_validation_fail'
   | 'rater_auto_disable'
   | 'rater_auto_enable'
-  | 'story_dead'
+  | 'story_flagged'
   | 'auto_retry'
   | 'dlq_auto_replay'
   | 'auto_calibration'

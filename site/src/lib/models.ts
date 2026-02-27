@@ -180,6 +180,23 @@ export function getEnabledFreeModels(): ModelDefinition[] {
   return MODEL_REGISTRY.filter(m => m.enabled && m.is_free);
 }
 
+/**
+ * DB-backed enabled model list. Intersects model_registry table (enabled=1)
+ * with MODEL_REGISTRY definitions. Falls back to static getEnabledModels() on error.
+ */
+export async function getEnabledModelsFromDb(db: D1Database): Promise<ModelDefinition[]> {
+  try {
+    const { results } = await db
+      .prepare(`SELECT model_id FROM model_registry WHERE enabled = 1`)
+      .all<{ model_id: string }>();
+    const enabledIds = new Set(results.map(r => r.model_id));
+    return MODEL_REGISTRY.filter(m => enabledIds.has(m.id));
+  } catch {
+    // DB unavailable or table missing — fall back to static registry
+    return getEnabledModels();
+  }
+}
+
 export function modelDisplayName(modelId: string): string {
   return getModelDef(modelId)?.api_model_id ?? modelId;
 }

@@ -11,8 +11,7 @@
 
 import {
   extractDomain,
-  getEnabledModels,
-  getEnabledFreeModels,
+  getEnabledModelsFromDb,
   type EvalScore,
 } from '../src/lib/shared-eval';
 import { logEvent, pruneEvents } from '../src/lib/events';
@@ -228,7 +227,7 @@ export default {
           ]);
 
           // Re-enqueue calibration set
-          const enabledModels = getEnabledModels();
+          const enabledModels = await getEnabledModelsFromDb(db);
           for (let i = 0; i < 15; i++) {
             const syntheticId = -(1000 + i + 1);
             await env.EVAL_QUEUE.send({
@@ -703,7 +702,7 @@ export default {
       }
 
       let enqueued = 0;
-      const enabledModels = getEnabledModels();
+      const enabledModels = await getEnabledModelsFromDb(db);
 
       for (let i = 0; i < CALIBRATION_SET.length; i++) {
         const cal = CALIBRATION_SET[i];
