@@ -260,6 +260,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                     <td style="padding: 6px 8px; text-align: center; color: #5b7279;">{a.story_count}</td>
                     <td style={`padding: 6px 8px; text-align: center; font-weight: bold; color: ${scoreToColor(a.avg_score)};`}>
                       {formatScore(a.avg_score)}
+                      {isLightMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: #5b7279; font-size: var(--font-xs); font-weight: normal; margin-left: 3px;" title="Editorial channel only — not comparable to full model weighted mean">E</span>}
                     </td>
                     <td style="padding: 6px 8px; text-align: center; color: #8faaab;">{a.avg_abs_score.toFixed(3)}</td>
                     <td style="padding: 6px 8px; text-align: center; color: #34d399;">{a.positive_pct}%</td>
@@ -283,6 +284,9 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 );
               })}
             </table>
+            <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 8px;">
+              Avg HRCB: full models = editorial+structural weighted mean · lite models = editorial only (E) — not directly comparable
+            </div>
           </td>
         </tr>
       </table>

@@ -15,7 +15,8 @@ const { story, rank, raterModels } = Astro.props;
 // Non-primary models that have evaluated this story
 const otherModels = (raterModels || []).filter(m => m.eval_model !== PRIMARY_MODEL_ID);
 
-const hasEval = story.eval_status === 'done' && story.hcb_weighted_mean !== null;
+const hasEval = story.eval_status === 'done' && (story.hcb_weighted_mean !== null || story.hcb_editorial_mean !== null);
+const isLightOnly = hasEval && story.hcb_weighted_mean === null && story.hcb_editorial_mean !== null;
 // Display editorial score as primary; fall back to weighted_mean if editorial not available
 const displayScore = story.hcb_editorial_mean ?? story.hcb_weighted_mean;
 const displayColor = hasEval ? scoreToColor(displayScore) : '#5b7279';
@@ -65,7 +66,7 @@ function timeAgo(unixTime: number): string {
     {hasEval ? (
       <a href={`/item/${story.hn_id}`} style="text-decoration: none;" title={`Editorial: ${formatScore(displayScore)} — ${classLabel} | Conf: ${formatConfidence(confidence)} | Structural: ${structuralScore !== null ? formatScore(structuralScore) : 'ND'} | SETL: ${formatSetl(aggSetl)}`}>
         <div style="white-space: nowrap;">
-          <span class="score-font" style="color: #5b7279; font-size: var(--font-xs);" title="Editorial score (author's stance toward human rights)">HRCB</span>
+          <span class="score-font" style="color: #5b7279; font-size: var(--font-xs);" title={isLightOnly ? "HRCB editorial score — lite model (editorial only)" : "Editorial score (author's stance toward human rights)"}>{isLightOnly ? '~lite' : 'HRCB'}</span>
           <span
             class="score-font"
             style={`color: ${displayColor}; font-size: var(--font-md); font-weight: bold; margin-left: 2px;`}
@@ -138,7 +139,7 @@ function timeAgo(unixTime: number): string {
     </span>
     {story.domain && (
       <span class="sitebit" style="font-size: var(--font-sm); margin-left: 5px;">
-        (<a href={`/domain/${story.domain}`}>{story.domain}</a>{hasEval && (
+        (<a href={`/domain/${story.domain}`}>{story.domain}</a>{hasEval && !isLightOnly && (
           <span style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : '#5b7279'}; margin-left: 4px;`}
                 title={structuralScore !== null ? `Structural: ${formatScore(structuralScore)} (what the site does — privacy, access, tracking)` : 'Structural: no data'}>
             S:{structuralScore !== null ? formatScore(structuralScore) : 'ND'}

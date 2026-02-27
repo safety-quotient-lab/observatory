@@ -83,13 +83,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
       input_tokens ?? 0, output_tokens ?? 0,
     );
 
-    // Mark story as done so it doesn't get re-queued
-    await env.DB
-      .prepare(`UPDATE stories SET eval_status = 'done', evaluated_at = datetime('now') WHERE hn_id = ? AND eval_status IN ('pending', 'queued')`)
-      .bind(hn_id)
-      .run();
-
     const agg = computeLightAggregates(light);
+
+    // Mark story as done and write editorial score so it shows in the feed
+    await env.DB
+      .prepare(`UPDATE stories SET eval_status = 'done', evaluated_at = datetime('now'), hcb_editorial_mean = ? WHERE hn_id = ? AND eval_status IN ('pending', 'queued')`)
+      .bind(light.evaluation.editorial, hn_id)
+      .run();
     return new Response(JSON.stringify({
       ok: true, hn_id, model_id, prompt_mode: 'light',
       weighted_mean: agg.weighted_mean,

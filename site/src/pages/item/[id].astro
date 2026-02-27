@@ -57,6 +57,9 @@ if (viewParam === 'compare' && raterEvals.length >= 2) {
 const isFailed = storyData.eval_status === 'failed';
 const isDone = storyData.eval_status === 'done' && !!storyData.hcb_json;
 const isPending = storyData.eval_status === 'pending' || storyData.eval_status === 'evaluating';
+// Light-only: done status but no full hcb_json — has rater_evals with lite models
+const isLightOnlyEval = !isDone && storyData.eval_status === 'done' && raterEvals.some(re => isLightMode(re.prompt_mode));
+const lightEval = isLightOnlyEval ? (raterEvals.find(re => isLightMode(re.prompt_mode)) ?? null) : null;
 
 let evalData: Evaluation | null = null;
 let cachedDcp: string | null = null;
@@ -241,7 +244,7 @@ function timeAgo(unixTime: number): string {
 ---
 
 <Base
-  title={`${storyData.title} — ${isFailed ? 'Failed' : isPending ? 'Pending' : 'HRCB'}`}
+  title={`${storyData.title} — ${isFailed ? 'Failed' : isPending ? 'Pending' : isLightOnlyEval ? 'HRCB~lite' : 'HRCB'}`}
   ogTitle={isDone && aggregates ? `${formatScore(storyData.hcb_editorial_mean ?? aggregates.weighted_mean)} ${storyData.title}` : storyData.title}
   ogDescription={isDone && aggregates ? (executiveSummary || `HRCB: ${aggregates.classification} (${formatScore(storyData.hcb_editorial_mean ?? aggregates.weighted_mean)}) — ${aggregates.signal_sections} of 31 UDHR provisions scored. ${storyData.domain || 'self-post'}`) : isPending ? `Evaluation pending for ${storyData.title}` : `Evaluation failed for ${storyData.title}`}
   ogUrl={`${siteUrl}/item/${storyData.hn_id}`}
@@ -263,7 +266,7 @@ function timeAgo(unixTime: number): string {
   </div>
 
   {/* Model tab bar (shown when multiple models have evaluated) */}
-  {isDone && hasMultipleModels && (
+  {(isDone || isLightOnlyEval) && hasMultipleModels && (
     <div style="padding: 6px 0; margin-bottom: 4px; display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
       <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 4px;">Model:</span>
       {raterEvals.map(re => {
@@ -868,6 +871,113 @@ function timeAgo(unixTime: number): string {
       </tr>
     </table>
   )}
+    </>
+  ) : isLightOnlyEval && lightEval ? (
+    <>
+      {/* Light-only eval page — editorial score, no per-section breakdown */}
+      <table cellpadding="0" cellspacing="0" width="100%">
+        <tr class="athing">
+          <td valign="top" style="padding: 5px var(--space-lg) 0 0; text-align: center; width: 44px;">
+            <span
+              class="score-font"
+              style={`color: ${scoreToColor(lightEval.hcb_editorial_mean ?? lightEval.hcb_weighted_mean)}; font-size: var(--font-lg); font-weight: bold;`}
+              title={`Light eval — editorial only: ${formatScore(lightEval.hcb_editorial_mean ?? lightEval.hcb_weighted_mean)}`}
+            >
+              {formatScore(lightEval.hcb_editorial_mean ?? lightEval.hcb_weighted_mean)}
+            </span>
+          </td>
+          <td>
+            <span class="titleline" style="font-size: var(--font-md);">
+              <a href={storyData.url || `https://news.ycombinator.com/item?id=${storyData.hn_id}`}
+                 target="_blank" rel="noopener"
+              >
+                {storyData.title}
+              </a>
+            </span>
+            {storyData.domain && (
+              <span class="sitebit" style="font-size: var(--font-sm); margin-left: 5px;">
+                (<a href={`/domain/${storyData.domain}`}>{storyData.domain}</a>)
+              </span>
+            )}
+          </td>
+        </tr>
+        <tr>
+          <td></td>
+          <td class="subtext" style="padding-bottom: 8px;">
+            {storyData.hn_score !== null && <span>{storyData.hn_score} points</span>}
+            {storyData.hn_by && <span> by <a href={`/user/${storyData.hn_by}`}>{storyData.hn_by}</a></span>}
+            <span> {timeAgo(storyData.hn_time)}</span>
+            <span> | </span>
+            <a href={`https://news.ycombinator.com/item?id=${storyData.hn_id}`} target="_blank" rel="noopener">
+              {storyData.hn_comments ?? 0} comments on HN
+            </a>
+            {lightEval.hcb_classification && (
+              <>
+                <span> | </span>
+                <span class="badge" style={`background: ${classificationColor(lightEval.hcb_classification)}; color: ${classificationTextColor(lightEval.hcb_classification)}; font-size: var(--font-xs);`}>
+                  {lightEval.hcb_classification}
+                </span>
+              </>
+            )}
+            <span style="color: #d56500; font-size: var(--font-xs); margin-left: 6px;" title="Light evaluation — editorial channel only, no per-section breakdown">~lite</span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">{lightEval.schema_version ? `v${lightEval.schema_version}` : ''}</span>
+          </td>
+        </tr>
+      </table>
+
+      <div style="height: 10px;"></div>
+
+      {/* Light eval summary card */}
+      <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+        <tr>
+          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Summary</span>
+              <span style="color: #d56500; font-size: var(--font-xs); border: 1px solid rgba(213,101,0,0.4); padding: 1px 5px; border-radius: 3px;" title="Light evaluation — editorial channel only, no per-section heatmap">~lite</span>
+              {lightEval.hcb_theme_tag && (
+                <span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1; font-size: var(--font-xs);">
+                  {lightEval.hcb_theme_tag}
+                </span>
+              )}
+              {lightEval.hcb_sentiment_tag && (
+                <span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee; font-size: var(--font-xs);">
+                  {lightEval.hcb_sentiment_tag}
+                </span>
+              )}
+            </div>
+            {lightEval.hcb_executive_summary && (
+              <div style="color: #98a8a8; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 10px;">
+                {lightEval.hcb_executive_summary}
+              </div>
+            )}
+            {(lightEval.eq_score !== null || lightEval.so_score !== null || lightEval.td_score !== null) && (
+              <div style="display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid #0d4655; padding-top: 8px; margin-top: 4px;">
+                {lightEval.eq_score !== null && (
+                  <div>
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">EQ</span>
+                    <span class="score-font" style={`color: ${lightEval.eq_score >= 0.7 ? '#16a34a' : lightEval.eq_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm); margin-left: 4px;`} title="Epistemic Quality">{lightEval.eq_score.toFixed(2)}</span>
+                  </div>
+                )}
+                {lightEval.so_score !== null && (
+                  <div>
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">SO</span>
+                    <span class="score-font" style={`color: ${lightEval.so_score >= 0.6 ? '#16a34a' : '#5b7279'}; font-size: var(--font-sm); margin-left: 4px;`} title="Solution Orientation">{lightEval.so_score.toFixed(2)}</span>
+                  </div>
+                )}
+                {lightEval.td_score !== null && (
+                  <div>
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">TD</span>
+                    <span class="score-font" style={`color: ${lightEval.td_score >= 0.7 ? '#16a34a' : lightEval.td_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm); margin-left: 4px;`} title="Transparency & Disclosure">{lightEval.td_score.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 10px;">
+              Light evaluation by {lightEval.eval_model} · editorial channel only · no per-section breakdown available
+            </div>
+          </td>
+        </tr>
+      </table>
     </>
   ) : isPending ? (
     <>
