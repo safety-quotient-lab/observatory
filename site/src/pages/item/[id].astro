@@ -5,6 +5,7 @@ import RadarChart from '../../components/RadarChart.astro';
 import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
 import ModelCompareTable from '../../components/ModelCompareTable.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
 import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getRaterEvalsForStory, getRaterScores } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
@@ -253,18 +254,11 @@ function timeAgo(unixTime: number): string {
 >
   {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
 
-  {/* Breadcrumb */}
-  <div style="padding: 4px 0; font-size: var(--font-xs); color: #5b7279;">
-    <a href="/" style="color: #5b7279;">home</a>
-    {storyData.domain && (
-      <>
-        <span style="color: #0d4655;"> / </span>
-        <a href={`/domain/${storyData.domain}`} style="color: #5b7279;">{storyData.domain}</a>
-      </>
-    )}
-    <span style="color: #0d4655;"> / </span>
-    <span style="color: #5b7279;">item {storyData.hn_id}</span>
-  </div>
+  <Breadcrumb crumbs={[
+    { label: 'home', href: '/' },
+    ...(storyData.domain ? [{ label: storyData.domain, href: `/domain/${storyData.domain}` }] : []),
+    { label: `item ${storyData.hn_id}` },
+  ]} />
 
   {/* Model tab bar (shown when multiple models have evaluated) */}
   {(isDone || isLightOnlyEval) && hasMultipleModels && (

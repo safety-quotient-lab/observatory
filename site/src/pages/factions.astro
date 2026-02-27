@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { getAllDomainStats, getDomainSignalProfiles, getDomainKarmaMap } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 import type { DomainSignalProfile } from '../lib/db';
@@ -795,6 +796,7 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
 ---
 
 <Base title="Domain Factions — HN HRCB">
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'sources', href: '/sources' }, { label: 'factions' }]} />
 
   {/* === Section 0: Header === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">

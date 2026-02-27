@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getStoriesByUser, getUserSetl, getUserDetailStats, getHnUser, getUserFingerprint, getUserSetlHistory } from '../../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { sanitizeHtml } from '../../lib/sanitize';
@@ -42,14 +43,11 @@ const accountAgeDays = hnUser?.created
 ---
 
 <Base title={`${username} — HN HRCB`} canonicalUrl={`${url.origin}/user/${username}`}>
-  {/* Breadcrumb */}
-  <div style="padding: 4px 0; font-size: var(--font-xs); color: #5b7279;">
-    <a href="/" style="color: #5b7279;">home</a>
-    <span style="color: #0d4655;"> / </span>
-    <a href="/users" style="color: #5b7279;">users</a>
-    <span style="color: #0d4655;"> / </span>
-    <span style="color: #5b7279;">{username}</span>
-  </div>
+  <Breadcrumb crumbs={[
+    { label: 'home', href: '/' },
+    { label: 'users', href: '/users' },
+    { label: username },
+  ]} />
 
   {/* User header card */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">

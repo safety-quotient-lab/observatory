@@ -1,8 +1,10 @@
 ---
 import Base from '../layouts/Base.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 ---
 
 <Base title="About">
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'about' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
       <td>

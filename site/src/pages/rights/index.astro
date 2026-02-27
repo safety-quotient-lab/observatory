@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getEvaluatedCount } from '../../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
@@ -30,6 +31,7 @@ const subPages = [
 ---
 
 <Base title="Rights">
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'rights' }]} />
   <div style="padding: 8px 0 16px 0;">
     <!-- Header -->
     <div style="margin-bottom: 16px;">

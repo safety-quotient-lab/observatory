@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ARTICLE_GROUPS, SECTIONS } from '../../lib/udhr';
 import { getArticleDetailedStats, getArticleSparklines } from '../../lib/db';
@@ -44,6 +45,7 @@ const groupColors: Record<string, string> = {
 ---
 
 <Base title="UDHR Articles — HN HRCB">
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'rights', href: '/rights' }, { label: 'articles' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>

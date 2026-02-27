@@ -78,7 +78,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/content-gate.ts` — Pre-eval content classification (paywall, captcha, bot protection, etc.)
 - `site/src/lib/colors.ts` — Score/SETL/confidence/gate color mapping
 - `site/src/lib/db-utils.ts` — `SETL_CASE_SQL(alias)` SQL fragment helper, `cachedQuery<T>(kv, key, fn, ttl)` KV-backed query cache, `safeBatch()` D1 batch chunker (≤100 statements)
-- `site/src/components/` — Reusable Astro components (EvalCard, DcpTable, etc.)
+- `site/src/components/` — Reusable Astro components (Breadcrumb, EvalCard, DcpTable, etc.)
 - `site/functions/rate-limit.ts` — Rate limit state, capacity checks, credit pause (KV TTL: 600s)
 - `site/functions/providers.ts` — API call adapters (Anthropic, OpenRouter, Workers AI) with 15s AbortController timeout
 

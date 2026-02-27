@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, classificationColor } from '../lib/colors';
 import { modelDisplayName, ALL_SECTIONS, isLightMode, getModelDef } from '../lib/shared-eval';
 import { ARTICLE_TITLES } from '../lib/udhr';
@@ -157,6 +158,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
 ---
 
 <Base title="Model Comparison">
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'system', href: '/system' }, { label: 'models' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
     <tr>
       <td>

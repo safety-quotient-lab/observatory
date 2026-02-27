@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
 import { getSignalOverview } from '../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
@@ -20,6 +21,7 @@ try {
 ---
 
 <Base title="Trends">
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'trends' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>

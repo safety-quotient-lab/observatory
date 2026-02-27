@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
 import DcpTable from '../../components/DcpTable.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp, getDomainSetlHistory, getDomainSignals, getDomainGateStats } from '../../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence, gateToColor } from '../../lib/colors';
 
@@ -47,14 +48,11 @@ if (dcpJson) {
 ---
 
 <Base title={`${domain} — HN HRCB`} canonicalUrl={`${url.origin}/domain/${domain}`}>
-  {/* Breadcrumb */}
-  <div style="padding: 4px 0; font-size: var(--font-xs); color: #5b7279;">
-    <a href="/" style="color: #5b7279;">home</a>
-    <span style="color: #0d4655;"> / </span>
-    <a href="/domains" style="color: #5b7279;">domains</a>
-    <span style="color: #0d4655;"> / </span>
-    <span style="color: #5b7279;">{domain}</span>
-  </div>
+  <Breadcrumb crumbs={[
+    { label: 'home', href: '/' },
+    { label: 'domains', href: '/domains' },
+    { label: domain },
+  ]} />
 
   {/* Domain header card */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">

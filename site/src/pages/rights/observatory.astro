@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution } from '../../lib/db';
 import { scoreToColor, formatScore, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
 import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../../lib/udhr';
@@ -111,6 +112,7 @@ const groupColors: Record<string, string> = {
 ---
 
 <Base title="Human Rights Observatory">
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'rights', href: '/rights' }, { label: 'observatory' }]} />
   <div style="padding: 8px 0 16px 0;">
 
     <!-- 1. Header -->

@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
 import { getArticleRanking, getArticleCoverage } from '../../lib/db';
@@ -56,14 +57,11 @@ const jsonLd = udhrSection ? {
 
 <Base title={`${section}: ${articleTitle} — Rankings`}>
   {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
-  {/* Breadcrumb */}
-  <div style="padding: 4px 0; font-size: var(--font-xs); color: #5b7279;">
-    <a href="/" style="color: #5b7279;">home</a>
-    <span style="color: #0d4655;"> / </span>
-    <a href="/rights/articles" style="color: #5b7279;">articles</a>
-    <span style="color: #0d4655;"> / </span>
-    <span style="color: #5b7279;">{section}</span>
-  </div>
+  <Breadcrumb crumbs={[
+    { label: 'home', href: '/' },
+    { label: 'articles', href: '/rights/articles' },
+    { label: section },
+  ]} />
   {/* Header */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
