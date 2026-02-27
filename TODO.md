@@ -35,6 +35,9 @@
 
 ## User-Facing Features
 
+- [x] **Story audit trail in UI** *(done 2026-02-27)*
+  - `getEvalHistoryForStory` + unified timeline on `/item/[id]` merging events + eval_history
+
 - [ ] **Story comparison view** (`/compare/[id1]/[id2]`)
   - Side-by-side scores, classification, sentiment
   - Section-by-section score differences, E vs S channel divergence
@@ -109,6 +112,14 @@
   - Flag stories where comments strongly disagree with assessment
   - UI: divergence badge on item page, comment sentiment distribution chart
   - Prerequisite: deep comment crawling (recursive depth 2+) from Enhanced Comments TODO
+
+- [x] **Algolia historical backfill** *(done 2026-02-27)*
+  - `?sweep=algolia_backfill&min_score=500&days_back=365` endpoint in cron.ts
+  - Calls `searchAlgolia` + `insertAlgoliaHits` from coverage-crawl.ts
+
+- [x] **Content change detection** *(done 2026-02-27)*
+  - `content_hash` + `content_last_fetched` columns (migration 0038)
+  - `checkContentDrift` in content-drift.ts, `?sweep=content_drift` endpoint
 
 - [ ] **Story velocity tracking**
   - Score acceleration from rank snapshots
