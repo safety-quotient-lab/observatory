@@ -16,7 +16,7 @@ const { scores } = Astro.props;
 const scoreMap = new Map(scores.map((s) => [s.section, s.final]));
 ---
 
-<div style="display: inline-flex; gap: 1px; vertical-align: middle;">
+<div style="display: inline-flex; gap: 1px; vertical-align: middle;" role="img" aria-label="UDHR section scores minibar">
   {ALL_SECTIONS.map((section) => {
     const final = scoreMap.get(section) ?? null;
     const color = final !== null ? scoreToColor(final) : '#0d4655';

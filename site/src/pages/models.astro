@@ -372,9 +372,8 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       </table>
 
       {/* Most disagreed / agreed stories */}
-      <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-        <tr>
-          <td width="50%" valign="top" style="padding-right: 5px;">
+      <div class="two-col" style="margin-bottom: 10px;">
+        <div>
             <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; height: 100%;">
               <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Disagreed</div>
               <table cellpadding="0" cellspacing="0" width="100%">
@@ -410,8 +409,8 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 ))}
               </table>
             </div>
-          </td>
-          <td width="50%" valign="top" style="padding-left: 5px;">
+          </div>
+        <div>
             <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; height: 100%;">
               <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Agreed</div>
               <table cellpadding="0" cellspacing="0" width="100%">
@@ -447,9 +446,8 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 ))}
               </table>
             </div>
-          </td>
-        </tr>
-      </table>
+          </div>
+      </div>
 
       {/* Per-section heatmap */}
       <div class="table-wrap">
