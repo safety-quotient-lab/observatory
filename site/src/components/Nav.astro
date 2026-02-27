@@ -37,7 +37,7 @@ const navItems = [
         <span class="nav-links" style="margin-left: 10px; font-size: var(--font-base);">
           {navItems.map((item, i) => (
             <>
-              {i > 0 && <span class="nav-pipe" aria-hidden="true"> | </span>}
+              {i > 0 && ' | '}
               <a href={item.href} style={`color: black;${isActive(item.prefix) ? ' font-weight: bold;' : ''}`}>{item.label}</a>
             </>
           ))}
