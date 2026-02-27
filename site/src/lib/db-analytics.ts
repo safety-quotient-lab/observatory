@@ -874,3 +874,43 @@ export async function getSignalCompleteness(db: D1Database): Promise<SignalCompl
     return [];
   }
 }
+
+// --- Model Trust Snapshots (Phase 37B) ---
+
+export interface ModelTrustSnapshot {
+  model_id: string;
+  day: string;
+  calibration_accuracy: number | null;
+  consensus_agreement: number | null;
+  parse_success_rate: number | null;
+  trust_score: number | null;
+  eval_count: number;
+}
+
+export async function getModelTrustHistory(db: D1Database, days = 14): Promise<ModelTrustSnapshot[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT model_id, day, calibration_accuracy, consensus_agreement,
+                parse_success_rate, trust_score, eval_count
+         FROM model_trust_snapshots
+         WHERE day >= date('now', ? || ' days')
+         ORDER BY model_id, day ASC`
+      )
+      .bind(-days)
+      .all<ModelTrustSnapshot>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// Returns trust snapshots keyed by model_id → sorted day array
+export function groupTrustByModel(snapshots: ModelTrustSnapshot[]): Map<string, ModelTrustSnapshot[]> {
+  const map = new Map<string, ModelTrustSnapshot[]>();
+  for (const s of snapshots) {
+    if (!map.has(s.model_id)) map.set(s.model_id, []);
+    map.get(s.model_id)!.push(s);
+  }
+  return map;
+}

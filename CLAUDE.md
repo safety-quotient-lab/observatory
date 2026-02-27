@@ -56,21 +56,21 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - **Rights** (`/rights`): hub → `/rights/observatory` (research dashboard), `/rights/articles`, `/rights/network`, `/article/[n]`
 - **Sources** (`/sources`): hub → `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
 - **Trends** (`/trends`): hub → `/seldon`, `/velocity`, `/dynamics`
-- **System** (`/system`): ops dashboard → `/models`. Primary: Pipeline progress, Workers health, Queue Breakdown. Secondary (collapsible): Multi-Model Raters, Evaluation Models. Tertiary (collapsed): API & Rate Limits, Cycle Performance, Measurement Integrity, Pipeline Events, Recent Failures, Evaluation Queue, Operations
+- **System** (`/system`): ops dashboard → `/models`. Primary: Pipeline progress, Workers health, Queue Breakdown. Secondary (collapsible): Multi-Model Raters, Evaluation Models. Tertiary (collapsed): API & Rate Limits, Cycle Performance, Measurement Integrity, Pipeline Events, Recent Failures, Evaluation Queue, Operations. `/models` includes **Evaluator Trust Index** card (daily trust_score = cal×0.40 + consensus×0.35 + parse×0.25, 14-day sparklines, auto-flag for trust <0.3 over 7 days).
 - **About** (`/about`): 3-tier progressive disclosure — Tier 1 (always visible: intro, HRCB, labels), Tier 2 (`<details open>`: methodology), Tier 3 (`<details>`: supplementary signals, factions, DCP, version history, technical)
 - **Redirects** (301): `/dashboard`→`/system`, `/front`→`/past`, `/articles`→`/rights/articles`, `/network`→`/rights/network`, `/user-intel`→`/users`, `/domain-intel`→`/domains`
 
 - `site/src/lib/db.ts` — Barrel re-export from `db-stories.ts`, `db-entities.ts`, `db-analytics.ts`, `db-multi-model.ts`
 - `site/src/lib/db-stories.ts` — Story types, feed queries, dashboard stats, queue/failed stories
 - `site/src/lib/db-entities.ts` — Domain/user queries, signal profiles, DCP, pipeline health, content gate stats, events re-exports
-- `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory, `getProviderStats` (per-worker eval activity), `getModelQueueStats` (per-queue in-flight + throughput), `getDlqTrend` (14-day daily counts + backlog direction), `getSelfThrottleImpact` (7-day wasted seconds per model), `getEvalLatencyStats` (P50/P95/P99 per model), `getSignalCompleteness` (per-model % non-null per supplementary signal)
+- `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory, `getProviderStats` (per-worker eval activity), `getModelQueueStats` (per-queue in-flight + throughput), `getDlqTrend` (14-day daily counts + backlog direction), `getSelfThrottleImpact` (7-day wasted seconds per model), `getEvalLatencyStats` (P50/P95/P99 per model), `getSignalCompleteness` (per-model % non-null per supplementary signal), `getModelTrustHistory` + `groupTrustByModel` (14-day trust snapshots for Evaluator Trust Index on /models)
 - `site/src/lib/db-multi-model.ts` — Rater evals/scores/witness, model agreement, multi-model stories
 - `site/src/lib/shared-eval.ts` — Barrel re-export from `eval-types.ts`, `models.ts`, `prompts.ts`, `eval-parse.ts`, `eval-write.ts`, `rater-health.ts`
 - `site/src/lib/eval-types.ts` — Type definitions, interfaces, ALL_SECTIONS constant
 - `site/src/lib/models.ts` — Model registry, provider types, queue bindings, `QUEUE_CONFIG` export (derived list of enabled model-to-queue mappings)
 - `site/src/lib/prompts.ts` — System prompts (full, slim, light)
 - `site/src/lib/eval-parse.ts` — Response parsing, validation, content fetching
-- `site/src/lib/eval-write.ts` — D1 write functions (eval results, DCP cache). `updateConsensusScore()` called at end of both write paths — computes weighted mean across all done rater_evals (full=1.0 weight, light=0.5), updates stories.consensus_score/count/spread.
+- `site/src/lib/eval-write.ts` — D1 write functions (eval results, DCP cache). `updateConsensusScore()` called at end of both write paths — computes weighted mean across all done rater_evals (full=1.0 weight, light=0.5), updates stories.consensus_score/count/spread. `requestArchive(db, kv, hnId, url)` — KV-rate-limited (10s TTL) fire-and-forget Wayback Machine preservation, stores memento URL in stories.archive_url.
 - `site/src/lib/rater-health.ts` — Per-model health tracking, auto-disable/re-enable
 - `site/src/lib/events.ts` — Structured event logger with typed event taxonomy
 - `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
@@ -167,11 +167,13 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 
 **Algorithm:** Z-normalize per dimension → cosine similarity on 8D vectors → agglomerative hierarchical clustering with average linkage at 1/φ threshold (fallback to 1/φ² if single giant cluster).
 
-**Page sections (top→bottom):** Signal Landscape (histograms) → Parallel Coordinates → Differentiation (inter-cluster variance) → Cluster Cards (radar charts, members, liminal flags) → Affinity Matrix → Interesting Pairs → Outliers → Methodology Notes.
+**Page sections (top→bottom):** Signal Landscape (histograms) → Parallel Coordinates → **Signal Space** (2D PCA scatter + 3D Three.js orbit toggle) → Differentiation (inter-cluster variance) → Cluster Cards (radar charts, members, liminal flags) → Affinity Matrix → Interesting Pairs → Outliers → Methodology Notes.
 
 **Archetype naming:** ~22 pattern rules (e.g., high EQ + TD + low PT → "Rigorous Analysts"), fallback to readable "High X/Y · Low Z" names.
 
 **Key data flow:** `getDomainSignalProfiles(db)` → build raw vectors → z-normalize → cluster → enrich with archetypes, insights, radar data → render. `getDomainSignalProfiles` reads from `domain_aggregates` (simple table scan, ~50ms vs old correlated-subquery ~2-5s). Results cached in KV (`q:domainSignalProfiles`, 5-min TTL). Note: `Map<string, DomainSignalProfile>` is not JSON-serializable — factions.astro caches `DomainSignalProfile[]` and reconstructs the Map.
+
+**Signal Space component** (`site/src/components/SignalSpace.astro`): Server-side PCA (power iteration, 3 components from 8D z-vectors). 2D SVG scatter (D3-free, cluster ellipse shadows, hover detail panel). 3D Three.js orbit (CDN lazy import via `<script is:inline define:vars>`, OrbitControls, Raycaster click). Toggle buttons for 2D/3D modes.
 
 ## Key Patterns
 

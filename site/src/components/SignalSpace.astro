@@ -1,0 +1,600 @@
+---
+/**
+ * Signal Space: interactive 2D PCA scatter + 3D Three.js orbit
+ * of the 8D domain editorial character signal space.
+ *
+ * Usage: <SignalSpace points={signalPoints} />
+ */
+
+const SIGNAL_DIM_NAMES = ['EQ', 'SO', 'SR', 'TD', 'PT', 'AR', 'VA', 'FW'];
+
+interface SignalPoint {
+  domain: string;
+  zVector: number[];        // 8D z-normalized signal vector
+  hcbScore: number | null;
+  storyCount: number;
+  clusterName: string | null;
+  clusterColor: string;
+}
+
+interface Props {
+  points: SignalPoint[];
+}
+
+const { points } = Astro.props;
+
+// --- PCA helpers (server-side computation) ---
+
+function covMatrix(vecs: number[][]): number[][] {
+  const d = vecs[0].length;
+  const n = vecs.length;
+  const cov: number[][] = Array.from({ length: d }, () => new Array(d).fill(0) as number[]);
+  for (const v of vecs) {
+    for (let i = 0; i < d; i++) {
+      for (let j = 0; j < d; j++) cov[i][j] += v[i] * v[j];
+    }
+  }
+  for (let i = 0; i < d; i++) for (let j = 0; j < d; j++) cov[i][j] /= n;
+  return cov;
+}
+
+function deflate(cov: number[][], pcs: number[][]): number[][] {
+  const d = cov.length;
+  const out = cov.map(row => [...row]);
+  for (const pc of pcs) {
+    let ev = 0;
+    for (let i = 0; i < d; i++) for (let j = 0; j < d; j++) ev += pc[i] * cov[i][j] * pc[j];
+    for (let i = 0; i < d; i++) for (let j = 0; j < d; j++) out[i][j] -= ev * pc[i] * pc[j];
+  }
+  return out;
+}
+
+function powerPC(mat: number[][], seedIdx: number): number[] {
+  const d = mat.length;
+  let v: number[] = Array.from({ length: d }, (_, i): number => i === seedIdx ? 1.0 : 0.05);
+  let len = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+  v = v.map(x => x / len);
+  for (let iter = 0; iter < 300; iter++) {
+    const nv: number[] = new Array(d).fill(0);
+    for (let i = 0; i < d; i++) for (let j = 0; j < d; j++) nv[i] += mat[i][j] * v[j];
+    const nl = Math.sqrt(nv.reduce((s, x) => s + x * x, 0));
+    if (nl < 1e-12) break;
+    const nn = nv.map(x => x / nl);
+    const diff = nn.reduce((s, x, i) => s + (x - v[i]) ** 2, 0);
+    v = nn;
+    if (diff < 1e-12) break;
+  }
+  return v;
+}
+
+function computePCs(vectors: number[][], k: number): number[][] {
+  const cov = covMatrix(vectors);
+  const pcs: number[][] = [];
+  for (let i = 0; i < k; i++) {
+    pcs.push(powerPC(deflate(cov, pcs), i));
+  }
+  return pcs;
+}
+
+function dot(a: number[], b: number[]): number {
+  return a.reduce((s, x, i) => s + x * b[i], 0);
+}
+
+function pcLabel(pc: number[]): string {
+  return pc
+    .map((v, i) => ({ i, abs: Math.abs(v) }))
+    .sort((a, b) => b.abs - a.abs)
+    .slice(0, 2)
+    .map(s => SIGNAL_DIM_NAMES[s.i])
+    .join('+');
+}
+
+// --- Project data ---
+
+const validPoints = points.filter(
+  p => p.zVector.length === 8 && p.zVector.every(v => isFinite(v))
+);
+const hasData = validPoints.length >= 5;
+
+interface ProjectedPoint extends SignalPoint {
+  x2: number; y2: number;
+  x3: number; y3: number; z3: number;
+}
+
+let projected: ProjectedPoint[] = [];
+let pcLabels = [SIGNAL_DIM_NAMES[0] + '+' + SIGNAL_DIM_NAMES[1], SIGNAL_DIM_NAMES[2] + '+' + SIGNAL_DIM_NAMES[3], SIGNAL_DIM_NAMES[4] + '+' + SIGNAL_DIM_NAMES[5]];
+
+if (hasData) {
+  const vecs = validPoints.map(p => p.zVector);
+  const pcs = computePCs(vecs, 3);
+  pcLabels = pcs.map(pcLabel);
+  projected = validPoints.map(p => ({
+    ...p,
+    x2: dot(p.zVector, pcs[0]),
+    y2: dot(p.zVector, pcs[1]),
+    x3: dot(p.zVector, pcs[0]),
+    y3: dot(p.zVector, pcs[1]),
+    z3: dot(p.zVector, pcs[2]),
+  }));
+}
+
+// Cluster legend (unique clusters, ordered by member count)
+const clusterMap = new Map<string, { name: string; color: string; count: number }>();
+for (const p of projected) {
+  if (!p.clusterName) continue;
+  const existing = clusterMap.get(p.clusterName);
+  if (existing) existing.count++;
+  else clusterMap.set(p.clusterName, { name: p.clusterName, color: p.clusterColor, count: 1 });
+}
+const clusterLegend = [...clusterMap.values()].sort((a, b) => b.count - a.count).slice(0, 10);
+
+// Compact serialization for client
+const r4 = (n: number) => Math.round(n * 10000) / 10000;
+const r3 = (n: number) => Math.round(n * 1000) / 1000;
+const clientData = JSON.stringify({
+  pts: projected.map(p => ({
+    d: p.domain,
+    x2: r4(p.x2), y2: r4(p.y2),
+    x3: r4(p.x3), y3: r4(p.y3), z3: r4(p.z3),
+    sc: p.hcbScore !== null ? r3(p.hcbScore) : null,
+    n: p.storyCount,
+    cn: p.clusterName,
+    cc: p.clusterColor,
+    zv: p.zVector.map(r3),
+  })),
+  l1: pcLabels[0], l2: pcLabels[1], l3: pcLabels[2],
+});
+---
+
+<div style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; margin: 4px 0;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+    <div>
+      <span style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Signal Space</span>
+      <span style="color: #5b7279; margin-left: 6px; font-size: var(--font-xs);">
+        PCA projection of 8D editorial character &mdash; each point is a domain
+      </span>
+    </div>
+    <div style="display: flex; gap: 4px;">
+      <button id="ss-btn-2d" style="padding: 3px 10px; background: #1a5568; border: 1px solid #60a5fa; border-radius: 3px; color: #60a5fa; font-size: var(--font-xs); cursor: pointer; font-family: monospace;">2D</button>
+      <button id="ss-btn-3d" style="padding: 3px 10px; background: #002d38; border: 1px solid #0d4655; border-radius: 3px; color: #5b7279; font-size: var(--font-xs); cursor: pointer; font-family: monospace;">3D</button>
+    </div>
+  </div>
+
+  {!hasData ? (
+    <div style="color: #5b7279; font-size: var(--font-xs); padding: 20px; text-align: center;">
+      Not enough data for signal space visualization (need 5+ evaluated domains).
+    </div>
+  ) : (
+    <>
+      {/* 2D view */}
+      <div id="ss-2d-wrap" style="display: flex; gap: 10px; align-items: flex-start;">
+        <div style="flex: 1; min-width: 0; overflow: hidden;">
+          <svg id="ss-svg" viewBox="0 0 560 340" width="100%" style="display: block; max-width: 560px; background: #002d38; border-radius: 4px; cursor: crosshair;">
+            <text x="280" y="175" fill="#1a5568" font-size="11" text-anchor="middle" font-family="monospace">rendering…</text>
+          </svg>
+        </div>
+        <div id="ss-detail-2d" style="width: 196px; flex-shrink: 0; background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: #5b7279; min-height: 160px;">
+          <div style="color: #1a5568; font-size: 9px;">hover a point for details</div>
+        </div>
+      </div>
+
+      {/* 3D view */}
+      <div id="ss-3d-wrap" style="display: none; flex-direction: column; gap: 6px;">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <div style="flex: 1; min-width: 0; position: relative;">
+            <canvas id="ss-3d-canvas" style="display: block; width: 100%; max-width: 560px; height: 340px; border-radius: 4px; background: #002d38;"></canvas>
+            <div id="ss-3d-loading" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5b7279; font-size: var(--font-xs); background: #002d38; border-radius: 4px;">
+              Loading 3D engine&hellip;
+            </div>
+          </div>
+          <div id="ss-detail-3d" style="width: 196px; flex-shrink: 0; background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: #5b7279; min-height: 160px;">
+            <div style="color: #1a5568; font-size: 9px;">click a sphere for details</div>
+          </div>
+        </div>
+        <div style="color: #1a5568; font-size: var(--font-xs);">Drag to orbit &middot; Scroll to zoom &middot; Click sphere for details &middot; auto-rotating</div>
+      </div>
+
+      {/* Legend + axis info */}
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: var(--font-xs);">
+        {clusterLegend.map(cl => (
+          <span style="display: inline-flex; align-items: center; gap: 3px;">
+            <span style={`display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${cl.color};`}></span>
+            <span style={`color: ${cl.color};`}>{cl.name}</span>
+          </span>
+        ))}
+        {projected.some(p => !p.clusterName) && (
+          <span style="display: inline-flex; align-items: center; gap: 3px;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #5b7279;"></span>
+            <span style="color: #5b7279;">Unaligned</span>
+          </span>
+        )}
+        <span style="color: #1a5568; margin-left: 8px;">size = story count &middot; color = HRCB score</span>
+      </div>
+      <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 4px;">
+        PC1: <span style="color: #5b7279;">{pcLabels[0]}</span> &middot;
+        PC2: <span style="color: #5b7279;">{pcLabels[1]}</span>
+        <span id="ss-pc3-label"> &middot; PC3: <span style="color: #5b7279;">{pcLabels[2]}</span></span>
+        <span style="color: #1a5568;"> (principal components of 8D editorial space)</span>
+      </div>
+    </>
+  )}
+</div>
+
+<script is:inline define:vars={{ clientData }}>
+(function() {
+  let data;
+  try { data = JSON.parse(clientData); } catch (e) { return; }
+  const { pts, l1, l2, l3 } = data;
+  if (!pts || pts.length < 2) return;
+
+  // HRCB → color
+  function hcbColor(sc) {
+    if (sc === null || sc === undefined) return '#5b7279';
+    if (sc >= 0.6) return '#22c55e';
+    if (sc >= 0.3) return '#4ade80';
+    if (sc >= 0.1) return '#86efac';
+    if (sc >= -0.1) return '#8faaab';
+    if (sc >= -0.3) return '#fca5a5';
+    if (sc >= -0.6) return '#f87171';
+    return '#dc2626';
+  }
+
+  // Cosine similarity in 8D
+  function cosSim(a, b) {
+    if (!a || !b) return 0;
+    let dot = 0, ma = 0, mb = 0;
+    for (let i = 0; i < a.length; i++) { dot += a[i]*b[i]; ma += a[i]*a[i]; mb += b[i]*b[i]; }
+    const d = Math.sqrt(ma) * Math.sqrt(mb);
+    return d > 0 ? dot / d : 0;
+  }
+
+  function nearest(pt, k) {
+    if (!pt.zv) return [];
+    return pts
+      .filter(p => p.d !== pt.d && p.zv)
+      .map(p => ({ ...p, sim: cosSim(pt.zv, p.zv) }))
+      .sort((a, b) => b.sim - a.sim)
+      .slice(0, k);
+  }
+
+  // Detail panel
+  function renderDetail(el, pt) {
+    if (!pt) {
+      const hint = el.id === 'ss-detail-2d' ? 'hover a point' : 'click a sphere';
+      el.innerHTML = `<div style="color:#1a5568;font-size:9px;">${hint} for details</div>`;
+      return;
+    }
+    const scoreColor = pt.cc || hcbColor(pt.sc);
+    const scoreStr = pt.sc !== null ? (pt.sc >= 0 ? '+' : '') + pt.sc.toFixed(3) : 'n/a';
+    const barW = pt.sc !== null ? Math.round(Math.abs(pt.sc) * 100) : 0;
+    const scoreBar = pt.sc !== null
+      ? `<div style="background:#0d4655;border-radius:2px;height:4px;margin:2px 0;"><div style="background:${hcbColor(pt.sc)};height:4px;border-radius:2px;width:${barW}%;"></div></div>`
+      : '';
+    const dimNames = ['EQ','SO','SR','TD','PT','AR','VA','FW'];
+    const signals = pt.zv
+      ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1px 6px;margin-top:4px;">`
+        + dimNames.map((k, i) => {
+          const v = pt.zv[i];
+          const w = v !== undefined ? Math.min(100, Math.round((v + 3) / 6 * 100)) : 0;
+          return `<div><span style="color:#5b7279;">${k}</span><div style="background:#0d4655;border-radius:1px;height:2px;margin-top:1px;"><div style="background:#5b7279;height:2px;border-radius:1px;width:${w}%;"></div></div></div>`;
+        }).join('') + `</div>`
+      : '';
+    const nbrs = nearest(pt, 3);
+    const nearHtml = nbrs.length
+      ? `<div style="color:#5b7279;font-size:9px;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;">Nearest</div>`
+        + nbrs.map(nb => `<div style="color:#5b7279;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">→ <a href="/domain/${nb.d}" style="color:#8faaab;text-decoration:none;">${nb.d}</a></div>`).join('')
+      : '';
+    el.innerHTML = `
+      <a href="/domain/${pt.d}" style="color:#98a8a8;font-weight:bold;text-decoration:none;font-size:10px;word-break:break-all;">${pt.d}</a>
+      <div style="color:${hcbColor(pt.sc)};font-size:11px;font-weight:bold;margin-top:3px;">HRCB ${scoreStr}</div>
+      ${scoreBar}
+      ${pt.cn ? `<div style="color:${pt.cc};font-size:9px;margin-top:3px;">${pt.cn}</div>` : `<div style="color:#5b7279;font-size:9px;margin-top:3px;">Unaligned</div>`}
+      <div style="color:#5b7279;font-size:9px;">${pt.n} ${pt.n === 1 ? 'story' : 'stories'}</div>
+      ${signals}${nearHtml}`;
+  }
+
+  // Mode toggle
+  let threeLoaded = false;
+  const btn2d = document.getElementById('ss-btn-2d');
+  const btn3d = document.getElementById('ss-btn-3d');
+  const wrap2d = document.getElementById('ss-2d-wrap');
+  const wrap3d = document.getElementById('ss-3d-wrap');
+  const pc3label = document.getElementById('ss-pc3-label');
+
+  function setMode(mode) {
+    const is2d = mode === '2d';
+    wrap2d.style.display = is2d ? 'flex' : 'none';
+    wrap3d.style.display = is2d ? 'none' : 'flex';
+    btn2d.style.cssText = is2d
+      ? 'padding:3px 10px;background:#1a5568;border:1px solid #60a5fa;border-radius:3px;color:#60a5fa;font-size:var(--font-xs);cursor:pointer;font-family:monospace;'
+      : 'padding:3px 10px;background:#002d38;border:1px solid #0d4655;border-radius:3px;color:#5b7279;font-size:var(--font-xs);cursor:pointer;font-family:monospace;';
+    btn3d.style.cssText = is2d
+      ? 'padding:3px 10px;background:#002d38;border:1px solid #0d4655;border-radius:3px;color:#5b7279;font-size:var(--font-xs);cursor:pointer;font-family:monospace;'
+      : 'padding:3px 10px;background:#1a5568;border:1px solid #60a5fa;border-radius:3px;color:#60a5fa;font-size:var(--font-xs);cursor:pointer;font-family:monospace;';
+    if (pc3label) pc3label.style.display = is2d ? 'none' : '';
+  }
+
+  if (pc3label) pc3label.style.display = 'none';
+
+  btn2d && btn2d.addEventListener('click', () => setMode('2d'));
+  btn3d && btn3d.addEventListener('click', () => {
+    if (threeLoaded) { setMode('3d'); return; }
+    setMode('3d');
+    init3D().catch(err => {
+      const loading = document.getElementById('ss-3d-loading');
+      if (loading) loading.textContent = '3D unavailable: ' + (err && err.message ? err.message : String(err));
+    });
+  });
+
+  // ========================
+  // 2D SVG rendering
+  // ========================
+  function render2D() {
+    const svg = document.getElementById('ss-svg');
+    if (!svg) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const W = 560, H = 340, PAD = 38;
+    const IW = W - 2 * PAD, IH = H - 2 * PAD;
+
+    const xs = pts.map(p => p.x2), ys = pts.map(p => p.y2);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs);
+    const yMin = Math.min(...ys), yMax = Math.max(...ys);
+    const xPad = (xMax - xMin) * 0.12 || 0.5;
+    const yPad = (yMax - yMin) * 0.12 || 0.5;
+    const xRange = (xMax + xPad) - (xMin - xPad);
+    const yRange = (yMax + yPad) - (yMin - yPad);
+    const toX = x => PAD + ((x - xMin + xPad) / xRange) * IW;
+    const toY = y => PAD + ((yMax + yPad - y) / yRange) * IH;
+
+    const maxN = Math.max(...pts.map(p => p.n), 1);
+    const dotR = n => Math.max(3, Math.min(10, 3 + Math.sqrt(n / maxN) * 7));
+
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // Background
+    const bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+    bg.setAttribute('width', W); bg.setAttribute('height', H);
+    bg.setAttribute('fill', '#002d38'); bg.setAttribute('rx', 4);
+    svg.appendChild(bg);
+
+    // Zero lines
+    const x0 = toX(0), y0 = toY(0);
+    if (x0 > PAD && x0 < W - PAD) {
+      const l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', x0); l.setAttribute('y1', PAD);
+      l.setAttribute('x2', x0); l.setAttribute('y2', H - PAD);
+      l.setAttribute('stroke', '#0d4655'); l.setAttribute('stroke-width', '1');
+      svg.appendChild(l);
+    }
+    if (y0 > PAD && y0 < H - PAD) {
+      const l = document.createElementNS(NS, 'line');
+      l.setAttribute('x1', PAD); l.setAttribute('y1', y0);
+      l.setAttribute('x2', W - PAD); l.setAttribute('y2', y0);
+      l.setAttribute('stroke', '#0d4655'); l.setAttribute('stroke-width', '1');
+      svg.appendChild(l);
+    }
+
+    // Cluster ellipse shadows
+    const groups = {};
+    for (const p of pts) {
+      if (!p.cn) continue;
+      if (!groups[p.cn]) groups[p.cn] = { pts: [], color: p.cc };
+      groups[p.cn].pts.push({ x: toX(p.x2), y: toY(p.y2) });
+    }
+    for (const cg of Object.values(groups)) {
+      if (cg.pts.length < 2) continue;
+      const cx = cg.pts.reduce((s, p) => s + p.x, 0) / cg.pts.length;
+      const cy = cg.pts.reduce((s, p) => s + p.y, 0) / cg.pts.length;
+      const r = Math.max(14, Math.max(...cg.pts.map(p => Math.hypot(p.x - cx, p.y - cy))) + 10);
+      const el = document.createElementNS(NS, 'ellipse');
+      el.setAttribute('cx', cx); el.setAttribute('cy', cy);
+      el.setAttribute('rx', r); el.setAttribute('ry', r * 0.72);
+      el.setAttribute('fill', cg.color); el.setAttribute('opacity', '0.06');
+      el.setAttribute('stroke', cg.color); el.setAttribute('stroke-width', '1');
+      el.setAttribute('stroke-opacity', '0.25');
+      svg.appendChild(el);
+    }
+
+    // Domain circles
+    const detail = document.getElementById('ss-detail-2d');
+    let hoveredPt = null;
+    for (const pt of pts) {
+      const cx = toX(pt.x2), cy = toY(pt.y2);
+      const r = dotR(pt.n);
+      const col = pt.sc !== null ? hcbColor(pt.sc) : (pt.cc || '#5b7279');
+
+      const circle = document.createElementNS(NS, 'circle');
+      circle.setAttribute('cx', cx); circle.setAttribute('cy', cy);
+      circle.setAttribute('r', r);
+      circle.setAttribute('fill', col); circle.setAttribute('fill-opacity', '0.85');
+      circle.setAttribute('stroke', '#002d38'); circle.setAttribute('stroke-width', '0.5');
+      circle.setAttribute('style', 'cursor:pointer;');
+
+      circle.addEventListener('mouseenter', () => {
+        circle.setAttribute('stroke', '#ffffff'); circle.setAttribute('stroke-width', '1.5');
+        renderDetail(detail, pt);
+        hoveredPt = pt;
+      });
+      circle.addEventListener('mouseleave', () => {
+        circle.setAttribute('stroke', '#002d38'); circle.setAttribute('stroke-width', '0.5');
+      });
+      circle.addEventListener('click', () => renderDetail(detail, pt));
+
+      const title = document.createElementNS(NS, 'title');
+      title.textContent = pt.d + (pt.sc !== null ? ' (' + (pt.sc >= 0 ? '+' : '') + pt.sc.toFixed(3) + ')' : '') + (pt.cn ? ' — ' + pt.cn : ' — Unaligned');
+      circle.appendChild(title);
+      svg.appendChild(circle);
+    }
+
+    // Labels for top-N by story count
+    const topLabeled = [...pts].sort((a, b) => b.n - a.n).slice(0, Math.min(10, pts.length));
+    for (const pt of topLabeled) {
+      const lx = toX(pt.x2) + dotR(pt.n) + 2;
+      const ly = toY(pt.y2) + 3;
+      const lbl = document.createElementNS(NS, 'text');
+      lbl.setAttribute('x', lx); lbl.setAttribute('y', ly);
+      lbl.setAttribute('fill', '#5b7279'); lbl.setAttribute('font-size', '8');
+      lbl.setAttribute('font-family', 'monospace');
+      lbl.setAttribute('style', 'pointer-events:none;');
+      lbl.textContent = pt.d.length > 18 ? pt.d.slice(0, 17) + '…' : pt.d;
+      svg.appendChild(lbl);
+    }
+
+    // Axis labels
+    const mkText = (x, y, anchor, transform, text) => {
+      const t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x); t.setAttribute('y', y);
+      t.setAttribute('text-anchor', anchor);
+      t.setAttribute('fill', '#5b7279'); t.setAttribute('font-size', '9');
+      t.setAttribute('font-family', 'monospace');
+      t.setAttribute('style', 'pointer-events:none;');
+      if (transform) t.setAttribute('transform', transform);
+      t.textContent = text;
+      return t;
+    };
+    svg.appendChild(mkText(W / 2, H - 6, 'middle', null, 'PC1 (' + l1 + ') →'));
+    svg.appendChild(mkText(11, H / 2, 'middle', `rotate(-90,11,${H / 2})`, '↑ PC2 (' + l2 + ')'));
+  }
+
+  // ========================
+  // 3D Three.js rendering
+  // ========================
+  async function init3D() {
+    const loading = document.getElementById('ss-3d-loading');
+    const canvas = document.getElementById('ss-3d-canvas');
+    if (!canvas) return;
+
+    const [THREE_mod, orbMod] = await Promise.all([
+      import('https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js'),
+      import('https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/controls/OrbitControls.js'),
+    ]);
+    const THREE = THREE_mod;
+    const OrbitControls = orbMod.OrbitControls;
+
+    const cw = canvas.parentElement ? canvas.parentElement.offsetWidth : 560;
+    const ch = 340;
+    canvas.width = cw; canvas.height = ch;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setSize(cw, ch);
+    renderer.setClearColor(0x002d38);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, cw / ch, 0.1, 100);
+    camera.position.set(0, 0, 8);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const dlight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dlight.position.set(5, 8, 5);
+    scene.add(dlight);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.4;
+
+    // Scale to fit
+    const allCoords = pts.flatMap(p => [p.x3, p.y3, p.z3]);
+    const maxAbs = Math.max(...allCoords.map(Math.abs)) || 1;
+    const sc3 = 4 / maxAbs;
+
+    const maxN = Math.max(...pts.map(p => p.n), 1);
+
+    // Cluster wireframe hulls
+    const cgroups = {};
+    for (const pt of pts) {
+      if (!pt.cn) continue;
+      if (!cgroups[pt.cn]) cgroups[pt.cn] = { xs: [], ys: [], zs: [], color: pt.cc };
+      cgroups[pt.cn].xs.push(pt.x3 * sc3);
+      cgroups[pt.cn].ys.push(pt.y3 * sc3);
+      cgroups[pt.cn].zs.push(pt.z3 * sc3);
+    }
+    for (const cg of Object.values(cgroups)) {
+      if (cg.xs.length < 2) continue;
+      const avg = arr => arr.reduce((s, x) => s + x, 0) / arr.length;
+      const cx = avg(cg.xs), cy = avg(cg.ys), cz = avg(cg.zs);
+      const r = Math.max(0.3, Math.max(...cg.xs.map((x, i) => Math.sqrt((x - cx) ** 2 + (cg.ys[i] - cy) ** 2 + (cg.zs[i] - cz) ** 2))) + 0.25);
+      const geo = new THREE.SphereGeometry(r, 16, 12);
+      const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(cg.color), wireframe: true, transparent: true, opacity: 0.1 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(cx, cy, cz);
+      scene.add(mesh);
+    }
+
+    // Domain spheres
+    const meshes = [];
+    for (const pt of pts) {
+      const r = Math.max(0.06, Math.min(0.28, 0.06 + Math.sqrt(pt.n / maxN) * 0.22));
+      const col = pt.sc !== null ? hcbColor(pt.sc) : (pt.cc || '#5b7279');
+      const geo = new THREE.SphereGeometry(r, 12, 12);
+      const mat = new THREE.MeshPhongMaterial({
+        color: new THREE.Color(col),
+        shininess: 60,
+        emissive: new THREE.Color(col),
+        emissiveIntensity: 0.12,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(pt.x3 * sc3, pt.y3 * sc3, pt.z3 * sc3);
+      mesh.userData = pt;
+      scene.add(mesh);
+      meshes.push(mesh);
+    }
+
+    // Raycaster for interaction
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let selectedMesh = null;
+    const detail = document.getElementById('ss-detail-3d');
+
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(meshes);
+      if (hits.length > 0) {
+        controls.autoRotate = false;
+        if (selectedMesh) {
+          selectedMesh.material.emissiveIntensity = 0.12;
+          selectedMesh.scale.set(1, 1, 1);
+        }
+        selectedMesh = hits[0].object;
+        selectedMesh.material.emissiveIntensity = 0.5;
+        selectedMesh.scale.set(1.4, 1.4, 1.4);
+        renderDetail(detail, selectedMesh.userData);
+      }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      canvas.style.cursor = raycaster.intersectObjects(meshes).length > 0 ? 'pointer' : 'grab';
+    });
+
+    if (loading) loading.style.display = 'none';
+    threeLoaded = true;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      const w = canvas.parentElement ? canvas.parentElement.offsetWidth : cw;
+      camera.aspect = w / ch;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, ch);
+    });
+  }
+
+  // Boot
+  render2D();
+})();
+</script>

@@ -263,6 +263,48 @@ export async function writeEvalResult(
   await refreshDailySectionStats(db, result.scores);
 }
 
+// --- Internet Archive: fire-and-forget preservation (Phase 39C Part 1) ---
+
+/**
+ * Submit a URL to Internet Archive for preservation.
+ * Rate-limited via KV: max 1 archive request per 10 seconds (key: archive:last_submit).
+ * Stores the Wayback Machine URL in stories.archive_url.
+ * Non-throwing — all errors are suppressed.
+ */
+export async function requestArchive(
+  db: D1Database,
+  kv: KVNamespace,
+  hnId: number,
+  url: string,
+): Promise<void> {
+  try {
+    // Rate limit: 1 per 10 seconds
+    const rateLimitKey = 'archive:last_submit';
+    const lastSubmit = await kv.get(rateLimitKey);
+    if (lastSubmit) return; // Still within rate limit window
+
+    await kv.put(rateLimitKey, '1', { expirationTtl: 10 });
+
+    const archiveUrl = `https://web.archive.org/save/${url}`;
+    const resp = await fetch(archiveUrl, {
+      method: 'GET',
+      headers: { 'User-Agent': 'HRCB-Evaluator/1.0 (hn-hrcb.pages.dev)' },
+    });
+
+    // Wayback Machine returns the Memento URL in the Content-Location header
+    const mementoUrl = resp.headers.get('Content-Location');
+    if (mementoUrl) {
+      const fullArchiveUrl = mementoUrl.startsWith('http') ? mementoUrl : `https://web.archive.org${mementoUrl}`;
+      await db
+        .prepare(`UPDATE stories SET archive_url = ? WHERE hn_id = ?`)
+        .bind(fullArchiveUrl, hnId)
+        .run();
+    }
+  } catch {
+    // Non-fatal: archive is best-effort
+  }
+}
+
 // --- Consensus scoring ---
 
 export async function updateConsensusScore(db: D1Database, hnId: number): Promise<void> {

@@ -116,6 +116,12 @@
 
 ## Schema & Architecture
 
+- [x] **Signal Space visualization** *(meerkat phase 39B — done)* — 2D PCA scatter + 3D Three.js orbit on /factions (`site/src/components/SignalSpace.astro`). Server-side PCA from 8D z-vectors, CDN Three.js lazy-loaded, cluster ellipses, hover/click detail panels.
+
+- [x] **Evaluator Trust Index** *(meerkat phase 37B — done)* — `model_trust_snapshots` table (migration 0031), daily cron computation (cal×0.40 + consensus×0.35 + parse×0.25), 14-day sparklines on /models. Auto-flags models with trust <0.3 for 7 consecutive days.
+
+- [x] **Internet Archive integration** *(meerkat phase 39C — done)* — Fire-and-forget Wayback preservation after primary eval (stores archive_url + archive_used columns, migration 0032). Wayback content fallback in prepareContent() when live content is unusable (error, gated, or unreadable).
+
 - [ ] **Model soft-delete (DB-level flag)** *(meerkat phase 34)*
   - New `model_registry` table in D1 with `enabled`, `deleted_at`, `disabled_reason` columns
   - Seed from `MODEL_REGISTRY` in models.ts; `getEnabledModels(db)` replaces hardcoded array
@@ -127,6 +133,13 @@
   - HN-compatible endpoints: `GET /v0/item/{id}.json`, `/v0/topstories.json`, `/v0/beststories.json`
   - Extended endpoints: `GET /api/stories`, `/api/story/{id}`, `/api/domain/{domain}`, `/api/domains`, `/api/search`
   - Rate-limited by IP; optional API key in KV; `Cache-Control: public, max-age=60` on list endpoints
+
+- [ ] **Structured Knowledge Base** *(meerkat phase 39A — requires phase 35)*
+  - JSON-LD with Schema.org annotations on all eval records
+  - Export endpoints via Phase 35 API: `GET /api/domain/{domain}/profile.json`, `GET /api/export/dataset.csv`
+  - Bulk dataset CSV export as daily R2 snapshot
+  - Citation format: "HRCB Score for {domain}, evaluated {date}, schema v3.x. Source: hn-hrcb.pages.dev/domain/{domain}"
+  - Domain profile versioning: version counter + changelog per domain
 
 - [ ] **Cost attribution per model**
   - Compute daily cost per model from eval_history token counts + Anthropic pricing

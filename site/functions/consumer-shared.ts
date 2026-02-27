@@ -17,6 +17,7 @@ import {
   computeLightAggregates,
   writeLightRaterEvalResult,
   fetchUrlContent,
+  requestArchive,
   writeRaterEvalResult,
   markFailed,
   markSkipped,
@@ -199,6 +200,27 @@ export interface PreparedContent {
 }
 
 /**
+ * Attempt to retrieve archived content from the Wayback Machine.
+ * Checks availability API first, then fetches the closest snapshot.
+ * Returns raw HTML string, or null if unavailable/unreachable.
+ */
+async function fetchFromWayback(url: string): Promise<string | null> {
+  try {
+    const checkUrl = `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`;
+    const check = await fetch(checkUrl, { signal: AbortSignal.timeout(8000) });
+    if (!check.ok) return null;
+    const data = await check.json() as { archived_snapshots?: { closest?: { available?: boolean; url?: string } } };
+    const snapshot = data?.archived_snapshots?.closest;
+    if (!snapshot?.available || !snapshot?.url) return null;
+    const archiveRes = await fetch(snapshot.url, { signal: AbortSignal.timeout(20000) });
+    if (!archiveRes.ok) return null;
+    return await archiveRes.text();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Prepare content for evaluation. Handles model resolution, credit pause, rater health,
  * binary skip, primary-skipped check, content fetch (KV cache → fetch → content gate → readable check).
  *
@@ -283,34 +305,49 @@ export async function prepareContent(
       content = cached;
       console.log(`[consumer] KV cache hit for hn_id=${story.hn_id}`);
     } else {
-      const rawHtml = await fetchUrlContent(story.url!);
+      // 1. Live fetch
+      let rawHtml = await fetchUrlContent(story.url!);
 
-      // Content gate
-      const gate = classifyContent(rawHtml, story.url!);
-      if (gate.blocked) {
-        if (isPrimary) {
-          await markSkipped(db, story.hn_id,
-            `Content gate: ${gate.category} (${gate.confidence.toFixed(2)})`,
-            gate.category, gate.confidence);
+      // 2. Evaluate live content quality
+      const isErrorResponse = rawHtml.startsWith('[error:');
+      const gate = isErrorResponse ? null : classifyContent(rawHtml, story.url!);
+      const liveOk = !isErrorResponse && gate !== null && !gate.blocked && hasReadableText(rawHtml);
+
+      // 3. Wayback Machine fallback if live content is unusable (Phase 39C Part 2)
+      let archiveUsed = false;
+      if (!liveOk) {
+        const wb = await fetchFromWayback(story.url!);
+        if (wb && hasReadableText(wb)) {
+          rawHtml = wb;
+          archiveUsed = true;
+          console.log(`[consumer] Wayback fallback used for hn_id=${story.hn_id}`);
+          await db.prepare('UPDATE stories SET archive_used = 1 WHERE hn_id = ?').bind(story.hn_id).run().catch(() => {});
         }
-        await markRaterFailed(db, story.hn_id, msgModelId, provider,
-          `Skipped: ${gate.category} (${gate.signals.join('; ')})`).catch(() => {});
-        await logEvent(db, {
-          hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info',
-          message: `Content gate: ${gate.category}`,
-          details: { reason: gate.category, confidence: gate.confidence, signals: gate.signals, model: msgModelId },
-        });
-        msg.ack();
-        return null;
       }
 
-      // Readable text check
-      if (!hasReadableText(rawHtml)) {
-        if (isPrimary) {
-          await markSkipped(db, story.hn_id, 'No readable content (JavaScript-only page)');
+      // 4. Handle unrecoverable failure (Wayback also unavailable)
+      if (!liveOk && !archiveUsed) {
+        if (gate?.blocked) {
+          if (isPrimary) {
+            await markSkipped(db, story.hn_id,
+              `Content gate: ${gate.category} (${gate.confidence.toFixed(2)})`,
+              gate.category, gate.confidence);
+          }
+          await markRaterFailed(db, story.hn_id, msgModelId, provider,
+            `Skipped: ${gate.category} (${gate.signals.join('; ')})`).catch(() => {});
+          await logEvent(db, {
+            hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info',
+            message: `Content gate: ${gate.category}`,
+            details: { reason: gate.category, confidence: gate.confidence, signals: gate.signals, model: msgModelId },
+          });
+        } else {
+          // Error response or no readable text
+          if (isPrimary) {
+            await markSkipped(db, story.hn_id, 'No readable content (JavaScript-only page)');
+          }
+          await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: no readable content').catch(() => {});
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: no readable text in HTML (likely JS-rendered SPA)`, details: { reason: 'no_readable_text', raw_length: rawHtml.length, model: msgModelId } });
         }
-        await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: no readable content').catch(() => {});
-        await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: no readable text in HTML (likely JS-rendered SPA)`, details: { reason: 'no_readable_text', raw_length: rawHtml.length, model: msgModelId } });
         msg.ack();
         return null;
       }
@@ -514,6 +551,11 @@ export async function processFullResult(
       console.error(`[consumer] R2 snapshot failed (non-fatal): ${err}`);
       await logEvent(db, { hn_id: story.hn_id, event_type: 'r2_error', severity: 'warn', message: `R2 snapshot failed`, details: { error: String(err) } });
     }
+  }
+
+  // Internet Archive preservation (primary only, fire-and-forget — Phase 39C Part 1)
+  if (prep.isPrimary && story.url) {
+    requestArchive(db, env.CONTENT_CACHE, story.hn_id, story.url).catch(() => {});
   }
 
   // Cache DCP if new (primary only)

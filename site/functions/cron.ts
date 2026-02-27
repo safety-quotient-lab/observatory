@@ -353,6 +353,112 @@ export default {
       }
     }
 
+    // ─── Phase 37B: Daily model trust scores (once per hour) ───
+
+    if (minute === 0) {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+
+        // Get all models that have had any eval activity in last 7 days
+        const { results: activeModels } = await db
+          .prepare(
+            `SELECT eval_model,
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN eval_status = 'done' THEN 1 END) as done_count
+             FROM rater_evals
+             WHERE evaluated_at >= datetime('now', '-7 days')
+             GROUP BY eval_model`
+          )
+          .all<{ eval_model: string; total: number; done_count: number }>();
+
+        for (const modelRow of activeModels) {
+          const modelId = modelRow.eval_model;
+          const parseSuccessRate = modelRow.total > 0 ? modelRow.done_count / modelRow.total : null;
+          const evalCount = modelRow.done_count;
+
+          // Calibration accuracy: latest calibration_run for this model
+          const calRun = await db
+            .prepare(
+              `SELECT passed, total_urls FROM calibration_runs
+               WHERE model = ? AND status IN ('pass', 'fail')
+               ORDER BY created_at DESC LIMIT 1`
+            )
+            .bind(modelId)
+            .first<{ passed: number; total_urls: number }>();
+          const calibrationAccuracy = calRun && calRun.total_urls > 0
+            ? calRun.passed / calRun.total_urls
+            : null;
+
+          // Consensus agreement: avg(1 - |model_score - consensus_score| / 2) for recent done evals
+          const consensusRow = await db
+            .prepare(
+              `SELECT AVG(1.0 - MIN(ABS(re.hcb_weighted_mean - s.consensus_score) / 2.0, 1.0)) as avg_agreement
+               FROM rater_evals re
+               JOIN stories s ON s.hn_id = re.hn_id
+               WHERE re.eval_model = ?
+                 AND re.eval_status = 'done'
+                 AND re.hcb_weighted_mean IS NOT NULL
+                 AND s.consensus_score IS NOT NULL
+                 AND s.consensus_model_count >= 2
+                 AND re.evaluated_at >= datetime('now', '-7 days')`
+            )
+            .bind(modelId)
+            .first<{ avg_agreement: number | null }>();
+          const consensusAgreement = consensusRow?.avg_agreement ?? null;
+
+          // Composite trust score
+          let trustScore: number | null = null;
+          const parts: number[] = [];
+          const weights: number[] = [];
+          if (calibrationAccuracy !== null) { parts.push(calibrationAccuracy * 0.40); weights.push(0.40); }
+          if (consensusAgreement !== null)   { parts.push(consensusAgreement * 0.35);  weights.push(0.35); }
+          if (parseSuccessRate !== null)     { parts.push(parseSuccessRate * 0.25);    weights.push(0.25); }
+          if (weights.length > 0) {
+            const totalWeight = weights.reduce((s, w) => s + w, 0);
+            trustScore = parts.reduce((s, p) => s + p, 0) / totalWeight;
+          }
+
+          await db
+            .prepare(
+              `INSERT INTO model_trust_snapshots
+                 (model_id, day, calibration_accuracy, consensus_agreement, parse_success_rate, trust_score, eval_count)
+               VALUES (?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(model_id, day) DO UPDATE SET
+                 calibration_accuracy = excluded.calibration_accuracy,
+                 consensus_agreement  = excluded.consensus_agreement,
+                 parse_success_rate   = excluded.parse_success_rate,
+                 trust_score          = excluded.trust_score,
+                 eval_count           = excluded.eval_count`
+            )
+            .bind(modelId, today, calibrationAccuracy, consensusAgreement, parseSuccessRate, trustScore, evalCount)
+            .run();
+        }
+
+        // Flag models with trust < 0.3 for 7 consecutive days
+        const { results: lowTrustModels } = await db
+          .prepare(
+            `SELECT model_id, COUNT(*) as bad_days
+             FROM model_trust_snapshots
+             WHERE trust_score < 0.3
+               AND day >= date('now', '-7 days')
+             GROUP BY model_id
+             HAVING bad_days >= 7`
+          )
+          .all<{ model_id: string; bad_days: number }>();
+
+        for (const { model_id, bad_days } of lowTrustModels) {
+          await logEvent(db, {
+            event_type: 'rater_auto_disable',
+            severity: 'warn',
+            message: `Model ${model_id} trust score <0.3 for ${bad_days} consecutive days — review recommended`,
+            details: { model: model_id, bad_days, source: 'trust_index' },
+          });
+        }
+      } catch (err) {
+        console.error('[trust-index] Failed (non-fatal):', err);
+      }
+    }
+
     // ─── Event pruning (90-day retention, once per hour) ───
 
     if (minute === 0) {
