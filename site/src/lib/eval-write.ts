@@ -259,6 +259,8 @@ export async function writeEvalResult(
   // Refresh materialized domain aggregate (best-effort)
   const domain = result.evaluation?.domain;
   if (domain) await refreshDomainAggregate(db, domain);
+
+  await refreshDailySectionStats(db, result.scores);
 }
 
 // --- Consensus scoring ---
@@ -386,6 +388,32 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
       .run();
   } catch (err) {
     console.error(`[eval-write] refreshDomainAggregate failed for ${domain}:`, err);
+  }
+}
+
+export async function refreshDailySectionStats(
+  db: D1Database,
+  scores: Array<{ section: string; final: number | null }>
+): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+  for (const score of scores) {
+    if (score.final === null) continue;
+    try {
+      await db
+        .prepare(
+          `INSERT INTO daily_section_stats (day, section, mean_final, min_final, max_final, eval_count)
+           VALUES (?, ?, ?, ?, ?, 1)
+           ON CONFLICT(day, section) DO UPDATE SET
+             mean_final  = (mean_final * eval_count + excluded.mean_final) / (eval_count + 1),
+             min_final   = MIN(min_final,  excluded.min_final),
+             max_final   = MAX(max_final,  excluded.max_final),
+             eval_count  = eval_count + 1`
+        )
+        .bind(today, score.section, score.final, score.final, score.final)
+        .run();
+    } catch (err) {
+      console.error(`[eval-write] refreshDailySectionStats failed for ${score.section}:`, err);
+    }
   }
 }
 

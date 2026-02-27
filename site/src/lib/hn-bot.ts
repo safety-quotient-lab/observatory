@@ -824,6 +824,61 @@ export async function checkDeadStories(db: D1Database): Promise<{ checked: numbe
   return { checked: candidates.length, dead: deadIds.length };
 }
 
+// ─── Content cache preloader ───
+
+/**
+ * Pre-fetch content for pending stories into KV so consumers get cache hits.
+ * Runs in the cron cycle after stories are inserted, before queue dispatch.
+ * Fires async fetches with a short timeout — non-fatal on failure.
+ *
+ * Key format matches consumer-shared.ts: content:${hn_id}
+ */
+export async function preloadContentCache(
+  db: D1Database,
+  kv: KVNamespace,
+  limit = 20
+): Promise<number> {
+  const { results: pending } = await db
+    .prepare(
+      `SELECT hn_id, url FROM stories
+       WHERE eval_status = 'pending'
+         AND url IS NOT NULL
+         AND url NOT LIKE 'https://news.ycombinator.com%'
+       ORDER BY hn_score DESC NULLS LAST
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ hn_id: number; url: string }>();
+
+  let cached = 0;
+  await Promise.allSettled(
+    pending.map(async ({ hn_id, url }) => {
+      // Use the same key format as consumer-shared.ts
+      const kvKey = `content:${hn_id}`;
+      const existing = await kv.get(kvKey);
+      if (existing !== null) return; // already cached
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8_000);
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HN-HRCB/1.0)' },
+        });
+        clearTimeout(timeout);
+        if (!res.ok) return;
+        const text = await res.text();
+        if (text.length < 100) return;
+        await kv.put(kvKey, text, { expirationTtl: 3600 });
+        cached++;
+      } catch {
+        // non-fatal
+      }
+    })
+  );
+  return cached;
+}
+
 // ─── Main crawl cycle ───
 
 /**

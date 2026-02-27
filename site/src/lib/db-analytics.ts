@@ -75,34 +75,25 @@ export interface SparklinePoint {
   evaluated_at: string;
 }
 
-export async function getArticleSparklines(db: D1Database, perArticle = 30): Promise<Map<string, number[]>> {
-  const limit = perArticle * 31; // 31 articles max
-  const { results } = await db
-    .prepare(
-      `SELECT sc.section, sc.final, s.evaluated_at
-       FROM scores sc JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE s.eval_status = 'done' AND sc.final IS NOT NULL AND s.evaluated_at IS NOT NULL
-       ORDER BY s.evaluated_at DESC LIMIT ?`
-    )
-    .bind(limit)
-    .all<SparklinePoint>();
-
-  const grouped = new Map<string, number[]>();
-  for (const r of results) {
-    let arr = grouped.get(r.section);
-    if (!arr) {
-      arr = [];
-      grouped.set(r.section, arr);
-    }
-    if (arr.length < perArticle) {
-      arr.push(r.final);
-    }
+export async function getArticleSparklines(
+  db: D1Database,
+  days = 30
+): Promise<{ section: string; day: string; final: number }[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT section, day, mean_final as final
+         FROM daily_section_stats
+         WHERE day >= date('now', ?)
+         ORDER BY section, day`
+      )
+      .bind(`-${days} days`)
+      .all<{ section: string; day: string; final: number }>();
+    return results;
+  } catch (err) {
+    console.error('[getArticleSparklines] DB error:', err);
+    return [];
   }
-  // Reverse for chronological order (query was DESC)
-  for (const [, arr] of grouped) {
-    arr.reverse();
-  }
-  return grouped;
 }
 
 // --- Article pair stats (co-occurrence + correlation) ---

@@ -6,7 +6,7 @@ import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../../li
 
 const db = Astro.locals.runtime.env.DB;
 
-const [articleStats, sparklines, statusCounts, dailyHrcb, topDomains, propagandaStories] = await Promise.all([
+const [articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories] = await Promise.all([
   getArticleDetailedStats(db),
   getArticleSparklines(db, 60),
   getStatusCounts(db),
@@ -14,6 +14,14 @@ const [articleStats, sparklines, statusCounts, dailyHrcb, topDomains, propaganda
   getDomainStats(db, 10),
   getTopPropagandaStories(db, 15),
 ]);
+
+// Build section → ordered final values map from daily rollup rows
+const sparklines = new Map<string, number[]>();
+for (const row of sparklinesRaw) {
+  let arr = sparklines.get(row.section);
+  if (!arr) { arr = []; sparklines.set(row.section, arr); }
+  arr.push(row.final);
+}
 
 // Graceful fallback for newer queries
 let signalOverview: Awaited<ReturnType<typeof getSignalOverview>> | null = null;

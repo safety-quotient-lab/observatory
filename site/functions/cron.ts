@@ -27,7 +27,7 @@ import {
   computeFairWitnessAggregates,
   type DcpElement,
 } from '../src/lib/compute-aggregates';
-import { runCrawlCycle, enqueueForEvaluation, dispatchFreeModelEvals } from '../src/lib/hn-bot';
+import { runCrawlCycle, enqueueForEvaluation, dispatchFreeModelEvals, preloadContentCache } from '../src/lib/hn-bot';
 import { getModelQueue } from '../src/lib/shared-eval';
 
 interface Env {
@@ -78,6 +78,15 @@ export default {
       console.error('[cron] Crawl cycle failed (non-fatal):', err);
       await logEvent(db, { event_type: 'cron_error', severity: 'error', message: `Crawl cycle failed`, details: { phase: 'crawl', error: String(err) } }).catch(() => {});
       crawlResult = { stories_new: 0, stories_found: 0, feeds: {}, score_refresh: { updates: 0, sweep: 0 } };
+    }
+
+    // ─── Pre-warm content cache for pending stories ───
+
+    try {
+      const preloaded = await preloadContentCache(db, env.CONTENT_CACHE, 20);
+      if (preloaded > 0) console.log(`[cron] pre-cached ${preloaded} story URLs`);
+    } catch (err) {
+      console.error('[cron] Content cache preload failed (non-fatal):', err);
     }
 
     // ─── Multi-model dispatch (every 5 minutes) ───

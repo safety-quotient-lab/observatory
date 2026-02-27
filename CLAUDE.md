@@ -42,7 +42,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 **Wrangler configs:** `site/wrangler.toml` (Pages site — has DB + CONTENT_CACHE bindings), `site/wrangler.cron.toml`, `site/wrangler.consumer-anthropic.toml`, `site/wrangler.consumer-openrouter.toml`, `site/wrangler.consumer-workers-ai.toml`, `site/wrangler.dlq.toml`
 
 **Storage:**
-- **D1** (`hrcb-db`): stories, scores, events, eval_history, fair_witness, domain_dcp, dlq_messages, calibration_runs, ratelimit_snapshots, domain_aggregates (materialized per-domain signal averages, updated at eval write time via `refreshDomainAggregate()`)
+- **D1** (`hrcb-db`): stories, scores, events, eval_history, fair_witness, domain_dcp, dlq_messages, calibration_runs, ratelimit_snapshots, domain_aggregates (materialized per-domain signal averages, updated at eval write time via `refreshDomainAggregate()`), daily_section_stats (per-day per-section score rollup, updated via `refreshDailySectionStats()`, used by `getArticleSparklines`)
 - **KV** (`CONTENT_CACHE`): content cache, DCP cache, rate limit state per model, query result cache (keys `q:*`, TTL 300-600s, invalidated after each primary eval)
 - **R2** (`hrcb-content-snapshots`): content snapshots for audit trail
 
