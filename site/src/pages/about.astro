@@ -201,6 +201,26 @@ const jsonLd = {
           </table>
           </div>
 
+          <h3 id="content-type-consensus" style="font-size: var(--font-sm); color: #98a8a8; font-weight: bold; margin: 15px 0 8px 0;">Content Type Consensus Vote</h3>
+
+          <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
+            Content type classification directly determines the E:S weight split, so misclassification can meaningfully distort the final HRCB score.
+            For example, an editorial article (ED: E=0.65, S=0.35) misclassified as a landing page (LP: E=0.40, S=0.60) shifts 25 percentage points of weight from the editorial channel to the structural channel.
+          </p>
+
+          <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
+            When multiple models evaluate the same story, the system uses a <b style="color: #98a8a8;">majority vote</b> to determine the consensus content type rather than trusting any single model's classification.
+            Each full-mode rater contributes one vote; light-mode raters do not vote (they don't classify content type). The plurality type becomes the consensus content type used for weight assignment.
+          </p>
+
+          <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
+            Validation metrics tracked on the <a href="/system" style="color: #2b90d8;">system dashboard</a>:
+          </p>
+          <ul style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; padding-left: 20px; margin-bottom: 12px;">
+            <li><b style="color: #98a8a8;">Suspect rate</b> — structural-heavy types (PO, LP, PR, AC) where the structural channel has no data, suggesting misclassification</li>
+            <li><b style="color: #98a8a8;">Cross-model disagreement</b> — stories where raters assigned different content types, indicating ambiguous content</li>
+          </ul>
+
           <h2 id="pipeline" style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Per-Provision Pipeline</h2>
 
           <div style="background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 12px; margin-bottom: 12px; overflow-x: auto;">
@@ -369,8 +389,8 @@ const jsonLd = {
 
           <ol style="color: #5b7279; line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
             <li>A URL from HN's top 7 pages (plus top best/ask/show) is fetched as the unit of analysis (other stories can be manually triggered)</li>
-            <li>The page's content type is classified (Editorial, Community, HR, etc.)</li>
-            <li>Channel weights are assigned based on content type</li>
+            <li>The page's content type is classified (Editorial, Community, HR, etc.); when multiple models evaluate the same story, a <a href="#content-type-consensus" style="color: #2b90d8;">majority vote</a> determines the consensus type</li>
+            <li>Channel weights are assigned based on the consensus content type</li>
             <li>A Domain Context Profile (DCP) is constructed from 8 domain-level elements</li>
             <li>Each of 31 UDHR provisions is scored for editorial and structural signals</li>
             <li>Fair Witness evidence (observable facts + inferences) is recorded per provision</li>
