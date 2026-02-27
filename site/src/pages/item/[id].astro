@@ -9,7 +9,7 @@ import { scoreToColor, formatScore, classificationColor, classificationTextColor
 import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getRaterEvalsForStory, getRaterScores } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import type { Evaluation } from '../../lib/types';
-import { modelDisplayName, PRIMARY_MODEL_ID } from '../../lib/shared-eval';
+import { modelDisplayName, PRIMARY_MODEL_ID, isLightMode } from '../../lib/shared-eval';
 
 const { id } = Astro.params;
 const db = Astro.locals.runtime.env.DB;
@@ -273,6 +273,7 @@ function timeAgo(unixTime: number): string {
           <a href={isPrimary ? `/item/${hnId}` : `/item/${hnId}?model=${re.eval_model}`}
              style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #2a2a3a; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #222;'}`}>
             {modelDisplayName(re.eval_model)}
+            {isLightMode(re.prompt_mode) && <span style="color: #d56500; margin-left: 3px;" title="Light evaluation — editorial only, no per-section scores">lite</span>}
             <span style={`margin-left: 4px; color: ${scoreToColor(re.hcb_weighted_mean)};`}>
               {formatScore(re.hcb_weighted_mean)}
             </span>

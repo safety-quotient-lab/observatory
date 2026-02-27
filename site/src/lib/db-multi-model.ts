@@ -116,6 +116,7 @@ export interface RaterEvalRow {
   output_tokens: number | null;
   evaluated_at: string | null;
   created_at: string;
+  prompt_mode: string | null;
 }
 
 export interface RaterScore {
@@ -178,23 +179,28 @@ export async function getRaterWitness(db: D1Database, hnId: number, evalModel: s
 }
 
 /** Get model IDs that have done evals for given hn_ids (for badge display) */
-export async function getRaterEvalCounts(db: D1Database, hnIds: number[]): Promise<Map<number, string[]>> {
+export interface RaterEvalRef {
+  eval_model: string;
+  prompt_mode: string | null;
+}
+
+export async function getRaterEvalCounts(db: D1Database, hnIds: number[]): Promise<Map<number, RaterEvalRef[]>> {
   if (hnIds.length === 0) return new Map();
 
   const placeholders = hnIds.map(() => '?').join(',');
   const { results } = await db
     .prepare(
-      `SELECT hn_id, eval_model FROM rater_evals
+      `SELECT hn_id, eval_model, prompt_mode FROM rater_evals
        WHERE hn_id IN (${placeholders}) AND eval_status = 'done'
        ORDER BY hn_id, eval_model`
     )
     .bind(...hnIds)
-    .all<{ hn_id: number; eval_model: string }>();
+    .all<{ hn_id: number; eval_model: string; prompt_mode: string | null }>();
 
-  const map = new Map<number, string[]>();
+  const map = new Map<number, RaterEvalRef[]>();
   for (const row of results) {
     const existing = map.get(row.hn_id) || [];
-    existing.push(row.eval_model);
+    existing.push({ eval_model: row.eval_model, prompt_mode: row.prompt_mode });
     map.set(row.hn_id, existing);
   }
   return map;

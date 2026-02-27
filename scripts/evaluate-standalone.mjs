@@ -62,6 +62,17 @@ HRCB measures the editorial lean of content relative to the UDHR's 30 Articles a
 
 Score scale: [-1.0, +1.0]
 
+## CRITICAL: SCORE THE EDITORIAL STANCE, NOT THE SUBJECT
+
+You are scoring the AUTHOR'S STANCE toward human rights, NOT whether the topic is positive or negative.
+
+- An article EXPOSING surveillance abuses → POSITIVE (the journalism champions privacy rights)
+- An article PROMOTING surveillance as beneficial → NEGATIVE (the editorial dismisses privacy rights)
+- An article REPORTING on war crimes to seek accountability → POSITIVE (advocates for justice)
+- An article JUSTIFYING war crimes → NEGATIVE (opposes human rights)
+
+The subject matter being "bad" (war, exploitation, surveillance) does NOT make the score negative. What matters is whether the author's editorial stance ALIGNS WITH or OPPOSES the UDHR.
+
 ## SCORING GUIDE WITH EXAMPLES
 
 Use the full range. Most content should NOT be 0.
@@ -135,6 +146,7 @@ const singleUrl = args[args.indexOf('--url') + 1];
 const singleHnId = parseInt(args[args.indexOf('--hn-id') + 1]);
 const dryRun = args.includes('--dry-run');
 const mode = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'full'; // 'full' | 'light'
+const concurrency = parseInt(args[args.indexOf('--concurrency') + 1] ?? '3');
 if (mode !== 'full' && mode !== 'light') {
   console.error(`Invalid --mode "${mode}". Must be "full" or "light".`);
   process.exit(1);
@@ -239,7 +251,7 @@ function hashPrompt(systemPrompt, userMessage) {
 }
 
 async function fetchQueue(limit) {
-  const res = await fetch(`${INGEST_URL}/api/queue?limit=${limit}`, {
+  const res = await fetch(`${INGEST_URL}/api/queue?limit=${limit}&provider=${encodeURIComponent(PROVIDER)}`, {
     headers: { 'Authorization': `Bearer ${INGEST_SECRET}` },
   });
   if (!res.ok) throw new Error(`Queue fetch failed: ${res.status} ${await res.text()}`);
@@ -300,7 +312,7 @@ async function evaluateOne(hnId, url) {
 }
 
 async function main() {
-  console.log(`HRCB Standalone Evaluator — model: ${MODEL_ID} — mode: ${mode}`);
+  console.log(`HRCB Standalone Evaluator — model: ${MODEL_ID} — mode: ${mode} — concurrency: ${concurrency}`);
   console.log(`Target: ${INGEST_URL}${dryRun ? ' [DRY RUN]' : ''}\n`);
 
   if (singleUrl && singleHnId) {
@@ -320,21 +332,32 @@ async function main() {
 
   let succeeded = 0;
   let failed = 0;
+  let total = 0;
 
-  for (const story of stories) {
-    console.log(`[${succeeded + failed + 1}/${stories.length}] hn_id=${story.hn_id} — ${story.title?.slice(0, 60)}`);
-    try {
-      await evaluateOne(story.hn_id, story.url);
-      succeeded++;
-    } catch (err) {
-      console.error(`  ✗ Failed: ${err.message}`);
-      failed++;
+  // Process in parallel chunks of `concurrency`
+  for (let i = 0; i < stories.length; i += concurrency) {
+    const chunk = stories.slice(i, i + concurrency);
+    console.log(`--- Chunk ${Math.floor(i / concurrency) + 1}: ${chunk.length} stories in parallel ---`);
+
+    const results = await Promise.allSettled(
+      chunk.map(story => {
+        console.log(`  → hn_id=${story.hn_id} — ${story.title?.slice(0, 50)}`);
+        return evaluateOne(story.hn_id, story.url);
+      })
+    );
+
+    for (let j = 0; j < results.length; j++) {
+      total++;
+      if (results[j].status === 'fulfilled') {
+        succeeded++;
+      } else {
+        failed++;
+        console.error(`  ✗ hn_id=${chunk[j].hn_id} failed: ${results[j].reason?.message}`);
+      }
     }
-    // Small delay between evaluations to be polite
-    await new Promise(r => setTimeout(r, 500));
   }
 
-  console.log(`\nDone: ${succeeded} succeeded, ${failed} failed.`);
+  console.log(`\nDone: ${succeeded} succeeded, ${failed} failed out of ${total}.`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

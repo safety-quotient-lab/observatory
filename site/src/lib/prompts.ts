@@ -568,6 +568,17 @@ HRCB measures the editorial lean of content relative to the UDHR's 30 Articles a
 
 Score scale: [-1.0, +1.0]
 
+## CRITICAL: SCORE THE EDITORIAL STANCE, NOT THE SUBJECT
+
+You are scoring the AUTHOR'S STANCE toward human rights, NOT whether the topic is positive or negative.
+
+- An article EXPOSING surveillance abuses → POSITIVE (the journalism champions privacy rights)
+- An article PROMOTING surveillance as beneficial → NEGATIVE (the editorial dismisses privacy rights)
+- An article REPORTING on war crimes to seek accountability → POSITIVE (advocates for justice)
+- An article JUSTIFYING war crimes → NEGATIVE (opposes human rights)
+
+The subject matter being "bad" (war, exploitation, surveillance) does NOT make the score negative. What matters is whether the author's editorial stance ALIGNS WITH or OPPOSES the UDHR.
+
 ## SCORING GUIDE WITH EXAMPLES
 
 Use the full range. Most content should NOT be 0.

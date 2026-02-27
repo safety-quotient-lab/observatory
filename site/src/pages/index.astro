@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
 import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
 import type { SortOption, FilterOption, TypeOption, ModelOption } from '../lib/db';
-import { modelDisplayName, getModelDef } from '../lib/shared-eval';
+import { modelDisplayName, getModelDef, isLightMode } from '../lib/shared-eval';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -87,9 +87,11 @@ const FILTER_OPTIONS = [
   { value: 'failed', label: 'failed' },
 ] as const;
 
-// Short display label for model IDs
+// Short display label for model IDs — append ~ for light-mode models
 function modelLabel(id: string): string {
-  return modelDisplayName(id);
+  const name = modelDisplayName(id);
+  const def = getModelDef(id);
+  return def?.prompt_mode === 'light' ? `${name} ~lite` : name;
 }
 ---
 

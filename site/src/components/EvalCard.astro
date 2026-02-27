@@ -2,17 +2,18 @@
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../lib/colors';
 import MiniBar from './MiniBar.astro';
 import type { Story, StoryWithMiniScores } from '../lib/db';
-import { modelShortName, PRIMARY_MODEL_ID } from '../lib/shared-eval';
+import { modelShortName, PRIMARY_MODEL_ID, isLightMode } from '../lib/shared-eval';
+import type { RaterEvalRef } from '../lib/db';
 
 interface Props {
   story: Story | StoryWithMiniScores;
   rank?: number;
-  raterModels?: string[]; // model IDs with done evals for this story
+  raterModels?: RaterEvalRef[]; // model refs with done evals for this story
 }
 
 const { story, rank, raterModels } = Astro.props;
 // Non-primary models that have evaluated this story
-const otherModels = (raterModels || []).filter(m => m !== PRIMARY_MODEL_ID);
+const otherModels = (raterModels || []).filter(m => m.eval_model !== PRIMARY_MODEL_ID);
 
 const hasEval = story.eval_status === 'done' && story.hcb_weighted_mean !== null;
 const meanColor = hasEval ? scoreToColor(story.hcb_weighted_mean) : '#5b7279';
@@ -180,11 +181,11 @@ function timeAgo(unixTime: number): string {
           </span>
         )}
         {otherModels.length > 0 && otherModels.map(m => (
-          <a href={`/item/${story.hn_id}?model=${m}`}
+          <a href={`/item/${story.hn_id}?model=${m.eval_model}`}
              class="badge"
-             style="background: rgba(52,211,153,0.15); color: #34d399; font-size: var(--font-xs); margin-left: 3px; text-decoration: none;"
-             title={`Also evaluated by ${m}`}>
-            {modelShortName(m)}
+             style={`background: ${isLightMode(m.prompt_mode) ? 'rgba(213,101,0,0.15)' : 'rgba(52,211,153,0.15)'}; color: ${isLightMode(m.prompt_mode) ? '#d56500' : '#34d399'}; font-size: var(--font-xs); margin-left: 3px; text-decoration: none;`}
+             title={`Also evaluated by ${m.eval_model}${isLightMode(m.prompt_mode) ? ' (lite — editorial only)' : ''}`}>
+            {modelShortName(m.eval_model)}{isLightMode(m.prompt_mode) ? '~' : ''}
           </a>
         ))}
       </>

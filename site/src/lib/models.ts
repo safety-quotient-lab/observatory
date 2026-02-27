@@ -67,7 +67,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'nvidia/nemotron-3-nano-30b-a3b:free',
     is_free: true,
-    enabled: true,   // re-enabled with light prompt mode (97% fail on full)
+    enabled: false,  // disabled: returns empty/broken JSON on both full and light prompts
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -110,7 +110,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
-    prompt_mode: 'full',
+    prompt_mode: 'light',
   },
   {
     id: 'mistral-small-3.1',
@@ -186,6 +186,14 @@ export function modelDisplayName(modelId: string): string {
 
 export function modelShortName(modelId: string): string {
   return getModelDef(modelId)?.short_name ?? modelId.slice(0, 3);
+}
+
+/** Returns true if the model (or eval row) used light prompt mode. */
+export function isLightMode(promptModeOrModelId: string | null | undefined): boolean {
+  if (promptModeOrModelId === 'light') return true;
+  // Check registry definition as fallback
+  const def = getModelDef(promptModeOrModelId ?? '');
+  return def?.prompt_mode === 'light';
 }
 
 /** Map model IDs to their queue binding names in wrangler config. */

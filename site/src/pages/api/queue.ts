@@ -18,16 +18,24 @@ export const GET: APIRoute = async ({ locals, request }) => {
   const url = new URL(request.url);
   const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '20'), 100);
 
+  const provider = url.searchParams.get('provider') ?? 'claude-code-standalone';
+
   const { results } = await env.DB
     .prepare(
-      `SELECT hn_id, url, title
-       FROM stories
-       WHERE eval_status IN ('pending', 'queued')
-         AND url NOT LIKE 'item?id=%'
-       ORDER BY score DESC
+      `SELECT s.hn_id, s.url, s.title
+       FROM stories s
+       WHERE s.eval_status IN ('pending', 'queued')
+         AND s.url NOT LIKE 'item?id=%'
+         AND NOT EXISTS (
+           SELECT 1 FROM rater_evals r
+           WHERE r.hn_id = s.hn_id
+             AND r.eval_provider = ?
+             AND r.eval_status = 'done'
+         )
+       ORDER BY s.score DESC
        LIMIT ?`
     )
-    .bind(limit)
+    .bind(provider, limit)
     .all<{ hn_id: number; url: string; title: string }>();
 
   return new Response(JSON.stringify({ stories: results }), {

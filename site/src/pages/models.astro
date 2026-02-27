@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import { scoreToColor, formatScore, classificationColor } from '../lib/colors';
-import { modelDisplayName, ALL_SECTIONS } from '../lib/shared-eval';
+import { modelDisplayName, ALL_SECTIONS, isLightMode, getModelDef } from '../lib/shared-eval';
 import { ARTICLE_TITLES } from '../lib/udhr';
 import {
   getMultiModelStories,
@@ -253,7 +253,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 const bias = biasAnalysis.find(b => b.model === a.model);
                 return (
                   <tr style="border-top: 1px solid #0d4655;">
-                    <td style="padding: 6px 8px; color: #98a8a8; font-weight: bold; font-size: var(--font-sm);">{modelDisplayName(a.model)}</td>
+                    <td style="padding: 6px 8px; color: #98a8a8; font-weight: bold; font-size: var(--font-sm);">
+                      {modelDisplayName(a.model)}
+                      {isLightMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Light evaluation — editorial only">lite</span>}
+                    </td>
                     <td style="padding: 6px 8px; text-align: center; color: #5b7279;">{a.story_count}</td>
                     <td style={`padding: 6px 8px; text-align: center; font-weight: bold; color: ${scoreToColor(a.avg_score)};`}>
                       {formatScore(a.avg_score)}
@@ -295,7 +298,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 const counts = histogramByModel.get(mid) || [];
                 return (
                   <div style="flex: 1; min-width: 200px;">
-                    <div style="color: #8faaab; font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">{modelDisplayName(mid)}</div>
+                    <div style="color: #8faaab; font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">
+                      {modelDisplayName(mid)}
+                      {isLightMode(getModelDef(mid)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;">lite</span>}
+                    </div>
                     <div style="display: flex; align-items: flex-end; gap: 2px; height: 60px;">
                       {counts.map((count, i) => {
                         const binStart = BIN_MIN + i * BIN_WIDTH;
@@ -331,7 +337,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 <td style="padding: 3px 6px;">Section</td>
                 <td style="padding: 3px 6px; color: #5b7279; font-weight: normal; text-transform: none;">Topic</td>
                 {modelIds.map(m => (
-                  <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
+                  <td style="padding: 3px 6px; text-align: center;">
+                    {modelDisplayName(m)}
+                    {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                  </td>
                 ))}
                 <td style="padding: 3px 6px; text-align: center;">Gap</td>
               </tr>
@@ -368,7 +377,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">
                   <td style="padding: 3px 6px;">Story</td>
                   {modelIds.map(m => (
-                    <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
+                    <td style="padding: 3px 6px; text-align: center;">
+                      {modelDisplayName(m)}
+                      {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                    </td>
                   ))}
                   <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
                 </tr>
@@ -402,7 +414,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">
                   <td style="padding: 3px 6px;">Story</td>
                   {modelIds.map(m => (
-                    <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
+                    <td style="padding: 3px 6px; text-align: center;">
+                      {modelDisplayName(m)}
+                      {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                    </td>
                   ))}
                   <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
                 </tr>
@@ -443,7 +458,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #093946;">
                   <td style="padding: 3px 6px;">Section</td>
                   {modelIds.map(m => (
-                    <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
+                    <td style="padding: 3px 6px; text-align: center;">
+                      {modelDisplayName(m)}
+                      {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                    </td>
                   ))}
                   {modelIds.length >= 2 && <td style="padding: 3px 6px; text-align: center;">Gap</td>}
                 </tr>
@@ -495,7 +513,10 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                   <td style="padding: 3px 6px;">Story</td>
                   <td style="padding: 3px 6px;">Domain</td>
                   {modelIds.map(m => (
-                    <td style="padding: 3px 6px; text-align: center;">{modelDisplayName(m)}</td>
+                    <td style="padding: 3px 6px; text-align: center;">
+                      {modelDisplayName(m)}
+                      {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                    </td>
                   ))}
                   <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
                 </tr>
@@ -542,6 +563,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                   <span>
                     {i > 0 ? ', ' : ' '}
                     <span style="color: #5b7279;">{modelDisplayName(m.model)}</span>
+                    {isLightMode(getModelDef(m.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 2px;">lite</span>}
                     <span style="color: #1a5568;"> ({m.story_count})</span>
                   </span>
                 ))}
