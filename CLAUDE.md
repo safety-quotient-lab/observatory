@@ -28,8 +28,8 @@ Cron Worker (1min) → Queue (hrcb-eval-queue) → Consumer Worker → D1 + R2
 ```
 
 **Workers:**
-- `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Also serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`.
-- `site/functions/consumer.ts` — Fetches URL content, calls Claude API (Haiku), computes aggregates on CPU, writes to D1/R2. Proactive rate limit awareness via KV.
+- `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Also serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`. Pre-fetch step runs content gate + `hasReadableText` to skip non-evaluable content before queueing.
+- `site/functions/consumer.ts` — Fetches URL content, calls Claude API (Haiku), computes aggregates on CPU, writes to D1/R2. Proactive rate limit awareness via KV. Also runs content gate as safety net for cache misses.
 - `site/functions/dlq-consumer.ts` — Captures dead-lettered messages. Also serves `/replay` and `/replay/:id`.
 
 **Wrangler configs:** `site/wrangler.cron.toml`, `site/wrangler.consumer.toml`, `site/wrangler.dlq.toml`
@@ -154,6 +154,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 - **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.
 - **Consumer hash functions**: `hashString()` = SHA-256 first 16 bytes as hex (32 chars). Used for methodology_hash (system prompt only) and prompt_hash (system + user).
 - **Rate limiting**: Consumer reads `anthropic-ratelimit-*` headers proactively, self-throttles via KV state before hitting 429s. Circuit breaker at 3+ consecutive 429s.
+- **Content gate dual placement**: Runs in cron pre-fetch (primary — blocks before queueing, writes `gate_category`/`gate_confidence` to stories) AND consumer (safety net for KV cache misses). Pure regex, no LLM calls.
 - **Calibration IDs**: Synthetic hn_ids -1001 to -1015 for the 15 calibration URLs.
 - **DCP caching**: 7-day TTL in KV per domain, also persisted to `domain_dcp` table in D1.
 - **Light prompt mode**: Small/free models (Workers AI Llama 4 Scout 17B, Nemotron Nano 30B) use `METHODOLOGY_SYSTEM_PROMPT_LIGHT` — editorial-only single score + 4 supplementary scores (~200-400 output tokens vs ~4-5K for full). Schema `light-1.1`. Controlled by `ModelDefinition.prompt_mode: 'full' | 'light'`. No structural channel, no per-section scores, no DCP, no Fair Witness evidence. Results written to `rater_evals` with `prompt_mode = 'light'` (no `rater_scores`/`rater_witness`). DB column `prompt_mode` (migration 0023) enables filtering light vs full evals.

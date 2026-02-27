@@ -7,7 +7,8 @@
 - [x] **Factor out hn-bot** *(done)* — extracted HN crawling/fetching/story mgmt from cron.ts into `src/lib/hn-bot.ts` (1114 lines). cron.ts is now a thin orchestrator.
 - [x] **Unified CLI eval tool** *(done)* — `scripts/hn-hrcb-evaluate` replaces backfill-eval.sh + backfill-targeted.sh with flags: `--pending`, `--failed`, `--domain`, `--min-score`, `--dry-run`, `--recalc`, `--status`, positional IDs
 
-- [ ] **Backfill gate_category from eval_error** — No existing `Content gate:` entries found in DB (gate was added after all current skips). Consider a one-time SQL backfill from `events` table (`eval_skip` events with gate details in `details` JSON) or re-running content fetch for skipped stories to classify them without LLM calls.
+- [x] **Content gate in cron pre-fetch** *(done)* — `hn-bot.ts` runs `classifyContent()` + `hasReadableText()` on raw HTML before queueing. Gated stories marked skipped with structured `gate_category`/`gate_confidence`. Consumer retains gate as safety net.
+- [ ] **Backfill gate_category for existing stories** — Cron pre-filter only catches new stories. ~2,500 existing pending/skipped stories have NULL gate_category. Could re-fetch and classify with `backfill-gate.mjs` (script exists but untested). Low priority since new flow handles all future stories.
 
 ## Data Sources
 
