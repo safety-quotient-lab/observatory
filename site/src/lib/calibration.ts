@@ -60,7 +60,7 @@ export const DRIFT_THRESHOLDS = {
 };
 
 /**
- * The 15-URL calibration set for the light-1.2 model (editorial-only, hcb_editorial).
+ * The 15-URL calibration set for the light-1.3 model (editorial-only, hcb_editorial).
  * Source: scripts/validate-light.mjs; validated 15/15 on back-to-back passes 12 & 13.
  *
  * URL selection notes:
@@ -91,7 +91,7 @@ export const LIGHT_CALIBRATION_SET: CalibrationUrl[] = [
 ];
 
 /**
- * Drift thresholds for the light-1.2 model (editorial-only).
+ * Drift thresholds for the light-1.3 model (editorial-only).
  * Wider than full-model thresholds — editorial-only scoring has more run-to-run variance.
  */
 export const LIGHT_DRIFT_THRESHOLDS = {
@@ -137,7 +137,7 @@ export interface CalibrationSummary {
  * Compare actual scores against a calibration set.
  * `scores` is a map from URL → actual weighted mean (null if not evaluated).
  * Defaults to the full-model CALIBRATION_SET and DRIFT_THRESHOLDS;
- * pass LIGHT_CALIBRATION_SET + LIGHT_DRIFT_THRESHOLDS for light-1.2 evaluation.
+ * pass LIGHT_CALIBRATION_SET + LIGHT_DRIFT_THRESHOLDS for light-1.3 evaluation.
  */
 export function runCalibrationCheck(
   scores: Map<string, number | null>,

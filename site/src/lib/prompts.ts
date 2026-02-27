@@ -576,7 +576,7 @@ Evidence strength: H=explicit rights discussion | M=implicit | L=tangential
 Output ONLY a JSON object. No markdown, no explanation.
 
 {
-  "schema_version": "light-1.2",
+  "schema_version": "light-1.3",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
@@ -591,5 +591,7 @@ Output ONLY a JSON object. No markdown, no explanation.
   "eq_score": <0.0 to 1.0>,
   "so_score": <0.0 to 1.0>,
   "td_score": <0.0 to 1.0>,
+  "valence": <-1.0 to +1.0>,
+  "arousal": <0.0 to 1.0>,
   "primary_tone": "<measured|urgent|alarmist|hopeful|cynical|detached|empathetic|confrontational|celebratory|solemn>"
 }`;

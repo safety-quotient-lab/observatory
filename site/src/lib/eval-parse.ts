@@ -347,6 +347,26 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
     }
   }
 
+  // Emotional tone scalars (light-1.3+) — clamp ranges if present
+  if (parsed.valence !== null && parsed.valence !== undefined) {
+    if (typeof parsed.valence !== 'number') {
+      const num = parseFloat(parsed.valence);
+      parsed.valence = (!isNaN(num) && isFinite(num)) ? Math.max(-1.0, Math.min(1.0, num)) : null;
+      repairs.push(`Coerced valence to ${parsed.valence}`);
+    } else {
+      parsed.valence = Math.max(-1.0, Math.min(1.0, parsed.valence));
+    }
+  }
+  if (parsed.arousal !== null && parsed.arousal !== undefined) {
+    if (typeof parsed.arousal !== 'number') {
+      const num = parseFloat(parsed.arousal);
+      parsed.arousal = (!isNaN(num) && isFinite(num)) ? Math.max(0.0, Math.min(1.0, num)) : null;
+      repairs.push(`Coerced arousal to ${parsed.arousal}`);
+    } else {
+      parsed.arousal = Math.max(0.0, Math.min(1.0, parsed.arousal));
+    }
+  }
+
   return { valid: errors.length === 0, errors, warnings, repairs };
 }
 

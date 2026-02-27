@@ -630,7 +630,7 @@ export async function getLatestLightCalibrationRun(
   try {
     return await db
       .prepare(
-        `SELECT * FROM calibration_runs WHERE model = 'light-1.2' ORDER BY created_at DESC LIMIT 1`,
+        `SELECT * FROM calibration_runs WHERE model = 'light-1.3' ORDER BY created_at DESC LIMIT 1`,
       )
       .first<CalibrationRun>();
   } catch {

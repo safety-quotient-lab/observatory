@@ -754,7 +754,7 @@ export default {
 
     // POST /calibrate/check — collect results and run drift check
     // Optional: ?model=deepseek-v3.2 to check a specific model's calibration from rater_evals
-    // Optional: ?mode=light to check the light-1.2 calibration set (hn_ids -2001 to -2015)
+    // Optional: ?mode=light to check the light-1.3 calibration set (hn_ids -2001 to -2015)
     if (path === '/calibrate/check' && request.method === 'POST') {
       const authErr = checkAuth();
       if (authErr) return authErr;
@@ -795,8 +795,8 @@ export default {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .bind(
-            'light-1.2',
-            'light-1.2',
+            'light-1.3',
+            'light-1.3',
             LIGHT_CALIBRATION_SET.length,
             lightSummary.passed,
             lightSummary.failed,
@@ -827,7 +827,7 @@ export default {
           },
         });
 
-        return new Response(JSON.stringify({ ...lightSummary, pending: lightPending, model: 'light-1.2' }), {
+        return new Response(JSON.stringify({ ...lightSummary, pending: lightPending, model: 'light-1.3' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });

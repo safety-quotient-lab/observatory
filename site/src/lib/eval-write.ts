@@ -808,7 +808,7 @@ export async function writeLightRaterEvalResult(
         hcb_theme_tag, hcb_sentiment_tag, hcb_executive_summary,
         fw_ratio, fw_observable_count, fw_inference_count,
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
-        eq_score, so_score, et_primary_tone, et_valence,
+        eq_score, so_score, et_primary_tone, et_valence, et_arousal,
         sr_score, pt_flag_count, td_score,
         input_tokens, output_tokens,
         evaluated_at
@@ -822,7 +822,7 @@ export async function writeLightRaterEvalResult(
         ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?, ?,
-        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?,
         datetime('now')
@@ -857,6 +857,7 @@ export async function writeLightRaterEvalResult(
         so_score = excluded.so_score,
         et_primary_tone = excluded.et_primary_tone,
         et_valence = excluded.et_valence,
+        et_arousal = excluded.et_arousal,
         sr_score = excluded.sr_score,
         pt_flag_count = excluded.pt_flag_count,
         td_score = excluded.td_score,
@@ -874,7 +875,7 @@ export async function writeLightRaterEvalResult(
       hcbEvidenceH, hcbEvidenceM, hcbEvidenceL,
       promptHash, methodologyHash,
       light.evaluation.content_type || 'MX',
-      light.schema_version || 'light-1.2',
+      light.schema_version || 'light-1.3',
       light.theme_tag || null,
       light.sentiment_tag || null,
       light.short_description || null,
@@ -885,16 +886,42 @@ export async function writeLightRaterEvalResult(
       null,                         // hcb_structural_mean (editorial-only in light mode)
       0,                            // hcb_setl (no structural channel)
       light.evaluation.confidence,  // hcb_confidence
-      light.eq_score ?? null,
-      light.so_score ?? null,
-      light.primary_tone ?? null,   // et_primary_tone
-      null,                         // et_valence (not in light)
-      null,                         // sr_score (not in light)
-      0,                            // pt_flag_count (not in light)
-      light.td_score ?? null,
+      light.eq_score ?? null,        // EQ
+      light.so_score ?? null,        // SO
+      light.primary_tone ?? null,    // tone
+      light.valence ?? null,         // VA (light-1.3+)
+      light.arousal ?? null,         // AR (light-1.3+)
+      null,                          // SR (not in light)
+      null,                          // PT (not in light — null, not 0)
+      light.td_score ?? null,        // TD
       inputTokens, outputTokens,
     )
     .run();
+
+  // COALESCE fill-in: write light signals to stories where full eval hasn't set them
+  await db.prepare(
+    `UPDATE stories SET
+       eq_score = COALESCE(eq_score, ?),
+       so_score = COALESCE(so_score, ?),
+       td_score = COALESCE(td_score, ?),
+       et_primary_tone = COALESCE(et_primary_tone, ?),
+       et_valence = COALESCE(et_valence, ?),
+       et_arousal = COALESCE(et_arousal, ?)
+     WHERE hn_id = ?`
+  ).bind(
+    light.eq_score ?? null,   // EQ
+    light.so_score ?? null,   // SO
+    light.td_score ?? null,   // TD
+    light.primary_tone ?? null, // tone
+    light.valence ?? null,    // VA
+    light.arousal ?? null,    // AR
+    hnId,
+  ).run().catch(() => {});
+
+  // Refresh domain aggregate now that stories has updated signals
+  if (light.evaluation.domain) {
+    await refreshDomainAggregate(db, light.evaluation.domain);
+  }
 
   // No rater_scores or rater_witness writes for light evals
 

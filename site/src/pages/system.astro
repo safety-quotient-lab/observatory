@@ -892,7 +892,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               )}
             </div>
 
-            {/* Light Calibration Status (light-1.2 model) */}
+            {/* Light Calibration Status (light-1.3 model) */}
             <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid ${lastLightCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
               <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Light Cal</div>
               {!lastLightCalibration ? (
@@ -906,7 +906,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   <span style="color: #5b7279;"> · {lastLightCalibration.passed}/{lastLightCalibration.total_urls} passed</span>
                   {lastLightCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastLightCalibration.failed} failed</span>}
                   <div style="color: #1a5568; font-size: 9px; margin-top: 2px;">
-                    light-1.2 · {lastLightCalibration.created_at.slice(0, 10)}
+                    light-1.3 · {lastLightCalibration.created_at.slice(0, 10)}
                   </div>
                 </div>
               )}

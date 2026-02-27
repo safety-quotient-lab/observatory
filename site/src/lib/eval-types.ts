@@ -206,6 +206,8 @@ export interface LightEvalResponse {
   eq_score: number | null;
   so_score: number | null;
   td_score: number | null;
+  valence: number | null;
+  arousal: number | null;
   primary_tone: string | null;
 }
 
