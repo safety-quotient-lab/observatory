@@ -1,10 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getUserIntelligence, getHourlyPatterns, getDayOfWeekPatterns } from '../lib/db';
+import { getUserIntelligence, getHourlyPatterns, getDayOfWeekPatterns, getKarmaHrcbCorrelation } from '../lib/db';
 import type { UserIntelSortOption } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
+import { cachedQuery } from '../lib/db-utils';
 
 const db = Astro.locals.runtime.env.DB;
+const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'stories') as UserIntelSortOption;
@@ -12,10 +14,11 @@ const validSorts: UserIntelSortOption[] = ['stories', 'score', 'comments', 'avg_
 const safeSort = validSorts.includes(sort) ? sort : 'stories';
 const minStories = Math.max(2, Math.min(20, parseInt(url.searchParams.get('min') || '3', 10) || 3));
 
-const [users, hourly, daily] = await Promise.all([
+const [users, hourly, daily, karmaCorr] = await Promise.all([
   getUserIntelligence(db, safeSort, minStories, 200),
   getHourlyPatterns(db),
   getDayOfWeekPatterns(db),
+  cachedQuery(kv, 'karmaHrcbCorrelation', () => getKarmaHrcbCorrelation(db), 600),
 ]);
 
 // Aggregate stats
@@ -39,6 +42,17 @@ const peakCommentHour = hourly.length > 0 ? hourly.reduce((best, h) => h.avg_com
 
 // Day of week stats
 const maxDailyStories = Math.max(...daily.map(d => d.stories), 1);
+
+// Karma vs HRCB scatter data (pre-resolved for Astro static rendering)
+const karmaUserCount = karmaCorr?.count ?? 0;
+const karmaPearsonR = karmaCorr?.pearson_r ?? null;
+const karmaRLabel = karmaPearsonR != null
+  ? `r = ${karmaPearsonR > 0 ? '+' : ''}${karmaPearsonR.toFixed(3)} (${Math.abs(karmaPearsonR) < 0.1 ? 'negligible' : Math.abs(karmaPearsonR) < 0.3 ? 'weak' : Math.abs(karmaPearsonR) < 0.5 ? 'moderate' : 'strong'})`
+  : '';
+const karmaRColor = karmaPearsonR != null && Math.abs(karmaPearsonR) > 0.3 ? '#d56500' : '#5b7279';
+const karmaScatterJson = JSON.stringify((karmaCorr?.points ?? []).map(p => ({
+  u: p.username, k: p.karma, h: p.avg_hrcb, n: p.story_count,
+})));
 
 function sortUrl(s: string): string {
   const p = new URLSearchParams();
@@ -224,6 +238,27 @@ function thStyle(col: string): string {
     </tr>
   </table>
 
+  {/* --- Karma vs HRCB correlation scatter --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style={`margin-bottom: 10px;${karmaUserCount < 5 ? ' display: none;' : ''}`}>
+    <tr>
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          Karma vs HRCB
+          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            does HN reputation predict human rights alignment? · {karmaUserCount} users
+          </span>
+          <span style={`margin-left: 8px; padding: 1px 6px; border-radius: 3px; font-size: var(--font-xs); text-transform: none; letter-spacing: 0; background: #0d4655; color: ${karmaRColor};`}>
+            {karmaRLabel}
+          </span>
+        </div>
+        <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">
+          X: karma (log scale) · Y: avg HRCB · hover for details
+        </div>
+        <canvas id="karma-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: #002d38; border-radius: 4px;"></canvas>
+      </td>
+    </tr>
+  </table>
+
   {/* --- Main user table --- */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
     <tr>
@@ -327,4 +362,105 @@ function thStyle(col: string): string {
       </td>
     </tr>
   </table>
+
+  <script define:vars={{ karmaScatterJson }}>
+    const data = JSON.parse(karmaScatterJson);
+    const canvas = document.getElementById('karma-scatter');
+    if (canvas && data.length > 0) {
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      const pad = 50;
+
+      const logKarmas = data.map(d => Math.log10(Math.max(d.k, 1)));
+      const minLogK = Math.min(...logKarmas);
+      const maxLogK = Math.max(...logKarmas, minLogK + 1);
+      const minHrcb = Math.min(...data.map(d => d.h), -0.5);
+      const maxHrcb = Math.max(...data.map(d => d.h), 0.5);
+
+      function x(logK) { return pad + ((logK - minLogK) / (maxLogK - minLogK)) * (W - pad * 2); }
+      function y(hrcb) { return H - pad - ((hrcb - minHrcb) / (maxHrcb - minHrcb)) * (H - pad * 2); }
+
+      // Axes
+      ctx.strokeStyle = '#1a5568';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad, pad); ctx.lineTo(pad, H - pad); ctx.lineTo(W - pad, H - pad);
+      ctx.stroke();
+
+      // Zero HRCB line
+      if (minHrcb < 0 && maxHrcb > 0) {
+        const zeroY = y(0);
+        ctx.strokeStyle = '#0d4655';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pad, zeroY); ctx.lineTo(W - pad, zeroY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#5b7279';
+        ctx.font = '10px monospace';
+        ctx.fillText('0', pad - 12, zeroY + 3);
+      }
+
+      // Axis labels
+      ctx.fillStyle = '#5b7279';
+      ctx.font = '10px monospace';
+      for (let p = Math.ceil(minLogK); p <= Math.floor(maxLogK); p++) {
+        const xPos = x(p);
+        const label = p >= 3 ? (Math.pow(10, p) / 1000) + 'K' : String(Math.pow(10, p));
+        ctx.fillText(label, xPos - 8, H - pad + 15);
+        ctx.strokeStyle = '#0d4655';
+        ctx.beginPath();
+        ctx.moveTo(xPos, H - pad); ctx.lineTo(xPos, H - pad + 4);
+        ctx.stroke();
+      }
+      ctx.fillText(fmtScore(maxHrcb), 2, pad + 3);
+      ctx.fillText(fmtScore(minHrcb), 2, H - pad + 3);
+      ctx.fillText('karma', W / 2 - 15, H - 5);
+
+      function fmtScore(s) {
+        return (s > 0 ? '+' : '') + s.toFixed(2);
+      }
+
+      function scoreColor(score) {
+        if (score > 0) {
+          const t = Math.min(score, 1);
+          return `rgb(${Math.round(234+(22-234)*t)},${Math.round(179+(163-179)*t)},${Math.round(8+(74-8)*t)})`;
+        } else if (score < 0) {
+          const t = Math.min(Math.abs(score), 1);
+          return `rgb(${Math.round(234+(220-234)*t)},${Math.round(179+(38-179)*t)},${Math.round(8+(38-8)*t)})`;
+        }
+        return '#eab308';
+      }
+
+      // Points
+      for (let i = 0; i < data.length; i++) {
+        const d = data[i];
+        const radius = Math.min(3 + Math.log2(d.n), 7);
+        ctx.beginPath();
+        ctx.arc(x(logKarmas[i]), y(d.h), radius, 0, 2 * Math.PI);
+        ctx.fillStyle = scoreColor(d.h);
+        ctx.globalAlpha = 0.7;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      // Hover tooltip
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scale = canvas.clientWidth / W;
+        const mx = (e.clientX - rect.left) / scale;
+        const my = (e.clientY - rect.top) / scale;
+        let found = null;
+        for (let i = 0; i < data.length; i++) {
+          if (Math.hypot(x(logKarmas[i]) - mx, y(data[i].h) - my) < 8) {
+            found = data[i];
+            break;
+          }
+        }
+        canvas.title = found
+          ? `${found.u}\nkarma: ${found.k.toLocaleString()} · avg HRCB: ${fmtScore(found.h)} · ${found.n} stories`
+          : '';
+      });
+    }
+  </script>
 </Base>

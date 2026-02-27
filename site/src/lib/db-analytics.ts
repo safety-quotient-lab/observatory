@@ -905,3 +905,60 @@ export function groupTrustByModel(snapshots: ModelTrustSnapshot[]): Map<string, 
   }
   return map;
 }
+
+// --- Karma vs HRCB Correlation ---
+
+export interface KarmaHrcbPoint {
+  username: string;
+  karma: number;
+  avg_hrcb: number;
+  story_count: number;
+}
+
+export interface KarmaHrcbCorrelation {
+  points: KarmaHrcbPoint[];
+  pearson_r: number | null;
+  count: number;
+}
+
+export async function getKarmaHrcbCorrelation(db: D1Database): Promise<KarmaHrcbCorrelation> {
+  try {
+    const { results: points } = await db
+      .prepare(
+        `SELECT u.username, u.karma,
+                ROUND(AVG(s.hcb_weighted_mean), 4) as avg_hrcb,
+                COUNT(*) as story_count
+         FROM stories s
+         JOIN hn_users u ON u.username = s.hn_by
+         WHERE s.eval_status = 'done'
+           AND s.hcb_weighted_mean IS NOT NULL
+           AND u.karma > 0
+           AND s.hn_id > 0
+         GROUP BY u.username
+         HAVING COUNT(*) >= 2`
+      )
+      .all<KarmaHrcbPoint>();
+
+    if (points.length < 5) {
+      return { points, pearson_r: null, count: points.length };
+    }
+
+    // Pearson r on log10(karma) vs avg_hrcb — JS-side to avoid D1 LOG() uncertainty
+    const logK = points.map(p => Math.log10(p.karma));
+    const hrcbs = points.map(p => p.avg_hrcb);
+    const n = points.length;
+    const sumA = logK.reduce((s, v) => s + v, 0);
+    const sumB = hrcbs.reduce((s, v) => s + v, 0);
+    const sumAB = logK.reduce((s, v, i) => s + v * hrcbs[i], 0);
+    const sumA2 = logK.reduce((s, v) => s + v * v, 0);
+    const sumB2 = hrcbs.reduce((s, v) => s + v * v, 0);
+    const num = n * sumAB - sumA * sumB;
+    const den = Math.sqrt(Math.max(0, n * sumA2 - sumA * sumA) * Math.max(0, n * sumB2 - sumB * sumB));
+    const pearson_r = den > 0 ? num / den : null;
+
+    return { points, pearson_r, count: n };
+  } catch (err) {
+    console.error('[getKarmaHrcbCorrelation]', err);
+    return { points: [], pearson_r: null, count: 0 };
+  }
+}

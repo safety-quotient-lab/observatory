@@ -11,7 +11,7 @@
 - [x] Cron crawls user profiles every 15 minutes
 - [x] DB queries for poster stats
 - [x] User profile page at /user/[username] (with fingerprint + SETL history)
-- [ ] Karma vs HRCB correlation analysis on dashboard
+- [x] Karma vs HRCB correlation analysis on dashboard
 
 ### Feed Source Tracking (Seldon Index)
 - [x] Migration 0009: story_feeds junction table
