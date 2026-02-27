@@ -177,6 +177,52 @@
   /* Flex stat cards with mobile collapse */
   .stat-cards { display: flex; gap: 12px; flex-wrap: wrap; }
   .stat-cards > * { flex: 1; min-width: 120px; }
+
+  /* Collapsible <details>/<summary> sections */
+  .collapsible-section {
+    background: #093946;
+    border: 1px solid #1a5568;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .collapsible-section > summary {
+    color: #5b7279;
+    font-size: var(--font-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    padding: 2px 0;
+  }
+
+  .collapsible-section > summary::-webkit-details-marker { display: none; }
+
+  .collapsible-section > summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 6px;
+    transition: transform 0.15s ease;
+    color: #1a5568;
+  }
+
+  .collapsible-section[open] > summary::before {
+    transform: rotate(90deg);
+  }
+
+  .collapsible-section > summary:hover {
+    color: #98a8a8;
+  }
+
+  .collapsible-section > summary:hover::before {
+    color: #5b7279;
+  }
+
+  .collapsible-section > :not(summary) {
+    margin-top: 10px;
+  }
 }
 
 /* Respect reduced motion preference */

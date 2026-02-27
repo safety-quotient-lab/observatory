@@ -385,13 +385,11 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
     </tr>
   </table>
 
-  {/* Multi-Model Rater Summary (only shown when > 1 model) */}
+  {/* ═══ SECONDARY — Expanded by default, collapsible ═══ */}
   {raterStatus.length > 0 && (
+    <details open class="collapsible-section">
+      <summary>Multi-Model Raters</summary>
     <div class="table-wrap">
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-      <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Multi-Model Raters</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td style="padding: 4px 8px;">Model</td>
@@ -450,25 +448,21 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               );
             })}
           </table>
-        </td>
-      </tr>
-    </table>
     </div>
+    </details>
   )}
 
   {/* Eval Model */}
   {models.length > 0 && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-      <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+    <details open class="collapsible-section">
+      <summary>
             Evaluation Models
             {modelComparison.length > 1 && (
               <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
                 {modelComparison.length} models in history
               </span>
             )}
-          </div>
+      </summary>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr style="color: #5b7279; font-size: var(--font-xs);">
               <td>Model</td>
@@ -514,22 +508,20 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               );
             })}
           </table>
-        </td>
-      </tr>
-    </table>
+    </details>
   )}
 
-  {/* Pipeline Events */}
+  {/* ═══ TERTIARY — Collapsed by default ═══ */}
+
+  {/* API & Rate Limits */}
   {(eventStats.total > 0 || recentPipelineEvents.length > 0) && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-      <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
-            Pipeline Events
+    <details class="collapsible-section">
+      <summary>
+            API & Rate Limits
             <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
-              {eventStats.last_24h} last 24h · {eventStats.last_7d} last 7d · {eventStats.error_count_7d > 0 ? `${eventStats.error_count_7d} errors` : 'no errors'}
+              {eventStats.error_count_7d > 0 ? `${eventStats.error_count_7d} errors 7d` : 'no errors'}
             </span>
-          </div>
+      </summary>
 
           {/* Error sparkline (last 7 days) */}
           {dailyErrors.length > 0 && (
@@ -615,25 +607,14 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               </div>
             </div>
           )}
+    </details>
+  )}
 
-          {/* Event type breakdown */}
-          {Object.keys(eventStats.by_type).length > 0 && (
-            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
-              {Object.entries(eventStats.by_type).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
-                const color = EVENT_TYPE_COLORS[type] || '#5b7279';
-                return (
-                  <span class="badge" style={`background: ${color}20; color: ${color}; font-size: var(--font-xs);`}>
-                    {type}: {count}
-                  </span>
-                );
-              })}
-            </div>
-          )}
+  {/* Cycle Performance */}
+  {cycleStats.length > 0 && (
+    <details class="collapsible-section">
+      <summary>Cycle Performance</summary>
 
-          {/* Cycle stats (evals per cycle + cycle time) */}
-          {cycleStats.length > 0 && (
-            <div style="margin-bottom: 10px;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Cycle Performance</div>
               <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
                 <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase;">
                   <td width="130">Cycle Start</td>
@@ -686,10 +667,12 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   </div>
                 );
               })()}
-            </div>
-          )}
+    </details>
+  )}
 
-          {/* Measurement Integrity */}
+  {/* Measurement Integrity */}
+  <details class="collapsible-section">
+    <summary>Measurement Integrity</summary>
           <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
             {/* DLQ Status */}
             <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${dlqStats.pending > 0 ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
@@ -830,6 +813,31 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               )}
             </div>
           </div>
+  </details>
+
+  {/* Pipeline Events */}
+  {(eventStats.total > 0 || recentPipelineEvents.length > 0) && (
+    <details class="collapsible-section">
+      <summary>
+            Pipeline Events
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+              {eventStats.last_24h} last 24h · {eventStats.last_7d} last 7d
+            </span>
+      </summary>
+
+          {/* Event type breakdown */}
+          {Object.keys(eventStats.by_type).length > 0 && (
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+              {Object.entries(eventStats.by_type).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
+                const color = EVENT_TYPE_COLORS[type] || '#5b7279';
+                return (
+                  <span class="badge" style={`background: ${color}20; color: ${color}; font-size: var(--font-xs);`}>
+                    {type}: {count}
+                  </span>
+                );
+              })}
+            </div>
+          )}
 
           {/* Recent events table */}
           {recentPipelineEvents.length > 0 && (
@@ -875,17 +883,13 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               </table>
             </div>
           )}
-        </td>
-      </tr>
-    </table>
+    </details>
   )}
 
-  {/* Failed Stories */}
+  {/* Recent Failures */}
   {failed.length > 0 && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-      <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Recent Failures</div>
+    <details class="collapsible-section">
+      <summary>Recent Failures <span style="text-transform: none; letter-spacing: 0; color: #dc2626; margin-left: 6px;">{failed.length}</span></summary>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             {failed.map((s) => (
               <tr style="border-top: 1px solid #0d4655;">
@@ -899,22 +903,18 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               </tr>
             ))}
           </table>
-        </td>
-      </tr>
-    </table>
+    </details>
   )}
 
   {/* Evaluation Queue */}
   {queue.length > 0 && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-      <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
-            Queue
-            <span style="color: #5b7279; text-transform: none; letter-spacing: 0; margin-left: 6px;">
-              {queue.length} stories waiting &middot; ~20 per batch &middot; est. {Math.ceil(queue.length / 20) * 10} min to clear
+    <details class="collapsible-section">
+      <summary>
+            Evaluation Queue
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+              {queue.length} stories waiting
             </span>
-          </div>
+      </summary>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr style="color: #5b7279; font-size: var(--font-xs);">
               <td width="24">#</td>
@@ -942,16 +942,12 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               </tr>
             ))}
           </table>
-        </td>
-      </tr>
-    </table>
+    </details>
   )}
 
   {/* Operations */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
-    <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Operations</div>
+  <details class="collapsible-section">
+    <summary>Operations</summary>
         <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
           <tr>
             <td style="color: #5b7279; width: 140px;">Cron interval</td>
@@ -1001,9 +997,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             <td style="color: #5b7279; font-size: var(--font-xs);">Cron v5 → Queue → Consumer (fan-out) · KV content cache · KV DCP cache</td>
           </tr>
         </table>
-      </td>
-    </tr>
-  </table>
+  </details>
 
   {/* Link card: Models */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">

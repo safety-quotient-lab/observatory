@@ -137,10 +137,10 @@ function fmtSig(v: number | null | undefined): string {
     <tr>
       <td style="padding: 14px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
         <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
-          Signal Overview
+          Key Signals
           {signals && (
             <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
-              {signals.total_with_signals} stories with supplementary signals
+              4 of 9 dimensions · {signals.total_with_signals} stories
             </span>
           )}
         </div>
@@ -200,19 +200,37 @@ function fmtSig(v: number | null | undefined): string {
     </tr>
   </table>
 
-  {/* Link to Seldon */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
-    <tr>
-      <td style="padding: 14px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <a href="/seldon" style="text-decoration: none; display: block;">
-          <div style="color: #98a8a8; font-size: var(--font-sm); font-weight: bold; margin-bottom: 4px;">
-            Seldon &rarr;
-          </div>
-          <div style="color: #5b7279; font-size: var(--font-xs); line-height: 1.5;">
-            Psychohistorical trends. Regime change detection, rolling averages, per-feed analysis, and SETL drift.
-          </div>
-        </a>
-      </td>
-    </tr>
-  </table>
+  {/* Sub-page cards */}
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; padding: 5px 0 20px 0;">
+    <a href="/seldon" style="text-decoration: none;">
+      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; transition: border-color 0.2s;" class="hub-card">
+        <div style="color: #98a8a8; font-size: var(--font-sm); font-weight: bold; margin-bottom: 4px;">Seldon</div>
+        <div style="color: #5b7279; font-size: var(--font-xs); line-height: 1.5;">
+          Psychohistorical trends. Regime change detection, rolling averages, per-feed analysis, and SETL drift.
+        </div>
+      </div>
+    </a>
+    <a href="/velocity" style="text-decoration: none;">
+      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; transition: border-color 0.2s;" class="hub-card">
+        <div style="color: #98a8a8; font-size: var(--font-sm); font-weight: bold; margin-bottom: 4px;">Velocity</div>
+        <div style="color: #5b7279; font-size: var(--font-xs); line-height: 1.5;">
+          Score-vs-velocity scatter plots and fastest-rising stories.
+        </div>
+      </div>
+    </a>
+    <a href="/dynamics" style="text-decoration: none;">
+      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; transition: border-color 0.2s;" class="hub-card">
+        <div style="color: #98a8a8; font-size: var(--font-sm); font-weight: bold; margin-bottom: 4px;">Dynamics</div>
+        <div style="color: #5b7279; font-size: var(--font-xs); line-height: 1.5;">
+          Engagement patterns, comment ratios, and slow burners.
+        </div>
+      </div>
+    </a>
+  </div>
+
+  <style>
+    .hub-card:hover {
+      border-color: #259d94 !important;
+    }
+  </style>
 </Base>

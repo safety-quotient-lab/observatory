@@ -1,40 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { getArticleDetailedStats, getStatusCounts } from '../../lib/db';
-import { scoreToColor, formatScore } from '../../lib/colors';
-import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../../lib/udhr';
+import { getEvaluatedCount } from '../../lib/db';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [articleStats, statusCounts] = await Promise.all([
-  getArticleDetailedStats(db),
-  getStatusCounts(db),
-]);
-
-const statsMap = new Map(articleStats.map(a => [a.section, a]));
-
-// Summary stats
-const totalEvaluated = statusCounts.done;
-const allScores = articleStats.filter(a => a.avg_final !== null);
-const meanHrcb = allScores.length > 0
-  ? allScores.reduce((sum, a) => sum + (a.avg_final ?? 0), 0) / allScores.length
-  : null;
-const coveragePct = ALL_SECTIONS.length > 0
-  ? Math.round((allScores.length / ALL_SECTIONS.length) * 100)
-  : 0;
-
-// Group colors
-const groupColors: Record<string, string> = {
-  'Foundation': '#a78bfa',
-  'Security': '#f87171',
-  'Legal': '#22d3ee',
-  'Privacy & Movement': '#34d399',
-  'Personal': '#60a5fa',
-  'Expression': '#fbbf24',
-  'Economic & Social': '#fb923c',
-  'Cultural': '#e879f9',
-  'Order & Duties': '#7d80d1',
-};
+const evalCount = await getEvaluatedCount(db);
 
 // Sub-page cards
 const subPages = [
@@ -62,57 +32,8 @@ const subPages = [
     <div style="margin-bottom: 16px;">
       <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Rights</span>
       <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-sm);">
-        Human rights analysis of Hacker News stories
+        Human rights analysis across {evalCount.toLocaleString()} evaluated stories
       </span>
-    </div>
-
-    <!-- Summary stats row -->
-    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Evaluated</div>
-        <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold;" class="score-font">{totalEvaluated.toLocaleString()}</div>
-      </div>
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Mean HRCB</div>
-        <div style={`font-size: var(--font-md); font-weight: bold; color: ${scoreToColor(meanHrcb)};`} class="score-font">
-          {formatScore(meanHrcb)}
-        </div>
-      </div>
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Coverage</div>
-        <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold;" class="score-font">{coveragePct}%</div>
-      </div>
-    </div>
-
-    <!-- UDHR Heatmap -->
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">UDHR Provision Heatmap</div>
-
-      {Object.entries(ARTICLE_GROUPS).map(([group, sectionIds]) => {
-        const color = groupColors[group] || '#5b7279';
-        return (
-          <div style="margin-bottom: 8px;">
-            <div style={`color: ${color}; font-size: var(--font-xs); margin-bottom: 4px; opacity: 0.8;`}>{group}</div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, 32px); gap: 3px;">
-              {sectionIds.map(sid => {
-                const stat = statsMap.get(sid);
-                const score = stat?.avg_final ?? null;
-                const bg = score !== null ? scoreToColor(score) : '#0d4655';
-                const section = SECTIONS.find(s => s.id === sid);
-                const label = sid === 'Preamble' ? 'P' : String(section?.number ?? '?');
-                const title = `${sid}: ${ARTICLE_TITLES[sid] ?? ''} (${formatScore(score)})`;
-                return (
-                  <a href={`/article/${section?.number ?? 0}`} title={title}
-                     style={`display: flex; align-items: center; justify-content: center; width: 32px; height: 28px; background: ${bg}; border-radius: 3px; font-size: var(--font-xs); color: #e5e5e5; text-decoration: none; font-weight: bold; opacity: ${score !== null ? '1' : '0.3'};`}
-                     class="score-font">
-                    {label}
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
     </div>
 
     <!-- Sub-page cards -->

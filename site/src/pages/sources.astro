@@ -1,12 +1,10 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getDomainStats, getStatusCounts, getGlobalGateStats } from '../lib/db';
-import { scoreToColor, formatScore } from '../lib/colors';
-
 const db = Astro.locals.runtime.env.DB;
 
 const [topDomains, statusCounts, globalGate] = await Promise.all([
-  getDomainStats(db, 5),
+  getDomainStats(db, 1),
   getStatusCounts(db),
   getGlobalGateStats(db),
 ]);
@@ -111,37 +109,4 @@ const sections: SectionCard[] = [
     ))}
   </div>
 
-  <!-- Top domains mini table -->
-  <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; margin-bottom: 20px;">
-    <div style="color: #5b7279; font-size: var(--font-sm); font-weight: bold; margin-bottom: 8px;">
-      Top 5 Domains
-      <a href="/domains" style="color: #5b7279; font-size: var(--font-xs); margin-left: 8px; font-weight: normal;">view all &rarr;</a>
-    </div>
-    <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse: collapse;">
-      <thead>
-        <tr style="border-bottom: 1px solid #1a5568;">
-          <td style="color: #5b7279; font-size: var(--font-xs); padding: 4px 8px 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">Domain</td>
-          <td style="color: #5b7279; font-size: var(--font-xs); padding: 4px 8px; text-align: right; text-transform: uppercase; letter-spacing: 0.5px;">Stories</td>
-          <td style="color: #5b7279; font-size: var(--font-xs); padding: 4px 0 4px 8px; text-align: right; text-transform: uppercase; letter-spacing: 0.5px;">Avg HRCB</td>
-        </tr>
-      </thead>
-      <tbody>
-        {topDomains.map(d => (
-          <tr style="border-bottom: 1px solid #0d4655;">
-            <td style="padding: 5px 8px 5px 0; font-size: var(--font-sm);">
-              <a href={`/domain/${d.domain}`} style="color: #98a8a8; text-decoration: none;">{d.domain}</a>
-            </td>
-            <td style="padding: 5px 8px; text-align: right; color: #5b7279; font-size: var(--font-sm);">
-              {d.count}
-            </td>
-            <td style="padding: 5px 0 5px 8px; text-align: right; font-size: var(--font-sm);">
-              <span style={`color: ${scoreToColor(d.avg_score)}; font-weight: bold;`}>
-                {formatScore(d.avg_score)}
-              </span>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
 </Base>

@@ -54,9 +54,9 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]`
 - **Rights** (`/rights`): hub → `/rights/observatory` (research dashboard), `/rights/articles`, `/rights/network`, `/article/[n]`
 - **Sources** (`/sources`): hub → `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
-- **Trends** (`/trends`): hub → `/seldon`
-- **System** (`/system`): ops dashboard → `/models`. Cards: Pipeline summary, Workers health (per-worker last-active/24h/7d/errors), Queue Breakdown (all 10 CF queues + DLQ with in-flight proxy), Multi-Model Raters, Calibration, Content Gates, DLQ
-- **About** (`/about`)
+- **Trends** (`/trends`): hub → `/seldon`, `/velocity`, `/dynamics`
+- **System** (`/system`): ops dashboard → `/models`. Primary: Pipeline progress, Workers health, Queue Breakdown. Secondary (collapsible): Multi-Model Raters, Evaluation Models. Tertiary (collapsed): API & Rate Limits, Cycle Performance, Measurement Integrity, Pipeline Events, Recent Failures, Evaluation Queue, Operations
+- **About** (`/about`): 3-tier progressive disclosure — Tier 1 (always visible: intro, HRCB, labels), Tier 2 (`<details open>`: methodology), Tier 3 (`<details>`: supplementary signals, factions, DCP, version history, technical)
 - **Redirects** (301): `/dashboard`→`/system`, `/front`→`/past`, `/articles`→`/rights/articles`, `/network`→`/rights/network`, `/user-intel`→`/users`, `/domain-intel`→`/domains`
 
 - `site/src/lib/db.ts` — Barrel re-export from `db-stories.ts`, `db-entities.ts`, `db-analytics.ts`, `db-multi-model.ts`
@@ -175,6 +175,8 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 
 - **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.
 - **Mobile responsiveness**: CSS utility classes in `global.css` handle mobile layout: `.insight-grid` (auto-fill grid → 2-col → 1-col), `.two-col` (2-col → stacked), `.stat-cards` (flex wrap → 50% → 100%). Nested table min-widths killed via `.hn-page table table { min-width: unset !important }`. EvalCard score column uses responsive width (60–80px) instead of fixed 90px. Nav links use flex-wrap with plain text `' | '` separators (wrapping spans break flex layout). Breakpoints: 640px (mobile) and 400px (extra-small).
+- **Progressive disclosure**: `.collapsible-section` class in `global.css` styles `<details>/<summary>` for 3-tier content. Used on About page (Tier 1 always visible, Tier 2 `<details open>`, Tier 3 `<details>` collapsed) and System page (primary always visible, secondary `<details open>`, tertiary `<details>` collapsed). Custom `▸` marker rotates on open.
+- **Hub pages as navigation gateways**: Rights, Sources, and Trends hubs are lean navigation gateways — minimal inline data, sub-page cards with descriptions. Redundant data that exists on sub-pages should not be duplicated on hub pages.
 - **Consumer hash functions**: `hashString()` = SHA-256 first 16 bytes as hex (32 chars). Used for methodology_hash (system prompt only) and prompt_hash (system + user).
 - **Rate limiting**: Consumer reads `anthropic-ratelimit-*` headers proactively, self-throttles via KV state before hitting 429s. Circuit breaker at 3+ consecutive 429s.
 - **Content gate dual placement**: Runs in cron pre-fetch (primary — blocks before queueing, writes `gate_category`/`gate_confidence` to stories) AND consumer (safety net for KV cache misses). Pure regex, no LLM calls.
