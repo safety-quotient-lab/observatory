@@ -649,7 +649,7 @@ export default {
         try {
           await db.batch([
             db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${lightPlaceholders}) AND prompt_mode = 'light'`).bind(...lightCalIds),
-            db.prepare(`DELETE FROM calibration_runs WHERE model = 'light-1.3'`),
+            db.prepare(`DELETE FROM calibration_runs WHERE model = 'light-1.3' AND created_at < datetime('now', '-30 days')`),
           ]);
         } catch (err) {
           console.warn('[calibrate] Light cleanup failed (non-fatal):', err);
