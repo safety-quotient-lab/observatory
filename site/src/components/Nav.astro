@@ -20,7 +20,7 @@ const navItems = [
 ];
 ---
 
-<table style="background-color: #d56500; padding: 2px;" width="100%" cellpadding="0" cellspacing="0">
+<table role="presentation" style="background-color: #d56500; padding: 2px;" width="100%" cellpadding="0" cellspacing="0">
   <tr>
     <td style="width: 18px; padding-right: 4px;">
       <a href="/">
@@ -38,7 +38,7 @@ const navItems = [
           {navItems.map((item, i) => (
             <>
               {i > 0 && ' | '}
-              <a href={item.href} style={`color: black;${isActive(item.prefix) ? ' font-weight: bold;' : ''}`}>{item.label}</a>
+              <a href={item.href} style={`color: black;${isActive(item.prefix) ? ' font-weight: bold;' : ''}`} aria-current={isActive(item.prefix) ? 'page' : undefined}>{item.label}</a>
             </>
           ))}
         </span>

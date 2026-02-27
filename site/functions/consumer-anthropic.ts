@@ -78,7 +78,8 @@ export default {
         const userMessage = buildUserMessageWithDcp(prep.evalUrl, prep.content, prep.isSelfPost, cachedDcp);
 
         // Pre-call: check rate limit capacity
-        const capacity = await checkRateLimitCapacity(env.CONTENT_CACHE, prep.msgModelId);
+        const maxBackoffSec = parseInt(env.RATE_LIMIT_MAX_BACKOFF_SECONDS ?? '120', 10);
+        const capacity = await checkRateLimitCapacity(env.CONTENT_CACHE, prep.msgModelId, maxBackoffSec);
         if (!capacity.ok) {
           const delay = addJitter(capacity.delaySeconds!);
           console.warn(`[consumer-anthropic] Self-throttle for hn_id=${story.hn_id} model=${prep.msgModelId}: ${capacity.reason}, delaying ${delay}s`);

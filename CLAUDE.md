@@ -62,14 +62,14 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/db.ts` — Barrel re-export from `db-stories.ts`, `db-entities.ts`, `db-analytics.ts`, `db-multi-model.ts`
 - `site/src/lib/db-stories.ts` — Story types, feed queries, dashboard stats, queue/failed stories
 - `site/src/lib/db-entities.ts` — Domain/user queries, signal profiles, DCP, pipeline health, content gate stats, events re-exports
-- `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory, `getProviderStats` (per-worker eval activity), `getModelQueueStats` (per-queue in-flight + throughput)
+- `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory, `getProviderStats` (per-worker eval activity), `getModelQueueStats` (per-queue in-flight + throughput), `getDlqTrend` (14-day daily counts + backlog direction), `getSelfThrottleImpact` (7-day wasted seconds per model), `getEvalLatencyStats` (P50/P95/P99 per model), `getSignalCompleteness` (per-model % non-null per supplementary signal)
 - `site/src/lib/db-multi-model.ts` — Rater evals/scores/witness, model agreement, multi-model stories
 - `site/src/lib/shared-eval.ts` — Barrel re-export from `eval-types.ts`, `models.ts`, `prompts.ts`, `eval-parse.ts`, `eval-write.ts`, `rater-health.ts`
 - `site/src/lib/eval-types.ts` — Type definitions, interfaces, ALL_SECTIONS constant
-- `site/src/lib/models.ts` — Model registry, provider types, queue bindings
+- `site/src/lib/models.ts` — Model registry, provider types, queue bindings, `QUEUE_CONFIG` export (derived list of enabled model-to-queue mappings)
 - `site/src/lib/prompts.ts` — System prompts (full, slim, light)
 - `site/src/lib/eval-parse.ts` — Response parsing, validation, content fetching
-- `site/src/lib/eval-write.ts` — D1 write functions (eval results, DCP cache)
+- `site/src/lib/eval-write.ts` — D1 write functions (eval results, DCP cache). `updateConsensusScore()` called at end of both write paths — computes weighted mean across all done rater_evals (full=1.0 weight, light=0.5), updates stories.consensus_score/count/spread.
 - `site/src/lib/rater-health.ts` — Per-model health tracking, auto-disable/re-enable
 - `site/src/lib/events.ts` — Structured event logger with typed event taxonomy
 - `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
@@ -133,7 +133,7 @@ npx wrangler tail hn-hrcb-consumer-workers-ai --format pretty
 
 ## Event Types
 
-The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`.
+The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `rater_auto_disable`, `dcp_stale`, `r2_cleanup`.
 
 ## Methodology Files
 

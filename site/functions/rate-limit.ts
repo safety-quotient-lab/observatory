@@ -158,7 +158,7 @@ export async function setCreditPause(kv: KVNamespace, provider: string): Promise
   } catch {}
 }
 
-export async function checkRateLimitCapacity(kv: KVNamespace, model: string): Promise<CapacityResult> {
+export async function checkRateLimitCapacity(kv: KVNamespace, model: string, maxBackoffSec = 120): Promise<CapacityResult> {
   const key = `ratelimit:${model}`;
   let state: RateLimitState | null = null;
   try {
@@ -170,20 +170,20 @@ export async function checkRateLimitCapacity(kv: KVNamespace, model: string): Pr
 
   // Circuit breaker: 3+ consecutive 429s → wait for reset
   if (state.consecutive_429s >= 3) {
-    const delay = Math.min(Math.max(secondsUntilReset(state.requests_reset), 10), 120);
+    const delay = Math.min(Math.max(secondsUntilReset(state.requests_reset), 10), maxBackoffSec);
     return { ok: false, delaySeconds: delay, reason: `circuit-breaker: ${state.consecutive_429s} consecutive 429s` };
   }
 
   // Low request capacity
   if (state.requests_remaining !== null && state.requests_remaining < 3) {
-    const delay = Math.min(Math.max(secondsUntilReset(state.requests_reset), 5), 60);
+    const delay = Math.min(Math.max(secondsUntilReset(state.requests_reset), 5), Math.min(60, maxBackoffSec));
     return { ok: false, delaySeconds: delay, reason: `low requests remaining: ${state.requests_remaining}` };
   }
 
   // Low input token capacity (<10% of limit)
   if (state.input_tokens_remaining !== null && state.input_tokens_limit !== null && state.input_tokens_limit > 0) {
     if (state.input_tokens_remaining < state.input_tokens_limit * 0.1) {
-      const delay = Math.min(Math.max(secondsUntilReset(state.tokens_reset), 5), 60);
+      const delay = Math.min(Math.max(secondsUntilReset(state.tokens_reset), 5), Math.min(60, maxBackoffSec));
       return { ok: false, delaySeconds: delay, reason: `low input tokens: ${state.input_tokens_remaining}/${state.input_tokens_limit}` };
     }
   }
@@ -191,7 +191,7 @@ export async function checkRateLimitCapacity(kv: KVNamespace, model: string): Pr
   // Low output token capacity (<10% of limit)
   if (state.output_tokens_remaining !== null && state.output_tokens_limit !== null && state.output_tokens_limit > 0) {
     if (state.output_tokens_remaining < state.output_tokens_limit * 0.1) {
-      const delay = Math.min(Math.max(secondsUntilReset(state.tokens_reset), 5), 60);
+      const delay = Math.min(Math.max(secondsUntilReset(state.tokens_reset), 5), Math.min(60, maxBackoffSec));
       return { ok: false, delaySeconds: delay, reason: `low output tokens: ${state.output_tokens_remaining}/${state.output_tokens_limit}` };
     }
   }

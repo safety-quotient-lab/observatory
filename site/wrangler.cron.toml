@@ -1,6 +1,6 @@
 name = "hn-hrcb-cron"
 main = "functions/cron.ts"
-compatibility_date = "2024-09-23"
+compatibility_date = "2026-02-01"
 
 [[d1_databases]]
 binding = "DB"
@@ -10,6 +10,10 @@ database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
 [[kv_namespaces]]
 binding = "CONTENT_CACHE"
 id = "ffe31e8bd21f43169e81f6d6137772bf"
+
+[[r2_buckets]]
+binding = "CONTENT_SNAPSHOTS"
+bucket_name = "hrcb-content-snapshots"
 
 [triggers]
 crons = ["* * * * *"]

@@ -93,10 +93,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     const agg = computeLightAggregates(light);
 
-    // Always write editorial score; only advance status if not already done
+    // Only set editorial score if not already set (don't overwrite a full eval's value)
     await env.DB
       .prepare(`UPDATE stories
-        SET hcb_editorial_mean = ?,
+        SET hcb_editorial_mean = COALESCE(hcb_editorial_mean, ?),
             eval_status = CASE WHEN eval_status IN ('pending', 'queued') THEN 'done' ELSE eval_status END,
             evaluated_at = CASE WHEN eval_status IN ('pending', 'queued') THEN datetime('now') ELSE evaluated_at END
         WHERE hn_id = ?`)

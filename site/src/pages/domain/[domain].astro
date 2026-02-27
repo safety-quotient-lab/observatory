@@ -145,12 +145,12 @@ if (dcpJson) {
               {(signals.topScope || signals.avgPtCount !== null) && (
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
                   {signals.topScope && (
-                    <span style="font-size: var(--font-xs); background: #0d4655; border: 1px solid #2a2a35; border-radius: 3px; padding: 1px 6px; color: #5b7279;">
+                    <span style="font-size: var(--font-xs); background: #0d4655; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; color: #5b7279;">
                       {signals.topScope}
                     </span>
                   )}
                   {signals.avgPtCount !== null && signals.avgPtCount > 0 && (
-                    <span style={`font-size: var(--font-xs); background: #0d4655; border: 1px solid ${signals.avgPtCount > 2 ? '#dc2626' : '#2a2a35'}; border-radius: 3px; padding: 1px 6px; color: ${signals.avgPtCount > 2 ? '#dc2626' : '#5b7279'};`}>
+                    <span style={`font-size: var(--font-xs); background: #0d4655; border: 1px solid ${signals.avgPtCount > 2 ? '#dc2626' : '#1a5568'}; border-radius: 3px; padding: 1px 6px; color: ${signals.avgPtCount > 2 ? '#dc2626' : '#5b7279'};`}>
                       {signals.avgPtCount.toFixed(1)} propaganda flags/story
                     </span>
                   )}

@@ -43,6 +43,7 @@ try {
     <title>{title} | HN HRCB</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
     <link rel="alternate" type="application/atom+xml" title="HN HRCB Feed" href="/feed.xml" />
@@ -56,8 +57,9 @@ try {
     <meta name="twitter:description" content={ogDescription || description} />
   </head>
   <body>
+    <a href="#main-content" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Skip to content</a>
     <center>
-      <table id="hnmain" width="85%" cellpadding="0" cellspacing="0" style="background-color: #002d38; max-width: 1280px;">
+      <table id="hnmain" role="presentation" width="85%" cellpadding="0" cellspacing="0" style="background-color: #002d38; max-width: 1280px;">
         <tr>
           <td>
             <Nav />
@@ -65,7 +67,7 @@ try {
         </tr>
         <tr style="height: 10px;"></tr>
         <tr>
-          <td>
+          <td id="main-content" role="main">
             <slot />
           </td>
         </tr>
@@ -118,9 +120,10 @@ try {
       }
 
       // Donate modal logic
-      const donateModal = document.getElementById('donate-modal')!;
-      const donateForm = document.getElementById('donate-form')!;
-      const alreadyDonated = document.getElementById('already-donated')!;
+      const donateModal = document.getElementById('donate-modal');
+      const donateForm = document.getElementById('donate-form');
+      const alreadyDonated = document.getElementById('already-donated');
+      if (!donateModal || !donateForm || !alreadyDonated) throw new Error('Donate modal elements missing');
       let pendingTriggerBtn: HTMLElement | null = null;
 
       function showDonateModal(btn: HTMLElement) {

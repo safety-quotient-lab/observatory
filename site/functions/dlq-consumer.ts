@@ -85,11 +85,25 @@ export default {
       console.log(`[dlq] Dead-lettered: hn_id=${story.hn_id} model=${story.eval_model || 'primary'}: ${story.title}`);
 
       try {
+        // Count prior DLQ entries for this hn_id to determine auto-replay schedule
+        const priorRow = await db
+          .prepare(`SELECT COUNT(*) as cnt FROM dlq_messages WHERE hn_id = ?`)
+          .bind(story.hn_id)
+          .first<{ cnt: number }>();
+        const prevCount = priorRow?.cnt ?? 0;
+
+        const autoReplayAt = prevCount === 0
+          ? new Date(Date.now() + 3_600_000).toISOString()   // +1h
+          : prevCount === 1
+            ? new Date(Date.now() + 21_600_000).toISOString() // +6h
+            : null;                                            // manual review required
+        const manualRequired = prevCount >= 2 ? 1 : 0;
+
         // Write to dlq_messages table (including model/provider for routing on replay)
         await db
           .prepare(
-            `INSERT INTO dlq_messages (hn_id, url, title, domain, original_error, retry_count, eval_model, eval_provider)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO dlq_messages (hn_id, url, title, domain, original_error, retry_count, eval_model, eval_provider, auto_replay_at, manual_review_required)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .bind(
             story.hn_id,
@@ -100,6 +114,8 @@ export default {
             msg.attempts,
             story.eval_model || null,
             story.eval_provider || null,
+            autoReplayAt,
+            manualRequired,
           )
           .run();
 

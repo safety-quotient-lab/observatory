@@ -714,3 +714,174 @@ export async function getModelQueueStats(db: D1Database): Promise<ModelQueueStat
     .all<ModelQueueStat>();
   return results;
 }
+
+// --- Observability: DLQ trend ---
+
+export interface DlqDayTrend {
+  day: string;
+  new_count: number;
+  replayed_count: number;
+  pending_count: number;
+}
+
+export interface DlqTrend {
+  days: DlqDayTrend[];
+  backlog_growing: boolean;
+  current_pending: number;
+}
+
+export async function getDlqTrend(db: D1Database): Promise<DlqTrend> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT DATE(created_at) as day,
+                COUNT(CASE WHEN status != 'replayed' THEN 1 END) as new_count,
+                COUNT(CASE WHEN status = 'replayed' THEN 1 END) as replayed_count,
+                COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count
+         FROM dlq_messages
+         WHERE created_at >= datetime('now', '-14 days')
+         GROUP BY DATE(created_at)
+         ORDER BY day ASC`
+      )
+      .all<DlqDayTrend>();
+
+    const pendingRow = await db
+      .prepare(`SELECT COUNT(*) as cnt FROM dlq_messages WHERE status = 'pending'`)
+      .first<{ cnt: number }>();
+
+    const currentPending = pendingRow?.cnt ?? 0;
+
+    // Growing if today's pending > 7 days ago pending
+    const today = results[results.length - 1]?.pending_count ?? 0;
+    const weekAgo = results[0]?.pending_count ?? 0;
+    const backlogGrowing = today > weekAgo;
+
+    return { days: results, backlog_growing: backlogGrowing, current_pending: currentPending };
+  } catch {
+    return { days: [], backlog_growing: false, current_pending: 0 };
+  }
+}
+
+// --- Observability: Self-throttle impact ---
+
+export interface SelfThrottleImpact {
+  model: string;
+  event_count: number;
+  total_delay_sec: number;
+}
+
+export async function getSelfThrottleImpact(db: D1Database): Promise<SelfThrottleImpact[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT json_extract(details, '$.model') as model,
+                COUNT(*) as event_count,
+                SUM(CAST(json_extract(details, '$.delay_seconds') AS REAL)) as total_delay_sec
+         FROM events
+         WHERE event_type = 'self_throttle'
+           AND created_at >= datetime('now', '-7 days')
+         GROUP BY json_extract(details, '$.model')
+         ORDER BY total_delay_sec DESC`
+      )
+      .all<SelfThrottleImpact>();
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// --- Observability: Eval latency stats ---
+
+export interface EvalLatencyStat {
+  eval_model: string;
+  p50_sec: number | null;
+  p95_sec: number | null;
+  p99_sec: number | null;
+  sample_count: number;
+}
+
+export async function getEvalLatencyStats(db: D1Database): Promise<EvalLatencyStat[]> {
+  try {
+    // Compute per-model percentiles using ordered aggregation
+    const { results: modelRows } = await db
+      .prepare(
+        `SELECT re.eval_model,
+                COUNT(*) as sample_count,
+                (UNIXEPOCH(re.evaluated_at) - s.hn_time) as latency_sec
+         FROM rater_evals re
+         JOIN stories s ON s.hn_id = re.hn_id
+         WHERE re.eval_status = 'done'
+           AND re.evaluated_at >= datetime('now', '-7 days')
+           AND re.evaluated_at IS NOT NULL
+           AND s.hn_time IS NOT NULL
+         ORDER BY re.eval_model, latency_sec`
+      )
+      .all<{ eval_model: string; sample_count: number; latency_sec: number }>();
+
+    // Group by model and compute percentiles in JS (D1 lacks PERCENTILE_CONT)
+    const byModel = new Map<string, number[]>();
+    for (const r of modelRows) {
+      const arr = byModel.get(r.eval_model) ?? [];
+      arr.push(r.latency_sec);
+      byModel.set(r.eval_model, arr);
+    }
+
+    const stats: EvalLatencyStat[] = [];
+    for (const [model, latencies] of byModel) {
+      latencies.sort((a, b) => a - b);
+      const n = latencies.length;
+      const p = (pct: number) => n > 0 ? latencies[Math.floor(n * pct / 100)] ?? null : null;
+      stats.push({
+        eval_model: model,
+        p50_sec: p(50),
+        p95_sec: p(95),
+        p99_sec: p(99),
+        sample_count: n,
+      });
+    }
+
+    return stats;
+  } catch {
+    return [];
+  }
+}
+
+// --- Observability: Signal completeness ---
+
+export interface SignalCompletenessRow {
+  eval_model: string;
+  total_evals: number;
+  eq_pct: number;
+  so_pct: number;
+  td_pct: number;
+  pt_pct: number;
+  tone_pct: number;
+  any_below_80: boolean;
+}
+
+export async function getSignalCompleteness(db: D1Database): Promise<SignalCompletenessRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT eval_model,
+                COUNT(*) as total_evals,
+                ROUND(100.0 * COUNT(CASE WHEN eq_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as eq_pct,
+                ROUND(100.0 * COUNT(CASE WHEN so_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as so_pct,
+                ROUND(100.0 * COUNT(CASE WHEN td_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as td_pct,
+                ROUND(100.0 * COUNT(CASE WHEN pt_flag_count IS NOT NULL THEN 1 END) / COUNT(*), 1) as pt_pct,
+                ROUND(100.0 * COUNT(CASE WHEN et_primary_tone IS NOT NULL THEN 1 END) / COUNT(*), 1) as tone_pct
+         FROM rater_evals
+         WHERE eval_status = 'done'
+         GROUP BY eval_model
+         ORDER BY total_evals DESC`
+      )
+      .all<Omit<SignalCompletenessRow, 'any_below_80'>>();
+
+    return results.map(r => ({
+      ...r,
+      any_below_80: r.eq_pct < 80 || r.so_pct < 80 || r.td_pct < 80 || r.pt_pct < 80 || r.tone_pct < 80,
+    }));
+  } catch {
+    return [];
+  }
+}

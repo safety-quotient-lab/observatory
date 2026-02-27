@@ -930,14 +930,14 @@ function tierLabel(sim: number): { label: string; color: string } {
             {/* Parallel coordinates chart */}
             <svg width="100%" viewBox={`0 0 ${pcW} ${pcH}`} style={`max-width: ${pcW}px; height: auto;`}>
               {/* Background */}
-              <rect x="0" y="0" width={pcW} height={pcH} fill="#0a0a12" rx="4" />
+              <rect x="0" y="0" width={pcW} height={pcH} fill="#002d38" rx="4" />
 
               {/* Vertical axes */}
               {SIGNAL_DIMS.map((dim, i) => {
                 const x = pcAxisX(i);
                 return (
                   <g>
-                    <line x1={x} y1={pcPadT} x2={x} y2={pcPadT + pcInnerH} stroke="#2a2a35" stroke-width="1" />
+                    <line x1={x} y1={pcPadT} x2={x} y2={pcPadT + pcInnerH} stroke="#1a5568" stroke-width="1" />
                     {/* Axis label */}
                     <text x={x} y={pcPadT + pcInnerH + 16} fill={dim.color} font-size="10" font-family="monospace" text-anchor="middle" font-weight="bold">
                       {dim.code}
@@ -983,7 +983,7 @@ function tierLabel(sim: number): { label: string; color: string } {
               {/* Centroid dots at each axis */}
               {enrichedClusters.map(cl =>
                 cl.rawCentroid.map((v, i) => (
-                  <circle cx={pcAxisX(i)} cy={pcValY(v, i)} r="3" fill={cl.color} stroke="#0a0a12" stroke-width="1">
+                  <circle cx={pcAxisX(i)} cy={pcValY(v, i)} r="3" fill={cl.color} stroke="#002d38" stroke-width="1">
                     <title>{cl.name} — {SIGNAL_DIMS[i].code}: {v.toFixed(2)}</title>
                   </circle>
                 ))
@@ -1139,7 +1139,7 @@ function tierLabel(sim: number): { label: string; color: string } {
                           const [x, y] = polarToXY(i * angleStep, r * radarR);
                           return `${x},${y}`;
                         }).join(' ');
-                        return <polygon points={pts} fill="none" stroke="#2a2a35" stroke-width="1" />;
+                        return <polygon points={pts} fill="none" stroke="#1a5568" stroke-width="1" />;
                       })}
 
                       {/* Axes */}
@@ -1148,7 +1148,7 @@ function tierLabel(sim: number): { label: string; color: string } {
                         const [lx, ly] = polarToXY(i * angleStep, radarR + 18);
                         return (
                           <g>
-                            <line x1={radarCx} y1={radarCy} x2={ax} y2={ay} stroke="#2a2a35" stroke-width="1" />
+                            <line x1={radarCx} y1={radarCy} x2={ax} y2={ay} stroke="#1a5568" stroke-width="1" />
                             <text x={lx} y={ly} fill={dim.color} font-size="8" font-family="monospace" text-anchor="middle" dominant-baseline="middle">
                               {dim.code}
                             </text>

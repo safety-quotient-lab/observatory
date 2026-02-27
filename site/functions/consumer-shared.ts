@@ -54,6 +54,7 @@ export interface Env {
   CONTENT_CACHE: KVNamespace;
   CONTENT_SNAPSHOTS: R2Bucket;
   EVAL_MODEL_OVERRIDE?: string;
+  RATE_LIMIT_MAX_BACKOFF_SECONDS?: string;
 }
 
 export interface QueueMessage {

@@ -69,7 +69,28 @@ export interface Story {
   td_author_identified: number | null;
   td_conflicts_disclosed: number | null;
   td_funding_disclosed: number | null;
+  // Ensemble consensus
+  consensus_score: number | null;
+  consensus_model_count: number | null;
+  consensus_spread: number | null;
+  consensus_updated_at: string | null;
 }
+
+// Explicit column list for list-view queries — omits hcb_json and hn_text (large blobs not needed for cards)
+const STORY_LIST_COLS = `hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, hn_type,
+  content_type, hcb_weighted_mean, hcb_editorial_mean, hcb_structural_mean, hcb_classification,
+  hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
+  eval_model, eval_prompt_hash, eval_status, eval_error, evaluated_at, created_at, hn_rank,
+  fw_ratio, fw_observable_count, fw_inference_count, schema_version,
+  hcb_theme_tag, hcb_sentiment_tag, hcb_executive_summary,
+  eq_score, eq_source_quality, eq_evidence_reasoning, eq_uncertainty_handling, eq_purpose_transparency, eq_claim_density,
+  pt_flag_count, pt_flags_json, so_score, so_framing, so_reader_agency,
+  et_primary_tone, et_valence, et_arousal, et_dominance,
+  sr_score, sr_perspective_count, sr_voice_balance, sr_who_speaks, sr_who_spoken_about,
+  tf_primary_focus, tf_time_horizon, gs_scope, gs_regions_json,
+  cl_reading_level, cl_jargon_density, cl_assumed_knowledge,
+  td_score, td_author_identified, td_conflicts_disclosed, td_funding_disclosed,
+  consensus_score, consensus_model_count, consensus_spread, consensus_updated_at`;
 
 export interface ScoreRow {
   hn_id: number;
@@ -281,7 +302,7 @@ export async function getFilteredStoriesWithScores(
               s.hcb_signal_sections, s.hcb_nd_count, s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l,
               s.eval_model, s.eval_prompt_hash,
               s.eval_status, s.eval_error, s.evaluated_at, s.created_at, s.schema_version,
-              s.hcb_theme_tag,
+              s.hcb_theme_tag, s.consensus_score, s.consensus_model_count, s.consensus_spread,
               SUBSTR(s.hn_text, 1, 100) as hn_text_preview${setlSelect}`;
 
   const storyQueryResult = await db
@@ -532,7 +553,7 @@ export async function getArticleDetailedStats(db: D1Database): Promise<ArticleDe
 export async function getTopPositiveStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
     .prepare(
-      `SELECT * FROM stories WHERE eval_status = 'done'
+      `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status = 'done'
        ORDER BY hcb_weighted_mean DESC LIMIT ?`
     )
     .bind(limit)
@@ -543,7 +564,7 @@ export async function getTopPositiveStories(db: D1Database, limit = 5): Promise<
 export async function getTopNegativeStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
     .prepare(
-      `SELECT * FROM stories WHERE eval_status = 'done'
+      `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status = 'done'
        ORDER BY hcb_weighted_mean ASC LIMIT ?`
     )
     .bind(limit)
@@ -605,7 +626,7 @@ export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<S
 export async function getRecentEvaluations(db: D1Database, limit = 10): Promise<Story[]> {
   const { results } = await db
     .prepare(
-      `SELECT * FROM stories WHERE eval_status = 'done'
+      `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status = 'done'
        ORDER BY evaluated_at DESC LIMIT ?`
     )
     .bind(limit)
@@ -642,7 +663,7 @@ export async function getDomainStats(db: D1Database, limit = 10): Promise<Domain
 export async function getQueueStories(db: D1Database, limit = 100): Promise<Story[]> {
   const { results } = await db
     .prepare(
-      `SELECT * FROM stories WHERE eval_status IN ('pending', 'evaluating')
+      `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status IN ('pending', 'evaluating')
        ORDER BY
          CASE eval_status WHEN 'evaluating' THEN 0 WHEN 'pending' THEN 1 END,
          hn_time DESC
@@ -673,7 +694,7 @@ export async function getModelStats(db: D1Database): Promise<ModelStat[]> {
 export async function getFailedStories(db: D1Database, limit = 10): Promise<Story[]> {
   const { results } = await db
     .prepare(
-      `SELECT * FROM stories WHERE eval_status = 'failed'
+      `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status = 'failed'
        ORDER BY created_at DESC LIMIT ?`
     )
     .bind(limit)

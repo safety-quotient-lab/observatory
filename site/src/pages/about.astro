@@ -6,7 +6,7 @@ import Base from '../layouts/Base.astro';
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
       <td>
-        <p style="font-size: var(--font-md); color: #98a8a8; font-weight: bold; margin-bottom: 10px;">About HN HRCB</p>
+        <h1 style="font-size: var(--font-md); color: #98a8a8; font-weight: bold; margin-bottom: 10px;">About HN HRCB</h1>
 
         {/* ═══ TIER 1 — Always visible ═══ */}
 
@@ -29,7 +29,7 @@ import Base from '../layouts/Base.astro';
           directly observable, with no inference beyond the evidence.
         </p>
 
-        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Core Construct: HRCB</p>
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Core Construct: HRCB</h2>
 
         <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
           <b>Human Rights Compatibility Bias (HRCB)</b> measures the directional lean
@@ -38,6 +38,7 @@ import Base from '../layouts/Base.astro';
           content that conflicts with them.
         </p>
 
+        <div class="table-wrap">
         <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #093946; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
           <tr style="color: #5b7279;">
             <td class="score-font" style="color: #dc2626;">-1.0</td>
@@ -51,8 +52,9 @@ import Base from '../layouts/Base.astro';
             <td class="score-font" style="color: #16a34a;">+1.0</td>
           </tr>
         </table>
+        </div>
 
-        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Story-Level Labels</p>
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Story-Level Labels</h2>
 
         <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
           Each evaluation generates three story-level labels that provide a quick overview:
@@ -73,7 +75,7 @@ import Base from '../layouts/Base.astro';
           </tr>
         </table>
 
-        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</p>
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">No Data vs 0.0</h2>
 
         <div class="two-col" style="font-size: var(--font-base); margin-bottom: 15px;">
           <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
@@ -86,7 +88,7 @@ import Base from '../layouts/Base.astro';
           </div>
         </div>
 
-        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">The Universal Declaration of Human Rights</p>
+        <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">The Universal Declaration of Human Rights</h2>
 
         <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 15px;">
           Adopted by the United Nations General Assembly on 10 December 1948 (Resolution 217 A),
@@ -119,13 +121,14 @@ import Base from '../layouts/Base.astro';
             Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.
           </p>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</p>
+          <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</h2>
 
           <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
             SETL measures the divergence between editorial and structural signals for each article.
             It captures whether a site's words and infrastructure tell different stories.
           </p>
 
+          <div class="table-wrap">
           <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
             <tr style="color: #5b7279;">
               <td class="score-font" style="color: #dc2626;">-1.0</td>
@@ -139,13 +142,14 @@ import Base from '../layouts/Base.astro';
               <td class="score-font" style="color: #16a34a;">+1.0</td>
             </tr>
           </table>
+          </div>
 
           <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
             Formula: <span class="score-font">sign(E-S) &times; &radic;(|E-S| &times; max(|E|, |S|))</span>.
             A high absolute SETL means the site's content and infrastructure are misaligned on human rights.
           </p>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Fair Witness Evidence Layer</p>
+          <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Fair Witness Evidence Layer</h2>
 
           <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
             Inspired by Heinlein's Fair Witnesses from <i>Stranger in a Strange Land</i>,
@@ -170,7 +174,7 @@ import Base from '../layouts/Base.astro';
             on any item page to switch between the standard view and a stripped-down view showing only the evidence breakdown.
           </p>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Evidence Strength & Confidence</p>
+          <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Evidence Strength & Confidence</h2>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 10px;">
             <tr>
@@ -192,7 +196,7 @@ import Base from '../layouts/Base.astro';
             H=1.0, M=0.6, L=0.2, ND=0.0. Higher confidence means more provisions had strong evidence.
           </p>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Directionality Markers</p>
+          <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Directionality Markers</h2>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
             <tr>
@@ -213,7 +217,7 @@ import Base from '../layouts/Base.astro';
             </tr>
           </table>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">How Evaluations Work</p>
+          <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">How Evaluations Work</h2>
 
           <ol style="color: #5b7279; line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
             <li>A URL from HN's top 7 pages (plus top best/ask/show) is fetched as the unit of analysis (other stories can be manually triggered)</li>
@@ -228,7 +232,7 @@ import Base from '../layouts/Base.astro';
             <li>A final classification is assigned (Strong positive to Strong negative)</li>
           </ol>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Light Evaluations <span style="color: #d56500; font-size: var(--font-sm);">(~lite)</span></p>
+          <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Light Evaluations <span style="color: #d56500; font-size: var(--font-sm);">(~lite)</span></h2>
 
           <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
             Some stories are evaluated by smaller, free-tier models using a streamlined
@@ -318,7 +322,7 @@ import Base from '../layouts/Base.astro';
             </tr>
           </table>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Domain Signal Profiles (Factions)</p>
+          <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Domain Signal Profiles (Factions)</h2>
 
           <p style="font-size: var(--font-base); color: #5b7279; margin-bottom: 10px;">
             The <a href="/factions" style="color: #60a5fa;">Factions page</a> clusters domains by <em>editorial character</em>
@@ -423,7 +427,7 @@ import Base from '../layouts/Base.astro';
             ))}
           </table>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Technical Details</p>
+          <h2 style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Technical Details</h2>
 
           <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; margin-bottom: 0;" width="100%">
             <tr>

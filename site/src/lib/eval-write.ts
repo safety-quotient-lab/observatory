@@ -257,6 +257,53 @@ export async function writeEvalResult(
   }
 }
 
+// --- Consensus scoring ---
+
+export async function updateConsensusScore(db: D1Database, hnId: number): Promise<void> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT eval_model, hcb_weighted_mean, hcb_editorial_mean, prompt_mode
+         FROM rater_evals
+         WHERE hn_id = ? AND eval_status = 'done'
+           AND (hcb_weighted_mean IS NOT NULL OR hcb_editorial_mean IS NOT NULL)`
+      )
+      .bind(hnId)
+      .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null }>();
+
+    if (results.length < 2) return;
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+    const scores: number[] = [];
+
+    for (const r of results) {
+      const score = r.hcb_weighted_mean ?? r.hcb_editorial_mean;
+      if (score === null) continue;
+      const weight = r.prompt_mode === 'light' ? 0.5 : 1.0;
+      weightedSum += score * weight;
+      totalWeight += weight;
+      scores.push(score);
+    }
+
+    if (totalWeight === 0 || scores.length < 2) return;
+
+    const consensusScore = weightedSum / totalWeight;
+    const spread = Math.max(...scores) - Math.min(...scores);
+
+    await db
+      .prepare(
+        `UPDATE stories SET consensus_score=?, consensus_model_count=?,
+         consensus_spread=?, consensus_updated_at=datetime('now') WHERE hn_id=?`
+      )
+      .bind(consensusScore, results.length, spread, hnId)
+      .run();
+  } catch (err) {
+    // Non-throwing — consensus is best-effort
+    console.error(`[eval-write] updateConsensusScore failed for hn_id=${hnId}:`, err);
+  }
+}
+
 export async function markFailed(db: D1Database, hnId: number, error: string): Promise<void> {
   await db
     .prepare(`UPDATE stories SET eval_status = 'failed', eval_error = ? WHERE hn_id = ? AND eval_status NOT IN ('done', 'rescoring')`)
@@ -542,6 +589,9 @@ export async function writeRaterEvalResult(
   if (modelId === PRIMARY_MODEL_ID) {
     await writeEvalResult(db, hnId, result, modelId, promptHash);
   }
+
+  // Update ensemble consensus score (best-effort, non-blocking)
+  await updateConsensusScore(db, hnId);
 }
 
 export async function markRaterFailed(
@@ -686,6 +736,9 @@ export async function writeLightRaterEvalResult(
     .run();
 
   // No rater_scores or rater_witness writes for light evals
+
+  // Update ensemble consensus score (best-effort, non-blocking)
+  await updateConsensusScore(db, hnId);
 
   // Write to eval_history
   await db

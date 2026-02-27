@@ -95,3 +95,21 @@ export function updateRaterHealthOnApiFailure(health: RaterHealthState): RaterHe
   };
   return updated;
 }
+
+export interface CalibrationSummary {
+  status: string;
+  classOrderingOk: boolean;
+}
+
+export function shouldAutoDisableFromCalibration(
+  summary: CalibrationSummary,
+  modelId: string,
+): { disable: boolean; reason: string } {
+  if (summary.status === 'fail') {
+    return { disable: true, reason: `Calibration check failed for model ${modelId}` };
+  }
+  if (!summary.classOrderingOk) {
+    return { disable: true, reason: `Calibration class ordering violated for model ${modelId}` };
+  }
+  return { disable: false, reason: '' };
+}

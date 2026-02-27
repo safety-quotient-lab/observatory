@@ -275,7 +275,7 @@ function timeAgo(unixTime: number): string {
         const isPrimary = re.eval_model === PRIMARY_MODEL_ID;
         return (
           <a href={isPrimary ? `/item/${hnId}` : `/item/${hnId}?model=${re.eval_model}`}
-             style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #2a2a3a; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #222;'}`}>
+             style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #0d4655; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #0d4655;'}`}>
             {modelDisplayName(re.eval_model)}
             {isLightMode(re.prompt_mode) && <span style="color: #d56500; margin-left: 3px;" title="Light evaluation — editorial only, no per-section scores">lite</span>}
             <span style={`margin-left: 4px; color: ${scoreToColor(re.hcb_editorial_mean ?? re.hcb_weighted_mean)};`}>
@@ -285,7 +285,7 @@ function timeAgo(unixTime: number): string {
         );
       })}
       <a href={`/item/${hnId}?view=compare`}
-         style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${viewParam === 'compare' ? 'background: #2a2a3a; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #222;'}`}>
+         style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${viewParam === 'compare' ? 'background: #0d4655; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #0d4655;'}`}>
         Compare
       </a>
     </div>
@@ -505,10 +505,9 @@ function timeAgo(unixTime: number): string {
   </table>
 
   {/* Stats + Radar */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
-    <tr>
-      <td width="50%" valign="top" style="padding-right: 5px;">
-        <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+  <div class="two-col" style="padding: 5px 0; gap: 10px;">
+    <div>
+      <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
           <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr>
@@ -580,15 +579,14 @@ function timeAgo(unixTime: number): string {
             })}
           </div>
         </div>
-      </td>
-      <td width="50%" valign="top" style="padding-left: 5px;">
-        <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
-          <RadarChart scores={scores} size={300} />
-        </div>
-      </td>
-    </tr>
-  </table>
+    </div>
+    <div>
+      <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
+        <RadarChart scores={scores} size={300} />
+      </div>
+    </div>
+  </div>
 
   {/* HN Comments */}
   {comments.length > 0 && (
@@ -647,7 +645,7 @@ function timeAgo(unixTime: number): string {
           <div style="color: #5b7279; font-size: var(--font-xs);">What the site does</div>
         </div>
         {domain_context_profile && (
-          <div style="margin-bottom: 12px; padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px;">
+          <div style="margin-bottom: 12px; padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;">
             <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Domain Context Profile</div>
             <DcpTable elements={domain_context_profile.elements} />
           </div>
@@ -661,16 +659,14 @@ function timeAgo(unixTime: number): string {
 
   {/* Supplementary Signals */}
   {hasSignals && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
-      <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #f59e0b;">
-          <div style="color: #f59e0b; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 12px;">Supplementary Signals</div>
+    <div style="padding: 5px 0 20px 0;">
+      <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #f59e0b;">
+        <div style="color: #f59e0b; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 12px;">Supplementary Signals</div>
 
-          <table cellpadding="0" cellspacing="0" width="100%">
-            <tr>
-              {/* Epistemic Quality */}
-              <td width="33%" valign="top" style="padding: 0 5px 10px 0;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+        <div class="insight-grid">
+          {/* Epistemic Quality */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Epistemic Quality</div>
                   {eqData ? (
                     <>
@@ -691,11 +687,11 @@ function timeAgo(unixTime: number): string {
                     <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
-              </td>
+          </div>
 
-              {/* Propaganda Flags */}
-              <td width="33%" valign="top" style="padding: 0 5px 10px 5px;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+          {/* Propaganda Flags */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Propaganda Flags</div>
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                     <span class="badge" style={`background: ${ptFlagCount === 0 ? 'rgba(22,163,106,0.15)' : ptFlagCount <= 2 ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${ptFlagCount === 0 ? '#16a34a' : ptFlagCount <= 2 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm);`}>{ptFlagCount}</span>
@@ -712,11 +708,11 @@ function timeAgo(unixTime: number): string {
                     </div>
                   )}
                 </div>
-              </td>
+          </div>
 
-              {/* Solution Orientation */}
-              <td width="33%" valign="top" style="padding: 0 0 10px 5px;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+          {/* Solution Orientation */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Solution Orientation</div>
                   {soData ? (
                     <>
@@ -732,13 +728,11 @@ function timeAgo(unixTime: number): string {
                     <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
-              </td>
-            </tr>
+          </div>
 
-            <tr>
-              {/* Emotional Tone */}
-              <td width="33%" valign="top" style="padding: 0 5px 10px 0;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+          {/* Emotional Tone */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Emotional Tone</div>
                   {etData ? (
                     <>
@@ -755,11 +749,11 @@ function timeAgo(unixTime: number): string {
                     <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
-              </td>
+          </div>
 
-              {/* Stakeholder Representation */}
-              <td width="33%" valign="top" style="padding: 0 5px 10px 5px;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+          {/* Stakeholder Representation */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Stakeholder Voice</div>
                   {srData ? (
                     <>
@@ -788,11 +782,11 @@ function timeAgo(unixTime: number): string {
                     <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
-              </td>
+          </div>
 
-              {/* Temporal Framing */}
-              <td width="33%" valign="top" style="padding: 0 0 10px 5px;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+          {/* Temporal Framing */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Temporal Framing</div>
                   {tfData ? (
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
@@ -803,13 +797,11 @@ function timeAgo(unixTime: number): string {
                     <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
-              </td>
-            </tr>
+          </div>
 
-            <tr>
-              {/* Geographic Scope */}
-              <td width="33%" valign="top" style="padding: 0 5px 0 0;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+          {/* Geographic Scope */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Geographic Scope</div>
                   {gsData ? (
                     <>
@@ -824,11 +816,11 @@ function timeAgo(unixTime: number): string {
                     <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
-              </td>
+          </div>
 
-              {/* Complexity Level */}
-              <td width="33%" valign="top" style="padding: 0 5px 0 5px;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+          {/* Complexity Level */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Complexity</div>
                   {clData ? (
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
@@ -840,11 +832,11 @@ function timeAgo(unixTime: number): string {
                     <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
-              </td>
+          </div>
 
-              {/* Transparency & Disclosure */}
-              <td width="33%" valign="top" style="padding: 0 0 0 5px;">
-                <div style="padding: 8px; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 4px; height: 100%;">
+          {/* Transparency & Disclosure */}
+          <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
                   <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Transparency</div>
                   {tdData ? (
                     <>
@@ -865,12 +857,10 @@ function timeAgo(unixTime: number): string {
                     <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
                   )}
                 </div>
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-    </table>
+          </div>
+        </div>
+      </div>
+    </div>
   )}
     </>
   ) : isLightOnlyEval && lightEval ? (
@@ -1050,6 +1040,7 @@ function timeAgo(unixTime: number): string {
             Event Timeline
             <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">{storyEvents.length} events</span>
           </div>
+          <div class="table-wrap">
           <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
             {storyEvents.map((ev) => {
               const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#5b7279';
@@ -1082,6 +1073,7 @@ function timeAgo(unixTime: number): string {
               );
             })}
           </table>
+          </div>
         </td>
       </tr>
     </table>

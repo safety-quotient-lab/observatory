@@ -25,7 +25,12 @@ export type EventType =
   | 'rater_validation_fail'
   | 'rater_auto_disable'
   | 'rater_auto_enable'
-  | 'story_dead';
+  | 'story_dead'
+  | 'auto_retry'
+  | 'dlq_auto_replay'
+  | 'auto_calibration'
+  | 'dcp_stale'
+  | 'r2_cleanup';
 
 export type Severity = 'info' | 'warn' | 'error';
 

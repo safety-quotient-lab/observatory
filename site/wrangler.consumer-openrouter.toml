@@ -1,6 +1,6 @@
 name = "hn-hrcb-consumer-openrouter"
 main = "functions/consumer-openrouter.ts"
-compatibility_date = "2024-09-23"
+compatibility_date = "2026-02-01"
 
 [[d1_databases]]
 binding = "DB"
@@ -71,6 +71,9 @@ max_batch_size = 1
 max_concurrency = 1
 max_retries = 2
 dead_letter_queue = "hrcb-eval-dlq"
+
+[vars]
+RATE_LIMIT_MAX_BACKOFF_SECONDS = "120"
 
 # Secrets (set via `wrangler secret put --name hn-hrcb-consumer-openrouter`):
 # OPENROUTER_API_KEY

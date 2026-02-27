@@ -21,20 +21,20 @@
 
 ## Pipeline Resilience
 
-- [ ] **DLQ auto-replay with exponential backoff**
+- [x] **DLQ auto-replay with exponential backoff** *(done)*
   - First DLQ entry: auto-replay after 1h
   - Second DLQ entry: auto-replay after 6h
   - Third DLQ entry: mark `manual_review_required`, stop auto-replay
-  - Implement as cron job checking `auto_replay_at` column on dlq_messages
+  - dlq-consumer.ts computes auto_replay_at on INSERT; cron.ts replays on schedule (migration 0027)
 
 - [x] **Domain-level circuit breaker** *(done)*
   - KV-backed failure tracking per domain (5 consecutive failures → circuit open, 24h TTL auto-reset)
   - Pre-fetch skips circuit-broken domains, logs `fetch_error` event when breaker opens
   - Clears on successful fetch
 
-- [ ] **Configurable rate limit max backoff**
-  - Current hard-coded 120s cap may be too low under heavy rate limiting
-  - Add `RATE_LIMIT_MAX_BACKOFF_SECONDS` env var (default 120)
+- [x] **Configurable rate limit max backoff** *(done)*
+  - `checkRateLimitCapacity()` takes optional `maxBackoffSec` param (default 120)
+  - `RATE_LIMIT_MAX_BACKOFF_SECONDS` env var wired in consumer-anthropic + openrouter configs
 
 ## Monitoring & Alerting
 
@@ -43,34 +43,30 @@
   - Log `alert_level: critical` event when projected exhaustion <24h
   - Show forecast on dashboard headroom widget
 
-- [ ] **Evaluation latency percentiles**
-  - Track P50/P95/P99 eval duration by model
-  - Add `eval_duration_seconds` derived from `evaluated_at - created_at`
-  - Surface on dashboard as sparkline
+- [x] **Evaluation latency percentiles** *(done — backend)*
+  - `getEvalLatencyStats()` in db-analytics.ts computes P50/P95/P99 per model (JS NTILE)
+  - UI card pending (system.astro)
 
-- [ ] **DLQ trend tracking**
-  - Compare DLQ count across time windows (1d, 7d, 30d)
-  - Flag if DLQ backlog is growing (more entries than resolves)
+- [x] **DLQ trend tracking** *(done — backend)*
+  - `getDlqTrend()` returns 14-day daily counts + backlog_growing flag
+  - UI card pending (system.astro)
 
-- [ ] **Self-throttle impact analysis**
-  - Aggregate `delay_seconds` from self_throttle events
-  - Show total time lost to throttling per day/week
-  - Correlate with API quota events
+- [x] **Self-throttle impact analysis** *(done — backend)*
+  - `getSelfThrottleImpact()` aggregates `delay_seconds` from self_throttle events by model
+  - UI card pending (system.astro)
 
 ## Data Quality
 
-- [ ] **Signal completeness matrix**
-  - Query per-model % non-null for each supplementary signal (eq_score, pt_flag_count, so_score, etc.)
-  - Flag models with <80% completion for re-evaluation targeting
-  - Dashboard widget showing completion heatmap
+- [x] **Signal completeness matrix** *(done — backend)*
+  - `getSignalCompleteness()` in db-analytics.ts; flags models <80% on any signal
+  - UI card pending (system.astro)
 
 - [ ] **Content type classification validation**
   - Post-eval check: if content_type=PO but 0 structural evidence, flag as likely misclassification
   - Track misclassification rate per model over time
 
-- [ ] **DCP staleness alerting**
-  - Flag domains appearing in >20 stories where DCP is >30 days old
-  - Log `dcp_stale` event for dashboard visibility
+- [x] **DCP staleness alerting** *(done)*
+  - Hourly cron step logs `dcp_stale` event (deduplicated per domain per 24h) for domains with >20 done stories and DCP age >30 days
 
 - [ ] **Eval consistency check for re-evaluations**
   - When same URL is evaluated by different models, compare hcb_weighted_mean
@@ -119,9 +115,8 @@
   - Replace simple "top 5 pages" threshold with dynamic priority queue
   - Add `eval_priority_score` computed by cron
 
-- [ ] **R2 content snapshot retention policy**
-  - Delete snapshots >90 days old for completed evaluations
-  - Add as cron job or cleanup in pruneEvents
+- [x] **R2 content snapshot retention policy** *(done)*
+  - Weekly cron step (guarded by KV flag `r2:cleanup:last_run`) deletes objects >90 days old for done stories (max 200/cycle); logs `r2_cleanup`
 
 - [ ] **A/B testing framework for methodology**
   - Add `eval_variant` column (control, candidate_A, candidate_B)
@@ -146,10 +141,8 @@
   - Use comment sentiment as a validation signal for HRCB score
   - Flag stories where comments strongly disagree with HRCB assessment
 
-- [ ] **Best-of feed auto-evaluation**
-  - Currently only top 5 pages of topstories get auto-evaluated
-  - beststories contains high-quality content that may never reach top 5 pages
-  - Add configurable threshold: auto-eval if story is in beststories AND hn_score >= N
+- [x] **Best-of feed auto-evaluation** *(done)*
+  - Top 30 `bestIds` already included in `autoEvalIds` in hn-bot.ts alongside top 7 pages of topstories
 
 - [ ] **Algolia historical backfill**
   - HN Algolia API (`hn.algolia.com/api/v1/search`) allows searching by date/score

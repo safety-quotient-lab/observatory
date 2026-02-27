@@ -40,7 +40,9 @@ interface Env {
   LLAMA_QUEUE: Queue;
   MISTRAL_QUEUE: Queue;
   HERMES_QUEUE: Queue;
+  WORKERS_AI_QUEUE?: Queue;
   CONTENT_CACHE: KVNamespace;
+  CONTENT_SNAPSHOTS?: R2Bucket;
   CRON_SECRET?: string;
   DAILY_EVAL_BUDGET?: string;
 }
@@ -70,7 +72,7 @@ export default {
 
     let crawlResult: Awaited<ReturnType<typeof runCrawlCycle>>;
     try {
-      crawlResult = await runCrawlCycle(db, env.EVAL_QUEUE, env.CONTENT_CACHE, minute);
+      crawlResult = await runCrawlCycle(db, env.EVAL_QUEUE, env.CONTENT_CACHE, minute, env.WORKERS_AI_QUEUE);
     } catch (err) {
       console.error('[cron] Crawl cycle failed (non-fatal):', err);
       await logEvent(db, { event_type: 'cron_error', severity: 'error', message: `Crawl cycle failed`, details: { phase: 'crawl', error: String(err) } }).catch(() => {});
@@ -108,6 +110,237 @@ export default {
     } catch (err) {
       console.error('Coverage crawl failed (non-fatal):', err);
       await logEvent(db, { event_type: 'cron_error', severity: 'warn', message: `Coverage crawl failed`, details: { phase: 'coverage_crawl', error: String(err) } });
+    }
+
+    // ─── Phase 31A: Auto-retry failed stories (every 10 min) ───
+
+    if (minute % 10 === 0) {
+      try {
+        const { meta: retryMeta } = await db
+          .prepare(
+            `UPDATE stories SET eval_status = 'pending', eval_error = NULL
+             WHERE eval_status = 'failed'
+               AND hn_score >= 50
+               AND created_at > datetime('now', '-7 days')
+               AND eval_error NOT LIKE '%binary%'
+               AND eval_error NOT LIKE '%Content gate%'
+               AND eval_error NOT LIKE '%no readable%'
+             LIMIT 20`
+          )
+          .run();
+        const retried = retryMeta?.changes ?? 0;
+        if (retried > 0) {
+          console.log(`[auto-retry] Reset ${retried} failed stories to pending`);
+          await logEvent(db, {
+            event_type: 'auto_retry',
+            severity: 'info',
+            message: `Auto-retry: reset ${retried} failed stories to pending`,
+            details: { retried },
+          });
+        }
+      } catch (err) {
+        console.error('[auto-retry] Failed (non-fatal):', err);
+      }
+    }
+
+    // ─── Phase 31B: DLQ auto-replay (every hour) ───
+
+    if (minute === 0) {
+      try {
+        const { results: dlqRows } = await db
+          .prepare(
+            `SELECT id, hn_id, url, title, domain, eval_model, eval_provider
+             FROM dlq_messages
+             WHERE status = 'pending'
+               AND manual_review_required = 0
+               AND auto_replay_at IS NOT NULL
+               AND auto_replay_at <= datetime('now')
+             LIMIT 20`
+          )
+          .all<{ id: number; hn_id: number; url: string | null; title: string; domain: string | null; eval_model: string | null; eval_provider: string | null }>();
+
+        for (const row of dlqRows) {
+          try {
+            const targetQueue = getModelQueue(row.eval_model || 'claude-haiku-4-5-20251001', env as unknown as Record<string, any>);
+            if (!targetQueue) {
+              await db.prepare(`UPDATE dlq_messages SET manual_review_required = 1 WHERE id = ?`).bind(row.id).run();
+              continue;
+            }
+            await targetQueue.send({
+              hn_id: row.hn_id,
+              url: row.url,
+              title: row.title,
+              hn_text: null,
+              domain: row.domain,
+              eval_model: row.eval_model || undefined,
+              eval_provider: row.eval_provider || undefined,
+            });
+            await db
+              .prepare(`UPDATE dlq_messages SET status = 'replayed', resolved_at = datetime('now') WHERE id = ?`)
+              .bind(row.id)
+              .run();
+            await logEvent(db, {
+              hn_id: row.hn_id,
+              event_type: 'dlq_auto_replay',
+              severity: 'info',
+              message: `DLQ auto-replay: message ${row.id} re-enqueued`,
+              details: { dlq_id: row.id, eval_model: row.eval_model },
+            });
+          } catch (err) {
+            console.error(`[dlq-auto-replay] Failed for dlq_id=${row.id}:`, err);
+          }
+        }
+      } catch (err) {
+        console.error('[dlq-auto-replay] Failed (non-fatal):', err);
+      }
+    }
+
+    // ─── Phase 31C: Auto-calibrate weekly (Sunday 03:00 UTC) ───
+
+    const now = new Date();
+    if (now.getUTCDay() === 0 && now.getUTCHours() === 3 && minute === 0) {
+      try {
+        const lastCal = await db
+          .prepare(`SELECT MAX(created_at) as last FROM calibration_runs`)
+          .first<{ last: string | null }>();
+        const lastMs = lastCal?.last ? new Date(lastCal.last).getTime() : 0;
+        const sixDaysMs = 6 * 24 * 60 * 60 * 1000;
+
+        if (Date.now() - lastMs >= sixDaysMs) {
+          // Cleanup stale calibration data
+          const calIds = Array.from({ length: 15 }, (_, i) => -(1000 + i + 1));
+          const placeholders = calIds.map(() => '?').join(',');
+          await db.batch([
+            db.prepare(`DELETE FROM eval_history WHERE hn_id IN (${placeholders})`).bind(...calIds),
+            db.prepare(`DELETE FROM fair_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
+            db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${placeholders})`).bind(...calIds),
+            db.prepare(`DELETE FROM calibration_runs WHERE created_at < datetime('now', '-30 days')`),
+          ]);
+
+          // Re-enqueue calibration set
+          const enabledModels = getEnabledModels();
+          for (let i = 0; i < 15; i++) {
+            const syntheticId = -(1000 + i + 1);
+            await env.EVAL_QUEUE.send({
+              hn_id: syntheticId, url: null, title: `[AUTO-CAL] ${syntheticId}`, hn_text: null, domain: null,
+            } as any).catch(() => {});
+          }
+
+          await logEvent(db, {
+            event_type: 'auto_calibration',
+            severity: 'info',
+            message: `Auto-calibration triggered (weekly Sunday 03:00 UTC)`,
+            details: { models: enabledModels.map(m => m.id) },
+          });
+        }
+      } catch (err) {
+        console.error('[auto-calibration] Failed (non-fatal):', err);
+      }
+    }
+
+    // ─── DCP staleness alerting (hourly) ───
+
+    if (minute === 0) {
+      try {
+        const { results: staleDomains } = await db
+          .prepare(
+            `SELECT d.domain
+             FROM domain_dcp d
+             JOIN stories s ON s.domain = d.domain
+             WHERE s.eval_status = 'done'
+             GROUP BY d.domain
+             HAVING COUNT(s.hn_id) > 20
+               AND MAX(d.cached_at) < datetime('now', '-30 days')`
+          )
+          .all<{ domain: string }>();
+
+        for (const { domain } of staleDomains) {
+          // Only log if no dcp_stale event in last 24h for this domain
+          const existing = await db
+            .prepare(
+              `SELECT 1 FROM events
+               WHERE event_type = 'dcp_stale'
+                 AND json_extract(details, '$.domain') = ?
+                 AND created_at >= datetime('now', '-1 day')
+               LIMIT 1`
+            )
+            .bind(domain)
+            .first();
+          if (!existing) {
+            await logEvent(db, {
+              event_type: 'dcp_stale',
+              severity: 'warn',
+              message: `DCP stale >30 days for domain ${domain} (>20 done stories)`,
+              details: { domain },
+            });
+          }
+        }
+      } catch (err) {
+        console.error('[dcp-stale] Failed (non-fatal):', err);
+      }
+    }
+
+    // ─── R2 snapshot retention cleanup (weekly, guarded by KV flag) ───
+
+    if (minute === 0 && env.CONTENT_SNAPSHOTS) {
+      try {
+        const r2CleanupKey = 'r2:cleanup:last_run';
+        const lastRun = await env.CONTENT_CACHE.get(r2CleanupKey);
+        if (!lastRun) {
+          // Set 7-day flag immediately (prevents repeat runs even if cleanup fails)
+          await env.CONTENT_CACHE.put(r2CleanupKey, new Date().toISOString(), { expirationTtl: 7 * 24 * 3600 });
+
+          const cutoffDate = new Date(Date.now() - 90 * 24 * 3600 * 1000);
+          const cutoffStr = cutoffDate.toISOString().slice(0, 10); // YYYY-MM-DD
+
+          let deleted = 0;
+          let cursor: string | undefined;
+          const maxDelete = 200;
+
+          while (deleted < maxDelete) {
+            const list = await env.CONTENT_SNAPSHOTS.list({ cursor, limit: 100 });
+            const toDelete: string[] = [];
+
+            for (const obj of list.objects) {
+              // Key format: {hn_id}/{YYYY-MM-DD}.txt
+              const match = obj.key.match(/^-?\d+\/(\d{4}-\d{2}-\d{2})\.txt$/);
+              if (match && match[1] < cutoffStr) {
+                // Check if story is done in DB
+                const hnId = parseInt(obj.key.split('/')[0], 10);
+                const storyRow = await db
+                  .prepare(`SELECT 1 FROM stories WHERE hn_id = ? AND eval_status = 'done' LIMIT 1`)
+                  .bind(hnId)
+                  .first();
+                if (storyRow) toDelete.push(obj.key);
+              }
+              if (deleted + toDelete.length >= maxDelete) break;
+            }
+
+            for (const key of toDelete) {
+              await env.CONTENT_SNAPSHOTS.delete(key);
+              deleted++;
+            }
+
+            if (list.truncated && deleted < maxDelete) {
+              cursor = list.cursor;
+            } else {
+              break;
+            }
+          }
+
+          if (deleted > 0) {
+            await logEvent(db, {
+              event_type: 'r2_cleanup',
+              severity: 'info',
+              message: `R2 cleanup: deleted ${deleted} snapshots older than 90 days`,
+              details: { deleted, cutoff: cutoffStr },
+            });
+            console.log(`[r2-cleanup] Deleted ${deleted} old snapshots`);
+          }
+        }
+      } catch (err) {
+        console.error('[r2-cleanup] Failed (non-fatal):', err);
+      }
     }
 
     // ─── Event pruning (90-day retention, once per hour) ───

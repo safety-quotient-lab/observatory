@@ -407,6 +407,7 @@ export async function enqueueForEvaluation(
   db: D1Database,
   queue: Queue,
   kv: KVNamespace,
+  lightQueue?: Queue,
 ): Promise<void> {
   const limit = 100;
   console.log(`[queue] Dispatching up to ${limit} pending stories`);
@@ -562,6 +563,23 @@ export async function enqueueForEvaluation(
   for (let i = 0; i < messages.length; i += 25) {
     const batch = messages.slice(i, i + 25);
     await queue.sendBatch(batch);
+  }
+
+  // Dual-dispatch: light model for instant feed presence, full model for depth
+  if (lightQueue) {
+    for (const msg of messages) {
+      try {
+        await lightQueue.send({
+          hn_id: msg.body.hn_id,
+          url: msg.body.url,
+          title: msg.body.title,
+          domain: msg.body.domain,
+          prompt_mode: 'light',
+        });
+      } catch {
+        // Non-fatal — light eval is best-effort
+      }
+    }
   }
 
   // Mark stories as queued
@@ -819,6 +837,7 @@ export async function runCrawlCycle(
   queue: Queue,
   kv: KVNamespace,
   minute: number,
+  lightQueue?: Queue,
 ): Promise<CrawlResult> {
   const startTime = Date.now();
   const result: CrawlResult = {
@@ -1139,7 +1158,7 @@ export async function runCrawlCycle(
     )
     .run();
 
-  await enqueueForEvaluation(db, queue, kv);
+  await enqueueForEvaluation(db, queue, kv, lightQueue);
   result.enqueued = true;
 
   // Skip self-posts with no text AND no URL

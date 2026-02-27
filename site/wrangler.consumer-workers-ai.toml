@@ -1,6 +1,6 @@
 name = "hn-hrcb-consumer-workers-ai"
 main = "functions/consumer-workers-ai.ts"
-compatibility_date = "2024-09-23"
+compatibility_date = "2026-02-01"
 
 [[d1_databases]]
 binding = "DB"

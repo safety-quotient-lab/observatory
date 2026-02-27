@@ -230,6 +230,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
     <tr>
       <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
         <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Workers</div>
+        <div class="table-wrap">
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
           <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="padding: 2px 6px; width: 12px;"></td>
@@ -301,6 +302,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             );
           })()}
         </table>
+        </div>
       </td>
     </tr>
   </table>
@@ -313,6 +315,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
           Queues
           <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px; font-size: var(--font-xs);">{QUEUE_CONFIG.length} queues + hrcb-eval-dlq</span>
         </div>
+        <div class="table-wrap">
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
           <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="padding: 2px 6px; width: 12px;"></td>
@@ -381,6 +384,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             );
           })()}
         </table>
+        </div>
       </td>
     </tr>
   </table>
@@ -463,6 +467,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               </span>
             )}
       </summary>
+          <div class="table-wrap">
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr style="color: #5b7279; font-size: var(--font-xs);">
               <td>Model</td>
@@ -508,6 +513,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               );
             })}
           </table>
+          </div>
     </details>
   )}
 
@@ -534,7 +540,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   return (
                     <div
                       title={`${d.day}: ${d.count}`}
-                      style={`width: ${Math.floor(100 / Math.max(dailyErrors.length, 1))}%; height: ${h}px; background: ${d.count > 5 ? '#dc2626' : d.count > 0 ? '#eab308' : '#222'}; border-radius: 1px;`}
+                      style={`width: ${Math.floor(100 / Math.max(dailyErrors.length, 1))}%; height: ${h}px; background: ${d.count > 5 ? '#dc2626' : d.count > 0 ? '#eab308' : '#0d4655'}; border-radius: 1px;`}
                     ></div>
                   );
                 })}
@@ -544,7 +550,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
 
           {/* API Headroom */}
           {rateLimitSnapshot && (
-            <div style="margin-bottom: 10px; padding: 8px; background: #0a0a12; border: 1px solid #0d4655; border-radius: 4px;">
+            <div style="margin-bottom: 10px; padding: 8px; background: #0d4655; border: 1px solid #0d4655; border-radius: 4px;">
               <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 6px;">
                 API Headroom
                 <span style="text-transform: none; color: #1a5568; margin-left: 6px;">
@@ -615,6 +621,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
     <details class="collapsible-section">
       <summary>Cycle Performance</summary>
 
+              <div class="table-wrap">
               <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
                 <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase;">
                   <td width="130">Cycle Start</td>
@@ -648,6 +655,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   );
                 })}
               </table>
+              </div>
               {cycleStats.length >= 2 && (() => {
                 const withDurations = cycleStats.filter(c => c.cycle_end !== null);
                 if (withDurations.length === 0) return null;
@@ -675,7 +683,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
     <summary>Measurement Integrity</summary>
           <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
             {/* DLQ Status */}
-            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${dlqStats.pending > 0 ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid ${dlqStats.pending > 0 ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
               <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Dead Letter Queue</div>
               {dlqStats.total === 0 ? (
                 <div style="color: #5b7279; font-size: var(--font-xs);">Empty</div>
@@ -699,7 +707,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             </div>
 
             {/* Methodology Versions */}
-            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid #0d4655; border-radius: 4px;">
+            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid #0d4655; border-radius: 4px;">
               <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Methodology Versions</div>
               {methodologyDist.length === 0 ? (
                 <div style="color: #5b7279; font-size: var(--font-xs);">No data</div>
@@ -726,7 +734,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             </div>
 
             {/* Model Drift */}
-            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid #0d4655; border-radius: 4px;">
+            <div style="flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid #0d4655; border-radius: 4px;">
               <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Model Drift</div>
               {driftStats.models.length === 0 ? (
                 <div style="color: #5b7279; font-size: var(--font-xs);">No data</div>
@@ -753,7 +761,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             </div>
 
             {/* Calibration Status (full model) */}
-            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${lastCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid ${lastCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
               <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Calibration</div>
               {!lastCalibration ? (
                 <div style="font-size: var(--font-xs);">
@@ -773,7 +781,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             </div>
 
             {/* Light Calibration Status (light-1.2 model) */}
-            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${lastLightCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid ${lastLightCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
               <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Light Cal</div>
               {!lastLightCalibration ? (
                 <div style="font-size: var(--font-xs);">
@@ -793,7 +801,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
             </div>
 
             {/* Content Gates */}
-            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0a0a12; border: 1px solid ${globalGate.gate_pct > 20 ? '#eab30840' : '#0d4655'}; border-radius: 4px;`}>
+            <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid ${globalGate.gate_pct > 20 ? '#eab30840' : '#0d4655'}; border-radius: 4px;`}>
               <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Gates</div>
               <div style="font-size: var(--font-xs);">
                 <span style={`color: ${globalGate.gate_pct > 20 ? '#eab308' : '#5b7279'}; font-weight: bold;`}>{globalGate.gate_pct}%</span>
@@ -890,6 +898,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
   {failed.length > 0 && (
     <details class="collapsible-section">
       <summary>Recent Failures <span style="text-transform: none; letter-spacing: 0; color: #dc2626; margin-left: 6px;">{failed.length}</span></summary>
+          <div class="table-wrap">
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             {failed.map((s) => (
               <tr style="border-top: 1px solid #0d4655;">
@@ -903,6 +912,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
               </tr>
             ))}
           </table>
+          </div>
     </details>
   )}
 

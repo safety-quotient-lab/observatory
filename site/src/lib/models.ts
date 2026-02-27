@@ -216,3 +216,15 @@ export function getModelQueue(modelId: string, env: Record<string, any>): Queue 
   const binding = MODEL_QUEUE_BINDINGS[modelId] || 'EVAL_QUEUE';
   return env[binding] as Queue;
 }
+
+/** Derived queue configuration for system observability. */
+export const QUEUE_CONFIG = MODEL_REGISTRY
+  .filter(m => m.enabled)
+  .map(m => ({
+    bindingKey: MODEL_QUEUE_BINDINGS[m.id] ?? 'EVAL_QUEUE',
+    model: m.id,
+    shortName: m.short_name,
+    consumer: `consumer-${m.provider}`,
+    provider: m.provider,
+    promptMode: m.prompt_mode,
+  }));
