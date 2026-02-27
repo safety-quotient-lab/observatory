@@ -394,6 +394,35 @@ import Base from '../layouts/Base.astro';
           <li>A final classification is assigned (Strong positive to Strong negative)</li>
         </ol>
 
+        <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Light Evaluations <span style="color: #d56500; font-size: var(--font-sm);">(~lite)</span></p>
+
+        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
+          Some stories are evaluated by smaller, free-tier models using a streamlined
+          <b style="color: #d56500;">light</b> methodology. Light evaluations are faster and cheaper but cover
+          less ground — editorial channel only, no per-provision breakdown.
+        </p>
+
+        <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
+          <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <td style="padding: 4px 8px; width: 50%;">Full evaluation</td>
+            <td style="padding: 4px 8px; width: 50%; color: #d56500;">~lite evaluation</td>
+          </tr>
+          <tr>
+            <td valign="top" style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
+              <span style="color: #5b7279;">Editorial + Structural channels, 31-provision heatmap, DCP, Fair Witness evidence, all 9 supplementary signals, confidence, SETL</span>
+            </td>
+            <td width="5px"></td>
+            <td valign="top" style="background: #093946; border: 1px solid rgba(213,101,0,0.4); border-radius: 4px; padding: 8px;">
+              <span style="color: #5b7279;">Editorial channel only — single HRCB score + 3 supplementary signals (EQ, SO, TD) + tone + summary. No per-provision breakdown, no structural channel.</span>
+            </td>
+          </tr>
+        </table>
+
+        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
+          Stories with only a light evaluation show <span style="color: #d56500; font-family: var(--font-mono);">~lite</span> in the feed instead of <span style="color: #98a8a8; font-family: var(--font-mono);">HRCB</span>, and their item pages display the editorial summary card rather than the full heatmap and radar chart.
+          Light scores are editorial-only and are not directly comparable to full weighted means.
+        </p>
+
         <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Version History</p>
 
         <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
@@ -426,8 +455,12 @@ import Base from '../layouts/Base.astro';
             <td style="color: #5b7279;" class="score-font">Framework</td><td style="color: #98a8a8;" class="score-font">Astro + CF Pages</td>
           </tr>
           <tr>
-            <td style="color: #5b7279;" class="score-font">Evaluator</td><td style="color: #98a8a8;" class="score-font">Claude Haiku 4.5</td>
+            <td style="color: #5b7279;" class="score-font">Evaluator (full)</td><td style="color: #98a8a8;" class="score-font">Claude Haiku 4.5</td>
             <td style="color: #5b7279;" class="score-font">Database</td><td style="color: #98a8a8;" class="score-font">Cloudflare D1</td>
+          </tr>
+          <tr>
+            <td style="color: #5b7279;" class="score-font">Evaluator (~lite)</td><td style="color: #d56500;" class="score-font">Workers AI (Llama 4, Nemotron)</td>
+            <td style="color: #5b7279;" class="score-font">Snapshots</td><td style="color: #98a8a8;" class="score-font">R2 (content audit trail)</td>
           </tr>
           <tr>
             <td style="color: #5b7279;" class="score-font">Cron</td><td style="color: #98a8a8;" class="score-font">Every 5 min (6 HN lists, top 7 pages)</td>
@@ -435,7 +468,7 @@ import Base from '../layouts/Base.astro';
           </tr>
           <tr>
             <td style="color: #5b7279;" class="score-font">Queue</td><td style="color: #98a8a8;" class="score-font">CF Queues (fan-out)</td>
-            <td style="color: #5b7279;" class="score-font">Storage</td><td style="color: #98a8a8;" class="score-font">R2 (content snapshots)</td>
+            <td style="color: #5b7279;" class="score-font">Light schema</td><td style="color: #d56500;" class="score-font">light-1.2 (editorial only)</td>
           </tr>
         </table>
 
