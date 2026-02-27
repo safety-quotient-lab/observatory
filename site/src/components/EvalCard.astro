@@ -62,14 +62,14 @@ function timeAgo(unixTime: number): string {
       {rank !== undefined ? `${rank}.` : ''}
     </span>
   </td>
-  <td valign="top" style="padding-right: 5px; width: 90px; text-align: left;">
+  <td valign="top" style="padding-right: 5px; width: 90px; min-width: 90px; text-align: left; white-space: nowrap;">
     {hasEval ? (
       <a href={`/item/${story.hn_id}`} style="text-decoration: none;" title={`Editorial: ${formatScore(displayScore)} — ${classLabel} | Conf: ${formatConfidence(confidence)} | Structural: ${structuralScore !== null ? formatScore(structuralScore) : 'ND'} | SETL: ${formatSetl(aggSetl)}`}>
         <div style="white-space: nowrap;">
           <span class="score-font" style="color: #5b7279; font-size: var(--font-xs);" title={isLightOnly ? "HRCB editorial score — lite model (editorial only)" : "Editorial score (author's stance toward human rights)"}>{isLightOnly ? '~lite' : 'HRCB'}</span>
           <span
             class="score-font"
-            style={`color: ${displayColor}; font-size: var(--font-md); font-weight: bold; margin-left: 2px;`}
+            style={`color: ${displayColor}; font-size: var(--font-md); font-weight: bold; margin-left: 2px; white-space: nowrap;`}
           >
             {formatScore(displayScore)}
           </span>

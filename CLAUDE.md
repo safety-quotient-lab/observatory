@@ -174,6 +174,7 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 ## Key Patterns
 
 - **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.
+- **Mobile table score wrapping**: Score values (e.g. `−0.24`) break across lines on mobile portrait in HTML tables. Fix: add `white-space: nowrap` to both the `<td>` and the score `<span>` directly. The `−` hyphen-minus is a browser break opportunity; `white-space: nowrap` on a parent div alone is not always sufficient inside compressed table layouts.
 - **Consumer hash functions**: `hashString()` = SHA-256 first 16 bytes as hex (32 chars). Used for methodology_hash (system prompt only) and prompt_hash (system + user).
 - **Rate limiting**: Consumer reads `anthropic-ratelimit-*` headers proactively, self-throttles via KV state before hitting 429s. Circuit breaker at 3+ consecutive 429s.
 - **Content gate dual placement**: Runs in cron pre-fetch (primary — blocks before queueing, writes `gate_category`/`gate_confidence` to stories) AND consumer (safety net for KV cache misses). Pure regex, no LLM calls.

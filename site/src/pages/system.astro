@@ -499,13 +499,13 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                 <td align="center" class="score-font" style="color: #5b7279;">
                   {evalCount > 0 ? evalCount : '---'}
                 </td>
-                <td align="center" class="score-font" style={`color: ${scoreToColor(avgScore)};`}>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(avgScore)}; white-space: nowrap;`}>
                   {avgScore != null ? formatScore(avgScore) : '---'}
                 </td>
-                <td align="center" class="score-font" style={`color: ${scoreToColor(hist?.min_score ?? null)};`}>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(hist?.min_score ?? null)}; white-space: nowrap;`}>
                   {hist ? formatScore(hist.min_score) : '---'}
                 </td>
-                <td align="center" class="score-font" style={`color: ${scoreToColor(hist?.max_score ?? null)};`}>
+                <td align="center" class="score-font" style={`color: ${scoreToColor(hist?.max_score ?? null)}; white-space: nowrap;`}>
                   {hist ? formatScore(hist.max_score) : '---'}
                 </td>
               </tr>
