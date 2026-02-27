@@ -791,45 +791,36 @@ export interface EvalLatencyStat {
 
 export async function getEvalLatencyStats(db: D1Database): Promise<EvalLatencyStat[]> {
   try {
-    // Compute per-model percentiles using ordered aggregation
-    const { results: modelRows } = await db
+    // Compute per-model percentiles using NTILE window function (SQLite 3.25+)
+    const { results } = await db
       .prepare(
-        `SELECT re.eval_model,
+        `WITH latencies AS (
+           SELECT re.eval_model,
+                  (UNIXEPOCH(re.evaluated_at) - s.hn_time) as latency_sec,
+                  NTILE(100) OVER (
+                    PARTITION BY re.eval_model
+                    ORDER BY (UNIXEPOCH(re.evaluated_at) - s.hn_time)
+                  ) as pctile
+           FROM rater_evals re
+           JOIN stories s ON s.hn_id = re.hn_id
+           WHERE re.eval_status = 'done'
+             AND re.evaluated_at >= datetime('now', '-7 days')
+             AND re.evaluated_at IS NOT NULL
+             AND s.hn_time IS NOT NULL
+             AND s.hn_time > 0
+         )
+         SELECT eval_model,
                 COUNT(*) as sample_count,
-                (UNIXEPOCH(re.evaluated_at) - s.hn_time) as latency_sec
-         FROM rater_evals re
-         JOIN stories s ON s.hn_id = re.hn_id
-         WHERE re.eval_status = 'done'
-           AND re.evaluated_at >= datetime('now', '-7 days')
-           AND re.evaluated_at IS NOT NULL
-           AND s.hn_time IS NOT NULL
-         ORDER BY re.eval_model, latency_sec`
+                MAX(CASE WHEN pctile = 50 THEN latency_sec END) as p50_sec,
+                MAX(CASE WHEN pctile = 95 THEN latency_sec END) as p95_sec,
+                MAX(CASE WHEN pctile = 99 THEN latency_sec END) as p99_sec
+         FROM latencies
+         GROUP BY eval_model
+         ORDER BY sample_count DESC`
       )
-      .all<{ eval_model: string; sample_count: number; latency_sec: number }>();
+      .all<EvalLatencyStat>();
 
-    // Group by model and compute percentiles in JS (D1 lacks PERCENTILE_CONT)
-    const byModel = new Map<string, number[]>();
-    for (const r of modelRows) {
-      const arr = byModel.get(r.eval_model) ?? [];
-      arr.push(r.latency_sec);
-      byModel.set(r.eval_model, arr);
-    }
-
-    const stats: EvalLatencyStat[] = [];
-    for (const [model, latencies] of byModel) {
-      latencies.sort((a, b) => a - b);
-      const n = latencies.length;
-      const p = (pct: number) => n > 0 ? latencies[Math.floor(n * pct / 100)] ?? null : null;
-      stats.push({
-        eval_model: model,
-        p50_sec: p(50),
-        p95_sec: p(95),
-        p99_sec: p(99),
-        sample_count: n,
-      });
-    }
-
-    return stats;
+    return results;
   } catch {
     return [];
   }

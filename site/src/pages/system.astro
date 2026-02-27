@@ -32,83 +32,60 @@ import {
   getEvalLatencyStats,
   getSignalCompleteness,
 } from '../lib/db';
+import { cachedQuery } from '../lib/db-utils';
 import { CALIBRATION_SET, LIGHT_CALIBRATION_SET } from '../lib/calibration';
 
 const db = Astro.locals.runtime.env.DB;
+const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
-const [status, failed, queue, models, modelComparison, costStats] = await Promise.all([
-  getStatusCounts(db),
+// Only real dependency: velocity needs pending count from status
+const status = await getStatusCounts(db);
+
+// Everything else in parallel — individual .catch() prevents cascade failures
+const emptyEventStats = { total: 0, by_type: {}, by_severity: {}, last_24h: 0, last_7d: 0, error_count_7d: 0 };
+const [
+  failed, queue, models, velocity,
+  modelComparison, costStats,
+  eventStats, recentPipelineEvents, cronRuns, dailyErrors, cycleStats,
+  rateLimitSnapshot, dlqStats, dlqMessages,
+  methodologyDist, driftStats, lastCalibration, lastLightCalibration, globalGate,
+  raterSummary, raterStatus, providerStats, modelQueueStats,
+  dlqTrend, throttleImpact, latencyStats, signalCompleteness,
+] = await Promise.all([
+  // Ops-critical (fresh)
   getFailedStories(db, 5),
   getQueueStories(db),
   getModelStats(db),
-  getModelComparisonStats(db),
-  getCostStats(db),
-]);
-
-// Velocity needs pending count from status
-const velocity = await getVelocityStats(db, status.pending);
-
-// Event log data (graceful fallback if table doesn't exist yet)
-let eventStats: Awaited<ReturnType<typeof getEventStats>> = { total: 0, by_type: {}, by_severity: {}, last_24h: 0, last_7d: 0, error_count_7d: 0 };
-let recentPipelineEvents: Awaited<ReturnType<typeof getRecentEvents>> = [];
-let cronRuns: Awaited<ReturnType<typeof getCronRuns>> = [];
-let dailyErrors: Awaited<ReturnType<typeof getDailyErrorCounts>> = [];
-let cycleStats: Awaited<ReturnType<typeof getEvalsPerCycle>> = [];
-try {
-  [eventStats, recentPipelineEvents, cronRuns, dailyErrors, cycleStats] = await Promise.all([
-    getEventStats(db, 7),
-    getRecentEvents(db, 15),
-    getCronRuns(db, 5),
-    getDailyErrorCounts(db, 7),
-    getEvalsPerCycle(db, 10),
-  ]);
-} catch {
-  // events table may not exist yet
-}
-
-// Rate limit + measurement integrity data (graceful fallback if tables don't exist yet)
-const [rateLimitSnapshot, dlqStats, dlqMessages, methodologyDist, driftStats, lastCalibration, lastLightCalibration, globalGate] = await Promise.all([
+  getVelocityStats(db, status.pending),
+  // Historical aggregates (cached — eval_history full scans)
+  cachedQuery(kv, 'sys:modelComparison', () => getModelComparisonStats(db), 300),
+  cachedQuery(kv, 'sys:costStats', () => getCostStats(db), 120),
+  // Events (mix of cached + fresh)
+  cachedQuery(kv, 'sys:eventStats', () => getEventStats(db, 7), 60).catch(() => emptyEventStats),
+  getRecentEvents(db, 15).catch(() => [] as Awaited<ReturnType<typeof getRecentEvents>>),
+  getCronRuns(db, 5).catch(() => [] as Awaited<ReturnType<typeof getCronRuns>>),
+  cachedQuery(kv, 'sys:dailyErrors', () => getDailyErrorCounts(db, 7), 300).catch(() => [] as Awaited<ReturnType<typeof getDailyErrorCounts>>),
+  cachedQuery(kv, 'sys:evalsPerCycle', () => getEvalsPerCycle(db, 10), 120).catch(() => [] as Awaited<ReturnType<typeof getEvalsPerCycle>>),
+  // Rate limit + integrity (mix)
   getLatestRateLimitSnapshot(db),
   getDlqStats(db),
   getDlqMessages(db, 'pending', 10),
-  getMethodologyDistribution(db),
-  getModelDriftStats(db),
-  getLatestCalibrationRun(db),
-  getLatestLightCalibrationRun(db),
-  getGlobalGateStats(db),
+  cachedQuery(kv, 'sys:methDist', () => getMethodologyDistribution(db), 600),
+  cachedQuery(kv, 'sys:modelDrift', () => getModelDriftStats(db), 300),
+  cachedQuery(kv, 'sys:lastCal', () => getLatestCalibrationRun(db), 600),
+  cachedQuery(kv, 'sys:lastLightCal', () => getLatestLightCalibrationRun(db), 600),
+  cachedQuery(kv, 'sys:globalGate', () => getGlobalGateStats(db), 600),
+  // Rater stats (mix of cached + fresh)
+  cachedQuery(kv, 'sys:raterSummary', () => getRaterSummaryStats(db), 120).catch(() => [] as Awaited<ReturnType<typeof getRaterSummaryStats>>),
+  cachedQuery(kv, 'sys:raterStatus', () => getRaterStatusBreakdown(db), 120).catch(() => [] as Awaited<ReturnType<typeof getRaterStatusBreakdown>>),
+  getProviderStats(db).catch(() => [] as Awaited<ReturnType<typeof getProviderStats>>),
+  getModelQueueStats(db).catch(() => [] as Awaited<ReturnType<typeof getModelQueueStats>>),
+  // Observability (mostly cached)
+  cachedQuery(kv, 'sys:dlqTrend', () => getDlqTrend(db), 300).catch(() => null as Awaited<ReturnType<typeof getDlqTrend>> | null),
+  cachedQuery(kv, 'sys:throttle', () => getSelfThrottleImpact(db), 300).catch(() => [] as Awaited<ReturnType<typeof getSelfThrottleImpact>>),
+  getEvalLatencyStats(db).catch(() => [] as Awaited<ReturnType<typeof getEvalLatencyStats>>),
+  cachedQuery(kv, 'sys:signalComplete', () => getSignalCompleteness(db), 300).catch(() => [] as Awaited<ReturnType<typeof getSignalCompleteness>>),
 ]);
-
-// Multi-model rater summary stats (graceful fallback)
-let raterSummary: Awaited<ReturnType<typeof getRaterSummaryStats>> = [];
-let raterStatus: Awaited<ReturnType<typeof getRaterStatusBreakdown>> = [];
-let providerStats: Awaited<ReturnType<typeof getProviderStats>> = [];
-let modelQueueStats: Awaited<ReturnType<typeof getModelQueueStats>> = [];
-try {
-  [raterSummary, raterStatus, providerStats, modelQueueStats] = await Promise.all([
-    getRaterSummaryStats(db),
-    getRaterStatusBreakdown(db),
-    getProviderStats(db),
-    getModelQueueStats(db),
-  ]);
-} catch {
-  // rater_evals table may not exist yet
-}
-
-// Observability data (graceful fallback — these tables may not exist yet)
-let dlqTrend: Awaited<ReturnType<typeof getDlqTrend>> | null = null;
-let throttleImpact: Awaited<ReturnType<typeof getSelfThrottleImpact>> = [];
-let latencyStats: Awaited<ReturnType<typeof getEvalLatencyStats>> = [];
-let signalCompleteness: Awaited<ReturnType<typeof getSignalCompleteness>> = [];
-try {
-  [dlqTrend, throttleImpact, latencyStats, signalCompleteness] = await Promise.all([
-    getDlqTrend(db),
-    getSelfThrottleImpact(db),
-    getEvalLatencyStats(db),
-    getSignalCompleteness(db),
-  ]);
-} catch {
-  // graceful fallback
-}
 
 // Format token counts for display
 function formatTokens(n: number): string {
@@ -747,11 +724,11 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
           const fmt = (s: number | null) => s == null ? '—' : s < 3600 ? `${Math.round(s / 60)}m` : `${(s / 3600).toFixed(1)}h`;
           return (
             <tr style="border-top: 1px solid #0d4655;">
-              <td style="padding: 3px 6px; color: #98a8a8;">{row.model}</td>
+              <td style="padding: 3px 6px; color: #98a8a8;">{row.eval_model}</td>
               <td style={`padding: 3px 6px; text-align: right; color: ${row.p50_sec != null && row.p50_sec > 3600 ? '#eab308' : '#5b7279'};`}>{fmt(row.p50_sec)}</td>
               <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{fmt(row.p95_sec)}</td>
               <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{fmt(row.p99_sec)}</td>
-              <td style="padding: 3px 6px; text-align: right; color: #1a5568;">{row.count}</td>
+              <td style="padding: 3px 6px; text-align: right; color: #1a5568;">{row.sample_count}</td>
             </tr>
           );
         })}
@@ -784,7 +761,7 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
           const col = (v: number | null) => v == null ? '#1a5568' : v < 80 ? '#dc2626' : v < 95 ? '#eab308' : '#5b7279';
           return (
             <tr style="border-top: 1px solid #0d4655;">
-              <td style="padding: 3px 6px; color: #98a8a8;">{row.model}</td>
+              <td style="padding: 3px 6px; color: #98a8a8;">{row.eval_model}</td>
               <td style={`padding: 3px 6px; text-align: right; color: ${col(row.eq_pct)};`}>{pct(row.eq_pct)}</td>
               <td style={`padding: 3px 6px; text-align: right; color: ${col(row.so_pct)};`}>{pct(row.so_pct)}</td>
               <td style={`padding: 3px 6px; text-align: right; color: ${col(row.td_pct)};`}>{pct(row.td_pct)}</td>

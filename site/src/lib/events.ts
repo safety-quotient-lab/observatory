@@ -330,39 +330,53 @@ export async function getEvalsPerCycle(
 
   if (runs.length === 0) return [];
 
-  const cycles: CycleStats[] = [];
-
+  // Build boundary pairs
+  const boundaries: { start: string; end: string | null; details: string | null }[] = [];
   for (let i = 0; i < Math.min(runs.length, limit); i++) {
-    const cycleStart = runs[i].created_at;
-    const cycleEnd = i > 0 ? runs[i - 1].created_at : null;
-    const details = runs[i].details ? JSON.parse(runs[i].details!) : null;
-
-    // Count evals between this cron_run and the next (or now)
-    const upperBound = cycleEnd || "datetime('now')";
-    const { results: counts } = await db
-      .prepare(
-        `SELECT
-           SUM(CASE WHEN event_type = 'eval_success' THEN 1 ELSE 0 END) as success_count,
-           SUM(CASE WHEN event_type = 'eval_failure' THEN 1 ELSE 0 END) as fail_count
-         FROM events
-         WHERE created_at >= ? AND created_at < ?
-           AND event_type IN ('eval_success', 'eval_failure')`,
-      )
-      .bind(cycleStart, cycleEnd || new Date().toISOString())
-      .all<{ success_count: number; fail_count: number }>();
-
-    cycles.push({
-      cycle_start: cycleStart,
-      cycle_end: cycleEnd,
-      duration_ms: details?.duration_ms ?? null,
-      stories_found: details?.stories_found ?? null,
-      stories_new: details?.stories_new ?? null,
-      evals_completed: counts[0]?.success_count ?? 0,
-      evals_failed: counts[0]?.fail_count ?? 0,
+    boundaries.push({
+      start: runs[i].created_at,
+      end: i > 0 ? runs[i - 1].created_at : null,
+      details: runs[i].details,
     });
   }
 
-  return cycles;
+  // Single query: fetch all eval events since oldest cycle start
+  const oldestStart = boundaries[boundaries.length - 1].start;
+  const { results: evalEvents } = await db
+    .prepare(
+      `SELECT created_at, event_type FROM events
+       WHERE event_type IN ('eval_success', 'eval_failure')
+         AND created_at >= ?
+       ORDER BY created_at`,
+    )
+    .bind(oldestStart)
+    .all<{ created_at: string; event_type: string }>();
+
+  // Bucket events into cycles in JS (O(events × cycles), both small)
+  const cycleCounters = boundaries.map(() => ({ success: 0, fail: 0 }));
+  for (const ev of evalEvents) {
+    for (let i = 0; i < boundaries.length; i++) {
+      const b = boundaries[i];
+      if (ev.created_at >= b.start && (b.end === null || ev.created_at < b.end)) {
+        if (ev.event_type === 'eval_success') cycleCounters[i].success++;
+        else cycleCounters[i].fail++;
+        break;
+      }
+    }
+  }
+
+  return boundaries.map((b, i) => {
+    const details = b.details ? JSON.parse(b.details) : null;
+    return {
+      cycle_start: b.start,
+      cycle_end: b.end,
+      duration_ms: details?.duration_ms ?? null,
+      stories_found: details?.stories_found ?? null,
+      stories_new: details?.stories_new ?? null,
+      evals_completed: cycleCounters[i].success,
+      evals_failed: cycleCounters[i].fail,
+    };
+  });
 }
 
 /**
