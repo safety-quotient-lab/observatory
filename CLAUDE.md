@@ -22,17 +22,24 @@ This repository contains the UN Universal Declaration of Human Rights (UDHR) tex
 All infrastructure code lives under `site/`.
 
 ```
-Cron Worker (1min) → Queue (hrcb-eval-queue) → Consumer Worker → D1 + R2
-                                                      ↓ (on failure)
-                                                DLQ Worker (hrcb-eval-dlq) → dlq_messages table
+Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + R2
+                                        ↓ (on failure)
+                                  DLQ Worker (hrcb-eval-dlq) → dlq_messages table
+
+  hrcb-eval-queue (1 queue)     → hn-hrcb-consumer-anthropic
+  8 OpenRouter queues           → hn-hrcb-consumer-openrouter
+  hrcb-eval-workers-ai (1 queue)→ hn-hrcb-consumer-workers-ai
 ```
 
 **Workers:**
 - `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Also serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`. Pre-fetch step runs content gate + `hasReadableText` to skip non-evaluable content before queueing.
-- `site/functions/consumer.ts` — Fetches URL content, calls Claude API (Haiku), computes aggregates on CPU, writes to D1/R2. Proactive rate limit awareness via KV. Also runs content gate as safety net for cache misses.
+- `site/functions/consumer-shared.ts` — Shared types, helpers, content prep, and result writing for all 3 consumers.
+- `site/functions/consumer-anthropic.ts` — Anthropic queue handler. Inline fetch with prompt caching, proactive rate limit tracking, 429/529/credit handling, truncation retry.
+- `site/functions/consumer-openrouter.ts` — OpenRouter queue handler (8 model queues). Light + full prompt modes. Uses `callOpenRouterApi` from providers.ts.
+- `site/functions/consumer-workers-ai.ts` — Workers AI queue handler. Free tier, no API key. Uses `callWorkersAi` from providers.ts.
 - `site/functions/dlq-consumer.ts` — Captures dead-lettered messages. Also serves `/replay` and `/replay/:id`.
 
-**Wrangler configs:** `site/wrangler.cron.toml`, `site/wrangler.consumer.toml`, `site/wrangler.dlq.toml`
+**Wrangler configs:** `site/wrangler.cron.toml`, `site/wrangler.consumer-anthropic.toml`, `site/wrangler.consumer-openrouter.toml`, `site/wrangler.consumer-workers-ai.toml`, `site/wrangler.dlq.toml`
 
 **Storage:**
 - **D1** (`hrcb-db`): stories, scores, events, eval_history, fair_witness, domain_dcp, dlq_messages, calibration_runs, ratelimit_snapshots
@@ -84,7 +91,9 @@ npx astro build
 # Deploy
 npx wrangler pages deploy dist --project-name hn-hrcb     # site
 npx wrangler deploy --config wrangler.cron.toml            # cron worker
-npx wrangler deploy --config wrangler.consumer.toml        # consumer worker
+npx wrangler deploy --config wrangler.consumer-anthropic.toml   # Anthropic consumer
+npx wrangler deploy --config wrangler.consumer-openrouter.toml  # OpenRouter consumer
+npx wrangler deploy --config wrangler.consumer-workers-ai.toml  # Workers AI consumer
 npx wrangler deploy --config wrangler.dlq.toml             # DLQ worker
 
 # Migrations
@@ -116,7 +125,9 @@ curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health
 npx wrangler d1 execute hrcb-db --remote --command "SELECT ..."
 
 # Tail logs
-npx wrangler tail --config wrangler.consumer.toml --format pretty
+npx wrangler tail hn-hrcb-consumer-anthropic --format pretty
+npx wrangler tail hn-hrcb-consumer-openrouter --format pretty
+npx wrangler tail hn-hrcb-consumer-workers-ai --format pretty
 ```
 
 ## Event Types
@@ -134,8 +145,14 @@ The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry
 - Earlier versions: `methodology-v1.txt`, `methodology-v2.txt`, `methodology-v3.txt`, `methodology-v3.3.txt`
 
 ### Calibration
-- `calibration-v3.1-set.txt` — 15-URL calibration set with expected score ranges
+- `calibration-v3.1-set.txt` — 15-URL calibration set with expected score ranges (full model)
 - `calibration-v3.1-baselines.txt` — Actual baseline evaluations for 9 calibration URLs
+
+### Local scripts (run with `node scripts/...`)
+- `scripts/evaluate-standalone.mjs` — Fetch queue from `/api/queue`, evaluate with `claude -p`, post to `/api/ingest`. Modes: `--mode light` (default) or `--mode full`. Self-guards against `CLAUDECODE` env var nesting.
+- `scripts/backfill-daemon.sh` — Batch loop with 15s sleep. Self-launches into `tmux new-session -d -s backfill` if not already in tmux. Stop with `touch .backfill-stop`.
+- `scripts/validate-light.mjs` — 15-URL calibration validator for `light-1.2` model. Passes 15/15 against final calibration set (EP-1..5, EN-1..5, EX-1..5). Run: `node scripts/validate-light.mjs [--concurrency N]`.
+- `scripts/validate-light-dcp.mjs` — Two-step DCP-enhanced validator (root page → DCP profile → editorial eval). Passes 15/15. Adds ~17s per URL overhead. DCP limitation: archive.org profiled as "utility" (misses digital rights mission).
 
 ## Factions Page
 
@@ -157,6 +174,6 @@ The factions page (`site/src/pages/factions.astro`) clusters domains by **editor
 - **Content gate dual placement**: Runs in cron pre-fetch (primary — blocks before queueing, writes `gate_category`/`gate_confidence` to stories) AND consumer (safety net for KV cache misses). Pure regex, no LLM calls.
 - **Calibration IDs**: Synthetic hn_ids -1001 to -1015 for the 15 calibration URLs.
 - **DCP caching**: 7-day TTL in KV per domain, also persisted to `domain_dcp` table in D1.
-- **Light prompt mode**: Small/free models (Workers AI Llama 4 Scout 17B, Nemotron Nano 30B) use `METHODOLOGY_SYSTEM_PROMPT_LIGHT` — editorial-only single score + 4 supplementary scores (~200-400 output tokens vs ~4-5K for full). Schema `light-1.1`. Controlled by `ModelDefinition.prompt_mode: 'full' | 'light'`. No structural channel, no per-section scores, no DCP, no Fair Witness evidence. Results written to `rater_evals` with `prompt_mode = 'light'` (no `rater_scores`/`rater_witness`). DB column `prompt_mode` (migration 0023) enables filtering light vs full evals.
+- **Light prompt mode**: Small/free models (Workers AI Llama 4 Scout 17B, Nemotron Nano 30B) use `METHODOLOGY_SYSTEM_PROMPT_LIGHT` — editorial-only single score + 3 supplementary scores (eq, so, td) + primary_tone (~200-400 output tokens vs ~4-5K for full). Schema `light-1.2`. Field `executive_summary` renamed to `short_description` (max 20 words). Controlled by `ModelDefinition.prompt_mode: 'full' | 'light'`. No structural channel, no per-section scores, no DCP, no Fair Witness evidence. Results written to `rater_evals` with `prompt_mode = 'light'` (no `rater_scores`/`rater_witness`). DB column `prompt_mode` (migration 0023) enables filtering light vs full evals.
 - **Workers AI response format**: `ai.run()` may return `{ response: "string" }` or `{ response: { ...object } }` — consumer handles both.
 - **Content gate columns**: `stories.gate_category` (TEXT, nullable) and `stories.gate_confidence` (REAL, nullable) — migration 0024. NULL = content was accessible. Written by `markSkipped()` when content gate blocks a URL. Surfaced on `/domain/[domain]` (Access Barriers), `/domains` (Most Gatekept card), `/sources` (Gated Content card), `/system` (Content Gates box). Query functions: `getDomainGateStats`, `getMostGatekeptDomains`, `getGlobalGateStats` in `db-entities.ts`.

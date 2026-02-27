@@ -243,11 +243,140 @@ async function postIngest(hnId, result, modelId, provider, promptHash, inputToke
   return body;
 }
 
+// --- Content Gate (inline, matches site/src/lib/content-gate.ts) ---
+
+const PAYWALL_DOMAINS = new Set([
+  'bloomberg.com', 'wsj.com', 'ft.com', 'nytimes.com', 'economist.com',
+  'theathletic.com', 'telegraph.co.uk', 'thetimes.co.uk', 'barrons.com',
+  'hbr.org', 'foreignaffairs.com', 'foreignpolicy.com', 'theatlantic.com',
+  'newyorker.com', 'wired.com', 'vanityfair.com', 'bostonglobe.com',
+  'washingtonpost.com', 'latimes.com', 'sfchronicle.com', 'seattletimes.com',
+  'denverpost.com', 'inquirer.com', 'startribune.com', 'chicagotribune.com',
+  'baltimoresun.com', 'journalnow.com', 'businessinsider.com', 'insider.com',
+  'seekingalpha.com', 'statista.com',
+]);
+
+const GATE_TITLE_PATTERNS = [
+  { re: /access denied/i, cat: 'bot_protection', conf: 0.8, sig: 'Title: Access Denied' },
+  { re: /just a moment/i, cat: 'bot_protection', conf: 0.85, sig: 'Title: Just a moment (Cloudflare)' },
+  { re: /verify you are human/i, cat: 'captcha', conf: 0.85, sig: 'Title: Verify you are human' },
+  { re: /attention required/i, cat: 'bot_protection', conf: 0.8, sig: 'Title: Attention Required' },
+  { re: /you have been blocked/i, cat: 'bot_protection', conf: 0.85, sig: 'Title: You have been blocked' },
+  { re: /pardon our interruption/i, cat: 'bot_protection', conf: 0.8, sig: 'Title: Pardon Our Interruption' },
+  { re: /robot or human/i, cat: 'captcha', conf: 0.85, sig: 'Title: Robot or human?' },
+  { re: /service unavailable/i, cat: 'error_page', conf: 0.7, sig: 'Title: Service Unavailable' },
+  { re: /page not found|404/i, cat: 'error_page', conf: 0.7, sig: 'Title: Page Not Found' },
+  { re: /under maintenance/i, cat: 'error_page', conf: 0.75, sig: 'Title: Under Maintenance' },
+  { re: /age verification/i, cat: 'age_gate', conf: 0.8, sig: 'Title: Age Verification' },
+];
+
+const GATE_BODY_PATTERNS = [
+  // Paywall
+  { re: /subscribe to (read|continue|access|unlock)/i, cat: 'paywall', w: 0.3, sig: 'subscribe to read/continue' },
+  { re: /premium (content|article|member|subscriber)/i, cat: 'paywall', w: 0.3, sig: 'premium content/member' },
+  { re: /(paid|premium) subscription/i, cat: 'paywall', w: 0.3, sig: 'paid/premium subscription' },
+  { re: /become a (member|subscriber)/i, cat: 'paywall', w: 0.3, sig: 'become a member/subscriber' },
+  { re: /already a subscriber\? ?(log|sign) ?in/i, cat: 'paywall', w: 0.3, sig: 'already a subscriber? log in' },
+  { re: /free articles? remaining/i, cat: 'paywall', w: 0.3, sig: 'free articles remaining' },
+  { re: /this (article|content|story) is (for|available to) (paid |premium )?subscribers/i, cat: 'paywall', w: 0.35, sig: 'content for subscribers' },
+  // CAPTCHA
+  { re: /class="g-recaptcha"/i, cat: 'captcha', w: 0.5, sig: 'reCAPTCHA widget' },
+  { re: /class="h-captcha"/i, cat: 'captcha', w: 0.5, sig: 'hCaptcha widget' },
+  { re: /data-sitekey=/i, cat: 'captcha', w: 0.45, sig: 'CAPTCHA sitekey' },
+  { re: /challenges\.cloudflare\.com/i, cat: 'captcha', w: 0.5, sig: 'Cloudflare challenge script' },
+  { re: /verify you are (a )?human/i, cat: 'captcha', w: 0.5, sig: 'verify you are human' },
+  // Bot protection
+  { re: /cf-browser-verification/i, cat: 'bot_protection', w: 0.4, sig: 'Cloudflare browser verification' },
+  { re: /cf-challenge/i, cat: 'bot_protection', w: 0.4, sig: 'Cloudflare challenge' },
+  { re: /__cf_chl/i, cat: 'bot_protection', w: 0.4, sig: 'Cloudflare challenge token' },
+  { re: /perimeterx/i, cat: 'bot_protection', w: 0.4, sig: 'PerimeterX' },
+  { re: /datadome/i, cat: 'bot_protection', w: 0.4, sig: 'DataDome' },
+  { re: /imperva.*incapsula/i, cat: 'bot_protection', w: 0.4, sig: 'Imperva/Incapsula' },
+  { re: /your (access|request) (to|has been) (this site|blocked|denied)/i, cat: 'bot_protection', w: 0.4, sig: 'access blocked' },
+  { re: /ray id:/i, cat: 'bot_protection', w: 0.3, sig: 'Cloudflare Ray ID' },
+  // Login wall
+  { re: /(sign|log) ?in to (continue|read|access|view)/i, cat: 'login_wall', w: 0.35, sig: 'sign in to continue' },
+  { re: /create (an |a free )?account to (continue|read|access)/i, cat: 'login_wall', w: 0.35, sig: 'create account to continue' },
+  // Geo restriction
+  { re: /not available in your (country|region|location)/i, cat: 'geo_restriction', w: 0.4, sig: 'not available in region' },
+  // Rate limited
+  { re: /too many requests/i, cat: 'rate_limited', w: 0.4, sig: 'too many requests' },
+  { re: /rate limit/i, cat: 'rate_limited', w: 0.4, sig: 'rate limit' },
+  // Age gate
+  { re: /must be (18|21)\+?/i, cat: 'age_gate', w: 0.4, sig: 'must be 18/21+' },
+  { re: /age (verification|gate|check)/i, cat: 'age_gate', w: 0.4, sig: 'age verification/gate' },
+  // App gate
+  { re: /download (our|the) app/i, cat: 'app_gate', w: 0.35, sig: 'download our app' },
+  { re: /continue in (the )?app/i, cat: 'app_gate', w: 0.35, sig: 'continue in app' },
+  // Error page
+  { re: /500 internal server error/i, cat: 'error_page', w: 0.5, sig: '500 error' },
+  { re: /503 service unavailable/i, cat: 'error_page', w: 0.5, sig: '503 error' },
+  { re: /site (is )?(under |undergoing )?maintenance/i, cat: 'error_page', w: 0.4, sig: 'site maintenance' },
+];
+
+function classifyContent(html, url) {
+  const scores = {};
+  const signals = [];
+  const addScore = (cat, w, sig) => { scores[cat] = (scores[cat] || 0) + w; signals.push(sig); };
+
+  // Layer 1: Error prefix
+  if (html.startsWith('[error:')) {
+    const m = html.match(/^\[error:([^\]]+)\]/);
+    const code = m ? m[1] : 'unknown';
+    if (code === 'http-429') return { category: 'rate_limited', confidence: 0.9, signals: ['HTTP 429'], blocked: true };
+    if (code === 'http-451') return { category: 'geo_restriction', confidence: 0.9, signals: ['HTTP 451'], blocked: true };
+    if (code === 'http-403') return { category: 'bot_protection', confidence: 0.7, signals: ['HTTP 403'], blocked: true };
+    if (code.startsWith('http-5')) return { category: 'error_page', confidence: 0.9, signals: [`HTTP ${code.replace('http-', '')}`], blocked: true };
+    return { category: 'error_page', confidence: 0.8, signals: [`Fetch error: ${code}`], blocked: true };
+  }
+
+  // Layer 2: Known paywall domains
+  let hostname = '';
+  try { hostname = new URL(url).hostname.replace(/^www\./, ''); } catch {}
+  const textLen = html.replace(/<(script|style)[\s>][\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().length;
+  const parts = hostname.split('.');
+  let isPaywall = PAYWALL_DOMAINS.has(hostname);
+  if (!isPaywall) { for (let i = 1; i < parts.length - 1; i++) { if (PAYWALL_DOMAINS.has(parts.slice(i).join('.'))) { isPaywall = true; break; } } }
+  if (isPaywall) {
+    if (textLen < 1000) addScore('paywall', 0.6, `Known paywall (${hostname}) + short content`);
+    else addScore('paywall', 0.2, `Known paywall (${hostname})`);
+  }
+
+  // Layer 3: Title patterns
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+  for (const tp of GATE_TITLE_PATTERNS) { if (tp.re.test(title)) addScore(tp.cat, tp.conf, tp.sig); }
+
+  // Layer 4: Body patterns
+  for (const bp of GATE_BODY_PATTERNS) { if (bp.re.test(html)) addScore(bp.cat, bp.w, bp.sig); }
+
+  // Layer 5: Short content amplifier
+  if (textLen < 500 && signals.length > 0) {
+    const topCat = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (topCat) addScore(topCat, 0.2, `Short content (${textLen} chars) amplifier`);
+  }
+
+  // Decision
+  const topEntry = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
+  if (!topEntry) return { category: 'content', confidence: 1.0, signals: [], blocked: false };
+  const [cat, raw] = topEntry;
+  const caps = { paywall: 0.95, captcha: 0.95, bot_protection: 0.95, cookie_wall: 0.85, login_wall: 0.90, geo_restriction: 0.95, rate_limited: 0.95, error_page: 0.95, age_gate: 0.90, app_gate: 0.90 };
+  const confidence = Math.round(Math.min(raw, caps[cat] ?? 0.95) * 100) / 100;
+  return { category: cat, confidence, signals, blocked: confidence >= 0.6 };
+}
+
 // --- Main evaluation loop ---
 
 async function evaluateOne(hnId, url) {
   console.log(`  Fetching content from ${url}`);
   const content = await fetchContent(url);
+
+  // Content gate: classify before spending tokens on eval
+  const gate = classifyContent(content, url);
+  if (gate.blocked) {
+    console.log(`  \u229C Skipped: ${gate.category} (${(gate.confidence * 100).toFixed(0)}%) \u2014 ${gate.signals.join('; ')}`);
+    return { skipped: true, category: gate.category };
+  }
 
   const userMessage = buildUserMessage(url, content);
   const promptHash = hashPrompt(SYSTEM_PROMPT, userMessage);

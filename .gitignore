@@ -20,3 +20,10 @@ dist/
 
 # node
 node_modules/
+
+# local logs
+backfill.log
+*.log
+
+# lock files (local dev)
+package-lock.json
