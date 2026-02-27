@@ -753,6 +753,7 @@ export async function checkDeadStories(db: D1Database): Promise<{ checked: numbe
       `SELECT hn_id FROM stories
        WHERE eval_status IN ('pending', 'queued', 'done', 'evaluating')
          AND hn_time > unixepoch('now', '-30 days')
+         AND hn_type != 'calibration'
        ORDER BY
          CASE eval_status WHEN 'pending' THEN 0 WHEN 'queued' THEN 1 ELSE 2 END,
          hn_time DESC
