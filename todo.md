@@ -8,7 +8,7 @@
 - [x] **Unified CLI eval tool** *(done)* — `scripts/hn-hrcb-evaluate` replaces backfill-eval.sh + backfill-targeted.sh with flags: `--pending`, `--failed`, `--domain`, `--min-score`, `--dry-run`, `--recalc`, `--status`, positional IDs
 
 - [x] **Content gate in cron pre-fetch** *(done)* — `hn-bot.ts` runs `classifyContent()` + `hasReadableText()` on raw HTML before queueing. Gated stories marked skipped with structured `gate_category`/`gate_confidence`. Consumer retains gate as safety net.
-- [ ] **Backfill gate_category for existing stories** — Cron pre-filter only catches new stories. ~2,500 existing pending/skipped stories have NULL gate_category. Could re-fetch and classify with `backfill-gate.mjs` (script exists but untested). Low priority since new flow handles all future stories.
+- [x] **Backfill gate_category for existing stories** *(done)* — Swept 18 skipped stories (score >= 50) back to pending; they'll flow through cron pre-fetch content gate naturally. Remaining ~1,738 are low-score (<50) stories — not worth re-evaluating.
 
 ## Data Sources
 
