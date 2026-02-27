@@ -2,22 +2,33 @@
  * Dead Letter Queue Consumer + Replay Endpoint.
  *
  * Queue consumer:
- * 1. Writes failed messages to dlq_messages for inspection
+ * 1. Writes failed messages to dlq_messages (including eval_model/eval_provider)
  * 2. Logs a structured 'dlq' event
  * 3. Acks the message (so it doesn't loop)
  *
  * HTTP endpoints:
  * - GET  /          → health check
- * - POST /replay    → re-enqueue pending DLQ messages to eval queue
+ * - POST /replay    → re-enqueue pending DLQ messages to the correct provider queue
  * - POST /replay/:id → re-enqueue a single DLQ message by ID
  */
 
 import { logEvent } from '../src/lib/events';
-import { extractDomain } from '../src/lib/shared-eval';
+import { extractDomain, getModelDef } from '../src/lib/shared-eval';
+import { MODEL_QUEUE_BINDINGS } from '../src/lib/models';
 
 interface Env {
   DB: D1Database;
+  // Queue producer bindings — one per provider queue
   EVAL_QUEUE: Queue;
+  DEEPSEEK_QUEUE: Queue;
+  TRINITY_QUEUE: Queue;
+  NEMOTRON_QUEUE: Queue;
+  STEP_QUEUE: Queue;
+  QWEN_QUEUE: Queue;
+  LLAMA_QUEUE: Queue;
+  MISTRAL_QUEUE: Queue;
+  HERMES_QUEUE: Queue;
+  WORKERS_AI_QUEUE: Queue;
   CRON_SECRET?: string;
 }
 
@@ -27,6 +38,8 @@ interface QueueMessage {
   title: string;
   hn_text: string | null;
   domain: string | null;
+  eval_model?: string;
+  eval_provider?: string;
 }
 
 interface DlqRow {
@@ -38,6 +51,8 @@ interface DlqRow {
   original_error: string | null;
   retry_count: number;
   status: string;
+  eval_model: string | null;
+  eval_provider: string | null;
 }
 
 function checkAuth(request: Request, env: Env): Response | null {
@@ -50,6 +65,14 @@ function checkAuth(request: Request, env: Env): Response | null {
   return null;
 }
 
+/** Get the correct queue for a model ID, falling back to EVAL_QUEUE (Anthropic). */
+function getQueue(env: Env, modelId: string | null | undefined): Queue {
+  if (!modelId) return env.EVAL_QUEUE;
+  const binding = MODEL_QUEUE_BINDINGS[modelId] || 'EVAL_QUEUE';
+  const queue = (env as any)[binding] as Queue | undefined;
+  return queue || env.EVAL_QUEUE;
+}
+
 export default {
   async queue(
     batch: MessageBatch<QueueMessage>,
@@ -59,14 +82,14 @@ export default {
 
     for (const msg of batch.messages) {
       const story = msg.body;
-      console.log(`[dlq] Dead-lettered: hn_id=${story.hn_id}: ${story.title}`);
+      console.log(`[dlq] Dead-lettered: hn_id=${story.hn_id} model=${story.eval_model || 'primary'}: ${story.title}`);
 
       try {
-        // Write to dlq_messages table
+        // Write to dlq_messages table (including model/provider for routing on replay)
         await db
           .prepare(
-            `INSERT INTO dlq_messages (hn_id, url, title, domain, original_error, retry_count)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO dlq_messages (hn_id, url, title, domain, original_error, retry_count, eval_model, eval_provider)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .bind(
             story.hn_id,
@@ -75,6 +98,8 @@ export default {
             story.domain || null,
             `Exhausted all retries (delivered to DLQ at ${new Date().toISOString()})`,
             msg.attempts,
+            story.eval_model || null,
+            story.eval_provider || null,
           )
           .run();
 
@@ -88,6 +113,8 @@ export default {
             url: story.url,
             domain: story.domain,
             attempts: msg.attempts,
+            eval_model: story.eval_model,
+            eval_provider: story.eval_provider,
           },
         });
       } catch (err) {
@@ -120,7 +147,7 @@ export default {
       if (singleIdMatch) {
         const id = parseInt(singleIdMatch[1], 10);
         const result = await db
-          .prepare(`SELECT id, hn_id, url, title, domain, original_error, retry_count, status FROM dlq_messages WHERE id = ? AND status = 'pending'`)
+          .prepare(`SELECT id, hn_id, url, title, domain, original_error, retry_count, status, eval_model, eval_provider FROM dlq_messages WHERE id = ? AND status = 'pending'`)
           .bind(id)
           .all<DlqRow>();
         rows = result.results;
@@ -132,7 +159,7 @@ export default {
         const limit = parseInt(url.searchParams.get('limit') || '50', 10);
         const cappedLimit = Math.min(Math.max(limit, 1), 100);
         const result = await db
-          .prepare(`SELECT id, hn_id, url, title, domain, original_error, retry_count, status FROM dlq_messages WHERE status = 'pending' ORDER BY created_at ASC LIMIT ?`)
+          .prepare(`SELECT id, hn_id, url, title, domain, original_error, retry_count, status, eval_model, eval_provider FROM dlq_messages WHERE status = 'pending' ORDER BY created_at ASC LIMIT ?`)
           .bind(cappedLimit)
           .all<DlqRow>();
         rows = result.results;
@@ -143,10 +170,10 @@ export default {
         return new Response(JSON.stringify({ error: 'Not found' }), { status: 404 });
       }
 
-      // Re-enqueue each row and mark as replayed
+      // Re-enqueue each row to the correct provider queue and mark as replayed
       let replayed = 0;
       let failed = 0;
-      const details: { id: number; hn_id: number; status: string }[] = [];
+      const details: { id: number; hn_id: number; status: string; queue?: string }[] = [];
 
       for (const row of rows) {
         try {
@@ -156,15 +183,20 @@ export default {
             .bind(row.hn_id)
             .first<QueueMessage>();
 
-          const queueMsg: QueueMessage = storyRow || {
-            hn_id: row.hn_id,
-            url: row.url,
-            title: row.title,
-            hn_text: null,
-            domain: row.domain || (row.url ? extractDomain(row.url) : null),
+          const queueMsg: QueueMessage = {
+            hn_id: storyRow?.hn_id ?? row.hn_id,
+            url: storyRow?.url ?? row.url,
+            title: storyRow?.title ?? row.title,
+            hn_text: storyRow?.hn_text ?? null,
+            domain: storyRow?.domain ?? row.domain ?? (row.url ? extractDomain(row.url) : null),
+            eval_model: row.eval_model || undefined,
+            eval_provider: row.eval_provider || undefined,
           };
 
-          await env.EVAL_QUEUE.send(queueMsg);
+          // Route to the correct queue based on the model that originally failed
+          const targetQueue = getQueue(env, row.eval_model);
+          const queueBinding = row.eval_model ? (MODEL_QUEUE_BINDINGS[row.eval_model] || 'EVAL_QUEUE') : 'EVAL_QUEUE';
+          await targetQueue.send(queueMsg);
 
           // Mark as replayed
           await db
@@ -172,22 +204,24 @@ export default {
             .bind(row.id)
             .run();
 
-          // Reset story eval_status so it gets re-evaluated
-          await db
-            .prepare(`UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status = 'failed'`)
-            .bind(row.hn_id)
-            .run();
+          // Reset story eval_status so it gets re-evaluated (primary model only)
+          if (!row.eval_model || row.eval_model === 'claude-haiku-4-5-20251001') {
+            await db
+              .prepare(`UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status = 'failed'`)
+              .bind(row.hn_id)
+              .run();
+          }
 
           await logEvent(db, {
             hn_id: row.hn_id,
             event_type: 'dlq_replay',
             severity: 'info',
-            message: `DLQ message ${row.id} replayed: ${row.title}`,
-            details: { dlq_id: row.id, original_error: row.original_error },
+            message: `DLQ message ${row.id} replayed to ${queueBinding}: ${row.title}`,
+            details: { dlq_id: row.id, original_error: row.original_error, eval_model: row.eval_model, queue: queueBinding },
           });
 
           replayed++;
-          details.push({ id: row.id, hn_id: row.hn_id, status: 'replayed' });
+          details.push({ id: row.id, hn_id: row.hn_id, status: 'replayed', queue: queueBinding });
         } catch (err) {
           console.error(`[dlq] Replay failed for id=${row.id} hn_id=${row.hn_id}:`, err);
           failed++;

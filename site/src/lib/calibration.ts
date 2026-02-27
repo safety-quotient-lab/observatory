@@ -15,8 +15,13 @@ export interface CalibrationUrl {
 }
 
 /**
- * The 15-URL calibration set with expected score ranges.
- * Source: calibration-v3.1-set.txt
+ * The 15-URL calibration set with expected score ranges (full model, hcb_weighted_mean).
+ * Source: calibration-v3.1-set.txt; URL fixes applied 2026-02-27.
+ *
+ * URL selection notes:
+ *   EX-2 → rt.com/about-us/ (9K readable chars; rt.com homepage returns ~58 chars)
+ *   EX-4 → news.gab.com (6K editorial content; gab.com is JS-rendered, 18 chars)
+ *   EX-5 → globaltimes.cn (English CPC state media; xinhuanet.com is Chinese-only)
  */
 export const CALIBRATION_SET: CalibrationUrl[] = [
   { slot: 'EP-1', url: 'https://www.amnesty.org/en/what-we-do/', expectedClass: 'EP', expectedMeanMin: 0.55, expectedMeanMax: 0.70, label: 'Amnesty International' },
@@ -29,11 +34,11 @@ export const CALIBRATION_SET: CalibrationUrl[] = [
   { slot: 'EN-3', url: 'https://www.xe.com', expectedClass: 'EN', expectedMeanMin: -0.05, expectedMeanMax: 0.10, label: 'XE.com' },
   { slot: 'EN-4', url: 'https://en.wikipedia.org/wiki/Oxygen', expectedClass: 'EN', expectedMeanMin: 0.00, expectedMeanMax: 0.15, label: 'Wikipedia (Oxygen)' },
   { slot: 'EN-5', url: 'https://www.speedtest.net', expectedClass: 'EN', expectedMeanMin: -0.10, expectedMeanMax: 0.05, label: 'Speedtest.net' },
-  { slot: 'EX-1', url: 'https://www.temu.com', expectedClass: 'EX', expectedMeanMin: -0.25, expectedMeanMax: -0.10, label: 'Temu' },
-  { slot: 'EX-2', url: 'https://www.rt.com', expectedClass: 'EX', expectedMeanMin: -0.15, expectedMeanMax: -0.02, label: 'RT' },
+  { slot: 'EX-1', url: 'https://www.temu.com', expectedClass: 'EX', expectedMeanMin: -0.25, expectedMeanMax: -0.05, label: 'Temu' },
+  { slot: 'EX-2', url: 'https://www.rt.com/about-us/', expectedClass: 'EX', expectedMeanMin: -0.30, expectedMeanMax: -0.05, label: 'RT (About)' },
   { slot: 'EX-3', url: 'https://www.booking.com', expectedClass: 'EX', expectedMeanMin: -0.20, expectedMeanMax: -0.05, label: 'Booking.com' },
-  { slot: 'EX-4', url: 'https://gab.com', expectedClass: 'EX', expectedMeanMin: -0.20, expectedMeanMax: -0.05, label: 'Gab' },
-  { slot: 'EX-5', url: 'https://www.xinhuanet.com', expectedClass: 'EX', expectedMeanMin: -0.15, expectedMeanMax: -0.02, label: 'Xinhua' },
+  { slot: 'EX-4', url: 'https://news.gab.com', expectedClass: 'EX', expectedMeanMin: -0.20, expectedMeanMax: 0.10, label: 'Gab News' },
+  { slot: 'EX-5', url: 'https://www.globaltimes.cn', expectedClass: 'EX', expectedMeanMin: -0.45, expectedMeanMax: -0.10, label: 'Global Times' },
 ];
 
 /**

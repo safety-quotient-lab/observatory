@@ -7,10 +7,48 @@ binding = "DB"
 database_name = "hrcb-db"
 database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
 
+# Queue producer bindings — one per provider queue for per-provider replay routing
 [[queues.producers]]
 binding = "EVAL_QUEUE"
 queue = "hrcb-eval-queue"
 
+[[queues.producers]]
+binding = "DEEPSEEK_QUEUE"
+queue = "hrcb-eval-deepseek"
+
+[[queues.producers]]
+binding = "TRINITY_QUEUE"
+queue = "hrcb-eval-trinity"
+
+[[queues.producers]]
+binding = "NEMOTRON_QUEUE"
+queue = "hrcb-eval-nemotron"
+
+[[queues.producers]]
+binding = "STEP_QUEUE"
+queue = "hrcb-eval-step"
+
+[[queues.producers]]
+binding = "QWEN_QUEUE"
+queue = "hrcb-eval-qwen"
+
+[[queues.producers]]
+binding = "LLAMA_QUEUE"
+queue = "hrcb-eval-llama"
+
+[[queues.producers]]
+binding = "MISTRAL_QUEUE"
+queue = "hrcb-eval-mistral"
+
+[[queues.producers]]
+binding = "HERMES_QUEUE"
+queue = "hrcb-eval-hermes"
+
+[[queues.producers]]
+binding = "WORKERS_AI_QUEUE"
+queue = "hrcb-eval-workers-ai"
+
+# DLQ consumer
 [[queues.consumers]]
 queue = "hrcb-eval-dlq"
 max_batch_size = 5
