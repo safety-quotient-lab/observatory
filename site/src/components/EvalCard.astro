@@ -197,6 +197,13 @@ function timeAgo(unixTime: number): string {
             {modelShortName(m.eval_model)}{isLightMode(m.prompt_mode) ? '~' : ''}
           </a>
         ))}
+        {(story.consensus_model_count ?? 0) >= 2 && story.consensus_score != null && (
+          <span
+            class="badge"
+            style="background: rgba(43,144,216,0.10); color: #8faaab; font-size: var(--font-xs); margin-left: 3px;"
+            title={`Consensus across ${story.consensus_model_count} models: ${story.consensus_score > 0 ? '+' : ''}${story.consensus_score.toFixed(3)}${story.consensus_spread != null ? ` (spread ±${(story.consensus_spread / 2).toFixed(3)})` : ''}`}
+          >×{story.consensus_model_count}</span>
+        )}
       </>
     ) : story.eval_status === 'evaluating' ? (
       <span> | <span style="color: #60a5fa; font-size: var(--font-sm);">evaluating</span></span>

@@ -27,6 +27,10 @@ import {
   getGlobalGateStats,
   getProviderStats,
   getModelQueueStats,
+  getDlqTrend,
+  getSelfThrottleImpact,
+  getEvalLatencyStats,
+  getSignalCompleteness,
 } from '../lib/db';
 import { CALIBRATION_SET, LIGHT_CALIBRATION_SET } from '../lib/calibration';
 
@@ -88,6 +92,22 @@ try {
   ]);
 } catch {
   // rater_evals table may not exist yet
+}
+
+// Observability data (graceful fallback — these tables may not exist yet)
+let dlqTrend: Awaited<ReturnType<typeof getDlqTrend>> | null = null;
+let throttleImpact: Awaited<ReturnType<typeof getSelfThrottleImpact>> = [];
+let latencyStats: Awaited<ReturnType<typeof getEvalLatencyStats>> = [];
+let signalCompleteness: Awaited<ReturnType<typeof getSignalCompleteness>> = [];
+try {
+  [dlqTrend, throttleImpact, latencyStats, signalCompleteness] = await Promise.all([
+    getDlqTrend(db),
+    getSelfThrottleImpact(db),
+    getEvalLatencyStats(db),
+    getSignalCompleteness(db),
+  ]);
+} catch {
+  // graceful fallback
 }
 
 // Format token counts for display
@@ -678,13 +698,117 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
     </details>
   )}
 
+  {/* Throttle Impact */}
+  {throttleImpact.length > 0 && (
+    <details class="collapsible-section">
+      <summary>
+        Throttle Impact
+        <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+          {Math.round(throttleImpact.reduce((s, r) => s + r.total_delay_sec, 0) / 60)}m wasted 7d
+        </span>
+      </summary>
+      <div class="table-wrap">
+      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+        <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+          <td style="padding: 2px 6px;">Model</td>
+          <td style="padding: 2px 6px; text-align: right; width: 60px;">Events</td>
+          <td style="padding: 2px 6px; text-align: right; width: 80px;">Wasted (7d)</td>
+        </tr>
+        {throttleImpact.map(row => (
+          <tr style="border-top: 1px solid #0d4655;">
+            <td style="padding: 3px 6px; color: #98a8a8;">{row.model}</td>
+            <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{row.event_count}</td>
+            <td style={`padding: 3px 6px; text-align: right; color: ${row.total_delay_sec > 600 ? '#eab308' : '#5b7279'};`}>
+              {row.total_delay_sec >= 60
+                ? `${Math.round(row.total_delay_sec / 60)}m ${Math.round(row.total_delay_sec % 60)}s`
+                : `${Math.round(row.total_delay_sec)}s`}
+            </td>
+          </tr>
+        ))}
+      </table>
+      </div>
+    </details>
+  )}
+
+  {/* Eval Latency */}
+  {latencyStats.length > 0 && (
+    <details class="collapsible-section">
+      <summary>Eval Latency</summary>
+      <div class="table-wrap">
+      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+        <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+          <td style="padding: 2px 6px;">Model</td>
+          <td style="padding: 2px 6px; text-align: right; width: 60px;" title="Median latency (story crawled → eval done)">P50</td>
+          <td style="padding: 2px 6px; text-align: right; width: 60px;">P95</td>
+          <td style="padding: 2px 6px; text-align: right; width: 60px;">P99</td>
+          <td style="padding: 2px 6px; text-align: right; width: 50px;">N</td>
+        </tr>
+        {latencyStats.map(row => {
+          const fmt = (s: number | null) => s == null ? '—' : s < 3600 ? `${Math.round(s / 60)}m` : `${(s / 3600).toFixed(1)}h`;
+          return (
+            <tr style="border-top: 1px solid #0d4655;">
+              <td style="padding: 3px 6px; color: #98a8a8;">{row.model}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${row.p50_sec != null && row.p50_sec > 3600 ? '#eab308' : '#5b7279'};`}>{fmt(row.p50_sec)}</td>
+              <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{fmt(row.p95_sec)}</td>
+              <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{fmt(row.p99_sec)}</td>
+              <td style="padding: 3px 6px; text-align: right; color: #1a5568;">{row.count}</td>
+            </tr>
+          );
+        })}
+      </table>
+      </div>
+    </details>
+  )}
+
+  {/* Signal Completeness */}
+  {signalCompleteness.length > 0 && (
+    <details class="collapsible-section">
+      <summary>
+        Signal Completeness
+        {signalCompleteness.some(r => r.any_below_80) && (
+          <span style="text-transform: none; letter-spacing: 0; color: #eab308; margin-left: 6px;">gaps detected</span>
+        )}
+      </summary>
+      <div class="table-wrap">
+      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+        <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+          <td style="padding: 2px 6px;">Model</td>
+          <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Epistemic quality">EQ</td>
+          <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Solution orientation">SO</td>
+          <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Temporal dimension">TD</td>
+          <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Propaganda flags">PT</td>
+          <td style="padding: 2px 6px; text-align: right; width: 50px;" title="Primary tone">Tone</td>
+        </tr>
+        {signalCompleteness.map(row => {
+          const pct = (v: number | null) => v == null ? '—' : `${Math.round(v)}%`;
+          const col = (v: number | null) => v == null ? '#1a5568' : v < 80 ? '#dc2626' : v < 95 ? '#eab308' : '#5b7279';
+          return (
+            <tr style="border-top: 1px solid #0d4655;">
+              <td style="padding: 3px 6px; color: #98a8a8;">{row.model}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${col(row.eq_pct)};`}>{pct(row.eq_pct)}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${col(row.so_pct)};`}>{pct(row.so_pct)}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${col(row.td_pct)};`}>{pct(row.td_pct)}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${col(row.pt_pct)};`}>{pct(row.pt_pct)}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${col(row.tone_pct)};`}>{pct(row.tone_pct)}</td>
+            </tr>
+          );
+        })}
+      </table>
+      </div>
+    </details>
+  )}
+
   {/* Measurement Integrity */}
   <details class="collapsible-section">
     <summary>Measurement Integrity</summary>
           <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
             {/* DLQ Status */}
             <div style={`flex: 1; min-width: 120px; padding: 6px 8px; background: #0d4655; border: 1px solid ${dlqStats.pending > 0 ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
-              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Dead Letter Queue</div>
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">
+                Dead Letter Queue
+                {dlqTrend?.backlog_growing && <span style="color: #dc2626; margin-left: 4px;" title="Backlog growing over last 7 days">↑</span>}
+                {dlqTrend && !dlqTrend.backlog_growing && dlqStats.pending > 0 && <span style="color: #16a34a; margin-left: 4px;" title="Backlog stable or shrinking">→</span>}
+              </div>
               {dlqStats.total === 0 ? (
                 <div style="color: #5b7279; font-size: var(--font-xs);">Empty</div>
               ) : (
@@ -693,6 +817,17 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
                   <span style="color: #5b7279;"> pending</span>
                   {dlqStats.replayed > 0 && <span style="color: #5b7279;"> · {dlqStats.replayed} replayed</span>}
                   {dlqStats.discarded > 0 && <span style="color: #1a5568;"> · {dlqStats.discarded} discarded</span>}
+                </div>
+              )}
+              {dlqTrend && dlqTrend.daily.length > 0 && (
+                <div style="margin-top: 4px; display: flex; align-items: flex-end; gap: 1px; height: 16px;" title="14-day DLQ new entries">
+                  {dlqTrend.daily.map(d => {
+                    const maxNew = Math.max(...dlqTrend!.daily.map(x => x.new_count), 1);
+                    const h = Math.max(2, Math.round((d.new_count / maxNew) * 16));
+                    return (
+                      <div style={`width: 6px; height: ${h}px; background: ${d.new_count > 0 ? '#dc262680' : '#0d4655'}; border-radius: 1px;`} title={`${d.day}: ${d.new_count} new`}></div>
+                    );
+                  })}
                 </div>
               )}
               {dlqMessages.length > 0 && (
