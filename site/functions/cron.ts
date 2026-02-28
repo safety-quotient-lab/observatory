@@ -17,7 +17,7 @@ import {
 import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, LITE_CALIBRATION_SET, LITE_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
 import { shouldAutoDisableFromCalibration, raterHealthKvKey, emptyRaterHealth, type RaterHealthState } from '../src/lib/rater-health';
-import { getPipelineHealth } from '../src/lib/db';
+import { getPipelineHealth, computeModelComparisonBlob, MODEL_COMPARISON_KV_KEY, MODEL_COMPARISON_TTL } from '../src/lib/db';
 import { safeBatch } from '../src/lib/db-utils';
 import { runScheduledCoverageStrategy } from '../src/lib/coverage-crawl';
 import {
@@ -528,6 +528,24 @@ export default {
         }
       } catch (err) {
         console.error('[cron] Stale domain refresh failed (non-fatal):', err);
+      }
+    }
+
+    // ─── Pre-compute model comparison blob for /status/models (every 10 min) ───
+    // Models page has 10ms CPU limit on CF Pages — heavy multi-model queries +
+    // O(n²) correlation/histogram compute exceeds budget. Pre-compute here (30s CPU).
+
+    if (minute % 10 === 5) {
+      try {
+        const blob = await computeModelComparisonBlob(db);
+        await env.CONTENT_CACHE.put(
+          MODEL_COMPARISON_KV_KEY,
+          JSON.stringify(blob),
+          { expirationTtl: MODEL_COMPARISON_TTL }
+        );
+        console.log(`[cron] Model comparison blob computed: ${blob.totalStories} stories, ${blob.modelIds.length} models`);
+      } catch (err) {
+        console.error('[cron] Model comparison blob failed (non-fatal):', err);
       }
     }
 
