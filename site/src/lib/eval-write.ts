@@ -4,7 +4,7 @@
  * Pure extraction from shared-eval.ts — no logic changes.
  */
 
-import { computeSetl } from './compute-aggregates';
+import { computeSetl, EVIDENCE_WEIGHTS_CONFIDENCE } from './compute-aggregates';
 import { ALL_SECTIONS, type EvalResult, type LiteEvalResponse } from './eval-types';
 import { computeLiteAggregates } from './eval-parse';
 import { PRIMARY_MODEL_ID } from './models';
@@ -51,9 +51,7 @@ export async function writeEvalResult(
   const totalSections = result.scores.length;
   for (const s of result.scores) {
     const ev = s.evidence?.toUpperCase();
-    if (ev === 'H') confWeightedSum += 1.0;
-    else if (ev === 'M') confWeightedSum += 0.6;
-    else if (ev === 'L') confWeightedSum += 0.2;
+    if (ev && ev in EVIDENCE_WEIGHTS_CONFIDENCE) confWeightedSum += EVIDENCE_WEIGHTS_CONFIDENCE[ev];
   }
   const hcbConfidence = totalSections > 0 ? confWeightedSum / totalSections : null;
 
@@ -281,15 +279,15 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
 
     if (totalWeight === 0 || scores.length < 2) return;
 
-    const consensusScore = weightedSum / totalWeight;
-    const spread = Math.max(...scores) - Math.min(...scores);
+    const consensusScore = Math.round((weightedSum / totalWeight) * 1000) / 1000;
+    const spread = Math.round((Math.max(...scores) - Math.min(...scores)) * 1000) / 1000;
 
     await db
       .prepare(
         `UPDATE stories SET consensus_score=?, consensus_model_count=?,
          consensus_spread=?, consensus_updated_at=datetime('now') WHERE hn_id=?`
       )
-      .bind(consensusScore, results.length, spread, hnId)
+      .bind(consensusScore, scores.length, spread, hnId)
       .run();
 
     // Alert on high cross-model divergence
@@ -338,7 +336,7 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
            AVG(CASE WHEN eval_status = 'done' THEN so_score END),
            AVG(CASE WHEN eval_status = 'done' THEN sr_score END),
            AVG(CASE WHEN eval_status = 'done' THEN td_score END),
-           AVG(CASE WHEN eval_status = 'done' THEN pt_flag_count END),
+           AVG(CASE WHEN eval_status = 'done' AND pt_flag_count IS NOT NULL THEN pt_flag_count END),
            AVG(CASE WHEN eval_status = 'done' THEN et_valence END),
            AVG(CASE WHEN eval_status = 'done' THEN et_arousal END),
            AVG(CASE WHEN eval_status = 'done' THEN et_dominance END),
@@ -580,9 +578,7 @@ export async function writeRaterEvalResult(
   const totalSections = result.scores.length;
   for (const s of result.scores) {
     const ev = s.evidence?.toUpperCase();
-    if (ev === 'H') confWeightedSum += 1.0;
-    else if (ev === 'M') confWeightedSum += 0.6;
-    else if (ev === 'L') confWeightedSum += 0.2;
+    if (ev && ev in EVIDENCE_WEIGHTS_CONFIDENCE) confWeightedSum += EVIDENCE_WEIGHTS_CONFIDENCE[ev];
   }
   const hcbConfidence = totalSections > 0 ? confWeightedSum / totalSections : null;
 

@@ -16,13 +16,13 @@ Score scale: [-1.0, +1.0]
 
 | Range | Label |
 |---|---|
-| +0.7 to +1.0 | Strong positive |
-| +0.4 to +0.6 | Moderate positive |
+| +0.6 to +1.0 | Strong positive |
+| +0.3 to +0.6 | Moderate positive |
 | +0.1 to +0.3 | Mild positive |
 | -0.1 to +0.1 | Neutral |
 | -0.3 to -0.1 | Mild negative |
-| -0.6 to -0.4 | Moderate negative |
-| -1.0 to -0.7 | Strong negative |
+| -0.6 to -0.3 | Moderate negative |
+| -1.0 to -0.6 | Strong negative |
 | ND | No data |
 
 Scoring principles:
@@ -300,13 +300,13 @@ Score scale: [-1.0, +1.0]
 
 | Range | Label |
 |---|---|
-| +0.7 to +1.0 | Strong positive |
-| +0.4 to +0.6 | Moderate positive |
+| +0.6 to +1.0 | Strong positive |
+| +0.3 to +0.6 | Moderate positive |
 | +0.1 to +0.3 | Mild positive |
 | -0.1 to +0.1 | Neutral |
 | -0.3 to -0.1 | Mild negative |
-| -0.6 to -0.4 | Moderate negative |
-| -1.0 to -0.7 | Strong negative |
+| -0.6 to -0.3 | Moderate negative |
+| -1.0 to -0.6 | Strong negative |
 | ND | No data |
 
 Scoring principles:

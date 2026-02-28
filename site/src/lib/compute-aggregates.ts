@@ -6,11 +6,13 @@
 import { CLASSIFICATIONS } from './types';
 import type { EvalScore, SlimEvalScore } from './shared-eval';
 
-const EVIDENCE_WEIGHTS: Record<string, number> = {
-  H: 1.0,
-  M: 0.7,
-  L: 0.4,
-};
+/** Evidence weights for weighted_mean: higher spread rewards strong evidence more in the score itself. */
+export const EVIDENCE_WEIGHTS_MEAN: Record<string, number> = { H: 1.0, M: 0.7, L: 0.4 };
+
+/** Evidence weights for confidence: steeper drop-off reflects how much we trust the assessment. */
+export const EVIDENCE_WEIGHTS_CONFIDENCE: Record<string, number> = { H: 1.0, M: 0.6, L: 0.2 };
+
+const EVIDENCE_WEIGHTS = EVIDENCE_WEIGHTS_MEAN;
 
 export interface Aggregates {
   weighted_mean: number;
@@ -186,6 +188,13 @@ export function computeDerivedScoreFields(
   channelWeights: { editorial: number; structural: number },
   dcpElements: Record<string, DcpElement> | null,
 ): EvalScore[] {
+  // Validate channel weights: must sum ≈ 1.0 and both be positive
+  let weights = channelWeights;
+  const wSum = channelWeights.editorial + channelWeights.structural;
+  if (channelWeights.editorial <= 0 || channelWeights.structural <= 0 || Math.abs(wSum - 1.0) > 0.01) {
+    weights = { editorial: 0.65, structural: 0.35 };
+  }
+
   return scores.map(s => {
     const eScore = s.editorial;
     const sScore = s.structural;
@@ -193,7 +202,7 @@ export function computeDerivedScoreFields(
     // Combined = weighted average of E and S channels
     let combined: number | null = null;
     if (eScore !== null && sScore !== null) {
-      combined = round(channelWeights.editorial * eScore + channelWeights.structural * sScore);
+      combined = round(weights.editorial * eScore + weights.structural * sScore);
     } else if (eScore !== null) {
       combined = eScore;
     } else if (sScore !== null) {
@@ -255,7 +264,9 @@ export function computeSetl(scores: Array<{ editorial: number | null; structural
       vals.push(s.editorial >= s.structural ? mag : -mag);
     }
   }
-  return vals.length > 0 ? round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  if (vals.length === 0) return null;
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return round(Math.max(-1.0, Math.min(1.0, avg)));
 }
 
 // --- Story-level aggregate helpers ---
@@ -288,9 +299,7 @@ export function computeStoryLevelAggregates(scores: EvalScore[]): StoryLevelAggr
     let weightedSum = 0;
     for (const s of scores) {
       const ev = s.evidence?.toUpperCase();
-      if (ev === 'H') weightedSum += 1.0;
-      else if (ev === 'M') weightedSum += 0.6;
-      else if (ev === 'L') weightedSum += 0.2;
+      if (ev && ev in EVIDENCE_WEIGHTS_CONFIDENCE) weightedSum += EVIDENCE_WEIGHTS_CONFIDENCE[ev];
       // ND contributes 0
     }
     hcb_confidence = round(weightedSum / total);

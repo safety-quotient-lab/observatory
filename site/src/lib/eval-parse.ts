@@ -193,6 +193,28 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
 
   if (!parsed.evaluation || typeof parsed.evaluation !== 'object') {
     errors.push('Missing "evaluation" object');
+  } else {
+    // Content type validation (parity with lite eval validation)
+    const ct = parsed.evaluation.content_type;
+    if (ct && typeof ct === 'object' && ct.primary) {
+      const upper = String(ct.primary).toUpperCase();
+      if (!VALID_CONTENT_TYPES.has(upper)) {
+        warnings.push(`Invalid content_type.primary "${ct.primary}", defaulting to MX`);
+        ct.primary = 'MX';
+        repairs.push('Set content_type.primary to MX (was invalid)');
+      } else if (ct.primary !== upper) {
+        ct.primary = upper;
+        repairs.push(`Normalized content_type.primary to "${upper}"`);
+      }
+    }
+  }
+
+  // Schema version warning
+  if (parsed.schema_version !== undefined) {
+    const known = ['3.0', '3.1', '3.3', '3.4', 'slim-3.3', 'slim-3.4'];
+    if (!known.includes(parsed.schema_version)) {
+      warnings.push(`Unrecognized schema_version "${parsed.schema_version}"`);
+    }
   }
 
   // --- Soft validations (auto-repair or warn) ---
@@ -259,6 +281,33 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
       warnings.push(`Missing supplementary signal: ${signal}`);
     }
   }
+
+  // Range-clamp supplementary signal sub-fields (parity with lite eval validation)
+  const clamp01 = (obj: any, field: string, label: string) => {
+    if (obj?.[field] != null && typeof obj[field] === 'number') {
+      if (obj[field] < 0.0 || obj[field] > 1.0) {
+        const orig = obj[field];
+        obj[field] = Math.max(0.0, Math.min(1.0, obj[field]));
+        repairs.push(`Clamped ${label}: ${orig} → ${obj[field]}`);
+      }
+    }
+  };
+  const clampPM1 = (obj: any, field: string, label: string) => {
+    if (obj?.[field] != null && typeof obj[field] === 'number') {
+      if (obj[field] < -1.0 || obj[field] > 1.0) {
+        const orig = obj[field];
+        obj[field] = Math.max(-1.0, Math.min(1.0, obj[field]));
+        repairs.push(`Clamped ${label}: ${orig} → ${obj[field]}`);
+      }
+    }
+  };
+  clamp01(parsed.epistemic_quality, 'eq_score', 'epistemic_quality.eq_score');
+  clamp01(parsed.solution_orientation, 'so_score', 'solution_orientation.so_score');
+  clamp01(parsed.transparency_disclosure, 'td_score', 'transparency_disclosure.td_score');
+  clamp01(parsed.stakeholder_representation, 'sr_score', 'stakeholder_representation.sr_score');
+  clampPM1(parsed.emotional_tone, 'valence', 'emotional_tone.valence');
+  clamp01(parsed.emotional_tone, 'arousal', 'emotional_tone.arousal');
+  clamp01(parsed.emotional_tone, 'dominance', 'emotional_tone.dominance');
 
   return { valid: errors.length === 0, errors, warnings, repairs };
 }

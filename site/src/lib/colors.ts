@@ -94,7 +94,8 @@ export function computeSetl(structural: number | null, editorial: number | null)
   const strength = Math.max(Math.abs(editorial), Math.abs(structural));
   if (strength === 0 && diff === 0) return null;
   const magnitude = Math.sqrt(Math.abs(diff) * strength);
-  return diff >= 0 ? magnitude : -magnitude;
+  const raw = diff >= 0 ? magnitude : -magnitude;
+  return Math.max(-1.0, Math.min(1.0, raw));
 }
 
 /** Format SETL value for display */
@@ -111,13 +112,14 @@ export function setlToColor(setl: number | null): string {
 }
 
 
-/** Compute evidence-weighted confidence: (H*1.0 + M*0.6 + L*0.2) / (H + M + L + ND) */
+/** Compute evidence-weighted confidence using EVIDENCE_WEIGHTS_CONFIDENCE scale */
 export function computeConfidence(
   evidenceH: number | null, evidenceM: number | null, evidenceL: number | null, ndCount: number | null
 ): number | null {
   if (evidenceH === null || evidenceM === null || evidenceL === null || ndCount === null) return null;
   const total = evidenceH + evidenceM + evidenceL + ndCount;
   if (total === 0) return null;
+  // Weights: H=1.0, M=0.6, L=0.2 (from EVIDENCE_WEIGHTS_CONFIDENCE in compute-aggregates.ts)
   return (evidenceH * 1.0 + evidenceM * 0.6 + evidenceL * 0.2) / total;
 }
 
