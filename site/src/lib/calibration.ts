@@ -60,8 +60,9 @@ export const DRIFT_THRESHOLDS = {
 };
 
 /**
- * The 15-URL calibration set for the light-1.3 model (editorial-only, hcb_editorial).
- * Source: scripts/validate-light.mjs; validated 15/15 on back-to-back passes 12 & 13.
+ * The 15-URL calibration set for the light prompt (editorial-only, hcb_editorial).
+ * Compatible with light-1.3 and light-1.4 — ranges are in normalized [-1,+1] scale.
+ * Source: scripts/validate-light.mjs; validated 15/15 on back-to-back passes 12 & 13 (light-1.3).
  *
  * URL selection notes:
  *   EX-1 → shopify.com (Temu triggers parametric labor/Uyghur knowledge)
@@ -92,7 +93,7 @@ export const LIGHT_CALIBRATION_SET: CalibrationUrl[] = [
 ];
 
 /**
- * Drift thresholds for the light-1.3 model (editorial-only).
+ * Drift thresholds for the light prompt model (editorial-only, light-1.4+).
  * Wider than full-model thresholds — editorial-only scoring has more run-to-run variance.
  */
 export const LIGHT_DRIFT_THRESHOLDS = {
@@ -138,7 +139,7 @@ export interface CalibrationSummary {
  * Compare actual scores against a calibration set.
  * `scores` is a map from URL → actual weighted mean (null if not evaluated).
  * Defaults to the full-model CALIBRATION_SET and DRIFT_THRESHOLDS;
- * pass LIGHT_CALIBRATION_SET + LIGHT_DRIFT_THRESHOLDS for light-1.3 evaluation.
+ * pass LIGHT_CALIBRATION_SET + LIGHT_DRIFT_THRESHOLDS for light prompt evaluation.
  */
 export function runCalibrationCheck(
   scores: Map<string, number | null>,

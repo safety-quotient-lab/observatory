@@ -192,6 +192,7 @@ export interface SlimEvalResponse {
 
 export interface LightEvalResponse {
   schema_version: string;
+  reasoning?: string | null;
   evaluation: {
     url: string;
     domain: string;

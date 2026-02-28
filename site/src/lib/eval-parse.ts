@@ -288,7 +288,25 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
   }
 
   // Editorial score (the only scored channel in light mode)
-  if (ev.editorial !== null && ev.editorial !== undefined) {
+  // light-1.4 uses integer 0-100 (50=neutral); light-1.3 used float [-1,+1].
+  // Detect by schema_version (authoritative) or by value out of float range (fallback).
+  const isV14 = parsed.schema_version === 'light-1.4';
+  const couldBeInteger = typeof ev.editorial === 'number' && ev.editorial > 1.0;
+
+  if (isV14 || couldBeInteger) {
+    // Integer 0-100 format: normalize to [-1, +1] via (score - 50) / 50
+    if (typeof ev.editorial !== 'number') {
+      const num = parseFloat(ev.editorial);
+      ev.editorial = (!isNaN(num) && isFinite(num)) ? num : null;
+      if (ev.editorial !== null) repairs.push(`Coerced editorial to number: ${ev.editorial}`);
+    }
+    if (ev.editorial !== null) {
+      const clamped = Math.max(0, Math.min(100, ev.editorial));
+      ev.editorial = Math.round(((clamped - 50) / 50) * 1000) / 1000;
+      repairs.push(`Normalized integer ${clamped} \u2192 ${ev.editorial}`);
+    }
+  } else {
+    // light-1.3 float format: clamp to [-1, +1]
     if (typeof ev.editorial !== 'number') {
       const num = parseFloat(ev.editorial);
       if (!isNaN(num) && isFinite(num)) {
@@ -302,6 +320,16 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
       const original = ev.editorial;
       ev.editorial = Math.max(-1.0, Math.min(1.0, ev.editorial));
       repairs.push(`Clamped editorial: ${original} \u2192 ${ev.editorial}`);
+    }
+  }
+
+  // Validate reasoning field (light-1.4+): optional, discard if malformed
+  if (parsed.reasoning !== null && parsed.reasoning !== undefined) {
+    if (typeof parsed.reasoning !== 'string') {
+      parsed.reasoning = null;
+    } else if (parsed.reasoning.length > 100) {
+      parsed.reasoning = parsed.reasoning.slice(0, 100);
+      repairs.push('Truncated reasoning to 100 chars');
     }
   }
 
