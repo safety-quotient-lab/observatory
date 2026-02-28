@@ -32,12 +32,10 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Round 3 — Data Integrity
 
-- [ ] **Investigate S-not-E / E-not-S channel asymmetry in rater_scores** *(data quality)*
-  - 2,426 sections have structural score but null editorial; 1,919 have editorial but null structural
-  - Affects 315+ stories; primarily deepseek-v3.2 and claude-haiku-4-5 full evals
-  - Root cause unknown — parser dropping one channel? model omitting editorial when no direct evidence?
-  - Check: does `computeAggregates()` handle null editorial gracefully or silently skew weighted_mean?
-  - Fix: either parser repair pass or re-eval of affected stories
+- [x] **Fix S-not-E / E-not-S channel asymmetry in rater_scores** *(done 2026-02-28)*
+  - Migration 0049: 2,384 rows with structural-not-null/editorial-null retroactively cleaned;
+    hcb_weighted_mean re-derived for 372 stories; 132 all-bad stories reset to pending.
+    E-not-S rows (1,900+) are intentional behavior — no fix needed.
 
 ### Round 3 — Ops Visibility
 
