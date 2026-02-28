@@ -55,10 +55,8 @@ rounds. 30/43 items already fixed; remaining items below.
 ### Round 4 — Analytics (runs on existing data, no migrations needed)
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
-  - [ ] **Model mix over time** — stacked bar: which models did evals each day.
-    Data: `rater_evals.evaluated_at` + `eval_model` grouped by `DATE()`
-  - [ ] **Eval velocity chart** — evals/day line chart over 30/90 days.
-    Data: `COUNT(*) GROUP BY DATE(evaluated_at)`, overlay light vs full prompt_mode
+  - [x] **Model mix over time** — stacked bar: which models did evals each day. *(done 2026-02-28)*
+  - [x] **Eval velocity chart** — evals/day line chart, light vs full overlay. *(done 2026-02-28)*
   - [ ] **Coverage progression** — daily funnel: no-coverage → light → full → multi-model.
     Needs `daily_coverage_stats` materialized table or query from `stories` + `rater_evals`
   - [ ] **Per-content-type eval mix** — which content types (ED, PO, LP, PR, etc.) are

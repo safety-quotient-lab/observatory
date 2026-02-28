@@ -167,7 +167,7 @@ The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry
 
 ### Local scripts (run with `node scripts/...`)
 - `scripts/evaluate-standalone.mjs` — Fetch queue from `/api/queue`, evaluate with `claude -p`, post to `/api/ingest`. Modes: `--mode light` (default) or `--mode full`. Spawns claude with `{ CLAUDECODE: undefined, ANTHROPIC_API_KEY: undefined }` — both must be unset or the subprocess either refuses (CLAUDECODE) or uses depleted API credits instead of the OAuth subscription (ANTHROPIC_API_KEY). Failure mode: exit 1, "Credit balance is too low" on stdout, empty stderr.
-- `scripts/backfill-daemon.sh` — Batch loop with 15s sleep. Self-launches into `tmux new-session -d -s backfill` if not already in tmux. Stop with `touch .backfill-stop`.
+- *(backfill-daemon.sh removed — use evaluate-standalone.mjs directly)*
 **Light calibration workflow (server-side — canonical path):**
 1. `curl -X POST .../calibrate?mode=light` — inserts hn_ids -2001..-2015 as pending
 2. `node scripts/evaluate-standalone.mjs --mode light` — evaluates and posts to /api/ingest
