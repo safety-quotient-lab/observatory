@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Mission
+
+**Human rights pedagogy through utility.** Users learn UDHR provisions by encountering them naturally while doing something they already want to do — following tech news. The teaching is a side effect of the tool being useful.
+
+The most mission-aligned features aggregate invisible patterns into visible statements about rights — "34% of stories identify their author" (transparency), "privacy and expression are anti-correlated in tech content" (rights tension), "average jargon density excludes non-experts" (accessibility). These transform the site from "a score per story" into a mirror for how the tech ecosystem relates to human rights. That's the pedagogical leap.
+
+**Decision filter:** When evaluating features, prioritize work that helps users learn about UDHR provisions as a side effect of utility. Features that surface invisible rights patterns (Tier 1 in `IDEAS.md`) take priority over pure infrastructure (Tier 3) when effort is comparable.
+
 ## Overview
 
 This repository contains the UN Universal Declaration of Human Rights (UDHR) text, an evolving methodology for evaluating websites' compatibility with it, and **a live Cloudflare-based pipeline** that automatically evaluates Hacker News stories. The methodology has progressed through three major versions (v1 → v2 → v3).

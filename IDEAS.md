@@ -130,46 +130,50 @@ full materialization adds a write-path step for marginal gain.
 
 ## Mission Alignment Analysis *(2026-02-28)*
 
-Each idea evaluated against the core mission: **human rights pedagogy through utility** — users learn UDHR provisions as a side effect of the tool being useful.
+### The Mission
+
+**Human rights pedagogy through utility.** Users learn UDHR provisions by encountering them naturally while doing something they already want to do — following tech news. The teaching is a side effect of the tool being useful.
+
+### The Key Insight
+
+The most mission-aligned features aggregate invisible patterns into visible statements about rights:
+- "34% of stories identify their author" → transparency (Article 19)
+- "Privacy and expression are anti-correlated in tech content" → rights tension
+- "80% of privacy content is retrospective" → framing bias
+- "Average jargon density excludes non-experts" → accessibility (Article 26)
+
+These transform the site from "a score per story" into **a mirror for how the tech ecosystem relates to human rights.** That's the pedagogical leap.
 
 ### Tier 1 — Direct Pedagogy
 Ideas that aggregate invisible patterns into visible statements about rights. Highest mission alignment.
 
 | Idea | Why it teaches |
 |---|---|
-| **Transparency disclosure rates** | "Only 34% of stories identify their author" — makes invisible structural patterns visible |
-| **Comment sentiment divergence** | Shows when community perception conflicts with measured HR impact — teaches critical reading |
-| **Story comparison view** | Side-by-side scores teach what makes one source better/worse on rights |
-| **Filtered RSS feeds** | Users self-select into rights-filtered content streams — habituates rights-aware consumption |
-| **Jargon/knowledge-level aggregate** | "Most tech news assumes expert knowledge" — surfaces accessibility barriers |
-| **Content type browse page** | Browse by editorial/propaganda/landing page — teaches content classification as rights lens |
+| **Transparency disclosure rates** | "Only 34% of stories identify their author" — makes Article 19's relationship to accountability visible at corpus scale. TD is a core UDHR dimension; surfacing corpus-wide rates makes the invisible visible. **This is the mission distilled.** |
+| **Comment sentiment divergence** | "The article scored +0.4 on Article 19 but commenters disagree" — directly exposes tension between editorial assessment and community perception. That's a human rights discussion happening naturally. |
+| **Rights network temporal evolution** | Shows users that UDHR articles aren't independent — privacy and expression are in tension in tech. Temporal shifts reveal how discourse changes. This is rights-relationship pedagogy. |
+| **Story comparison view** | "Why did this story score differently on Article 19 vs Article 12?" — the comparison forces engagement with specific provisions. The comparison *is* the pedagogy. |
+| **Filtered RSS feeds** | A "rights-negative stories" RSS feed is a daily rights awareness tool. Per-article feeds ("new content affecting Article 12") are even stronger — ongoing passive pedagogy. |
+| **Jargon/knowledge-level aggregate** | Directly relates to Article 26 (right to education). "Average jargon density of HN content is X" exposes who rights discourse is for — if it's all expert-level, that's exclusionary. |
+| **Content type browse page** | "How do editorial articles differ from policy documents on Article 12?" — browsing by content type teaches that the medium shapes the rights message. Policy docs have high structural weight (0.7) for a reason. |
 
 ### Tier 2 — Mission-Supportive
 Ideas that improve accuracy, trust, or reach — don't teach directly but make the teaching more credible.
 
-| Idea | Why it matters |
-|---|---|
-| **Evidence caps enforcement** | *(done)* Prevents overstating scores beyond evidence strength |
-| **Confidence-weighted consensus** | Better ensemble scores = more trustworthy teaching material |
-| **Cross-model PT agreement** | Reduces propaganda false positives = maintains credibility |
-| **Calibration negative site** | Validates the scale's negative end = trustworthy measurements |
-| **Outlier rejection** | Statistical robustness = defensible claims |
-| **Methodology drift detector** | Internal consistency auditing |
+- **Seldon event annotations** — regime changes teach that rights-alignment is dynamic; event annotations ("EU AI Act passed → Article 12 content shifted") directly connect rights to real events
+- **Faction drift** — pedagogical only if framed as "this outlet's relationship with privacy rights is shifting"
+- **Lobsters** — cross-community comparison ("Lobsters cares more about privacy, HN more about expression") is pedagogically interesting *if framed*
+- **Temporal framing aggregate** — "80% of privacy content is retrospective (analyzing breaches) vs 5% prospective (preventing them)" — powerful with the right framing
+- **Confidence-weighted consensus** / **Outlier rejection** / **Cross-model PT agreement** / **Calibration negative site** — accuracy serves the mission; better propaganda detection = better pedagogy about information manipulation (Article 19)
+- **Signals API** — enables researchers and educators to programmatically access rights data; "build your own UDHR dashboard" is meta-pedagogical
 
 ### Tier 3 — Infrastructure
-No direct mission connection — pure platform capability.
+No direct mission connection — serve the tool, not the mission.
 
-| Idea | Category |
-|---|---|
-| Analytics Engine | Storage optimization |
-| Lobsters as source | Data expansion |
-| Rate limit forecasting | Ops monitoring |
-| A/B testing framework | Methodology tooling |
-| Velocity alerts | Analytics |
-| Batch regression isolation | Quality assurance |
+Analytics Engine, rate limit forecasting, velocity alerts, A/B testing, getUserIntelligence materialization, lite reasoning viewer, methodology drift detector, batch regression isolation, date-range filter, DCP staleness fix.
 
 ### Implication
-Tier 1 ideas should be prioritized for Phase 1 (Active Engineering) when they become feasible. The highest-leverage single feature for mission is **Transparency Disclosure Rates** — it requires no new data collection, just aggregating existing `td_*` fields into a visible dashboard section.
+Tier 1 ideas should be prioritized when they become feasible. Tier 3 should stay in IDEAS but deprioritized — they serve the tool, not the reason the tool exists. The highest-leverage single feature is **Transparency Disclosure Rates** — requires no new data collection, just aggregating existing `td_*` fields into a visible dashboard section.
 
 ---
 
