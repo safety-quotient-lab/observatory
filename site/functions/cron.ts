@@ -28,6 +28,7 @@ import {
   type DcpElement,
 } from '../src/lib/compute-aggregates';
 import { runCrawlCycle, enqueueForEvaluation, dispatchFreeModelEvals, preloadContentCache } from '../src/lib/hn-bot';
+import { refreshDomainAggregate, refreshAllDomainAggregates } from '../src/lib/eval-write';
 import { getModelQueue, PRIMARY_MODEL_ID } from '../src/lib/shared-eval';
 
 interface Env {
@@ -493,6 +494,38 @@ export default {
 
     // ─── Event pruning (90-day retention, once per hour) ───
 
+    // ─── Stale domain aggregate self-heal (every 30 minutes) ───
+    // Refreshes domains not updated in 6+ hours — catches aggregates made stale by migrations
+    // or other direct DB writes that don't go through the normal eval write path.
+
+    if (minute % 30 === 0) {
+      try {
+        const staleKey = 'cron:stale_domain_refresh:running';
+        const isRunning = await env.CONTENT_CACHE.get(staleKey);
+        if (!isRunning) {
+          await env.CONTENT_CACHE.put(staleKey, '1', { expirationTtl: 600 });
+          const { results: staleDomains } = await db
+            .prepare(
+              `SELECT domain FROM domain_aggregates
+               WHERE last_updated_at < datetime('now', '-6 hours')
+                 AND evaluated_count >= 1
+               ORDER BY last_updated_at ASC
+               LIMIT 50`,
+            )
+            .all<{ domain: string }>();
+          for (const { domain } of staleDomains) {
+            await refreshDomainAggregate(db, domain);
+          }
+          if (staleDomains.length > 0) {
+            console.log(`[cron] Refreshed ${staleDomains.length} stale domain aggregates`);
+          }
+          env.CONTENT_CACHE.delete(staleKey).catch(() => {});
+        }
+      } catch (err) {
+        console.error('[cron] Stale domain refresh failed (non-fatal):', err);
+      }
+    }
+
     if (minute === 0) {
       const pruned = await pruneEvents(db, 90);
       if (pruned > 0) console.log(`[events] Pruned ${pruned} events older than 90 days`);
@@ -710,7 +743,61 @@ export default {
         });
       }
 
-      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage', 'algolia_backfill', 'content_drift'] }), {
+      if (sweep === 'refresh_domain_aggregates') {
+        const guardKey = 'sweep:refresh_domain_aggregates:running';
+        const isRunning = await env.CONTENT_CACHE.get(guardKey).catch(() => null);
+        if (isRunning) {
+          return new Response(
+            JSON.stringify({ error: 'Refresh already in progress', retry_after_seconds: 60 }),
+            { status: 429, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        await env.CONTENT_CACHE.put(guardKey, new Date().toISOString(), { expirationTtl: 300 });
+
+        const chunkSize = Math.min(200, Math.max(10, parseInt(url.searchParams.get('chunk_size') || '100', 10)));
+        const minEvaluated = Math.max(0, parseInt(url.searchParams.get('min_evaluated') || '1', 10));
+
+        ctx.waitUntil(
+          (async () => {
+            try {
+              const result = await refreshAllDomainAggregates(db, { chunkSize, minEvaluated });
+              // Invalidate domain KV caches so next request gets fresh data
+              const cacheKeys = [
+                'q:domainSignalProfiles', 'q:allDomainStats:count:50', 'q:allDomainStats:count:200',
+                'q:allDomainStats:score:200', 'q:allDomainStats:setl:200', 'q:allDomainStats:conf:200',
+                'q:domainIntelligence', 'q:mostGatekeptDomains',
+              ];
+              await Promise.all(cacheKeys.map(k => env.CONTENT_CACHE.delete(k).catch(() => {})));
+              await logEvent(db, {
+                event_type: 'trigger',
+                severity: 'info',
+                message: `Sweep refresh_domain_aggregates: ${result.refreshed} refreshed, ${result.errors} errors in ${result.durationMs}ms`,
+                details: { sweep: 'refresh_domain_aggregates', ...result, chunk_size: chunkSize, min_evaluated: minEvaluated },
+              });
+            } catch (err) {
+              await logEvent(db, {
+                event_type: 'cron_error',
+                severity: 'error',
+                message: `Sweep refresh_domain_aggregates failed: ${String(err).slice(0, 300)}`,
+                details: { sweep: 'refresh_domain_aggregates', error: String(err) },
+              }).catch(() => {});
+            } finally {
+              env.CONTENT_CACHE.delete(guardKey).catch(() => {});
+            }
+          })(),
+        );
+
+        return new Response(
+          JSON.stringify({
+            sweep: 'refresh_domain_aggregates',
+            status: 'started',
+            description: 'Refreshing all domain_aggregates from stories table. Check /status/events for completion.',
+          }),
+          { status: 202, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+
+      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage', 'algolia_backfill', 'content_drift', 'refresh_domain_aggregates'] }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });

@@ -391,6 +391,51 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
   }
 }
 
+/**
+ * Refresh all domain_aggregates from the current stories table state.
+ * Used after bulk data corrections (migrations) that make aggregates stale.
+ * Pages through domain_aggregates in chunks to stay within D1 limits.
+ */
+export async function refreshAllDomainAggregates(
+  db: D1Database,
+  opts: { chunkSize?: number; minEvaluated?: number } = {},
+): Promise<{ refreshed: number; errors: number; durationMs: number }> {
+  const { chunkSize = 100, minEvaluated = 1 } = opts;
+  const t0 = Date.now();
+  let refreshed = 0;
+  let errors = 0;
+  let offset = 0;
+
+  while (true) {
+    const { results } = await db
+      .prepare(
+        `SELECT domain FROM domain_aggregates
+         WHERE evaluated_count >= ?
+         ORDER BY domain
+         LIMIT ? OFFSET ?`,
+      )
+      .bind(minEvaluated, chunkSize, offset)
+      .all<{ domain: string }>();
+
+    if (results.length === 0) break;
+
+    for (const { domain } of results) {
+      try {
+        await refreshDomainAggregate(db, domain);
+        refreshed++;
+      } catch (err) {
+        errors++;
+        console.error(`[refreshAllDomainAggregates] Failed for ${domain}:`, err);
+      }
+    }
+
+    offset += results.length;
+    if (results.length < chunkSize) break;
+  }
+
+  return { refreshed, errors, durationMs: Date.now() - t0 };
+}
+
 export async function refreshDailySectionStats(
   db: D1Database,
   scores: Array<{ section: string; final: number | null }>
@@ -714,16 +759,18 @@ export async function writeRaterEvalResult(
   const story = await db.prepare(
     `SELECT eval_status FROM stories WHERE hn_id = ?`
   ).bind(hnId).first<{ eval_status: string }>();
-  if (story && story.eval_status !== 'done' && story.eval_status !== 'rescoring') {
+  const promoted = story && story.eval_status !== 'done' && story.eval_status !== 'rescoring';
+  if (promoted) {
+    // writeEvalResult also calls refreshDomainAggregate internally
     await writeEvalResult(db, hnId, result, modelId, promptHash);
   }
 
   // Update ensemble consensus score (best-effort, non-blocking)
   await updateConsensusScore(db, hnId);
 
-  // Refresh materialized domain aggregate
+  // Refresh materialized domain aggregate (skip if writeEvalResult already did it above)
   const domain = result.evaluation?.domain;
-  if (domain) await refreshDomainAggregate(db, domain);
+  if (!promoted && domain) await refreshDomainAggregate(db, domain);
 }
 
 export async function markRaterFailed(
