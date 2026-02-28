@@ -160,6 +160,7 @@ export interface HistogramBin {
   count: number;
 }
 
+/** @internal Future use: dashboard candidate */
 export async function getScoreHistogram(db: D1Database): Promise<HistogramBin[]> {
   const { results } = await db
     .prepare(
@@ -258,6 +259,7 @@ export async function getVelocityStats(db: D1Database, pendingCount: number): Pr
 
 // --- Top/Bottom Confidence stories ---
 
+/** @internal Future use: dashboard candidate */
 export async function getTopConfidenceStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
     .prepare(
@@ -271,6 +273,7 @@ export async function getTopConfidenceStories(db: D1Database, limit = 5): Promis
   return results;
 }
 
+/** @internal Future use: dashboard candidate */
 export async function getBottomConfidenceStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
     .prepare(
@@ -292,6 +295,7 @@ export interface ContentTypeDistBin {
   count: number;
 }
 
+/** @internal Future use: dashboard candidate */
 export async function getContentTypeDistribution(db: D1Database): Promise<Map<string, { bins: Map<number, number>; total: number }>> {
   const { results } = await db
     .prepare(

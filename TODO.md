@@ -129,12 +129,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Housekeeping (no urgency)
 
-- [ ] **Prune orphaned query functions** *(data model DM-3)*
-  - ~16 exported functions never called — keep as future dashboard candidates
-    but consider marking with `/** @internal future use */` JSDoc
-  - `getCostStats` already wired to status page; `getTopPositiveStories`/
-    `getTopNegativeStories` useful for article deep dive (Round 6)
-
 - [ ] **Materialize `getUserIntelligence`** *(audit step 14, LOW)*
   - Currently a live CTE scan over full stories table
   - Create `user_aggregates` materialized table (like `domain_aggregates`)

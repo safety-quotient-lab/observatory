@@ -5,6 +5,7 @@ import { SETL_CASE_SQL } from './db-utils';
 
 // --- SETL queries ---
 
+/** @internal Future use: dashboard candidate */
 export async function getMeanSetl(db: D1Database): Promise<number | null> {
   const row = await db
     .prepare(

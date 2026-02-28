@@ -11,6 +11,7 @@ export interface ModelAgreementPair {
   pearson_r: number | null;
 }
 
+/** @internal Future use: multi-model analytics dashboard */
 export async function getModelAgreement(db: D1Database): Promise<ModelAgreementPair[]> {
   const { results } = await db
     .prepare(
@@ -52,6 +53,7 @@ export interface ModelMover {
   primary_score: number | null;
 }
 
+/** @internal Future use: multi-model analytics dashboard */
 export async function getTopModelMovers(db: D1Database, limit = 10): Promise<ModelMover[]> {
   const { results } = await db
     .prepare(

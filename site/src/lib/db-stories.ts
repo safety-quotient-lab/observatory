@@ -659,6 +659,7 @@ export async function getArticleDetailedStats(db: D1Database): Promise<ArticleDe
   }
 }
 
+/** @internal Future use: article deep dive (Round 6) */
 export async function getTopPositiveStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
     .prepare(
@@ -670,6 +671,7 @@ export async function getTopPositiveStories(db: D1Database, limit = 5): Promise<
   return results;
 }
 
+/** @internal Future use: article deep dive (Round 6) */
 export async function getTopNegativeStories(db: D1Database, limit = 5): Promise<Story[]> {
   const { results } = await db
     .prepare(
@@ -685,6 +687,7 @@ export interface SetlStory extends Story {
   story_setl: number | null;
 }
 
+/** @internal Future use: dashboard candidate */
 export async function getTopSetlStories(db: D1Database, limit = 5): Promise<SetlStory[]> {
   const { results } = await db
     .prepare(
@@ -703,6 +706,7 @@ export async function getTopSetlStories(db: D1Database, limit = 5): Promise<Setl
   return results;
 }
 
+/** @internal Future use: dashboard candidate */
 export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<SetlStory[]> {
   const { results } = await db
     .prepare(
@@ -722,6 +726,7 @@ export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<S
 }
 
 
+/** @internal Future use: dashboard candidate */
 export async function getRecentEvaluations(db: D1Database, limit = 10): Promise<Story[]> {
   const { results } = await db
     .prepare(
