@@ -499,10 +499,16 @@ export default {
               `INSERT OR IGNORE INTO domain_profile_snapshots
                  (domain, snapshot_date, story_count, evaluated_count,
                   avg_hrcb, avg_setl, avg_editorial, avg_structural,
-                  avg_eq, avg_so, avg_td, avg_valence, avg_arousal, dominant_tone)
+                  avg_eq, avg_so, avg_td, avg_valence, avg_arousal, dominant_tone,
+                  avg_confidence, avg_sr, avg_pt_count, avg_pt_score,
+                  avg_dominance, avg_fw_ratio,
+                  dominant_scope, dominant_reading_level, dominant_sentiment)
                SELECT domain, ?, story_count, evaluated_count,
                       avg_hrcb, avg_setl, avg_editorial, avg_structural,
-                      avg_eq, avg_so, avg_td, avg_valence, avg_arousal, dominant_tone
+                      avg_eq, avg_so, avg_td, avg_valence, avg_arousal, dominant_tone,
+                      avg_confidence, avg_sr, avg_pt_count, avg_pt_score,
+                      avg_dominance, avg_fw_ratio,
+                      dominant_scope, dominant_reading_level, dominant_sentiment
                FROM domain_aggregates
                WHERE evaluated_count >= 1`
             )

@@ -1457,3 +1457,68 @@ export async function getArticleThemeBreakdown(
   }
 }
 
+// --- Transparency disclosure rates (Tier 1 mission: Article 19 accountability) ---
+
+/**
+ * Corpus-wide transparency disclosure aggregates.
+ *
+ * Surfaces the invisible: "Only X% of stories identify their author" — makes
+ * Article 19's relationship to accountability visible at corpus scale.
+ *
+ * td_author_identified, td_conflicts_disclosed, td_funding_disclosed are
+ * INTEGER (0/1/NULL) columns on the stories table, written by writeEvalResult.
+ * NULL = field not measured (TD section absent in that eval).
+ */
+export interface TdSignalAggregates {
+  total_evaluated: number;          // done stories, hn_id > 0
+  td_measured: number;              // stories where td_score IS NOT NULL
+  td_measured_pct: number | null;   // % of evaluated stories with TD data
+  author_identified_pct: number | null;   // of td_measured: % where author was identified
+  conflicts_disclosed_pct: number | null; // of td_measured: % where conflicts were disclosed
+  funding_disclosed_pct: number | null;   // of td_measured: % where funding was disclosed
+  any_disclosure_pct: number | null;      // of td_measured: % with at least one disclosure=1
+  avg_td_score: number | null;
+  high_td_pct: number | null;   // % of td_measured with td_score >= 0.5 (strong transparency)
+  low_td_pct: number | null;    // % of td_measured with td_score <= -0.3 (poor transparency)
+}
+
+export async function getTdSignalAggregates(db: D1Database): Promise<TdSignalAggregates | null> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT
+           COUNT(*)                                                          AS total_evaluated,
+           SUM(CASE WHEN td_score IS NOT NULL THEN 1 ELSE 0 END)            AS td_measured,
+           ROUND(100.0 * SUM(CASE WHEN td_score IS NOT NULL THEN 1 ELSE 0 END) /
+                 NULLIF(COUNT(*), 0), 1)                                    AS td_measured_pct,
+           ROUND(100.0 * SUM(CASE WHEN td_author_identified = 1 THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN td_author_identified IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                            AS author_identified_pct,
+           ROUND(100.0 * SUM(CASE WHEN td_conflicts_disclosed = 1 THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN td_conflicts_disclosed IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                            AS conflicts_disclosed_pct,
+           ROUND(100.0 * SUM(CASE WHEN td_funding_disclosed = 1 THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN td_funding_disclosed IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                            AS funding_disclosed_pct,
+           ROUND(100.0 * SUM(CASE WHEN (td_author_identified = 1 OR td_conflicts_disclosed = 1
+                                         OR td_funding_disclosed = 1) THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN td_score IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                            AS any_disclosure_pct,
+           ROUND(AVG(CASE WHEN td_score IS NOT NULL THEN td_score END), 4)  AS avg_td_score,
+           ROUND(100.0 * SUM(CASE WHEN td_score >= 0.5 THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN td_score IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                            AS high_td_pct,
+           ROUND(100.0 * SUM(CASE WHEN td_score <= -0.3 THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN td_score IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                            AS low_td_pct
+         FROM stories
+         WHERE eval_status = 'done' AND hn_id > 0`
+      )
+      .first<TdSignalAggregates>();
+    return row ?? null;
+  } catch (err) {
+    console.error('[getTdSignalAggregates]', err);
+    return null;
+  }
+}
+
