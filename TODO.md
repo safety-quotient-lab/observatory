@@ -1,60 +1,15 @@
 # TODO
 
-Items are organized by execution horizon and track. Phases 1 and 2 are
-sequenced prerequisites for GitHub publishing and commercialization respectively.
+Items are organized by execution horizon. Phase 1 is fully unblocked.
+Phases 2 and 3 are sequenced prerequisites for commercialization and
+GitHub publishing respectively.
 
 ---
 
-## Phase 1 — Open Source Prep
-*Prerequisite for creating the public GitHub repo. ~2–4 weeks of part-time work.*
+## Phase 1 — Active Engineering
+*Fully unblocked. Pure engineering — deployable anytime.*
 
-- [x] **Replace real Cloudflare resource IDs** in committed code *(done 2026-02-27)*
-- [x] **Remove personal eval sample files** from repo root *(done 2026-02-27)*
-
-- [ ] **Decide on `LICENSE`** — license strategy TBD (AGPL-3.0 was considered; not yet decided)
-
-- [ ] **Revoke/rotate live credentials** — do before any `git push` to a public repo
-  - `ANTHROPIC_API_KEY` — revoke at console.anthropic.com → API Keys, re-issue, `wrangler secret put`
-  - `OPENROUTER_API_KEY` — revoke at openrouter.ai → Keys, re-issue, `wrangler secret put`
-  - `TRIGGER_SECRET` — rotate: `openssl rand -base64 32`, update `site/.dev.vars`, `wrangler secret put`
-  - **Status:** never committed (`git log` verified); `.gitignore` covers `*.key` + `.dev.vars`
-
-- [ ] **Write `README.md`** — architecture overview, what it does, screenshots, local dev setup
-
-- [ ] **Remove or relocate `IDEAS.md`** — contains detailed product roadmap; optional but
-  recommended before publishing (per Opus's analysis)
-
----
-
-## Phase 2 — Commercialization Gate
-*Turns the project from hobby into product. ~1–2 months. Do before Phase 3 (full publish).*
-
-- [ ] **API key system** — the commercial gate
-  - D1 table: `api_keys` (key_hash, tier, quota_per_hour, owner, created_at, active)
-  - Key issuance endpoint (email-based or OAuth)
-  - Replace IP-based KV rate limit on `/api/v1/` with key-based quota tracking
-  - A `/api-keys` management UI page
-
-- [ ] **Stripe integration**
-  - Webhook handler updates `api_keys.tier` in D1
-  - Tiers: free (IP-rate-limited) → research → pro → enterprise (manual)
-  - `/pricing` page
-
-- [ ] **Bulk export implementation** *(Phase 39B)*
-  - CSV/JSONL to R2 daily snapshot (R2 bound to cron worker)
-  - Implement the 501 stubs: `/api/v1/export/stories.csv`, `.jsonl`,
-    `domains.csv`, `rater-evals.jsonl`
-
-- [ ] **Full-text search endpoint** *(Phase 39B)*
-  - `/api/v1/search` via FTS5 virtual table on D1
-
-- [ ] **Dataset license decision**
-  - CC BY-NC-SA 4.0 recommended (non-commercial + share-alike)
-  - Publish to `/data` page once decided
-
----
-
-## Pipeline & Data Quality
+### Pipeline & Data Quality
 
 - [ ] **Rate limit exhaustion forecasting**
   - Project time-to-exhaustion from rolling 1h token usage window
@@ -77,9 +32,7 @@ sequenced prerequisites for GitHub publishing and commercialization respectively
   - Re-enqueue by domain, date range, model, methodology_hash
   - Rate-limited to prevent queue flooding
 
----
-
-## Data Sources & Crawling
+### Data Sources & Crawling
 
 - [ ] **Add Lobsters (lobste.rs) as a data source**
   - Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`
@@ -99,9 +52,7 @@ sequenced prerequisites for GitHub publishing and commercialization respectively
   - Flag stories where comments strongly disagree with assessment
   - UI: divergence badge on item page, comment sentiment distribution chart
 
----
-
-## Analytics & Ops Dashboard
+### Analytics & Ops Dashboard
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
   - [ ] **Model mix over time** — stacked bar: which models did evals each day.
@@ -114,8 +65,7 @@ sequenced prerequisites for GitHub publishing and commercialization respectively
     getting evaluated vs skipped
   - [ ] **Truncation impact dashboard** — distribution of `content_truncation_pct` across
     models, correlation with score divergence. Data from migration 0040.
-  - **Placement:** Enhance Seldon page (add tabs) or new `/system/metrics` sub-page.
-    Seldon is editorial/analytical; model mix + velocity are operational.
+  - **Placement:** Enhance Seldon page (add tabs) or new `/status/metrics` sub-page.
 
 - [ ] **SETL spike alerting**
   - Alert system for sudden SETL spikes across a domain or story cluster
@@ -124,9 +74,7 @@ sequenced prerequisites for GitHub publishing and commercialization respectively
   - Velocity alerts (stories hitting score threshold)
   - Velocity decay analysis
 
----
-
-## User-Facing Features
+### User-Facing Features
 
 - [ ] **Story comparison view** (`/compare/[id1]/[id2]`)
   - Side-by-side scores, classification, sentiment
@@ -150,9 +98,53 @@ sequenced prerequisites for GitHub publishing and commercialization respectively
   - Confidence interval bands
   - Real-world event annotation layer
 
----
-
-## Platform & Architecture
+### Platform & Architecture
 
 - [ ] **A/B testing framework for methodology**
   - `eval_variant` column, dashboard comparing outcome distributions across variants
+
+---
+
+## Phase 2 — Commercialization Gate
+*Mostly unblocked. Build before publishing. Stripe + dataset license wait on Phase 3.*
+
+- [ ] **API key system** — the commercial gate
+  - D1 table: `api_keys` (key_hash, tier, quota_per_hour, owner, created_at, active)
+  - Key issuance endpoint (email-based or OAuth)
+  - Replace IP-based KV rate limit on `/api/v1/` with key-based quota tracking
+  - A `/api-keys` management UI page
+
+- [ ] **Stripe integration** *(needs license + publishing strategy first)*
+  - Webhook handler updates `api_keys.tier` in D1
+  - Tiers: free (IP-rate-limited) → research → pro → enterprise (manual)
+  - `/pricing` page
+
+- [ ] **Bulk export implementation**
+  - CSV/JSONL to R2 daily snapshot (R2 bound to cron worker)
+  - Implement the 501 stubs: `/api/v1/export/stories.csv`, `.jsonl`,
+    `domains.csv`, `rater-evals.jsonl`
+
+- [ ] **Full-text search endpoint**
+  - `/api/v1/search` via FTS5 virtual table on D1
+
+- [ ] **Dataset license decision** *(CC BY-NC-SA 4.0 recommended; publish to `/data` once decided)*
+
+---
+
+## Phase 3 — Open Source Prep
+*Blocked on license decision. Do before creating the public GitHub repo.*
+
+- [x] **Replace real Cloudflare resource IDs** in committed code *(done 2026-02-27)*
+- [x] **Remove personal eval sample files** from repo root *(done 2026-02-27)*
+
+- [ ] **Decide on `LICENSE`** — TBD (AGPL-3.0 was considered; not yet decided)
+
+- [ ] **Write `README.md`** — architecture overview, what it does, screenshots, local dev setup
+
+- [ ] **`IDEAS.md` publish decision** — keeping for now; revisit when license is decided
+
+- [ ] **Revoke/rotate live credentials** — do immediately before `git push` to public repo
+  - `ANTHROPIC_API_KEY` — revoke at console.anthropic.com → API Keys, re-issue, `wrangler secret put`
+  - `OPENROUTER_API_KEY` — revoke at openrouter.ai → Keys, re-issue, `wrangler secret put`
+  - `TRIGGER_SECRET` — rotate: `openssl rand -base64 32`, update `site/.dev.vars`, `wrangler secret put`
+  - **Status:** never committed (`git log` verified); `.gitignore` covers `*.key` + `.dev.vars`
