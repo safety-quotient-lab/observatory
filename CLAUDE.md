@@ -165,9 +165,10 @@ The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry
 - `calibration-v3.1-set.txt` — 15-URL calibration set with expected score ranges (full model)
 - `calibration-v3.1-baselines.txt` — Actual baseline evaluations for 9 calibration URLs
 
-### Local scripts (run with `node scripts/...`)
+### Local scripts
+- `scripts/hn-hrcb-evaluate` — CLI evaluator: fetches stories from D1, evaluates with `claude -p`, posts to `/api/ingest`. Full-mode only. Flags: `--pending N`, `--failed N`, `--parallel N`, `--model MODEL`, `--domain D`, `--min-score N`, `--dry-run`, `--status`. Default model: `claude-haiku-4-5-20251001`. Emits `METRIC {...}` JSONL lines per eval for analytics. Uses `--tools "" --no-session-persistence` on `claude -p`.
+- `scripts/hn-hrcb-daemon` — Continuous evaluator wrapper: auto-launches tmux session `hrcb-daemon`, loops `hn-hrcb-evaluate --pending 3 --parallel 3` with 5s sleep. Stop: `touch site/.daemon-stop`. Circuit breaker: 5 consecutive errors → auto-stop.
 - `scripts/evaluate-standalone.mjs` — Fetch queue from `/api/queue`, evaluate with `claude -p`, post to `/api/ingest`. Modes: `--mode light` (default) or `--mode full`. Spawns claude with `{ CLAUDECODE: undefined, ANTHROPIC_API_KEY: undefined }` — both must be unset or the subprocess either refuses (CLAUDECODE) or uses depleted API credits instead of the OAuth subscription (ANTHROPIC_API_KEY). Failure mode: exit 1, "Credit balance is too low" on stdout, empty stderr.
-- *(backfill-daemon.sh removed — use evaluate-standalone.mjs directly)*
 **Light calibration workflow (server-side — canonical path):**
 1. `curl -X POST .../calibrate?mode=light` — inserts hn_ids -2001..-2015 as pending
 2. `node scripts/evaluate-standalone.mjs --mode light` — evaluates and posts to /api/ingest
