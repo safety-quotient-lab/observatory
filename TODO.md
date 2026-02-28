@@ -178,14 +178,5 @@ sequenced prerequisites for GitHub publishing and commercialization respectively
 
 ## Platform & Architecture
 
-- [ ] **Comprehensive data model audit** *(big effort — needs separate plan)*
-  - Inventory all computed/stored fields — displayed, internal-only, or orphaned
-  - Map entity relationships: stories ↔ users ↔ domains ↔ articles ↔ feeds
-    ↔ comments ↔ evals ↔ events
-  - Identify missing vocabulary — concepts we measure but don't name/surface
-  - Taxonomy gaps — dimensions with no UI representation
-  - Network analysis gaps — user↔domain posting patterns, article co-occurrence
-  - **Output:** `.claude/plans/data-model-audit-YYYY-MM-DD.md`
-
 - [ ] **A/B testing framework for methodology**
   - `eval_variant` column, dashboard comparing outcome distributions across variants
