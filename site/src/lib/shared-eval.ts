@@ -16,7 +16,7 @@ export const CONTENT_MAX_CHARS = 20_000;
 
 export const RAW_HTML_MAX_CHARS = 30_000;
 
-export const EVAL_MAX_TOKENS_LIGHT = 1024;
+export const EVAL_MAX_TOKENS_LITE = 1024;
 
 // --- Re-exports from split modules ---
 

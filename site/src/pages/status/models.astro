@@ -2,9 +2,9 @@
 import Base from '../../layouts/Base.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, classificationColor, confidenceToColor } from '../../lib/colors';
-import { modelDisplayName, ALL_SECTIONS, isLightMode, getModelDef, MODEL_REGISTRY } from '../../lib/shared-eval';
+import { modelDisplayName, ALL_SECTIONS, isLiteMode, getModelDef, MODEL_REGISTRY } from '../../lib/shared-eval';
 import { ARTICLE_TITLES } from '../../lib/udhr';
-import { CALIBRATION_SET, LIGHT_CALIBRATION_SET } from '../../lib/calibration';
+import { CALIBRATION_SET, LITE_CALIBRATION_SET } from '../../lib/calibration';
 import {
   getMultiModelStories,
   getModelComparisonAggregates,
@@ -16,7 +16,7 @@ import {
   getModelComparisonStats,
   getRaterSummaryStats,
   getLatestCalibrationRun,
-  getLatestLightCalibrationRun,
+  getLatestLiteCalibrationRun,
   getSignalCompleteness,
   getContentTypeValidation,
   getContentTypeDisagreement,
@@ -33,7 +33,7 @@ const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 const [
   stories, allAggregates, sectionAvgs, statusBreakdown, trustHistory,
   models, modelComparison, raterSummary,
-  lastCalibration, lastLightCalibration,
+  lastCalibration, lastLiteCalibration,
   signalCompleteness, ctValidation, ctDisagreement, ctMisclass,
   driftStats, globalGate, channelAverages,
 ] = await Promise.all([
@@ -47,7 +47,7 @@ const [
   cachedQuery(kv, 'sys:modelComparison', () => getModelComparisonStats(db), 300),
   cachedQuery(kv, 'sys:raterSummary', () => getRaterSummaryStats(db), 120).catch(() => [] as Awaited<ReturnType<typeof getRaterSummaryStats>>),
   cachedQuery(kv, 'sys:lastCal', () => getLatestCalibrationRun(db), 600),
-  cachedQuery(kv, 'sys:lastLightCal', () => getLatestLightCalibrationRun(db), 600),
+  cachedQuery(kv, 'sys:lastLiteCal', () => getLatestLiteCalibrationRun(db), 600),
   cachedQuery(kv, 'sys:signalComplete', () => getSignalCompleteness(db), 300).catch(() => [] as Awaited<ReturnType<typeof getSignalCompleteness>>),
   cachedQuery(kv, 'sys:ctValidation', () => getContentTypeValidation(db), 300).catch(() => [] as Awaited<ReturnType<typeof getContentTypeValidation>>),
   cachedQuery(kv, 'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300).catch(() => [] as Awaited<ReturnType<typeof getContentTypeDisagreement>>),
@@ -288,12 +288,12 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
               const hrcbW = Math.round((Math.abs(r.avg_hrcb ?? 0) / MAX_BAR) * BAR_W);
               const eW    = Math.round((Math.abs(r.avg_e    ?? 0) / MAX_BAR) * BAR_W);
               const sW    = r.avg_s != null ? Math.round((Math.abs(r.avg_s) / MAX_BAR) * BAR_W) : null;
-              const isLight = r.prompt_mode === 'light';
+              const isLite = r.prompt_mode === 'lite' || r.prompt_mode === 'light';
               return (
                 <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid #0d4655; font-size: var(--font-xs);">
                   <div style="width: 140px; color: #98a8a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;" title={r.eval_model}>
                     {modelDisplayName(r.eval_model)}
-                    {isLight && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
+                    {isLite && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
                   </div>
                   <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
                     {/* HRCB bar */}
@@ -309,7 +309,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                       <span class="score-font" style={`color: ${scoreToColor(r.avg_e)}; font-size: var(--font-xs);`}>{r.avg_e != null ? r.avg_e.toFixed(3) : '—'}</span>
                     </div>
                     {/* S bar — full models only */}
-                    {!isLight && (
+                    {!isLite && (
                       <div style="display: flex; align-items: center; gap: 4px;">
                         <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">S</span>
                         {sW != null
@@ -361,7 +361,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 <tr style="border-top: 1px solid #0d4655;">
                   <td style="padding: 6px 8px; color: #98a8a8; font-size: var(--font-sm); font-weight: bold;">
                     {modelDisplayName(rs.model)}
-                    {isLightMode(getModelDef(rs.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Light evaluation — editorial only">lite</span>}
+                    {isLiteMode(getModelDef(rs.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Lite evaluation — editorial only">lite</span>}
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
                     <span class="score-font" style={`color: ${summary?.avg_score != null ? scoreToColor(summary.avg_score) : '#5b7279'}; font-weight: bold;`}>
@@ -445,7 +445,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 <tr style="border-top: 1px solid #0d4655;">
                   <td style="padding: 5px 8px; color: #98a8a8; font-size: var(--font-sm);">
                     {modelDisplayName(modelId)}
-                    {isLightMode(getModelDef(modelId)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px;">lite</span>}
+                    {isLiteMode(getModelDef(modelId)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px;">lite</span>}
                   </td>
                   <td style={`padding: 5px 8px; text-align: center; font-weight: bold; color: ${trustColor};`}>
                     {trust !== null ? trust.toFixed(2) : '—'}
@@ -511,21 +511,21 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
         )}
       </div>
 
-      {/* Light calibration */}
-      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: #0d4655; border: 1px solid ${lastLightCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
-        <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Light Model</div>
-        {!lastLightCalibration ? (
+      {/* Lite calibration */}
+      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: #0d4655; border: 1px solid ${lastLiteCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
+        <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Lite Model</div>
+        {!lastLiteCalibration ? (
           <div style="font-size: var(--font-xs);">
             <div style="color: #eab308;">No runs yet</div>
-            <div style="color: #1a5568; font-size: 9px;">{LIGHT_CALIBRATION_SET.length} URLs defined</div>
+            <div style="color: #1a5568; font-size: 9px;">{LITE_CALIBRATION_SET.length} URLs defined</div>
           </div>
         ) : (
           <div style="font-size: var(--font-xs);">
-            <span style={`color: ${lastLightCalibration.status === 'pass' ? '#16a34a' : lastLightCalibration.status === 'fail' ? '#dc2626' : '#eab308'}; font-weight: bold; text-transform: uppercase;`}>{lastLightCalibration.status}</span>
-            <span style="color: #5b7279;"> · {lastLightCalibration.passed}/{lastLightCalibration.total_urls} passed</span>
-            {lastLightCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastLightCalibration.failed} failed</span>}
+            <span style={`color: ${lastLiteCalibration.status === 'pass' ? '#16a34a' : lastLiteCalibration.status === 'fail' ? '#dc2626' : '#eab308'}; font-weight: bold; text-transform: uppercase;`}>{lastLiteCalibration.status}</span>
+            <span style="color: #5b7279;"> · {lastLiteCalibration.passed}/{lastLiteCalibration.total_urls} passed</span>
+            {lastLiteCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastLiteCalibration.failed} failed</span>}
             <div style="color: #1a5568; font-size: 9px; margin-top: 2px;">
-              {lastLightCalibration.model ?? 'light-1.4'} · {lastLightCalibration.created_at.slice(0, 10)}
+              {lastLiteCalibration.model ?? 'lite-1.4'} · {lastLiteCalibration.created_at.slice(0, 10)}
             </div>
           </div>
         )}
@@ -715,7 +715,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
             <div style="flex: 1; min-width: 200px;">
               <div style="color: #8faaab; font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">
                 {modelDisplayName(mid)}
-                {isLightMode(getModelDef(mid)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;">lite</span>}
+                {isLiteMode(getModelDef(mid)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;">lite</span>}
               </div>
               <div style="display: flex; align-items: flex-end; gap: 2px; height: 60px;">
                 {counts.map((count, i) => {
@@ -810,12 +810,12 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
             <tr style="border-top: 1px solid #0d4655;">
               <td style="padding: 6px 8px; color: #98a8a8; font-weight: bold; font-size: var(--font-sm);">
                 {modelDisplayName(a.model)}
-                {isLightMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Light evaluation — editorial only">lite</span>}
+                {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Lite evaluation — editorial only">lite</span>}
               </td>
               <td style="padding: 6px 8px; text-align: center; color: #5b7279;">{a.story_count}</td>
               <td style={`padding: 6px 8px; text-align: center; font-weight: bold; color: ${scoreToColor(a.avg_score)};`}>
                 {formatScore(a.avg_score)}
-                {isLightMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: #5b7279; font-size: var(--font-xs); font-weight: normal; margin-left: 3px;" title="Editorial channel only — not comparable to full model weighted mean">E</span>}
+                {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: #5b7279; font-size: var(--font-xs); font-weight: normal; margin-left: 3px;" title="Editorial channel only — not comparable to full model weighted mean">E</span>}
               </td>
               <td style="padding: 6px 8px; text-align: center; color: #8faaab;">{a.avg_abs_score.toFixed(3)}</td>
               <td style="padding: 6px 8px; text-align: center; color: #34d399;">{a.positive_pct}%</td>
@@ -849,7 +849,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
           {modelIds.map(m => (
             <td style="padding: 3px 6px; text-align: center;">
               {modelDisplayName(m)}
-              {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+              {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
             </td>
           ))}
           <td style="padding: 3px 6px; text-align: center;">Gap</td>
@@ -890,7 +890,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 {modelIds.map(m => (
                   <td style="padding: 3px 6px; text-align: center;">
                     {modelDisplayName(m)}
-                    {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                    {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
                   </td>
                 ))}
                 <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
@@ -927,7 +927,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
                 {modelIds.map(m => (
                   <td style="padding: 3px 6px; text-align: center;">
                     {modelDisplayName(m)}
-                    {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                    {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
                   </td>
                 ))}
                 <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
@@ -971,7 +971,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
             {modelIds.map(m => (
               <td style="padding: 3px 6px; text-align: center;">
                 {modelDisplayName(m)}
-                {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
               </td>
             ))}
             {modelIds.length >= 2 && <td style="padding: 3px 6px; text-align: center;">Gap</td>}
@@ -1024,7 +1024,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
             {modelIds.map(m => (
               <td style="padding: 3px 6px; text-align: center;">
                 {modelDisplayName(m)}
-                {isLightMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
               </td>
             ))}
             <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
@@ -1071,7 +1071,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
               <span>
                 {i > 0 ? ', ' : ' '}
                 <span style="color: #5b7279;">{modelDisplayName(m.model)}</span>
-                {isLightMode(getModelDef(m.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 2px;">lite</span>}
+                {isLiteMode(getModelDef(m.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 2px;">lite</span>}
                 <span style="color: #1a5568;"> ({m.story_count})</span>
               </span>
             ))}

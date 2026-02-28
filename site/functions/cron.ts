@@ -15,7 +15,7 @@ import {
   type EvalScore,
 } from '../src/lib/shared-eval';
 import { logEvent, pruneEvents } from '../src/lib/events';
-import { CALIBRATION_SET, LIGHT_CALIBRATION_SET, LIGHT_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
+import { CALIBRATION_SET, LITE_CALIBRATION_SET, LITE_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
 import { shouldAutoDisableFromCalibration, raterHealthKvKey, emptyRaterHealth, type RaterHealthState } from '../src/lib/rater-health';
 import { getPipelineHealth } from '../src/lib/db';
 import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions, searchAlgolia, insertAlgoliaHits } from '../src/lib/coverage-crawl';
@@ -804,7 +804,7 @@ export default {
     }
 
     // POST /calibrate — enqueue 15 calibration URLs for evaluation (all enabled models)
-    // POST /calibrate?mode=light — insert light calibration URLs as pending for standalone evaluator
+    // POST /calibrate?mode=lite — insert lite calibration URLs as pending for standalone evaluator
     if (path === '/calibrate' && request.method === 'POST') {
       const authErr = checkAuth();
       if (authErr) return authErr;
@@ -812,28 +812,28 @@ export default {
       const db = env.DB;
       const mode = url.searchParams.get('mode');
 
-      // Light mode: insert LIGHT_CALIBRATION_SET stories as pending (hn_ids -2001 to -2015).
+      // Lite mode: insert LITE_CALIBRATION_SET stories as pending (hn_ids -2001 to -2015).
       // Evaluation is done by the local evaluate-standalone.mjs script, not Cloudflare queues.
-      if (mode === 'light') {
+      if (mode === 'lite' || mode === 'light') {
         // Generate a calibration_run ID (unix timestamp) — stored in KV so ingest.ts can tag rows in calibration_evals
         const calibrationRun = Math.floor(Date.now() / 1000);
         try {
-          await env.CONTENT_CACHE.put('calibration:light:current_run', String(calibrationRun), { expirationTtl: 30 * 24 * 60 * 60 });
+          await env.CONTENT_CACHE.put('calibration:lite:current_run', String(calibrationRun), { expirationTtl: 30 * 24 * 60 * 60 });
         } catch { /* non-fatal */ }
 
-        // Clean up previous light calibration rater_evals so the queue filter doesn't skip them
-        const lightCalIds = LIGHT_CALIBRATION_SET.map((_, i) => -(2000 + i + 1));
-        const lightPlaceholders = lightCalIds.map(() => '?').join(',');
+        // Clean up previous lite calibration rater_evals so the queue filter doesn't skip them
+        const liteCalIds = LITE_CALIBRATION_SET.map((_, i) => -(2000 + i + 1));
+        const litePlaceholders = liteCalIds.map(() => '?').join(',');
         try {
           await db.batch([
-            db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${lightPlaceholders}) AND prompt_mode = 'light'`).bind(...lightCalIds),
-            db.prepare(`DELETE FROM calibration_runs WHERE model IN ('light-1.3', 'light-1.4') AND created_at < datetime('now', '-30 days')`),
+            db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${litePlaceholders}) AND prompt_mode IN ('light', 'lite')`).bind(...liteCalIds),
+            db.prepare(`DELETE FROM calibration_runs WHERE model IN ('light-1.3', 'light-1.4', 'lite-1.4') AND created_at < datetime('now', '-30 days')`),
           ]);
         } catch (err) {
-          console.warn('[calibrate] Light cleanup failed (non-fatal):', err);
+          console.warn('[calibrate] Lite cleanup failed (non-fatal):', err);
         }
-        for (let i = 0; i < LIGHT_CALIBRATION_SET.length; i++) {
-          const cal = LIGHT_CALIBRATION_SET[i];
+        for (let i = 0; i < LITE_CALIBRATION_SET.length; i++) {
+          const cal = LITE_CALIBRATION_SET[i];
           const syntheticId = -(2000 + i + 1);
           const domain = extractDomain(cal.url);
           await db
@@ -842,21 +842,21 @@ export default {
                VALUES (?, ?, ?, ?, 0, 0, ?, 'calibration', 'pending')
                ON CONFLICT(hn_id) DO UPDATE SET url = excluded.url, domain = excluded.domain, title = excluded.title, eval_status = 'pending', evaluated_at = NULL`,
             )
-            .bind(syntheticId, `[CAL-LIGHT] ${cal.label} (${cal.slot})`, cal.url, domain, Math.floor(Date.now() / 1000))
+            .bind(syntheticId, `[CAL-LITE] ${cal.label} (${cal.slot})`, cal.url, domain, Math.floor(Date.now() / 1000))
             .run();
         }
         await logEvent(db, {
           event_type: 'calibration',
           severity: 'info',
-          message: `Light calibration queued: ${LIGHT_CALIBRATION_SET.length} URLs inserted as pending`,
-          details: { mode: 'light', calibration_ids: LIGHT_CALIBRATION_SET.map((_, i) => -(2000 + i + 1)) },
+          message: `Lite calibration queued: ${LITE_CALIBRATION_SET.length} URLs inserted as pending`,
+          details: { mode: 'lite', calibration_ids: LITE_CALIBRATION_SET.map((_, i) => -(2000 + i + 1)) },
         });
         return new Response(JSON.stringify({
-          mode: 'light',
+          mode: 'lite',
           calibration_run: calibrationRun,
-          queued: LIGHT_CALIBRATION_SET.length,
-          calibration_ids: LIGHT_CALIBRATION_SET.map((_, i) => -(2000 + i + 1)),
-          note: 'Stories inserted as pending. Run: node scripts/evaluate-standalone.mjs --mode light',
+          queued: LITE_CALIBRATION_SET.length,
+          calibration_ids: LITE_CALIBRATION_SET.map((_, i) => -(2000 + i + 1)),
+          note: 'Stories inserted as pending. Run: node scripts/evaluate-standalone.mjs --mode lite',
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
 
@@ -944,7 +944,7 @@ export default {
 
     // POST /calibrate/check — collect results and run drift check
     // Optional: ?model=deepseek-v3.2 to check a specific model's calibration from rater_evals
-    // Optional: ?mode=light to check the light-1.4 calibration set (hn_ids -2001 to -2015)
+    // Optional: ?mode=lite to check the lite-1.4 calibration set (hn_ids -2001 to -2015)
     if (path === '/calibrate/check' && request.method === 'POST') {
       const authErr = checkAuth();
       if (authErr) return authErr;
@@ -952,32 +952,32 @@ export default {
       const db = env.DB;
       const modeParam = url.searchParams.get('mode');
 
-      // Light mode: read from rater_evals (prompt_mode='light') for hn_ids -2001 to -2015
-      if (modeParam === 'light') {
-        const lightScores = new Map<string, number | null>();
-        let lightPending = 0;
+      // Lite mode: read from rater_evals (prompt_mode='lite') for hn_ids -2001 to -2015
+      if (modeParam === 'lite' || modeParam === 'light') {
+        const liteScores = new Map<string, number | null>();
+        let litePending = 0;
 
-        for (let i = 0; i < LIGHT_CALIBRATION_SET.length; i++) {
-          const cal = LIGHT_CALIBRATION_SET[i];
+        for (let i = 0; i < LITE_CALIBRATION_SET.length; i++) {
+          const cal = LITE_CALIBRATION_SET[i];
           const syntheticId = -(2000 + i + 1);
           const row = await db
             .prepare(
               `SELECT eval_status, hcb_weighted_mean FROM rater_evals
-               WHERE hn_id = ? AND prompt_mode = 'light'
+               WHERE hn_id = ? AND prompt_mode IN ('lite', 'light')
                ORDER BY evaluated_at DESC LIMIT 1`,
             )
             .bind(syntheticId)
             .first<{ eval_status: string; hcb_weighted_mean: number | null }>();
 
           if (row && row.eval_status === 'done' && row.hcb_weighted_mean !== null) {
-            lightScores.set(cal.url, row.hcb_weighted_mean);
+            liteScores.set(cal.url, row.hcb_weighted_mean);
           } else {
-            lightScores.set(cal.url, null);
-            if (row && (row.eval_status === 'pending' || row.eval_status === 'queued')) lightPending++;
+            liteScores.set(cal.url, null);
+            if (row && (row.eval_status === 'pending' || row.eval_status === 'queued')) litePending++;
           }
         }
 
-        const lightSummary = runCalibrationCheck(lightScores, LIGHT_CALIBRATION_SET, LIGHT_DRIFT_THRESHOLDS);
+        const liteSummary = runCalibrationCheck(liteScores, LITE_CALIBRATION_SET, LITE_DRIFT_THRESHOLDS);
 
         await db
           .prepare(
@@ -985,39 +985,39 @@ export default {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .bind(
-            'light-1.4',
-            'light-1.4',
-            LIGHT_CALIBRATION_SET.length,
-            lightSummary.passed,
-            lightSummary.failed,
-            lightSummary.skipped,
-            lightSummary.status,
+            'lite-1.4',
+            'lite-1.4',
+            LITE_CALIBRATION_SET.length,
+            liteSummary.passed,
+            liteSummary.failed,
+            liteSummary.skipped,
+            liteSummary.status,
             JSON.stringify({
-              results: lightSummary.results,
-              classOrderingOk: lightSummary.classOrderingOk,
-              pairChecks: lightSummary.pairChecks,
-              warned: lightSummary.warned,
+              results: liteSummary.results,
+              classOrderingOk: liteSummary.classOrderingOk,
+              pairChecks: liteSummary.pairChecks,
+              warned: liteSummary.warned,
             }),
           )
           .run();
 
         await logEvent(db, {
           event_type: 'calibration',
-          severity: lightSummary.status === 'fail' ? 'error' : lightSummary.status === 'warn' ? 'warn' : 'info',
-          message: `Light calibration check: ${lightSummary.status} (${lightSummary.passed} pass, ${lightSummary.failed} fail, ${lightSummary.skipped} skip)`,
+          severity: liteSummary.status === 'fail' ? 'error' : liteSummary.status === 'warn' ? 'warn' : 'info',
+          message: `Lite calibration check: ${liteSummary.status} (${liteSummary.passed} pass, ${liteSummary.failed} fail, ${liteSummary.skipped} skip)`,
           details: {
-            mode: 'light',
-            status: lightSummary.status,
-            passed: lightSummary.passed,
-            failed: lightSummary.failed,
-            warned: lightSummary.warned,
-            skipped: lightSummary.skipped,
-            classOrderingOk: lightSummary.classOrderingOk,
-            pending: lightPending,
+            mode: 'lite',
+            status: liteSummary.status,
+            passed: liteSummary.passed,
+            failed: liteSummary.failed,
+            warned: liteSummary.warned,
+            skipped: liteSummary.skipped,
+            classOrderingOk: liteSummary.classOrderingOk,
+            pending: litePending,
           },
         });
 
-        return new Response(JSON.stringify({ ...lightSummary, pending: lightPending, model: 'light-1.4' }), {
+        return new Response(JSON.stringify({ ...liteSummary, pending: litePending, model: 'lite-1.4' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });

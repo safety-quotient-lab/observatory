@@ -477,7 +477,7 @@ export {
   getMethodologyDistribution,
   getModelDriftStats,
   getLatestCalibrationRun,
-  getLatestLightCalibrationRun,
+  getLatestLiteCalibrationRun,
 } from './events';
 export type { Event, EventStats, CycleStats, RateLimitSnapshot, DlqMessage, DlqStats, MethodologyDistribution, ModelDriftPair, CalibrationRun } from './events';
 

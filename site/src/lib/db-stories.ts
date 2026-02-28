@@ -552,7 +552,7 @@ export interface StatusCounts {
   total: number;
   // Coverage spectrum
   coverageFull: number;       // done + hcb_weighted_mean IS NOT NULL
-  coverageLight: number;      // hcb_editorial_mean IS NOT NULL AND hcb_weighted_mean IS NULL
+  coverageLite: number;       // hcb_editorial_mean IS NOT NULL AND hcb_weighted_mean IS NULL
   coverageMultiModel: number; // consensus_model_count >= 2
   coverageNone: number;       // no scores at all (pending/evaluating/failed with no editorial)
 }
@@ -564,10 +564,10 @@ export async function getStatusCounts(db: D1Database): Promise<StatusCounts> {
 
   const counts: StatusCounts = {
     done: 0, pending: 0, evaluating: 0, failed: 0, skipped: 0, total: 0,
-    coverageFull: 0, coverageLight: 0, coverageMultiModel: 0, coverageNone: 0,
+    coverageFull: 0, coverageLite: 0, coverageMultiModel: 0, coverageNone: 0,
   };
   for (const r of results) {
-    const key = r.eval_status as keyof Omit<StatusCounts, 'total' | 'coverageFull' | 'coverageLight' | 'coverageMultiModel' | 'coverageNone'>;
+    const key = r.eval_status as keyof Omit<StatusCounts, 'total' | 'coverageFull' | 'coverageLite' | 'coverageMultiModel' | 'coverageNone'>;
     if (key in counts) (counts as any)[key] = r.cnt;
     counts.total += r.cnt;
   }
@@ -583,9 +583,9 @@ export async function getStatusCounts(db: D1Database): Promise<StatusCounts> {
 
   if (cov) {
     counts.coverageFull = cov.full_coverage;
-    counts.coverageLight = cov.light_only;
+    counts.coverageLite = cov.light_only;
     counts.coverageMultiModel = cov.multi_model;
-    counts.coverageNone = counts.total - cov.full_coverage - cov.light_only - counts.skipped;
+    counts.coverageNone = counts.total - cov.full_coverage - cov.light_only - counts.skipped; // light_only is SQL alias, stays
   }
 
   return counts;

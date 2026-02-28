@@ -53,8 +53,8 @@ const PROVIDER = 'claude-code-standalone';
 const CLAUDE_BIN = join(dirname(process.execPath), 'claude');
 const RAW_HTML_MAX_CHARS = 30_000;
 
-// Light prompt — inlined from prompts.ts METHODOLOGY_SYSTEM_PROMPT_LIGHT (light-1.4)
-const LIGHT_SYSTEM_PROMPT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score the AUTHOR'S EDITORIAL STANCE toward human rights, not the subject matter.
+// Lite prompt — inlined from prompts.ts METHODOLOGY_SYSTEM_PROMPT_LITE (lite-1.4)
+const LITE_SYSTEM_PROMPT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score the AUTHOR'S EDITORIAL STANCE toward human rights, not the subject matter.
 
 Score: integer 0-100 where 50 = neutral. Use the full range.
 Tier anchors:
@@ -75,7 +75,7 @@ Evidence strength: H=explicit rights discussion | M=implicit | L=tangential
 Output ONLY a JSON object. No markdown, no explanation.
 
 {
-  "schema_version": "light-1.4",
+  "schema_version": "lite-1.4",
   "reasoning": "<content type and rights stance in max 10 words>",
   "evaluation": {
     "url": "<url>",
@@ -110,10 +110,10 @@ const limit = parseInt(argVal('--limit') ?? '10');
 const singleUrl = argVal('--url');
 const singleHnId = parseInt(argVal('--hn-id') ?? '0');
 const dryRun = args.includes('--dry-run');
-const mode = argVal('--mode') ?? 'full'; // 'full' | 'light'
+const mode = argVal('--mode') ?? 'full'; // 'full' | 'lite'
 const concurrency = parseInt(argVal('--concurrency') ?? '3');
-if (mode !== 'full' && mode !== 'light') {
-  console.error(`Invalid --mode "${mode}". Must be "full" or "light".`);
+if (mode !== 'full' && mode !== 'lite' && mode !== 'light') {
+  console.error(`Invalid --mode "${mode}". Must be "full" or "lite".`);
   process.exit(1);
 }
 
@@ -131,7 +131,7 @@ function buildFallbackPrompt() {
   return `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Evaluate the URL provided against the UDHR. Output ONLY a JSON object matching the HRCB evaluation schema (schema_version, evaluation, domain_context_profile, scores array with 31 entries for Preamble + Articles 1-30, supplementary signals, theme_tag, sentiment_tag, executive_summary).`;
 }
 
-const SYSTEM_PROMPT = mode === 'light' ? LIGHT_SYSTEM_PROMPT : FULL_SYSTEM_PROMPT;
+const SYSTEM_PROMPT = (mode === 'lite' || mode === 'light') ? LITE_SYSTEM_PROMPT : FULL_SYSTEM_PROMPT;
 const METHODOLOGY_HASH = createHash('sha256').update(SYSTEM_PROMPT).digest('hex').slice(0, 32);
 
 // --- Helpers ---

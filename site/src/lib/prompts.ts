@@ -556,11 +556,11 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
 }`;
 
 /**
- * Light system prompt for small/free models that can't produce full 31-section output.
+ * Lite system prompt for small/free models that can't produce full 31-section output.
  * Editorial-only: single editorial score + basic metadata (~200-400 output tokens).
  * No structural channel, no per-article breakdown, no DCP, no Fair Witness evidence.
  */
-export const METHODOLOGY_SYSTEM_PROMPT_LIGHT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score the AUTHOR'S EDITORIAL STANCE toward human rights, not the subject matter.
+export const METHODOLOGY_SYSTEM_PROMPT_LITE = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score the AUTHOR'S EDITORIAL STANCE toward human rights, not the subject matter.
 
 Score: integer 0-100 where 50 = neutral. Use the full range.
 Tier anchors:
@@ -581,7 +581,7 @@ Evidence strength: H=explicit rights discussion | M=implicit | L=tangential
 Output ONLY a JSON object. No markdown, no explanation.
 
 {
-  "schema_version": "light-1.4",
+  "schema_version": "lite-1.4",
   "reasoning": "<content type and rights stance in max 10 words>",
   "evaluation": {
     "url": "<url>",

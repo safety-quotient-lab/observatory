@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro';
-import { writeRaterEvalResult, writeLightRaterEvalResult, writeCalibrationEval } from '../../lib/eval-write';
-import { validateSlimEvalResponse, validateLightEvalResponse, computeLightAggregates } from '../../lib/eval-parse';
+import { writeRaterEvalResult, writeLiteRaterEvalResult, writeCalibrationEval } from '../../lib/eval-write';
+import { validateSlimEvalResponse, validateLiteEvalResponse, computeLiteAggregates } from '../../lib/eval-parse';
 import { computeAggregates } from '../../lib/compute-aggregates';
-import type { EvalResult, SlimEvalResponse, LightEvalResponse } from '../../lib/eval-types';
+import type { EvalResult, SlimEvalResponse, LiteEvalResponse } from '../../lib/eval-types';
 
 /**
  * POST /api/ingest — accepts a pre-computed evaluation result from the standalone evaluator.
@@ -12,12 +12,12 @@ import type { EvalResult, SlimEvalResponse, LightEvalResponse } from '../../lib/
  *   hn_id: number,
  *   model_id: string,
  *   provider: string,
- *   prompt_mode: 'full' | 'light',   // default: 'full'
+ *   prompt_mode: 'full' | 'lite',   // default: 'full'
  *   input_tokens: number,
  *   output_tokens: number,
  *   prompt_hash: string | null,
  *   methodology_hash: string | null,
- *   result: SlimEvalResponse | LightEvalResponse
+ *   result: SlimEvalResponse | LiteEvalResponse
  * }
  */
 export const POST: APIRoute = async ({ locals, request }) => {
@@ -35,12 +35,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
     hn_id: number;
     model_id: string;
     provider: string;
-    prompt_mode?: 'full' | 'light';
+    prompt_mode?: 'full' | 'lite';
     input_tokens: number;
     output_tokens: number;
     prompt_hash: string | null;
     methodology_hash: string | null;
-    result: SlimEvalResponse | LightEvalResponse;
+    result: SlimEvalResponse | LiteEvalResponse;
   };
 
   try {
@@ -76,9 +76,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const safeOutputTokens = Number.isInteger(output_tokens) && output_tokens >= 0 ? output_tokens : 0;
 
   try {
-    if (prompt_mode === 'light') {
-      const light = result as LightEvalResponse;
-      const validation = validateLightEvalResponse(light);
+    if (prompt_mode === 'lite' || prompt_mode === 'light') {
+      const lite = result as LiteEvalResponse;
+      const validation = validateLiteEvalResponse(lite);
       if (!validation.valid) {
         return new Response(JSON.stringify({ error: 'Validation failed', details: validation.errors }), {
           status: 422,
@@ -86,8 +86,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
         });
       }
 
-      await writeLightRaterEvalResult(
-        env.DB, hn_id, light, model_id, provider,
+      await writeLiteRaterEvalResult(
+        env.DB, hn_id, lite, model_id, provider,
         prompt_hash ?? null, methodology_hash ?? null,
         safeInputTokens, safeOutputTokens, 0,
       );
@@ -95,17 +95,18 @@ export const POST: APIRoute = async ({ locals, request }) => {
       // Longitudinal calibration snapshot: if this is a calibration ID and a run is active, persist to calibration_evals
       const isCalId = hn_id >= -2015 && hn_id <= -2001;
       if (isCalId && env.CONTENT_CACHE) {
-        const runStr = await env.CONTENT_CACHE.get('calibration:light:current_run').catch(() => null);
+        const runStr = await env.CONTENT_CACHE.get('calibration:lite:current_run').catch(() => null)
+          ?? await env.CONTENT_CACHE.get('calibration:light:current_run').catch(() => null); // backward compat
         const calibrationRun = runStr ? parseInt(runStr) : NaN;
         if (!isNaN(calibrationRun)) {
-          await writeCalibrationEval(env.DB, calibrationRun, hn_id, light, model_id, provider);
+          await writeCalibrationEval(env.DB, calibrationRun, hn_id, lite, model_id, provider);
         }
       }
 
-      const agg = computeLightAggregates(light);
+      const agg = computeLiteAggregates(lite);
 
       return new Response(JSON.stringify({
-        ok: true, hn_id, model_id, prompt_mode: 'light',
+        ok: true, hn_id, model_id, prompt_mode: 'lite',
         weighted_mean: agg.weighted_mean,
         classification: agg.classification,
         repairs: validation.repairs,

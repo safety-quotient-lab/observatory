@@ -271,8 +271,8 @@ async function processAnthropicPullBatch(env: Env): Promise<void> {
       prep = await prepareContent(msg, env);
       if (!prep) continue;
 
-      if (prep.isLightMode) {
-        throw new Error(`Light mode not supported for provider=anthropic`);
+      if (prep.isLiteMode) {
+        throw new Error(`Lite mode not supported for provider=anthropic`);
       }
 
       await runAnthropicEval(env, db, msg, prep, evalStartMs);
@@ -314,8 +314,8 @@ export default {
         prep = await prepareContent(msg, env);
         if (!prep) continue;
 
-        if (prep.isLightMode) {
-          throw new Error(`Light mode not supported for provider=anthropic`);
+        if (prep.isLiteMode) {
+          throw new Error(`Lite mode not supported for provider=anthropic`);
         }
 
         await runAnthropicEval(env, db, msg, prep, evalStartMs);

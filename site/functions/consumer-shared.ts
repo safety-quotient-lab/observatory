@@ -8,14 +8,14 @@ import {
   PRIMARY_MODEL_ID,
   CONTENT_MAX_CHARS,
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
-  METHODOLOGY_SYSTEM_PROMPT_LIGHT,
+  METHODOLOGY_SYSTEM_PROMPT_LITE,
   extractDomain,
   buildUserMessageWithDcp,
-  buildLightUserMessage,
+  buildLiteUserMessage,
   extractJsonFromResponse,
-  validateLightEvalResponse,
-  computeLightAggregates,
-  writeLightRaterEvalResult,
+  validateLiteEvalResponse,
+  computeLiteAggregates,
+  writeLiteRaterEvalResult,
   fetchUrlContent,
   requestArchive,
   writeRaterEvalResult,
@@ -35,7 +35,7 @@ import {
   type ModelDefinition,
   type RaterHealthState,
   type SlimEvalResponse,
-  type LightEvalResponse,
+  type LiteEvalResponse,
 } from '../src/lib/shared-eval';
 
 import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
@@ -66,7 +66,7 @@ export interface QueueMessage {
   domain: string | null;
   eval_model?: string;
   eval_provider?: string;
-  prompt_mode?: 'full' | 'light';
+  prompt_mode?: 'full' | 'lite';
   batch_id?: string | null;
 }
 
@@ -82,7 +82,7 @@ export interface EvalQueueClaim {
   hn_id: number;
   target_provider: string;
   target_model: string;
-  prompt_mode: 'full' | 'light';
+  prompt_mode: 'full' | 'lite';
   batch_id: string | null;
 }
 
@@ -208,7 +208,7 @@ export async function handleParseFailure(
   provider: string,
   rawText: string,
   error: unknown,
-  promptMode: 'full' | 'light',
+  promptMode: 'full' | 'lite',
 ): Promise<void> {
   try {
     await env.CONTENT_SNAPSHOTS.put(
@@ -228,8 +228,8 @@ export async function handleParseFailure(
     await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${modelId} auto-disabled: ${health.disabled_reason}`, details: { model: modelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
   }
 
-  await markRaterFailed(db, story.hn_id, modelId, provider, `${promptMode === 'light' ? 'Light p' : 'P'}arse failure: ${error}`);
-  await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `${promptMode === 'light' ? 'Light p' : 'P'}arse failure for model ${modelId}: ${String(error).slice(0, 200)}`, details: { model: modelId, error: String(error).slice(0, 500), prompt_mode: promptMode } });
+  await markRaterFailed(db, story.hn_id, modelId, provider, `${promptMode === 'lite' ? 'Lite p' : 'P'}arse failure: ${error}`);
+  await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `${promptMode === 'lite' ? 'Lite p' : 'P'}arse failure for model ${modelId}: ${String(error).slice(0, 200)}`, details: { model: modelId, error: String(error).slice(0, 500), prompt_mode: promptMode } });
 }
 
 export async function handleValidationFailure(
@@ -240,7 +240,7 @@ export async function handleValidationFailure(
   provider: string,
   rawText: string,
   validation: { errors: string[]; warnings: string[] },
-  promptMode: 'full' | 'light',
+  promptMode: 'full' | 'lite',
 ): Promise<void> {
   try {
     await env.CONTENT_SNAPSHOTS.put(
@@ -260,8 +260,8 @@ export async function handleValidationFailure(
     await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${modelId} auto-disabled: ${health.disabled_reason}`, details: { model: modelId, reason: health.disabled_reason } });
   }
 
-  await markRaterFailed(db, story.hn_id, modelId, provider, `${promptMode === 'light' ? 'Light v' : 'V'}alidation failed: ${validation.errors.join('; ')}`);
-  await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `${promptMode === 'light' ? 'Light v' : 'V'}alidation failed for model ${modelId}`, details: { model: modelId, errors: validation.errors, warnings: validation.warnings, prompt_mode: promptMode } });
+  await markRaterFailed(db, story.hn_id, modelId, provider, `${promptMode === 'lite' ? 'Lite v' : 'V'}alidation failed: ${validation.errors.join('; ')}`);
+  await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_fail', severity: 'error', message: `${promptMode === 'lite' ? 'Lite v' : 'V'}alidation failed for model ${modelId}`, details: { model: modelId, errors: validation.errors, warnings: validation.warnings, prompt_mode: promptMode } });
 }
 
 export async function handleApiFailure(
@@ -304,7 +304,7 @@ export async function handleRaterHealthSuccess(
 export interface PreparedContent {
   content: string;
   contentHash: string | null;
-  isLightMode: boolean;
+  isLiteMode: boolean;
   modelDef: ModelDefinition | undefined;
   provider: string;
   modelToUse: string;
@@ -479,7 +479,7 @@ export async function prepareContent(
     content = content.slice(0, modelDef.max_input_chars);
   }
 
-  const isLightMode = story.prompt_mode === 'light' || modelDef?.prompt_mode === 'light';
+  const isLiteMode = story.prompt_mode === 'lite' || story.prompt_mode === 'light' || modelDef?.prompt_mode === 'lite';
   const domain = story.domain || (story.url ? extractDomain(story.url) : null);
 
   // Compute content hash for drift detection (skip self-posts — content is user-mutable)
@@ -493,7 +493,7 @@ export async function prepareContent(
   return {
     content,
     contentHash,
-    isLightMode,
+    isLiteMode,
     modelDef,
     provider,
     modelToUse,
@@ -505,9 +505,9 @@ export async function prepareContent(
   };
 }
 
-// --- Light result processing ---
+// --- Lite result processing ---
 
-export async function processLightResult(
+export async function processLiteResult(
   env: Env,
   msg: Message<QueueMessage>,
   prep: PreparedContent,
@@ -520,37 +520,37 @@ export async function processLightResult(
   const story = msg.body;
 
   // Parse
-  let lightParsed: LightEvalResponse;
+  let liteParsed: LiteEvalResponse;
   try {
     const extracted = extractJsonFromResponse(rawText);
-    lightParsed = JSON.parse(extracted) as LightEvalResponse;
+    liteParsed = JSON.parse(extracted) as LiteEvalResponse;
   } catch (parseErr) {
-    await handleParseFailure(env, db, story, prep.msgModelId, prep.provider, rawText, parseErr, 'light');
+    await handleParseFailure(env, db, story, prep.msgModelId, prep.provider, rawText, parseErr, 'lite');
     msg.ack();
     return false;
   }
 
   // Validate
-  const lightValidation = validateLightEvalResponse(lightParsed);
-  if (!lightValidation.valid) {
-    await handleValidationFailure(env, db, story, prep.msgModelId, prep.provider, rawText, lightValidation, 'light');
+  const liteValidation = validateLiteEvalResponse(liteParsed);
+  if (!liteValidation.valid) {
+    await handleValidationFailure(env, db, story, prep.msgModelId, prep.provider, rawText, liteValidation, 'lite');
     msg.ack();
     return false;
   }
 
-  if (lightValidation.warnings.length > 0 || lightValidation.repairs.length > 0) {
-    await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Light validation warnings for model ${prep.msgModelId}: ${lightValidation.warnings.length}W ${lightValidation.repairs.length}R`, details: { model: prep.msgModelId, warnings: lightValidation.warnings, repairs: lightValidation.repairs, prompt_mode: 'light' } });
+  if (liteValidation.warnings.length > 0 || liteValidation.repairs.length > 0) {
+    await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Lite validation warnings for model ${prep.msgModelId}: ${liteValidation.warnings.length}W ${liteValidation.repairs.length}R`, details: { model: prep.msgModelId, warnings: liteValidation.warnings, repairs: liteValidation.repairs, prompt_mode: 'lite' } });
   }
 
   // Build hashes
-  const lightUserMessage = buildLightUserMessage(prep.evalUrl, story.title, prep.content);
-  const lightPromptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT_LIGHT, lightUserMessage);
-  const lightMethodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_LIGHT);
+  const liteUserMessage = buildLiteUserMessage(prep.evalUrl, story.title, prep.content);
+  const litePromptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT_LITE, liteUserMessage);
+  const liteMethodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_LITE);
 
   // Write
-  await writeLightRaterEvalResult(db, story.hn_id, lightParsed, prep.msgModelId, prep.provider, lightPromptHash, lightMethodologyHash, inputTokens, outputTokens, prep.contentTruncationPct, story.batch_id ?? null);
+  await writeLiteRaterEvalResult(db, story.hn_id, liteParsed, prep.msgModelId, prep.provider, litePromptHash, liteMethodologyHash, inputTokens, outputTokens, prep.contentTruncationPct, story.batch_id ?? null);
 
-  // Invalidate domain caches — light eval fills hcb_editorial_mean which affects feed/domain display
+  // Invalidate domain caches — lite eval fills hcb_editorial_mean which affects feed/domain display
   const cacheKeys = [
     'q:domainSignalProfiles',
     'q:allDomainStats:count:50',
@@ -566,10 +566,10 @@ export async function processLightResult(
   // Health success
   await handleRaterHealthSuccess(env, db, story, prep.msgModelId);
 
-  const { weighted_mean, classification } = computeLightAggregates(lightParsed);
+  const { weighted_mean, classification } = computeLiteAggregates(liteParsed);
   const evalDurationMs = Date.now() - evalStartMs;
-  console.log(`[consumer] Done (light): hn_id=${story.hn_id} → ${classification} (${weighted_mean}) [${prep.msgModelId}] ${evalDurationMs}ms`);
-  await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_success', severity: 'info', message: `Light evaluated: ${classification} (${weighted_mean.toFixed(2)})`, details: { classification, weighted_mean, model: prep.msgModelId, provider: prep.provider, prompt_mode: 'light', input_tokens: inputTokens, output_tokens: outputTokens, duration_ms: evalDurationMs } });
+  console.log(`[consumer] Done (lite): hn_id=${story.hn_id} → ${classification} (${weighted_mean}) [${prep.msgModelId}] ${evalDurationMs}ms`);
+  await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_success', severity: 'info', message: `Lite evaluated: ${classification} (${weighted_mean.toFixed(2)})`, details: { classification, weighted_mean, model: prep.msgModelId, provider: prep.provider, prompt_mode: 'lite', input_tokens: inputTokens, output_tokens: outputTokens, duration_ms: evalDurationMs } });
   msg.ack();
   return true;
 }

@@ -4,7 +4,7 @@
 
 export type ModelProvider = 'anthropic' | 'openrouter' | 'workers-ai';
 
-export type PromptMode = 'full' | 'light';
+export type PromptMode = 'full' | 'lite';
 
 export interface ModelDefinition {
   id: string;                    // DB identifier (eval_model column)
@@ -17,7 +17,7 @@ export interface ModelDefinition {
   max_tokens: number;
   supports_cache_control: boolean;
   supports_json_mode: boolean;
-  prompt_mode: PromptMode;       // 'full' = 31-section eval, 'light' = aggregate-only
+  prompt_mode: PromptMode;       // 'full' = 31-section eval, 'lite' = aggregate-only
   max_input_chars?: number;      // max content chars to send (truncates before sending)
 }
 
@@ -68,11 +68,11 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'nvidia/nemotron-3-nano-30b-a3b:free',
     is_free: true,
-    enabled: false,  // disabled: returns empty/broken JSON on both full and light prompts
+    enabled: false,  // disabled: returns empty/broken JSON on both full and lite prompts
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
-    prompt_mode: 'light',
+    prompt_mode: 'lite',
   },
   {
     id: 'step-3.5-flash',
@@ -111,7 +111,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
-    prompt_mode: 'light',
+    prompt_mode: 'lite',
   },
   {
     id: 'mistral-small-3.1',
@@ -146,11 +146,11 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
     is_free: true,
-    enabled: true, // replaces llama-3.3-70b (OpenRouter) which was chronic 429s; light mode via WORKERS_AI_QUEUE
+    enabled: true, // replaces llama-3.3-70b (OpenRouter) which was chronic 429s; lite mode via WORKERS_AI_QUEUE
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
-    prompt_mode: 'light',
+    prompt_mode: 'lite',
     max_input_chars: 6000,
   },
   {
@@ -164,7 +164,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
-    prompt_mode: 'light',
+    prompt_mode: 'lite',
     max_input_chars: 12000,
   },
 ];
@@ -223,12 +223,14 @@ export function modelShortName(modelId: string): string {
   return getModelDef(modelId)?.short_name ?? modelId.slice(0, 3);
 }
 
-/** Returns true if the model (or eval row) used light prompt mode. */
-export function isLightMode(promptModeOrModelId: string | null | undefined): boolean {
+/** Returns true if the model (or eval row) used lite prompt mode. */
+export function isLiteMode(promptModeOrModelId: string | null | undefined): boolean {
+  if (promptModeOrModelId === 'lite') return true;
+  // Also accept legacy 'light' value for backward compat during transition
   if (promptModeOrModelId === 'light') return true;
   // Check registry definition as fallback
   const def = getModelDef(promptModeOrModelId ?? '');
-  return def?.prompt_mode === 'light';
+  return def?.prompt_mode === 'lite';
 }
 
 /** Map model IDs to their queue binding names in wrangler config. */

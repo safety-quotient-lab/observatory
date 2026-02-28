@@ -8,17 +8,17 @@ import {
   CLASSIFICATIONS,
   type EvalResult,
   type SlimEvalResponse,
-  type LightEvalResponse,
+  type LiteEvalResponse,
   type ValidationResult,
 } from './eval-types';
 import { RAW_HTML_MAX_CHARS } from './shared-eval';
 
-/** Valid content type codes for light evals. */
-const LIGHT_CONTENT_TYPES = new Set(['ED', 'PO', 'LP', 'PR', 'AC', 'MI', 'AD', 'HR', 'CO', 'ME', 'MX']);
+/** Valid content type codes for lite evals. */
+const LITE_CONTENT_TYPES = new Set(['ED', 'PO', 'LP', 'PR', 'AC', 'MI', 'AD', 'HR', 'CO', 'ME', 'MX']);
 
 const VALID_SENTIMENT_TAGS = ['Champions', 'Advocates', 'Acknowledges', 'Neutral', 'Neglects', 'Undermines', 'Hostile'];
 const VALID_EVIDENCE_STRENGTHS = ['H', 'M', 'L'];
-const VALID_CONTENT_TYPES = LIGHT_CONTENT_TYPES;
+const VALID_CONTENT_TYPES = LITE_CONTENT_TYPES;
 
 // --- Helpers ---
 
@@ -74,7 +74,7 @@ Today's date: ${today}
 Output ONLY the JSON evaluation object, no other text.`;
 }
 
-export function buildLightUserMessage(url: string, title: string, content: string): string {
+export function buildLiteUserMessage(url: string, title: string, content: string): string {
   const today = new Date().toISOString().slice(0, 10);
   return `Evaluate this URL: ${url}
 Title: ${title}
@@ -263,7 +263,7 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
   return { valid: errors.length === 0, errors, warnings, repairs };
 }
 
-export function validateLightEvalResponse(parsed: any): ValidationResult {
+export function validateLiteEvalResponse(parsed: any): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const repairs: string[] = [];
@@ -294,10 +294,11 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
     }
   }
 
-  // Editorial score (the only scored channel in light mode)
-  // light-1.4 uses integer 0-100 (50=neutral); light-1.3 used float [-1,+1].
+  // Editorial score (the only scored channel in lite mode)
+  // lite-1.4 uses integer 0-100 (50=neutral); lite-1.3 used float [-1,+1].
   // Detect by schema_version (authoritative) or by value out of float range (fallback).
-  const isV14 = parsed.schema_version === 'light-1.4';
+  // Accept both 'lite-1.4' and 'light-1.4' for backward compat during transition.
+  const isV14 = parsed.schema_version === 'lite-1.4' || parsed.schema_version === 'light-1.4';
   const couldBeInteger = typeof ev.editorial === 'number' && ev.editorial > 1.0;
 
   if (isV14 || couldBeInteger) {
@@ -313,7 +314,7 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
       repairs.push(`Normalized integer ${clamped} \u2192 ${ev.editorial}`);
     }
   } else {
-    // light-1.3 float format: clamp to [-1, +1]
+    // lite-1.3 float format: clamp to [-1, +1]
     if (typeof ev.editorial !== 'number') {
       const num = parseFloat(ev.editorial);
       if (!isNaN(num) && isFinite(num)) {
@@ -330,7 +331,7 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
     }
   }
 
-  // Validate reasoning field (light-1.4+): optional, discard if malformed
+  // Validate reasoning field (lite-1.4+): optional, discard if malformed
   if (parsed.reasoning !== null && parsed.reasoning !== undefined) {
     if (typeof parsed.reasoning !== 'string') {
       parsed.reasoning = null;
@@ -340,7 +341,7 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
     }
   }
 
-  // Editorial is required for light evals
+  // Editorial is required for lite evals
   if (ev.editorial === null || ev.editorial === undefined) {
     errors.push('Editorial score is null \u2014 no data to score');
   }
@@ -385,7 +386,7 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
     }
   }
 
-  // Emotional tone scalars (light-1.3+) — clamp ranges if present
+  // Emotional tone scalars (lite-1.3+) — clamp ranges if present
   if (parsed.valence !== null && parsed.valence !== undefined) {
     if (typeof parsed.valence !== 'number') {
       const num = parseFloat(parsed.valence);
@@ -408,14 +409,14 @@ export function validateLightEvalResponse(parsed: any): ValidationResult {
   return { valid: errors.length === 0, errors, warnings, repairs };
 }
 
-// --- Light Aggregates ---
+// --- Lite Aggregates ---
 
-export function computeLightAggregates(light: LightEvalResponse): {
+export function computeLiteAggregates(lite: LiteEvalResponse): {
   weighted_mean: number;
   classification: string;
 } {
-  // Light mode is editorial-only — editorial score IS the weighted mean
-  const e = light.evaluation.editorial;
+  // Lite mode is editorial-only — editorial score IS the weighted mean
+  const e = lite.evaluation.editorial;
   let weightedMean = e !== null && e !== undefined ? e : 0;
 
   // Clamp

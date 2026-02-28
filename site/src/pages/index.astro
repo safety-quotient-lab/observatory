@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
 import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
 import type { SortOption, FilterOption, TypeOption, ModelOption } from '../lib/db';
-import { modelDisplayName, getModelDef, isLightMode } from '../lib/shared-eval';
+import { modelDisplayName, getModelDef, isLiteMode } from '../lib/shared-eval';
 
 const db = Astro.locals.runtime.env.DB;
 
@@ -110,8 +110,8 @@ const FILTER_OPTIONS = [
 function modelLabel(id: string): string {
   return modelDisplayName(id);
 }
-function isLightModel(id: string): boolean {
-  return getModelDef(id)?.prompt_mode === 'light';
+function isLiteModel(id: string): boolean {
+  return getModelDef(id)?.prompt_mode === 'lite';
 }
 ---
 
@@ -160,8 +160,8 @@ function isLightModel(id: string): boolean {
                 <>
                   <span style="color: #1a5568;"> | </span>
                   {safeModel === m
-                    ? <span style="color: #d56500; font-weight: bold;">{modelLabel(m)}{isLightModel(m) && <span class="lite-icon" style="margin-left: 3px;">L</span>}</span>
-                    : <a href={buildUrl({ model: m, p: '1' })}>{modelLabel(m)}{isLightModel(m) && <span class="lite-icon" style="margin-left: 3px;">L</span>}</a>
+                    ? <span style="color: #d56500; font-weight: bold;">{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;">L</span>}</span>
+                    : <a href={buildUrl({ model: m, p: '1' })}>{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;">L</span>}</a>
                   }
                 </>
               ))}

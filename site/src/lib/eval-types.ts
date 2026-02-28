@@ -190,7 +190,7 @@ export interface SlimEvalResponse {
   adversarial_gap?: unknown;
 }
 
-export interface LightEvalResponse {
+export interface LiteEvalResponse {
   schema_version: string;
   reasoning?: string | null;
   evaluation: {

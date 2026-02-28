@@ -5,13 +5,13 @@
  * to claim rows from eval_queue and process them. Legacy push messages (with hn_id) are
  * still processed for backward compatibility.
  *
- * Supports both light and full prompt modes.
+ * Supports both lite and full prompt modes.
  * Error handling: 429 → retry with jitter, other errors → throw → DLQ.
  */
 
 import {
   prepareContent,
-  processLightResult,
+  processLiteResult,
   processFullResult,
   handleParseFailure,
   handleValidationFailure,
@@ -28,12 +28,12 @@ import {
 
 import {
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
-  METHODOLOGY_SYSTEM_PROMPT_LIGHT,
-  EVAL_MAX_TOKENS_LIGHT,
+  METHODOLOGY_SYSTEM_PROMPT_LITE,
+  EVAL_MAX_TOKENS_LITE,
   parseOpenRouterResponse,
   validateSlimEvalResponse,
   buildUserMessageWithDcp,
-  buildLightUserMessage,
+  buildLiteUserMessage,
 } from '../src/lib/shared-eval';
 
 import { logEvent } from '../src/lib/events';
@@ -59,11 +59,11 @@ async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: 
       return;
     }
 
-    if (prep.isLightMode) {
-      const lightModelDef = { ...prep.modelDef, max_tokens: EVAL_MAX_TOKENS_LIGHT };
-      const lightUserMessage = buildLightUserMessage(prep.evalUrl, story.title, prep.content);
+    if (prep.isLiteMode) {
+      const liteModelDef = { ...prep.modelDef, max_tokens: EVAL_MAX_TOKENS_LITE };
+      const liteUserMessage = buildLiteUserMessage(prep.evalUrl, story.title, prep.content);
 
-      const { response: res } = await callOpenRouterApi(env.OPENROUTER_API_KEY, lightModelDef, METHODOLOGY_SYSTEM_PROMPT_LIGHT, lightUserMessage);
+      const { response: res } = await callOpenRouterApi(env.OPENROUTER_API_KEY, liteModelDef, METHODOLOGY_SYSTEM_PROMPT_LITE, liteUserMessage);
 
       if (!res.ok) {
         const body = await res.text();
@@ -82,7 +82,7 @@ async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: 
       const inputTokens = rawData.usage?.prompt_tokens ?? 0;
       const outputTokens = rawData.usage?.completion_tokens ?? 0;
 
-      await processLightResult(env, msg, prep, rawText, inputTokens, outputTokens, evalStartMs);
+      await processLiteResult(env, msg, prep, rawText, inputTokens, outputTokens, evalStartMs);
 
     } else {
       const cachedDcp = await lookupCachedDcp(env, prep.domain);

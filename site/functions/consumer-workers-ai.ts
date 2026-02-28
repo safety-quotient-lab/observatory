@@ -2,13 +2,13 @@
  * Workers AI Consumer Worker: Processes evaluations from hrcb-eval-workers-ai queue.
  *
  * Uses Cloudflare AI binding (no API key needed, free tier).
- * Supports both light and full prompt modes.
+ * Supports both lite and full prompt modes.
  * No rate limiting — best-effort free tier.
  */
 
 import {
   prepareContent,
-  processLightResult,
+  processLiteResult,
   processFullResult,
   handleParseFailure,
   handleValidationFailure,
@@ -24,11 +24,11 @@ import {
 
 import {
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
-  METHODOLOGY_SYSTEM_PROMPT_LIGHT,
+  METHODOLOGY_SYSTEM_PROMPT_LITE,
   extractJsonFromResponse,
   validateSlimEvalResponse,
   buildUserMessageWithDcp,
-  buildLightUserMessage,
+  buildLiteUserMessage,
   type SlimEvalResponse,
 } from '../src/lib/shared-eval';
 
@@ -54,10 +54,10 @@ async function processWaiClaim(env: Env, msg: Message<QueueMessage>, db: D1Datab
       return;
     }
 
-    if (prep.isLightMode) {
-      const lightUserMessage = buildLightUserMessage(prep.evalUrl, story.title, prep.content);
-      const { text: rawText } = await callWorkersAi(env.AI, prep.modelDef, METHODOLOGY_SYSTEM_PROMPT_LIGHT, lightUserMessage);
-      await processLightResult(env, msg, prep, rawText, 0, 0, evalStartMs);
+    if (prep.isLiteMode) {
+      const liteUserMessage = buildLiteUserMessage(prep.evalUrl, story.title, prep.content);
+      const { text: rawText } = await callWorkersAi(env.AI, prep.modelDef, METHODOLOGY_SYSTEM_PROMPT_LITE, liteUserMessage);
+      await processLiteResult(env, msg, prep, rawText, 0, 0, evalStartMs);
     } else {
       const cachedDcp = await lookupCachedDcp(env, prep.domain);
       const userMessage = buildUserMessageWithDcp(prep.evalUrl, prep.content, prep.isSelfPost, cachedDcp);

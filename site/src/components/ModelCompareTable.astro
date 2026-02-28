@@ -1,6 +1,6 @@
 ---
 import { scoreToColor, formatScore } from '../lib/colors';
-import { modelDisplayName, ALL_SECTIONS, isLightMode } from '../lib/shared-eval';
+import { modelDisplayName, ALL_SECTIONS, isLiteMode } from '../lib/shared-eval';
 import type { RaterEval, RaterScore } from '../lib/db';
 
 interface Props {
@@ -60,7 +60,7 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
       <tr style="border-top: 1px solid #222;">
         <td style="padding: 4px 8px; color: #98a8a8; font-size: var(--font-sm);">
           {modelDisplayName(ev.eval_model)}
-          {isLightMode((ev as any).prompt_mode ?? null) && <span style="margin-left: 4px; color: #d56500; font-size: var(--font-xs); opacity: 0.8;" title="Light evaluation — editorial only, no per-section scores">lite</span>}
+          {isLiteMode((ev as any).prompt_mode ?? null) && <span style="margin-left: 4px; color: #d56500; font-size: var(--font-xs); opacity: 0.8;" title="Lite evaluation — editorial only, no per-section scores">lite</span>}
         </td>
         <td style={`padding: 4px 8px; color: ${scoreToColor(ev.hcb_editorial_mean ?? ev.hcb_weighted_mean)}; font-weight: bold;`}>
           {formatScore(ev.hcb_editorial_mean ?? ev.hcb_weighted_mean)}
@@ -88,7 +88,7 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
         {models.map(m => (
           <td style="padding: 3px 6px; text-align: center;">
             {modelDisplayName(m)}
-            {isLightMode(evals.find(e => e.eval_model === m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+            {isLiteMode(evals.find(e => e.eval_model === m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
           </td>
         ))}
         {models.length === 2 && <td style="padding: 3px 6px; text-align: center;">Delta</td>}

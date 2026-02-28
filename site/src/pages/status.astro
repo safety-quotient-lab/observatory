@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { modelDisplayName, MODEL_REGISTRY, isLightMode, getModelDef } from '../lib/shared-eval';
+import { modelDisplayName, MODEL_REGISTRY, isLiteMode, getModelDef } from '../lib/shared-eval';
 import {
   getStatusCounts,
   getVelocityStats,
@@ -37,8 +37,8 @@ const [
 // Prep eval velocity chart data
 const velDays = [...new Set(evalVelocity.map(r => r.day))].sort();
 const velFull = velDays.map(d => evalVelocity.find(r => r.day === d && r.prompt_mode === 'full')?.count ?? 0);
-const velLight = velDays.map(d => evalVelocity.find(r => r.day === d && r.prompt_mode === 'light')?.count ?? 0);
-const velMax = Math.max(1, ...velFull.map((f, i) => f + velLight[i]));
+const velLite = velDays.map(d => evalVelocity.find(r => r.day === d && (r.prompt_mode === 'lite' || r.prompt_mode === 'light'))?.count ?? 0);
+const velMax = Math.max(1, ...velFull.map((f, i) => f + velLite[i]));
 
 // Format token counts for display
 function formatTokens(n: number): string {
@@ -92,8 +92,8 @@ const QUEUE_CONFIG = [
 const evaluable = status.total - status.skipped;
 const pctCovMulti = evaluable > 0 ? Math.round((status.coverageMultiModel / evaluable) * 100) : 0;
 const pctCovFull = evaluable > 0 ? Math.round(((status.coverageFull - status.coverageMultiModel) / evaluable) * 100) : 0;
-const pctCovLight = evaluable > 0 ? Math.round((status.coverageLight / evaluable) * 100) : 0;
-const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
+const pctCovLite = evaluable > 0 ? Math.round((status.coverageLite / evaluable) * 100) : 0;
+const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
 ---
 
 <Base title="Status">
@@ -119,7 +119,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
         <div style="width: 100%; height: 8px; background: #0d4655; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 10px;">
           {pctCovMulti > 0 && <div style={`width: ${pctCovMulti}%; background: #259d94;`} title={`Multi-model: ${status.coverageMultiModel}`}></div>}
           {pctCovFull > 0 && <div style={`width: ${pctCovFull}%; background: #16a34a;`} title={`Full: ${status.coverageFull - status.coverageMultiModel}`}></div>}
-          {pctCovLight > 0 && <div style={`width: ${pctCovLight}%; background: #d56500;`} title={`Light: ${status.coverageLight}`}></div>}
+          {pctCovLite > 0 && <div style={`width: ${pctCovLite}%; background: #d56500;`} title={`Lite: ${status.coverageLite}`}></div>}
           {pctCovNone > 0 && <div style={`width: ${pctCovNone}%; background: #0d4655;`}></div>}
         </div>
 
@@ -134,11 +134,11 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
               <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Full</div>
             </td>
             <td style="text-align: center; width: 25%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #d56500; font-weight: bold;">{status.coverageLight}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Light</div>
+              <div class="score-font" style="font-size: var(--font-lg); color: #d56500; font-weight: bold;">{status.coverageLite}</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Lite</div>
             </td>
             <td style="text-align: center; width: 25%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #5b7279; font-weight: bold;">{evaluable > 0 ? evaluable - status.coverageFull - status.coverageLight : 0}</div>
+              <div class="score-font" style="font-size: var(--font-lg); color: #5b7279; font-weight: bold;">{evaluable > 0 ? evaluable - status.coverageFull - status.coverageLite : 0}</div>
               <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">No Coverage</div>
             </td>
           </tr>
@@ -282,7 +282,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
                 </td>
                 <td style="padding: 3px 6px; color: #98a8a8; white-space: nowrap;">
                   {modelDisplayName(qc.model)}
-                  {isLightMode(getModelDef(qc.model)?.prompt_mode ?? null) && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
+                  {isLiteMode(getModelDef(qc.model)?.prompt_mode ?? null) && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
                   {!isEnabled && <span style="color: #1a5568; margin-left: 4px; font-size: 8px;">off</span>}
                 </td>
                 <td style="padding: 3px 6px; color: #5b7279; font-size: 9px;">{qc.consumer}</td>
@@ -344,16 +344,16 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
               const h = velMax > 0 ? (v / velMax) * 56 : 0;
               return h > 0 ? <rect x={i * 8} y={60 - h} width={7} height={h} fill="#16a34a" opacity="0.8" /> : null;
             })}
-            {/* Light evals (stacked on top) */}
-            {velLight.map((v, i) => {
+            {/* Lite evals (stacked on top) */}
+            {velLite.map((v, i) => {
               const hFull = velMax > 0 ? (velFull[i] / velMax) * 56 : 0;
-              const hLight = velMax > 0 ? (v / velMax) * 56 : 0;
-              return hLight > 0 ? <rect x={i * 8} y={60 - hFull - hLight} width={7} height={hLight} fill="#d56500" opacity="0.8" /> : null;
+              const hLite = velMax > 0 ? (v / velMax) * 56 : 0;
+              return hLite > 0 ? <rect x={i * 8} y={60 - hFull - hLite} width={7} height={hLite} fill="#d56500" opacity="0.8" /> : null;
             })}
           </svg>
           <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs); color: #5b7279;">
             <span><span style="color: #16a34a;">■</span> full</span>
-            <span><span style="color: #d56500;">■</span> light</span>
+            <span><span style="color: #d56500;">■</span> lite</span>
             {velDays.length > 0 && <span style="margin-left: auto;">{velDays[0].slice(5)} – {velDays[velDays.length - 1].slice(5)}</span>}
           </div>
         </td>

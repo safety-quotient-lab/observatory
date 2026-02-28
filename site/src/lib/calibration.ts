@@ -60,9 +60,9 @@ export const DRIFT_THRESHOLDS = {
 };
 
 /**
- * The 15-URL calibration set for the light prompt (editorial-only, hcb_editorial).
- * Compatible with light-1.3 and light-1.4 — ranges are in normalized [-1,+1] scale.
- * Calibrated 15/15 via server pipeline (POST /calibrate?mode=light + evaluate-standalone.mjs), 2026-02-27.
+ * The 15-URL calibration set for the lite prompt (editorial-only, hcb_editorial).
+ * Compatible with lite-1.3 and lite-1.4 — ranges are in normalized [-1,+1] scale.
+ * Calibrated 15/15 via server pipeline (POST /calibrate?mode=lite + evaluate-standalone.mjs), 2026-02-27.
  *
  * URL selection notes:
  *   EX-1 → shopify.com (Temu triggers parametric labor/Uyghur knowledge)
@@ -74,7 +74,7 @@ export const DRIFT_THRESHOLDS = {
  * Note: EX-slot names are positional only. EX-1/EX-3 are EN-class (neutral commercial),
  * EX-4 is EP-class (Jacobin scores strongly positive for editorial HR advocacy).
  */
-export const LIGHT_CALIBRATION_SET: CalibrationUrl[] = [
+export const LITE_CALIBRATION_SET: CalibrationUrl[] = [
   { slot: 'EP-1', url: 'https://www.amnesty.org/en/what-we-do/', expectedClass: 'EP', expectedMeanMin: 0.75, expectedMeanMax: 1.00, label: 'Amnesty International' },
   { slot: 'EP-2', url: 'https://www.eff.org/deeplinks', expectedClass: 'EP', expectedMeanMin: 0.60, expectedMeanMax: 0.95, label: 'EFF Deeplinks' },
   { slot: 'EP-3', url: 'https://www.hrw.org', expectedClass: 'EP', expectedMeanMin: 0.70, expectedMeanMax: 0.95, label: 'Human Rights Watch' },
@@ -93,10 +93,10 @@ export const LIGHT_CALIBRATION_SET: CalibrationUrl[] = [
 ];
 
 /**
- * Drift thresholds for the light prompt model (editorial-only, light-1.4+).
+ * Drift thresholds for the lite prompt model (editorial-only, lite-1.4+).
  * Wider than full-model thresholds — editorial-only scoring has more run-to-run variance.
  */
-export const LIGHT_DRIFT_THRESHOLDS = {
+export const LITE_DRIFT_THRESHOLDS = {
   perUrl: { warning: 0.15, halt: 0.25 },
   classMean: {
     EP_min: 0.40,
@@ -139,7 +139,7 @@ export interface CalibrationSummary {
  * Compare actual scores against a calibration set.
  * `scores` is a map from URL → actual weighted mean (null if not evaluated).
  * Defaults to the full-model CALIBRATION_SET and DRIFT_THRESHOLDS;
- * pass LIGHT_CALIBRATION_SET + LIGHT_DRIFT_THRESHOLDS for light prompt evaluation.
+ * pass LITE_CALIBRATION_SET + LITE_DRIFT_THRESHOLDS for lite prompt evaluation.
  */
 export function runCalibrationCheck(
   scores: Map<string, number | null>,

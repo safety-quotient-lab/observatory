@@ -626,13 +626,13 @@ export async function getLatestCalibrationRun(
   }
 }
 
-export async function getLatestLightCalibrationRun(
+export async function getLatestLiteCalibrationRun(
   db: D1Database,
 ): Promise<CalibrationRun | null> {
   try {
     return await db
       .prepare(
-        `SELECT * FROM calibration_runs WHERE model IN ('light-1.3', 'light-1.4') ORDER BY created_at DESC LIMIT 1`,
+        `SELECT * FROM calibration_runs WHERE model IN ('light-1.3', 'light-1.4', 'lite-1.4') ORDER BY created_at DESC LIMIT 1`,
       )
       .first<CalibrationRun>();
   } catch {

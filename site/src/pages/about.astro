@@ -210,7 +210,7 @@ const jsonLd = {
 
           <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
             When multiple models evaluate the same story, the system uses a <b style="color: #98a8a8;">majority vote</b> to determine the consensus content type rather than trusting any single model's classification.
-            Each full-mode rater contributes one vote; light-mode raters do not vote (they don't classify content type). The plurality type becomes the consensus content type used for weight assignment.
+            Each full-mode rater contributes one vote; lite-mode raters do not vote (they don't classify content type). The plurality type becomes the consensus content type used for weight assignment.
           </p>
 
           <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
@@ -376,7 +376,7 @@ const jsonLd = {
 
           <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
             When multiple models evaluate the same story, a consensus score is computed as a weighted mean
-            across rater evaluations (full evaluations = 1.0 weight, light = 0.5 weight).
+            across rater evaluations (full evaluations = 1.0 weight, lite = 0.5 weight).
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
@@ -403,7 +403,7 @@ const jsonLd = {
           <h2 id="eval-modes" style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 20px 0 8px 0;">Evaluation Modes</h2>
 
           <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
-            Two evaluation modes serve different cost/quality trade-offs. Stories with only a light evaluation
+            Two evaluation modes serve different cost/quality trade-offs. Stories with only a lite evaluation
             show <span style="color: #d56500; font-family: var(--font-mono);">~lite</span> in the feed.
           </p>
 
@@ -418,7 +418,7 @@ const jsonLd = {
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">SETL</td><td style="color: #5b7279; padding: 4px 8px;">Yes</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">No (single channel)</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Confidence</td><td style="color: #5b7279; padding: 4px 8px;">Evidence-weighted</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">N/A</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Output tokens</td><td style="color: #5b7279; padding: 4px 8px;">~4-5K</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">~200-400</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Schema</td><td style="color: #5b7279; padding: 4px 8px;">3.7</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">light-1.4</td></tr>
+            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Schema</td><td style="color: #5b7279; padding: 4px 8px;">3.7</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">lite-1.4</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Models</td><td style="color: #5b7279; padding: 4px 8px;">Claude Haiku 4.5, DeepSeek V3, Llama 3.3 70B</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td></tr>
             <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Feed label</td><td style="color: #5b7279; padding: 4px 8px;">HRCB</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">~lite</td></tr>
           </table>
@@ -570,7 +570,7 @@ const jsonLd = {
 
           <p style="color: #5b7279; font-size: var(--font-sm); margin: 10px 0;">
             Each element shifts per-article scores by up to <b style="color: #98a8a8;">&plusmn;0.30</b>.
-            DCP profiles cached 7 days in KV, persisted to D1. Only used in <b style="color: #98a8a8;">full</b> evaluations (not light).
+            DCP profiles cached 7 days in KV, persisted to D1. Only used in <b style="color: #98a8a8;">full</b> evaluations (not lite).
           </p>
         </details>
 
@@ -656,7 +656,7 @@ const jsonLd = {
             </tr>
             <tr>
               <td style="color: #5b7279;" class="score-font">Queue</td><td style="color: #98a8a8;" class="score-font">CF Queues (fan-out)</td>
-              <td style="color: #5b7279;" class="score-font">Light schema</td><td style="color: #d56500;" class="score-font">light-1.4 (editorial only, integer 0-100)</td>
+              <td style="color: #5b7279;" class="score-font">Lite schema</td><td style="color: #d56500;" class="score-font">lite-1.4 (editorial only, integer 0-100)</td>
             </tr>
           </table>
         </details>

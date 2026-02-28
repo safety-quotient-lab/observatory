@@ -46,8 +46,8 @@ export const GET: APIRoute = async ({ locals }) => {
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const entries = stories.map(s => {
-    const isLightOnly = s.hcb_weighted_mean === null && s.hcb_editorial_mean !== null;
-    const score = isLightOnly ? '~lite' : formatScore(s.hcb_weighted_mean);
+    const isLiteOnly = s.hcb_weighted_mean === null && s.hcb_editorial_mean !== null;
+    const score = isLiteOnly ? '~lite' : formatScore(s.hcb_weighted_mean);
     const numericScore = s.hcb_weighted_mean ?? s.hcb_editorial_mean;
     const link = `${baseUrl}/item/${s.hn_id}`;
     const pubDate = s.evaluated_at ? new Date(s.evaluated_at).toISOString() : updated;
@@ -61,7 +61,7 @@ export const GET: APIRoute = async ({ locals }) => {
     parts.push(`HRCB: ${formatScore(numericScore)} (${s.hcb_classification || 'Unknown'})`);
     if (s.hcb_sentiment_tag) parts.push(`Sentiment: ${s.hcb_sentiment_tag}`);
     if (s.hcb_theme_tag) parts.push(`Theme: ${s.hcb_theme_tag}`);
-    if (!isLightOnly && s.hcb_signal_sections != null) {
+    if (!isLiteOnly && s.hcb_signal_sections != null) {
       parts.push(`${s.hcb_signal_sections}/31 provisions`);
     }
     parts.push(s.domain || 'self-post');

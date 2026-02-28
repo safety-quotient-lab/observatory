@@ -47,7 +47,7 @@ export interface QueueMessage {
   domain: string | null;
   eval_model?: string;
   eval_provider?: string;
-  prompt_mode?: 'full' | 'light';
+  prompt_mode?: 'full' | 'lite';
   batch_id?: string | null;
 }
 
@@ -419,18 +419,18 @@ export async function crawlUserProfiles(db: D1Database): Promise<number> {
  *
  * - 'multi' : high-signal (score≥200 or comments≥100) — primary model only,
  *             free models catch up via dispatchFreeModelEvals within 1 cron cycle
- * - 'full'  : medium-signal (score≥50) — primary model only, no light preview
- * - 'light' : low-signal — dual-dispatch (primary + Workers AI light eval for
+ * - 'full'  : medium-signal (score≥50) — primary model only, no lite preview
+ * - 'lite'  : low-signal — dual-dispatch (primary + Workers AI lite eval for
  *             fast feed presence via the ~lite label)
  */
 export function determineEvalDepth(
   story: { hn_score: number | null; hn_comments: number | null }
-): 'light' | 'full' | 'multi' {
+): 'lite' | 'full' | 'multi' {
   const score = story.hn_score ?? 0;
   const comments = story.hn_comments ?? 0;
   if (score >= 200 || comments >= 100) return 'multi';
   if (score >= 50) return 'full';
-  return 'light';
+  return 'lite';
 }
 
 // ─── Priority scoring ───
@@ -507,7 +507,7 @@ export async function enqueueForEvaluation(
   db: D1Database,
   queue: Queue,
   kv: KVNamespace,
-  lightQueue?: Queue,
+  liteQueue?: Queue,
   env?: Record<string, any>,
 ): Promise<void> {
   const limit = 100;
@@ -747,15 +747,15 @@ export async function enqueueForEvaluation(
     }
   }
 
-  // Light-dispatch: insert eval_queue rows for Workers AI light models.
+  // Lite-dispatch: insert eval_queue rows for Workers AI lite models.
   // Fills hcb_editorial_mean + supplementary signals for ~lite feed display
   // while stories await full eval. Does not promote stories to 'done'.
-  if (lightQueue) {
+  if (liteQueue) {
     const waiModels = getEnabledFreeModels().filter(m => m.provider === 'workers-ai');
     for (const model of waiModels) {
       const waiStmts = enqueuedIds.map(hnId =>
         db.prepare(
-          `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id) VALUES (?, 'workers-ai', ?, 'light', 0, ?)`
+          `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id) VALUES (?, 'workers-ai', ?, 'lite', 0, ?)`
         ).bind(hnId, model.id, batchId)
       );
       if (waiStmts.length > 0) await safeBatch(db, waiStmts);
@@ -763,7 +763,7 @@ export async function enqueueForEvaluation(
 
     if (waiModels.length > 0) {
       // Wake up Workers AI consumer
-      await (lightQueue as any).send({ trigger: 'new_work', provider: 'workers-ai' }).catch(() => {});
+      await (liteQueue as any).send({ trigger: 'new_work', provider: 'workers-ai' }).catch(() => {});
     }
   }
 
@@ -1092,7 +1092,7 @@ export async function runCrawlCycle(
   queue: Queue,
   kv: KVNamespace,
   minute: number,
-  lightQueue?: Queue,
+  liteQueue?: Queue,
   env?: Record<string, any>,
 ): Promise<CrawlResult> {
   const startTime = Date.now();
@@ -1415,7 +1415,7 @@ export async function runCrawlCycle(
     )
     .run();
 
-  await enqueueForEvaluation(db, queue, kv, lightQueue, env);
+  await enqueueForEvaluation(db, queue, kv, liteQueue, env);
   result.enqueued = true;
 
   // Skip self-posts with no text AND no URL

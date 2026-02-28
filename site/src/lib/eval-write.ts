@@ -5,8 +5,8 @@
  */
 
 import { computeSetl } from './compute-aggregates';
-import { ALL_SECTIONS, type EvalResult, type LightEvalResponse } from './eval-types';
-import { computeLightAggregates } from './eval-parse';
+import { ALL_SECTIONS, type EvalResult, type LiteEvalResponse } from './eval-types';
+import { computeLiteAggregates } from './eval-parse';
 import { PRIMARY_MODEL_ID } from './models';
 import { logEvent } from './events';
 
@@ -271,7 +271,7 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
     for (const r of results) {
       const score = r.hcb_weighted_mean ?? r.hcb_editorial_mean;
       if (score === null) continue;
-      const baseWeight = r.prompt_mode === 'light' ? 0.5 : 1.0;
+      const baseWeight = (r.prompt_mode === 'lite' || r.prompt_mode === 'light') ? 0.5 : 1.0;
       const truncPct = r.content_truncation_pct ?? 0;
       const weight = baseWeight * (1 - truncPct * 0.5);
       weightedSum += score * weight;
@@ -803,11 +803,11 @@ export async function writeCalibrationEval(
   db: D1Database,
   calibrationRun: number,
   hnId: number,
-  light: LightEvalResponse,
+  lite: LiteEvalResponse,
   modelId: string,
   provider: string,
 ): Promise<void> {
-  const agg = computeLightAggregates(light);
+  const agg = computeLiteAggregates(lite);
   try {
     await db
       .prepare(
@@ -815,20 +815,20 @@ export async function writeCalibrationEval(
            calibration_run, hn_id, eval_model, eval_provider, prompt_mode, schema_version,
            hcb_editorial_mean, hcb_weighted_mean, hcb_classification,
            eq_score, so_score, td_score, et_valence, et_arousal, et_primary_tone
-         ) VALUES (?, ?, ?, ?, 'light', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, 'lite', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         calibrationRun, hnId, modelId, provider,
-        light.schema_version || 'light-1.3',
-        light.evaluation.editorial,
+        lite.schema_version || 'lite-1.3',
+        lite.evaluation.editorial,
         agg.weighted_mean,
         agg.classification,
-        light.eq_score ?? null,
-        light.so_score ?? null,
-        light.td_score ?? null,
-        light.valence ?? null,
-        light.arousal ?? null,
-        light.primary_tone ?? null,
+        lite.eq_score ?? null,
+        lite.so_score ?? null,
+        lite.td_score ?? null,
+        lite.valence ?? null,
+        lite.arousal ?? null,
+        lite.primary_tone ?? null,
       )
       .run();
   } catch (err) {
@@ -836,12 +836,12 @@ export async function writeCalibrationEval(
   }
 }
 
-// --- Light eval write helpers ---
+// --- Lite eval write helpers ---
 
-export async function writeLightRaterEvalResult(
+export async function writeLiteRaterEvalResult(
   db: D1Database,
   hnId: number,
-  light: LightEvalResponse,
+  lite: LiteEvalResponse,
   modelId: string,
   provider: string,
   promptHash: string | null,
@@ -854,13 +854,13 @@ export async function writeLightRaterEvalResult(
   // FK guard: bail if story doesn't exist (stale queue message)
   const exists = await db.prepare('SELECT 1 FROM stories WHERE hn_id = ?').bind(hnId).first();
   if (!exists) {
-    throw new Error(`Story hn_id=${hnId} not found — skipping light eval write (stale message)`);
+    throw new Error(`Story hn_id=${hnId} not found — skipping lite eval write (stale message)`);
   }
 
-  const agg = computeLightAggregates(light);
+  const agg = computeLiteAggregates(lite);
 
   // Evidence counts from single evidence_strength value
-  const evStr = light.evaluation.evidence_strength?.toUpperCase() || 'M';
+  const evStr = lite.evaluation.evidence_strength?.toUpperCase() || 'M';
   const hcbEvidenceH = evStr === 'H' ? 1 : 0;
   const hcbEvidenceM = evStr === 'M' ? 1 : 0;
   const hcbEvidenceL = evStr === 'L' ? 1 : 0;
@@ -883,7 +883,7 @@ export async function writeLightRaterEvalResult(
         input_tokens, output_tokens, content_truncation_pct,
         eval_batch_id, reasoning, evaluated_at
       ) VALUES (
-        ?, ?, ?, 'done', 'light',
+        ?, ?, ?, 'done', 'lite',
         ?, ?, ?,
         ?, ?,
         ?, ?, ?,
@@ -900,7 +900,7 @@ export async function writeLightRaterEvalResult(
       ON CONFLICT(hn_id, eval_model) DO UPDATE SET
         eval_status = 'done',
         eval_error = NULL,
-        prompt_mode = 'light',
+        prompt_mode = 'lite',
         hcb_weighted_mean = excluded.hcb_weighted_mean,
         hcb_classification = excluded.hcb_classification,
         hcb_json = excluded.hcb_json,
@@ -942,38 +942,38 @@ export async function writeLightRaterEvalResult(
       hnId, modelId, provider,
       agg.weighted_mean,
       agg.classification,
-      JSON.stringify(light),
+      JSON.stringify(lite),
       0, // hcb_signal_sections (no per-section data)
       0, // hcb_nd_count
       hcbEvidenceH, hcbEvidenceM, hcbEvidenceL,
       promptHash, methodologyHash,
-      light.evaluation.content_type || 'MX',
-      light.schema_version || 'light-1.3',
-      light.theme_tag || null,
-      light.sentiment_tag || null,
-      light.short_description || null,
+      lite.evaluation.content_type || 'MX',
+      lite.schema_version || 'lite-1.3',
+      lite.theme_tag || null,
+      lite.sentiment_tag || null,
+      lite.short_description || null,
       null, // fw_ratio
       0,    // fw_observable_count
       0,    // fw_inference_count
-      light.evaluation.editorial ?? null,   // hcb_editorial_mean
-      null,                                // hcb_structural_mean (editorial-only in light mode)
+      lite.evaluation.editorial ?? null,   // hcb_editorial_mean
+      null,                                // hcb_structural_mean (editorial-only in lite mode)
       0,                                   // hcb_setl (no structural channel)
-      light.evaluation.confidence ?? null,  // hcb_confidence
-      light.eq_score ?? null,        // EQ
-      light.so_score ?? null,        // SO
-      light.primary_tone ?? null,    // tone
-      light.valence ?? null,         // VA (light-1.3+)
-      light.arousal ?? null,         // AR (light-1.3+)
-      null,                          // SR (not in light)
-      null,                          // PT (not in light — null, not 0)
-      light.td_score ?? null,        // TD
+      lite.evaluation.confidence ?? null,  // hcb_confidence
+      lite.eq_score ?? null,        // EQ
+      lite.so_score ?? null,        // SO
+      lite.primary_tone ?? null,    // tone
+      lite.valence ?? null,         // VA (lite-1.3+)
+      lite.arousal ?? null,         // AR (lite-1.3+)
+      null,                          // SR (not in lite)
+      null,                          // PT (not in lite — null, not 0)
+      lite.td_score ?? null,        // TD
       inputTokens, outputTokens, contentTruncationPct,
       batchId,
-      light.reasoning ?? null,       // reasoning (light-1.4+): pre-commit classification string
+      lite.reasoning ?? null,       // reasoning (lite-1.4+): pre-commit classification string
     )
     .run();
 
-  // COALESCE fill-in: write light signals to stories where full eval hasn't set them yet.
+  // COALESCE fill-in: write lite signals to stories where full eval hasn't set them yet.
   // Also promotes eval_status to 'done' if story isn't already done (first eval wins;
   // full evals overwrite via writeEvalResult which has no guard).
   await db.prepare(
@@ -994,26 +994,26 @@ export async function writeLightRaterEvalResult(
        evaluated_at = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN datetime('now') ELSE evaluated_at END
      WHERE hn_id = ?`
   ).bind(
-    light.eq_score ?? null,   // EQ
-    light.so_score ?? null,   // SO
-    light.td_score ?? null,   // TD
-    light.primary_tone ?? null, // tone
-    light.valence ?? null,    // VA
-    light.arousal ?? null,    // AR
-    light.evaluation.editorial ?? null,  // hcb_editorial_mean
-    light.theme_tag || null,  // hcb_theme_tag
-    light.sentiment_tag || null, // hcb_sentiment_tag
-    light.short_description || null, // hcb_executive_summary
+    lite.eq_score ?? null,   // EQ
+    lite.so_score ?? null,   // SO
+    lite.td_score ?? null,   // TD
+    lite.primary_tone ?? null, // tone
+    lite.valence ?? null,    // VA
+    lite.arousal ?? null,    // AR
+    lite.evaluation.editorial ?? null,  // hcb_editorial_mean
+    lite.theme_tag || null,  // hcb_theme_tag
+    lite.sentiment_tag || null, // hcb_sentiment_tag
+    lite.short_description || null, // hcb_executive_summary
     modelId,                  // eval_model (only set if not already done)
     hnId,
   ).run().catch(() => {});
 
   // Refresh domain aggregate now that stories has updated signals
-  if (light.evaluation.domain) {
-    await refreshDomainAggregate(db, light.evaluation.domain);
+  if (lite.evaluation.domain) {
+    await refreshDomainAggregate(db, lite.evaluation.domain);
   }
 
-  // No rater_scores or rater_witness writes for light evals
+  // No rater_scores or rater_witness writes for lite evals
 
   // Update ensemble consensus score (best-effort, non-blocking)
   await updateConsensusScore(db, hnId);
@@ -1028,7 +1028,7 @@ export async function writeLightRaterEvalResult(
       hnId, modelId,
       agg.weighted_mean,
       agg.classification,
-      JSON.stringify(light),
+      JSON.stringify(lite),
       inputTokens, outputTokens,
     )
     .run();
