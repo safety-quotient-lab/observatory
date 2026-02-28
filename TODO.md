@@ -56,6 +56,13 @@ rounds. 30/43 items already fixed; remaining items below.
   - >50% failures → decrement; avg claude_ms > 180s → decrement (model under load)
   - Empty queue → reset to initial. ~20 lines in daemon loop.
 
+### Round 3.5 — Triage UX Audit
+
+- [ ] **UX audit findings** — 31 items across navigation, accessibility, visual design, mobile
+  - Full plan: `.claude/plans/ux-audit-2026-02-28.md`
+  - 5 critical, 9 high, 11 medium, 6 low
+  - Key items: sub-page sibling nav, lite-only eval display, touch targets, jargon scaffolding
+
 ### Round 4 — Analytics (runs on existing data, no migrations needed)
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*

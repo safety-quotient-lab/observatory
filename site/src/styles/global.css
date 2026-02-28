@@ -196,6 +196,10 @@
     border-radius: 2px;
     font-family: var(--font-mono);
     vertical-align: baseline;
+    cursor: pointer;
+  }
+  .lite-icon:hover {
+    background: rgba(213, 101, 0, 0.2);
   }
 
   /* Active channel highlight — body[data-score-mode] controls which row is prominent */

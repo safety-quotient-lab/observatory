@@ -71,7 +71,7 @@ function timeAgo(unixTime: number): string {
             <span class="score-font score-value" style={`color: ${isLiteOnly ? '#5b7279' : displayColor};`}>
               {isLiteOnly ? '--' : formatScore(displayScore)}
             </span>
-            {isLiteOnly && <span class="lite-icon" title="Lite eval (editorial only)">L</span>}
+            {isLiteOnly && <span class="lite-icon" title="Lite eval (editorial only) — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}
           </div>
           <div class="score-row" data-channel="editorial">
             <span class="score-font score-label">E</span>
@@ -170,7 +170,7 @@ function timeAgo(unixTime: number): string {
              class="badge"
              style={`background: ${isLiteMode(m.prompt_mode) ? 'rgba(213,101,0,0.15)' : 'rgba(52,211,153,0.15)'}; color: ${isLiteMode(m.prompt_mode) ? '#d56500' : '#34d399'}; font-size: var(--font-xs); margin-left: 3px; text-decoration: none;`}
              title={`Also evaluated by ${m.eval_model}${isLiteMode(m.prompt_mode) ? ' (lite — editorial only)' : ''}`}>
-            {modelShortName(m.eval_model)}{isLiteMode(m.prompt_mode) && <span class="lite-icon" style="margin-left: 2px; vertical-align: middle;">L</span>}
+            {modelShortName(m.eval_model)}{isLiteMode(m.prompt_mode) && <span class="lite-icon" style="margin-left: 2px; vertical-align: middle;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}
           </a>
         ))}
         {(story.consensus_model_count ?? 0) >= 2 && story.consensus_score != null && (

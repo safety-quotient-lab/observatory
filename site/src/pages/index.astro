@@ -160,8 +160,8 @@ function isLiteModel(id: string): boolean {
                 <>
                   <span style="color: #1a5568;"> | </span>
                   {safeModel === m
-                    ? <span style="color: #d56500; font-weight: bold;">{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;">L</span>}</span>
-                    : <a href={buildUrl({ model: m, p: '1' })}>{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;">L</span>}</a>
+                    ? <span style="color: #d56500; font-weight: bold;">{modelLabel(m)}{isLiteModel(m) && <a href="/about#eval-modes" class="lite-icon" style="margin-left: 3px; text-decoration: none; color: var(--color-orange);" title="Lite eval — click for details">L</a>}</span>
+                    : <a href={buildUrl({ model: m, p: '1' })}>{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}</a>
                   }
                 </>
               ))}
