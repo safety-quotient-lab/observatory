@@ -32,7 +32,7 @@ import { refreshDomainAggregate } from '../src/lib/eval-write';
 import { getModelQueue, PRIMARY_MODEL_ID } from '../src/lib/shared-eval';
 import {
   sweepFailed, sweepSkipped, sweepCoverage, sweepContentDrift,
-  sweepAlgoliaBackfill, sweepRefreshDomainAggregates, sweepBackfillPtScore,
+  sweepAlgoliaBackfill, sweepRefreshDomainAggregates, sweepBackfillPtScore, sweepSetlSpikes,
   type SweepContext,
 } from './sweeps';
 
@@ -610,6 +610,7 @@ export default {
         algolia_backfill: sweepAlgoliaBackfill,
         refresh_domain_aggregates: sweepRefreshDomainAggregates,
         backfill_pt_score: sweepBackfillPtScore,
+        setl_spikes: sweepSetlSpikes,
       };
 
       const handler = SWEEP_HANDLERS[sweep];

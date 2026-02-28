@@ -22,6 +22,10 @@ import {
   getModelDriftStats,
   getGlobalGateStats,
   getModelChannelAverages,
+  getCoverageProgression,
+  getContentTypeEvalMix,
+  getTruncationImpact,
+  getCostStats,
   MODEL_COMPARISON_KV_KEY,
 } from '../../lib/db';
 import type { ModelComparisonBlob, ComparedStory } from '../../lib/db';
@@ -47,6 +51,10 @@ let ctMisclass: { structural_heavy_total: number; structural_heavy_missing: numb
 let driftStats: { models: any[]; overlapping: number; meanDelta: number | null } = { models: [], overlapping: 0, meanDelta: null };
 let globalGate: { total: number; gated: number; gate_pct: number; breakdown: { gate_category: string; cnt: number }[] } = { total: 0, gated: 0, gate_pct: 0, breakdown: [] };
 let channelAverages: Awaited<ReturnType<typeof getModelChannelAverages>> = [];
+let coverageProgression: Awaited<ReturnType<typeof getCoverageProgression>> = [];
+let ctEvalMix: Awaited<ReturnType<typeof getContentTypeEvalMix>> = [];
+let truncationImpact: Awaited<ReturnType<typeof getTruncationImpact>> = [];
+let costStats: Awaited<ReturnType<typeof getCostStats>> = [];
 
 // Timed query helper — wraps cachedQuery + records per-query timing
 const _timings: { name: string; ms: number }[] = [];
@@ -79,6 +87,10 @@ try {
   ctValidation    = await tq('ctValid',      'sys:ctValidation',  () => getContentTypeValidation(db), 300, [] as typeof ctValidation);
   ctDisagreement  = await tq('ctDisagree',   'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300, [] as typeof ctDisagreement);
   ctMisclass      = await tq('ctMisclass',   'sys:ctMisclass',    () => getMisclassificationSummary(db), 300, { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 });
+  coverageProgression = await tq('covProg',  'sys:covProg',       () => getCoverageProgression(db), 600, [] as typeof coverageProgression);
+  ctEvalMix       = await tq('ctEvalMix',    'sys:ctEvalMix',     () => getContentTypeEvalMix(db), 600, [] as typeof ctEvalMix);
+  truncationImpact = await tq('truncImpact', 'sys:truncImpact',   () => getTruncationImpact(db), 300, [] as typeof truncationImpact);
+  costStats       = await tq('costStats',    'sys:costStats',     () => getCostStats(db), 300, [] as typeof costStats);
 } catch (err: unknown) {
   _pageError = `Query phase: ${err instanceof Error ? err.message : String(err)}`;
 }
@@ -141,6 +153,20 @@ const MIN_STORIES = 10;
 
 const _computeMs = Date.now() - _t1;
 const _totalMs = Date.now() - _t0;
+
+// Model pricing table ($/MTok). Workers AI = free; OpenRouter free tier = free.
+const MODEL_PRICING: Record<string, { inPerMTok: number; outPerMTok: number }> = {
+  'claude-haiku-4-5-20251001':       { inPerMTok: 0.80,  outPerMTok: 4.00  },
+  'claude-haiku-4-5':                { inPerMTok: 0.80,  outPerMTok: 4.00  },
+  'claude-sonnet-4-5-20251022':      { inPerMTok: 3.00,  outPerMTok: 15.00 },
+  'claude-sonnet-4-6':               { inPerMTok: 3.00,  outPerMTok: 15.00 },
+  'claude-opus-4-6':                 { inPerMTok: 15.00, outPerMTok: 75.00 },
+};
+function modelCost(model: string, tokIn: number, tokOut: number): number {
+  const p = MODEL_PRICING[model];
+  if (!p) return 0;
+  return (tokIn / 1_000_000) * p.inPerMTok + (tokOut / 1_000_000) * p.outPerMTok;
+}
 ---
 
 <Base title="Models">
@@ -382,6 +408,76 @@ const _totalMs = Date.now() - _t0;
     </table>
   )}
 
+  {/* ═══ Coverage Progression — details open ═══ */}
+  {coverageProgression.length > 0 && (() => {
+    const days = coverageProgression.map(r => r.day.slice(5)); // MM-DD
+    const maxVal = Math.max(1, ...coverageProgression.map(r => r.full + r.lite));
+    const W = 600, H = 80, padL = 28, padR = 8, padT = 8, padB = 20;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+    const n = coverageProgression.length;
+    const barW = Math.max(2, Math.floor(innerW / n) - 1);
+    return (
+      <details open class="collapsible-section">
+        <summary>
+          Coverage Progression
+          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            new stories entering each tier per day (30d)
+          </span>
+        </summary>
+        <div style="overflow-x: auto;">
+        <svg width={W} viewBox={`0 0 ${W} ${H}`} style="display: block;">
+          <rect x="0" y="0" width={W} height={H} fill="#002d38" rx="4" />
+          {/* Y-axis labels */}
+          {[0, Math.round(maxVal / 2), maxVal].map((v, i) => {
+            const y = padT + innerH - (v / maxVal) * innerH;
+            return (
+              <g>
+                <text x={padL - 3} y={y + 3} fill="#5b7279" font-size="7" font-family="monospace" text-anchor="end">{v}</text>
+                <line x1={padL} y1={y} x2={padL + innerW} y2={y} stroke="#1a5568" stroke-width="0.5" />
+              </g>
+            );
+          })}
+          {/* Stacked bars */}
+          {coverageProgression.map((row, i) => {
+            const x = padL + Math.round((i / n) * innerW);
+            const hFull = Math.round((row.full / maxVal) * innerH);
+            const hLite = Math.round((row.lite / maxVal) * innerH);
+            return (
+              <g>
+                {row.lite > 0 && (
+                  <rect x={x} y={padT + innerH - hFull - hLite} width={barW} height={hLite} fill="#d56500" opacity="0.7">
+                    <title>{row.day}: {row.lite} lite</title>
+                  </rect>
+                )}
+                {row.full > 0 && (
+                  <rect x={x} y={padT + innerH - hFull} width={barW} height={hFull} fill="#259d94" opacity="0.85">
+                    <title>{row.day}: {row.full} full</title>
+                  </rect>
+                )}
+                {i % Math.max(1, Math.floor(n / 8)) === 0 && (
+                  <text x={x + barW / 2} y={H - 4} fill="#5b7279" font-size="7" font-family="monospace" text-anchor="middle">{days[i]}</text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+        </div>
+        <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs);">
+          <span style="display: inline-flex; align-items: center; gap: 3px;">
+            <span style="display: inline-block; width: 10px; height: 8px; background: #259d94; border-radius: 1px;"></span>
+            <span style="color: #5b7279;">Full eval</span>
+          </span>
+          <span style="display: inline-flex; align-items: center; gap: 3px;">
+            <span style="display: inline-block; width: 10px; height: 8px; background: #d56500; border-radius: 1px;"></span>
+            <span style="color: #5b7279;">Lite eval</span>
+          </span>
+          <span style="color: #1a5568; margin-left: 4px;">stories receiving their first evaluation of any kind</span>
+        </div>
+      </details>
+    );
+  })()}
+
   {/* ═══ Evaluator Trust Index — always visible ═══ */}
   {trustHistory.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
@@ -530,6 +626,76 @@ const _totalMs = Date.now() - _t0;
     </div>
   </details>
 
+  {/* ═══ Cost Attribution — details open ═══ */}
+  {costStats.length > 0 && (() => {
+    const totalCost7d  = costStats.reduce((s, r) => s + modelCost(r.eval_model, r.tokens_in_7d,  r.tokens_out_7d),  0);
+    const totalCost30d = costStats.reduce((s, r) => s + modelCost(r.eval_model, r.tokens_in_30d, r.tokens_out_30d), 0);
+    const totalEvals7d  = costStats.reduce((s, r) => s + r.evals_7d,  0);
+    const totalEvals30d = costStats.reduce((s, r) => s + r.evals_30d, 0);
+    return (
+      <details open class="collapsible-section">
+        <summary>
+          Cost Attribution
+          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            estimated API spend per model (approx.)
+          </span>
+        </summary>
+        <div class="table-wrap">
+        <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+          <tr style="color: #5b7279; font-size: 9px; border-bottom: 1px solid #1a5568;">
+            <td style="padding: 3px 6px;">Model</td>
+            <td style="padding: 3px 6px; text-align: right;">Evals 7d</td>
+            <td style="padding: 3px 6px; text-align: right;">Evals 30d</td>
+            <td style="padding: 3px 6px; text-align: right;">Tok In 7d</td>
+            <td style="padding: 3px 6px; text-align: right;">Tok Out 7d</td>
+            <td style="padding: 3px 6px; text-align: right;">Est Cost 7d</td>
+            <td style="padding: 3px 6px; text-align: right;">Est Cost 30d</td>
+          </tr>
+          {costStats.map(r => {
+            const cost7d  = modelCost(r.eval_model, r.tokens_in_7d,  r.tokens_out_7d);
+            const cost30d = modelCost(r.eval_model, r.tokens_in_30d, r.tokens_out_30d);
+            const isFree  = !MODEL_PRICING[r.eval_model];
+            const costColor = cost7d > 5 ? '#eab308' : cost7d > 1 ? '#98a8a8' : '#5b7279';
+            return (
+              <tr style="border-bottom: 1px solid #093946;">
+                <td style="padding: 3px 6px; color: #98a8a8;">
+                  {r.eval_model.replace('claude-', '').replace('-20251001', '').replace('-20251022', '')}
+                  <span style="color: #1a5568; font-size: 9px; margin-left: 4px;">{r.eval_provider}</span>
+                </td>
+                <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{r.evals_7d}</td>
+                <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{r.evals_30d}</td>
+                <td style="padding: 3px 6px; text-align: right; color: #5b7279; font-family: monospace;">{(r.tokens_in_7d / 1000).toFixed(0)}k</td>
+                <td style="padding: 3px 6px; text-align: right; color: #5b7279; font-family: monospace;">{(r.tokens_out_7d / 1000).toFixed(0)}k</td>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? '#1a5568' : costColor};`}>
+                  {isFree ? 'free' : cost7d === 0 ? '—' : `$${cost7d.toFixed(3)}`}
+                </td>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? '#1a5568' : costColor};`}>
+                  {isFree ? 'free' : cost30d === 0 ? '—' : `$${cost30d.toFixed(2)}`}
+                </td>
+              </tr>
+            );
+          })}
+          <tr style="border-top: 1px solid #1a5568; font-weight: bold;">
+            <td style="padding: 3px 6px; color: #5b7279;">Total</td>
+            <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{totalEvals7d}</td>
+            <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{totalEvals30d}</td>
+            <td colspan="2"></td>
+            <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${totalCost7d > 5 ? '#eab308' : '#98a8a8'};`}>
+              ${totalCost7d.toFixed(3)}
+            </td>
+            <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${totalCost30d > 20 ? '#eab308' : '#98a8a8'};`}>
+              ${totalCost30d.toFixed(2)}
+            </td>
+          </tr>
+        </table>
+        </div>
+        <div style="margin-top: 4px; color: #1a5568; font-size: 9px;">
+          Pricing approximate (Anthropic list rates). Workers AI and free-tier OpenRouter models not billed. Zero token rows = pre-2026-02-28 evals with no token data.
+        </div>
+      </details>
+    );
+  })()}
+
   {/* ═══ Signal Completeness (absorbed from /system) — details open ═══ */}
   {signalCompleteness.length > 0 && (
     <details open class="collapsible-section">
@@ -675,6 +841,95 @@ const _totalMs = Date.now() - _t0;
               <span style="color: #5b7279;"> · {row.models}</span>
             </div>
           ))}
+        </div>
+      </details>
+    )}
+
+    {/* Truncation Impact (nested collapse) */}
+    {truncationImpact.length > 0 && (
+      <details style="margin-bottom: 8px;">
+        <summary style="color: #5b7279; font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+          Truncation Impact ({truncationImpact.filter(r => r.truncated_count > 0).length} models truncating)
+        </summary>
+        <div class="table-wrap">
+        <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+          <tr style="color: #5b7279; border-bottom: 1px solid #1a5568; font-size: 9px;">
+            <td style="padding: 3px 6px;">Model</td>
+            <td style="padding: 3px 6px; text-align: right;">Evals</td>
+            <td style="padding: 3px 6px; text-align: right;">Truncated</td>
+            <td style="padding: 3px 6px; text-align: right;">Avg Trunc%</td>
+            <td style="padding: 3px 6px; text-align: right;">Avg Score (trunc)</td>
+            <td style="padding: 3px 6px; text-align: right;">Avg Score (full)</td>
+            <td style="padding: 3px 6px; text-align: right;">Δ</td>
+          </tr>
+          {truncationImpact.map(r => {
+            const delta = r.avg_score_truncated !== null && r.avg_score_full !== null
+              ? r.avg_score_truncated - r.avg_score_full : null;
+            const deltaColor = delta === null ? '#5b7279' : Math.abs(delta) > 0.1 ? '#eab308' : Math.abs(delta) > 0.05 ? '#98a8a8' : '#5b7279';
+            const truncPct = r.n > 0 ? Math.round((r.truncated_count / r.n) * 100) : 0;
+            return (
+              <tr style="border-bottom: 1px solid #093946;">
+                <td style="padding: 3px 6px; color: #98a8a8;">{r.eval_model.replace('claude-', '').replace('-20251001', '').replace('-20251022', '')}</td>
+                <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{r.n}</td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${truncPct > 50 ? '#eab308' : '#5b7279'};`}>
+                  {r.truncated_count} <span style="color: #1a5568;">({truncPct}%)</span>
+                </td>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${r.avg_truncation_pct > 60 ? '#eab308' : '#5b7279'};`}>
+                  {r.avg_truncation_pct != null ? r.avg_truncation_pct.toFixed(0) + '%' : '—'}
+                </td>
+                <td style="padding: 3px 6px; text-align: right; font-family: monospace; color: #5b7279;">
+                  {r.avg_score_truncated !== null ? r.avg_score_truncated.toFixed(3) : '—'}
+                </td>
+                <td style="padding: 3px 6px; text-align: right; font-family: monospace; color: #5b7279;">
+                  {r.avg_score_full !== null ? r.avg_score_full.toFixed(3) : '—'}
+                </td>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${deltaColor};`}>
+                  {delta !== null ? (delta > 0 ? '+' : '') + delta.toFixed(3) : '—'}
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+        </div>
+        <div style="color: #1a5568; font-size: 9px; margin-top: 3px;">
+          Δ = avg score (truncated) − avg score (full content). Non-zero suggests truncation may bias scores.
+        </div>
+      </details>
+    )}
+
+    {/* Content Type Eval Mix (nested collapse) */}
+    {ctEvalMix.length > 0 && (
+      <details style="margin-bottom: 8px;">
+        <summary style="color: #5b7279; font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+          Content Type Coverage Mix
+        </summary>
+        <div style="font-size: var(--font-xs);">
+          {ctEvalMix.map(r => {
+            const donePct      = r.total > 0 ? (r.done          / r.total) * 100 : 0;
+            const gatedPct     = r.total > 0 ? (r.gated         / r.total) * 100 : 0;
+            const failedPct    = r.total > 0 ? (r.failed_skipped / r.total) * 100 : 0;
+            const pendingPct   = r.total > 0 ? (r.pending        / r.total) * 100 : 0;
+            return (
+              <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0; border-bottom: 1px solid #093946;">
+                <span style="width: 52px; color: #5b7279; text-align: right; font-family: monospace; flex-shrink: 0;">{r.content_type}</span>
+                <div style="flex: 1; display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: #002d38; min-width: 80px;">
+                  {donePct   > 0 && <div style={`width: ${donePct}%; background: #259d94; opacity: 0.85;`} title={`Done: ${r.done}`} />}
+                  {gatedPct  > 0 && <div style={`width: ${gatedPct}%; background: #d56500; opacity: 0.7;`} title={`Gated: ${r.gated}`} />}
+                  {failedPct > 0 && <div style={`width: ${failedPct}%; background: #dc2626; opacity: 0.6;`} title={`Failed/skipped: ${r.failed_skipped}`} />}
+                  {pendingPct > 0 && <div style={`width: ${pendingPct}%; background: #1a5568; opacity: 0.8;`} title={`Pending: ${r.pending}`} />}
+                </div>
+                <span style="width: 36px; color: #1a5568; text-align: right; flex-shrink: 0; font-family: monospace;">{r.total}</span>
+              </div>
+            );
+          })}
+          <div style="display: flex; gap: 10px; margin-top: 4px;">
+            {[['#259d94','Done'],['#d56500','Gated'],['#dc2626','Failed'],['#1a5568','Pending']].map(([c,l]) => (
+              <span style="display: inline-flex; align-items: center; gap: 3px;">
+                <span style={`display: inline-block; width: 8px; height: 8px; background: ${c}; border-radius: 1px;`}></span>
+                <span style="color: #5b7279; font-size: 9px;">{l}</span>
+              </span>
+            ))}
+          </div>
         </div>
       </details>
     )}

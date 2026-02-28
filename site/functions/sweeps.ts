@@ -259,6 +259,54 @@ export async function sweepRefreshDomainAggregates({ db, env, ctx, url }: SweepC
   }, 202);
 }
 
+// ─── Sweep: setl_spikes ──────────────────────────────────────────────────────
+
+/**
+ * Detect SETL spikes: domains whose avg_setl crossed 0.3 today and jumped >0.15
+ * since yesterday. Emits a 'setl_spike' event per affected domain.
+ * Requires domain_profile_snapshots rows for today and yesterday.
+ */
+export async function sweepSetlSpikes({ db }: SweepContext): Promise<Response> {
+  const { results } = await db
+    .prepare(
+      `WITH today AS (
+         SELECT domain, avg_setl FROM domain_profile_snapshots WHERE snapshot_date = DATE('now')
+       ),
+       yesterday AS (
+         SELECT domain, avg_setl FROM domain_profile_snapshots WHERE snapshot_date = DATE('now', '-1 day')
+       )
+       SELECT t.domain,
+              t.avg_setl                                   AS setl_today,
+              y.avg_setl                                   AS setl_yesterday,
+              t.avg_setl - COALESCE(y.avg_setl, 0)        AS setl_delta
+       FROM today t
+       LEFT JOIN yesterday y ON t.domain = y.domain
+       WHERE t.avg_setl > 0.3
+         AND (y.avg_setl IS NULL OR t.avg_setl - y.avg_setl > 0.15)
+       ORDER BY setl_delta DESC
+       LIMIT 20`
+    )
+    .all<{ domain: string; setl_today: number; setl_yesterday: number | null; setl_delta: number }>();
+
+  let emitted = 0;
+  for (const row of results) {
+    await logEvent(db, {
+      event_type: 'setl_spike',
+      severity: 'warn',
+      message: `SETL spike: ${row.domain} avg_setl=${row.setl_today.toFixed(3)} (Δ=${row.setl_delta.toFixed(3)})`,
+      details: {
+        domain: row.domain,
+        setl_today: row.setl_today,
+        setl_yesterday: row.setl_yesterday,
+        setl_delta: row.setl_delta,
+      },
+    }).catch(() => {});
+    emitted++;
+  }
+
+  return json({ sweep: 'setl_spikes', detected: results.length, emitted });
+}
+
 // ─── Sweep: backfill_pt_score ────────────────────────────────────────────────
 
 /**

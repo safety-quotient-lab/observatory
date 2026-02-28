@@ -1165,3 +1165,155 @@ export async function getModelChannelAverages(db: D1Database): Promise<ModelChan
     .all<ModelChannelAverage>();
   return results;
 }
+
+// --- Coverage progression (new stories entering each tier per day) ---
+
+export interface CoverageProgressionRow {
+  day: string;
+  full: number;
+  lite: number;
+}
+
+export async function getCoverageProgression(db: D1Database, days = 30): Promise<CoverageProgressionRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT DATE(first_eval) as day,
+                SUM(CASE WHEN is_full = 1 THEN 1 ELSE 0 END) as full,
+                SUM(CASE WHEN is_full = 0 THEN 1 ELSE 0 END) as lite
+         FROM (
+           SELECT re.hn_id,
+                  MIN(re.evaluated_at) as first_eval,
+                  MAX(CASE WHEN re.prompt_mode = 'full' THEN 1 ELSE 0 END) as is_full
+           FROM rater_evals re
+           INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
+           WHERE re.eval_status = 'done'
+             AND re.hn_id > 0
+             AND re.evaluated_at IS NOT NULL
+           GROUP BY re.hn_id
+           HAVING MIN(re.evaluated_at) >= datetime('now', '-' || ? || ' days')
+         ) sub
+         GROUP BY day
+         ORDER BY day ASC`
+      )
+      .bind(days)
+      .all<CoverageProgressionRow>();
+    return results;
+  } catch (err) {
+    console.error('[getCoverageProgression]', err);
+    return [];
+  }
+}
+
+// --- Content type eval mix (coverage state breakdown per content type) ---
+
+export interface ContentTypeEvalMixRow {
+  content_type: string;
+  done: number;
+  gated: number;
+  failed_skipped: number;
+  pending: number;
+  total: number;
+}
+
+export async function getContentTypeEvalMix(db: D1Database): Promise<ContentTypeEvalMixRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT COALESCE(content_type, 'UNKNOWN') as content_type,
+                SUM(CASE WHEN eval_status = 'done' THEN 1 ELSE 0 END) as done,
+                SUM(CASE WHEN gate_category IS NOT NULL THEN 1 ELSE 0 END) as gated,
+                SUM(CASE WHEN eval_status IN ('failed','skipped') AND gate_category IS NULL THEN 1 ELSE 0 END) as failed_skipped,
+                SUM(CASE WHEN eval_status IN ('pending','queued','evaluating') AND gate_category IS NULL THEN 1 ELSE 0 END) as pending,
+                COUNT(*) as total
+         FROM stories
+         WHERE hn_id > 0
+         GROUP BY content_type
+         ORDER BY total DESC
+         LIMIT 15`
+      )
+      .all<ContentTypeEvalMixRow>();
+    return results;
+  } catch (err) {
+    console.error('[getContentTypeEvalMix]', err);
+    return [];
+  }
+}
+
+// --- Truncation impact (score bias when content is cut for small-context models) ---
+
+export interface TruncationImpactRow {
+  eval_model: string;
+  n: number;
+  truncated_count: number;
+  avg_truncation_pct: number;
+  avg_score_truncated: number | null;
+  avg_score_full: number | null;
+}
+
+export async function getTruncationImpact(db: D1Database): Promise<TruncationImpactRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT re.eval_model,
+                COUNT(*) as n,
+                SUM(CASE WHEN re.content_truncation_pct > 0 THEN 1 ELSE 0 END) as truncated_count,
+                ROUND(AVG(CASE WHEN re.content_truncation_pct > 0 THEN re.content_truncation_pct ELSE NULL END) * 100, 1) as avg_truncation_pct,
+                AVG(CASE WHEN re.content_truncation_pct > 0 THEN re.hcb_editorial_mean ELSE NULL END) as avg_score_truncated,
+                AVG(CASE WHEN re.content_truncation_pct = 0 OR re.content_truncation_pct IS NULL THEN re.hcb_editorial_mean ELSE NULL END) as avg_score_full
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+           AND re.hn_id > 0
+           AND re.content_truncation_pct IS NOT NULL
+         GROUP BY re.eval_model
+         ORDER BY truncated_count DESC`
+      )
+      .all<TruncationImpactRow>();
+    return results;
+  } catch (err) {
+    console.error('[getTruncationImpact]', err);
+    return [];
+  }
+}
+
+// --- Cost attribution (token usage + estimated cost per model) ---
+
+export interface CostStatRow {
+  eval_model: string;
+  eval_provider: string;
+  evals_7d: number;
+  evals_30d: number;
+  tokens_in_7d: number;
+  tokens_out_7d: number;
+  tokens_in_30d: number;
+  tokens_out_30d: number;
+}
+
+export async function getCostStats(db: D1Database): Promise<CostStatRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT re.eval_model,
+                re.eval_provider,
+                SUM(CASE WHEN re.evaluated_at >= datetime('now','-7 days') THEN 1 ELSE 0 END) as evals_7d,
+                SUM(CASE WHEN re.evaluated_at >= datetime('now','-30 days') THEN 1 ELSE 0 END) as evals_30d,
+                SUM(CASE WHEN re.evaluated_at >= datetime('now','-7 days') THEN COALESCE(re.input_tokens,0) ELSE 0 END) as tokens_in_7d,
+                SUM(CASE WHEN re.evaluated_at >= datetime('now','-7 days') THEN COALESCE(re.output_tokens,0) ELSE 0 END) as tokens_out_7d,
+                SUM(CASE WHEN re.evaluated_at >= datetime('now','-30 days') THEN COALESCE(re.input_tokens,0) ELSE 0 END) as tokens_in_30d,
+                SUM(CASE WHEN re.evaluated_at >= datetime('now','-30 days') THEN COALESCE(re.output_tokens,0) ELSE 0 END) as tokens_out_30d
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+           AND re.hn_id > 0
+           AND re.evaluated_at IS NOT NULL
+         GROUP BY re.eval_model, re.eval_provider
+         ORDER BY tokens_in_7d DESC`
+      )
+      .all<CostStatRow>();
+    return results;
+  } catch (err) {
+    console.error('[getCostStats]', err);
+    return [];
+  }
+}

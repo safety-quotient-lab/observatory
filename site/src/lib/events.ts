@@ -32,7 +32,8 @@ export type EventType =
   | 'dcp_stale'
   | 'r2_cleanup'
   | 'content_drift'
-  | 'model_divergence';
+  | 'model_divergence'
+  | 'setl_spike';
 
 export type Severity = 'info' | 'warn' | 'error';
 
