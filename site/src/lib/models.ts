@@ -18,6 +18,7 @@ export interface ModelDefinition {
   supports_cache_control: boolean;
   supports_json_mode: boolean;
   prompt_mode: PromptMode;       // 'full' = 31-section eval, 'light' = aggregate-only
+  max_input_chars?: number;      // max content chars to send (truncates before sending)
 }
 
 export const MODEL_REGISTRY: ModelDefinition[] = [
@@ -150,6 +151,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     supports_cache_control: false,
     supports_json_mode: false,
     prompt_mode: 'light',
+    max_input_chars: 6000,
   },
   {
     id: 'llama-4-scout-wai',
@@ -163,6 +165,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     supports_cache_control: false,
     supports_json_mode: false,
     prompt_mode: 'light',
+    max_input_chars: 12000,
   },
 ];
 

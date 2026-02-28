@@ -103,15 +103,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     const agg = computeLightAggregates(light);
 
-    // Only set editorial score if not already set (don't overwrite a full eval's value)
-    await env.DB
-      .prepare(`UPDATE stories
-        SET hcb_editorial_mean = COALESCE(hcb_editorial_mean, ?),
-            eval_status = CASE WHEN eval_status IN ('pending', 'queued') THEN 'done' ELSE eval_status END,
-            evaluated_at = CASE WHEN eval_status IN ('pending', 'queued') THEN datetime('now') ELSE evaluated_at END
-        WHERE hn_id = ?`)
-      .bind(light.evaluation.editorial, hn_id)
-      .run();
+    // writeLightRaterEvalResult above handles promotion (pending→done),
+    // hcb_editorial_mean, eval_model, theme_tag, etc. via COALESCE fill-in.
+    // No redundant UPDATE needed here.
     return new Response(JSON.stringify({
       ok: true, hn_id, model_id, prompt_mode: 'light',
       weighted_mean: agg.weighted_mean,

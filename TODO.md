@@ -25,18 +25,11 @@
 
 ## Data Quality
 
-- [x] **Content type classification validation** *(done 2026-02-27)*
-  - `getContentTypeValidation`, `getContentTypeDisagreement`, `getMisclassificationSummary` in db-analytics.ts
-  - Content Type Validation card + breakdown table + cross-model disagreement in /system Measurement Integrity
-
 - [ ] **Eval consistency check for re-evaluations**
   - Compare hcb_weighted_mean across models for same URL
   - Alert if divergence > ±0.25
 
 ## User-Facing Features
-
-- [x] **Story audit trail in UI** *(done 2026-02-27)*
-  - `getEvalHistoryForStory` + unified timeline on `/item/[id]` merging events + eval_history
 
 - [ ] **Story comparison view** (`/compare/[id1]/[id2]`)
   - Side-by-side scores, classification, sentiment
@@ -80,11 +73,6 @@
 
 ## Schema & Architecture
 
-- [x] **HN-compatible REST API extensions** *(done 2026-02-27)*
-  - `/api/v1/` REST: stories, story/[id], domains, domain/[domain] *(Phase 35)*
-  - `/api/v0/` HN Firebase-compatible: topstories.json, beststories.json, newstories.json, item/[id].json (with `hcb` extension)
-  - Still TODO: `/api/v1/search` full-text search endpoint
-
 - [ ] **Structured Knowledge Base** *(Phase 39A — partially done 2026-02-27)*
   - [x] JSON-LD on all major pages (index, item, article, domain, domains, about, sources)
   - [x] Domain profile versioning — `domain_profile_snapshots` table (migration 0039), daily cron snapshot, `/api/v1/domain/[domain]/history` endpoint
@@ -116,14 +104,6 @@
   - Flag stories where comments strongly disagree with assessment
   - UI: divergence badge on item page, comment sentiment distribution chart
   - Prerequisite: deep comment crawling (recursive depth 2+) from Enhanced Comments TODO
-
-- [x] **Algolia historical backfill** *(done 2026-02-27)*
-  - `?sweep=algolia_backfill&min_score=500&days_back=365` endpoint in cron.ts
-  - Calls `searchAlgolia` + `insertAlgoliaHits` from coverage-crawl.ts
-
-- [x] **Content change detection** *(done 2026-02-27)*
-  - `content_hash` + `content_last_fetched` columns (migration 0038)
-  - `checkContentDrift` in content-drift.ts, `?sweep=content_drift` endpoint
 
 - [ ] **Story velocity tracking**
   - Score acceleration from rank snapshots

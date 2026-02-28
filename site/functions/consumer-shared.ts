@@ -378,6 +378,11 @@ export async function prepareContent(
     return null;
   }
 
+  // Per-model content truncation for small-context models
+  if (modelDef?.max_input_chars && content.length > modelDef.max_input_chars) {
+    content = content.slice(0, modelDef.max_input_chars);
+  }
+
   const isLightMode = story.prompt_mode === 'light' || modelDef?.prompt_mode === 'light';
   const domain = story.domain || (story.url ? extractDomain(story.url) : null);
 
