@@ -6,7 +6,7 @@ function isActive(prefix: string): boolean {
   if (prefix === '/signals') return currentPath === '/signals';
   if (prefix === '/rights') return currentPath.startsWith('/rights') || currentPath.startsWith('/article/');
   if (prefix === '/sources') return currentPath === '/sources' || currentPath === '/domains' || currentPath.startsWith('/domain/') || currentPath === '/users' || currentPath.startsWith('/user/') || currentPath === '/factions';
-  if (prefix === '/system') return currentPath === '/system' || currentPath === '/models';
+  if (prefix === '/status') return currentPath.startsWith('/status');
   return currentPath === prefix;
 }
 
@@ -15,7 +15,7 @@ const navItems = [
   { href: '/signals', label: 'signals', prefix: '/signals' },
   { href: '/sources', label: 'sources', prefix: '/sources' },
   { href: '/rights', label: 'rights', prefix: '/rights' },
-  { href: '/system', label: 'system', prefix: '/system' },
+  { href: '/status', label: 'status', prefix: '/status' },
   { href: '/about', label: 'about', prefix: '/about' },
 ];
 ---

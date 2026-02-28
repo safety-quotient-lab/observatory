@@ -211,33 +211,47 @@ export async function getDailyHrcb(db: D1Database, limit = 60): Promise<DailyHrc
 
 export interface VelocityStats {
   evalsPerDay: number;
+  evals24h: number;
+  evals7d: number;
   daysActive: number;
   daysToClearing: number | null;
 }
 
 export async function getVelocityStats(db: D1Database, pendingCount: number): Promise<VelocityStats> {
-  const row = await db
+  // Rolling rate from rater_evals (captures multi-model throughput)
+  const recent = await db
     .prepare(
-      `SELECT COUNT(*) as n,
-              MIN(evaluated_at) as first_eval,
-              MAX(evaluated_at) as last_eval
+      `SELECT
+         COUNT(CASE WHEN evaluated_at >= datetime('now', '-1 day') THEN 1 END) as evals_24h,
+         COUNT(CASE WHEN evaluated_at >= datetime('now', '-7 days') THEN 1 END) as evals_7d
+       FROM rater_evals WHERE status = 'done' AND evaluated_at IS NOT NULL`
+    )
+    .first<{ evals_24h: number; evals_7d: number }>();
+
+  // All-time span for "days active"
+  const span = await db
+    .prepare(
+      `SELECT MIN(evaluated_at) as first_eval, MAX(evaluated_at) as last_eval
        FROM stories WHERE eval_status = 'done' AND evaluated_at IS NOT NULL`
     )
-    .first<{ n: number; first_eval: string | null; last_eval: string | null }>();
+    .first<{ first_eval: string | null; last_eval: string | null }>();
 
-  if (!row || !row.first_eval || !row.last_eval || row.n < 2) {
-    return { evalsPerDay: 0, daysActive: 0, daysToClearing: null };
+  const evals24h = recent?.evals_24h ?? 0;
+  const evals7d = recent?.evals_7d ?? 0;
+  const evalsPerDay = evals7d > 0 ? evals7d / 7 : 0;
+
+  let daysActive = 0;
+  if (span?.first_eval && span?.last_eval) {
+    daysActive = Math.max(1, Math.round(
+      (new Date(span.last_eval).getTime() - new Date(span.first_eval).getTime()) / (1000 * 60 * 60 * 24)
+    ));
   }
 
-  const firstMs = new Date(row.first_eval).getTime();
-  const lastMs = new Date(row.last_eval).getTime();
-  const daysActive = Math.max(1, (lastMs - firstMs) / (1000 * 60 * 60 * 24));
-  const evalsPerDay = row.n / daysActive;
   const daysToClearing = pendingCount > 0 && evalsPerDay > 0
     ? pendingCount / evalsPerDay
     : null;
 
-  return { evalsPerDay, daysActive: Math.round(daysActive), daysToClearing };
+  return { evalsPerDay, evals24h, evals7d, daysActive, daysToClearing };
 }
 
 // --- Top/Bottom Confidence stories ---

@@ -35,9 +35,13 @@
   - Side-by-side scores, classification, sentiment
   - Section-by-section score differences, E vs S channel divergence
 
-- [ ] **Temporal trend analysis**
-  - Rolling 7-day avg hcb_weighted_mean line chart
-  - Eval velocity (stories/day), model mix over time (stacked bar)
+- [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg + regime change; gaps below)*
+  - [ ] **Model mix over time** — stacked bar: which models (Haiku, DeepSeek, Llama 4, Llama 3.3) did evals each day. Data: `rater_evals.evaluated_at` + `eval_model` grouped by `DATE()`. Shows model diversity and free-model adoption.
+  - [ ] **Eval velocity chart** — evals/day line chart over 30/90 days (not just a single number on `/status`). Data: `COUNT(*) GROUP BY DATE(evaluated_at)` from `rater_evals`. Overlay light vs full prompt_mode.
+  - [ ] **Coverage progression** — daily funnel chart: how no-coverage → light → full → multi-model counts change over time. Needs new `daily_coverage_stats` materialized table or query from `stories` + `rater_evals`. Shows pipeline health trajectory.
+  - [ ] **Per-content-type eval mix** — which content types (ED, PO, LP, PR, etc.) are getting evaluated vs skipped. Seldon has per-type HRCB but not eval coverage by type.
+  - [ ] **Truncation impact dashboard** — distribution of `content_truncation_pct` across models, correlation with score divergence from non-truncated evals on same story. New data from migration 0040.
+  - **Placement**: Enhance existing Seldon page (add tabs/sections) or new `/status/events` sub-page for ops-focused charts. Seldon is editorial/analytical; model mix + velocity are operational.
 
 - [ ] **Article deep dive enhancements** (`/article/[n]`)
   - Stddev distribution, evidence strength breakdown
