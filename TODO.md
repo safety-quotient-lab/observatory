@@ -82,10 +82,10 @@ rounds. 30/43 items already fixed; remaining items below.
 - [x] **Link observatory propaganda table domain column** *(done 2026-02-28)* — domain text → `/domain/[domain]` link
 
 ### Round 4.7 — Data Model Cleanup
-*Open items from data-model audit (2026-02-28). Full plan: `.claude/plans/data-model-audit-2026-02-28.md`*
+*From data-model audit (2026-02-28). Full plan: `.claude/plans/data-model-audit-2026-02-28.md`*
 
-- [ ] **Drop orphaned `batches` table** — zero code references; decide if `eval_batch_id` column stays (it flows from `eval_queue.batch_id`, not from `batches`)
-- [ ] **Surface write-only sub-fields on item page** — `td_author_identified`, `td_conflicts_disclosed`, `td_funding_disclosed`, `eq_source_quality`, `eq_evidence_reasoning`, `eq_purpose_transparency` (all written, never displayed)
+- [x] **Drop orphaned `batches` table** *(already done — migration 0042)*
+- [x] **Surface write-only sub-fields on item page** *(already done — EQ 4-bar chart + TD boolean pills)*
 - [ ] **Enrich `domain_profile_snapshots`** — missing ~8 fields (`avg_confidence`, `avg_sr`, `avg_pt_count`, `avg_dominance`, `avg_fw_ratio`, `dominant_scope`, `dominant_reading_level`, `dominant_sentiment`)
 
 ### Round 5 — Data Expansion
