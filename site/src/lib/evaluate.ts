@@ -20,6 +20,8 @@ export interface EvalCallResult {
   result: EvalResult;
   model: string;
   promptHash: string;
+  inputTokens: number;
+  outputTokens: number;
 }
 
 async function hashPrompt(system: string, user: string): Promise<string> {
@@ -70,7 +72,19 @@ export async function callClaude(
 
   const data = (await res.json()) as {
     content: Array<{ type: string; text?: string }>;
+    usage?: {
+      input_tokens: number;
+      output_tokens: number;
+      cache_creation_input_tokens?: number;
+      cache_read_input_tokens?: number;
+    };
   };
+
+  const usage = data.usage;
+  const inputTokens = (usage?.input_tokens ?? 0)
+    + (usage?.cache_creation_input_tokens ?? 0)
+    + (usage?.cache_read_input_tokens ?? 0);
+  const outputTokens = usage?.output_tokens ?? 0;
 
   const parsed = parseEvalResponse(data);
 
@@ -90,5 +104,7 @@ export async function callClaude(
     result: parsed,
     model: PRIMARY_MODEL_ID,
     promptHash,
+    inputTokens,
+    outputTokens,
   };
 }

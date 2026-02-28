@@ -120,7 +120,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
         // Write results to D1 (rater tables + stories promotion)
         await writeRaterEvalResult(
           db, hnId, evalCall.result, evalCall.model, 'anthropic',
-          evalCall.promptHash, null, 0, 0,
+          evalCall.promptHash, null, evalCall.inputTokens, evalCall.outputTokens,
         );
 
         await logEvent(db, { hn_id: hnId, event_type: 'eval_success', severity: 'info', message: `Trigger eval done: ${evalCall.result.aggregates.classification} (${evalCall.result.aggregates.weighted_mean.toFixed(2)})`, details: { classification: evalCall.result.aggregates.classification, weighted_mean: evalCall.result.aggregates.weighted_mean, model: evalCall.model, duration_ms: evalDurationMs } });
