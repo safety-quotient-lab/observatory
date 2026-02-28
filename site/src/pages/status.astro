@@ -11,6 +11,7 @@ import {
   getDlqStats,
   getCostStats,
   getRecentEvents,
+  getDailyEvalVelocity,
 } from '../lib/db';
 import { cachedQuery } from '../lib/db-utils';
 
@@ -21,7 +22,7 @@ const status = await getStatusCounts(db);
 
 const [
   velocity, cronRuns, providerStats, modelQueueStats,
-  dlqStats, costStats, recentPipelineEvents,
+  dlqStats, costStats, recentPipelineEvents, evalVelocity,
 ] = await Promise.all([
   getVelocityStats(db, status.pending),
   getCronRuns(db, 5).catch(() => [] as Awaited<ReturnType<typeof getCronRuns>>),
@@ -30,7 +31,14 @@ const [
   getDlqStats(db),
   cachedQuery(kv, 'sys:costStats', () => getCostStats(db), 120),
   getRecentEvents(db, 15).catch(() => [] as Awaited<ReturnType<typeof getRecentEvents>>),
+  getDailyEvalVelocity(db, 60).catch(() => [] as Awaited<ReturnType<typeof getDailyEvalVelocity>>),
 ]);
+
+// Prep eval velocity chart data
+const velDays = [...new Set(evalVelocity.map(r => r.day))].sort();
+const velFull = velDays.map(d => evalVelocity.find(r => r.day === d && r.prompt_mode === 'full')?.count ?? 0);
+const velLight = velDays.map(d => evalVelocity.find(r => r.day === d && r.prompt_mode === 'light')?.count ?? 0);
+const velMax = Math.max(1, ...velFull.map((f, i) => f + velLight[i]));
 
 // Format token counts for display
 function formatTokens(n: number): string {
@@ -320,6 +328,38 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
       </td>
     </tr>
   </table>
+
+  {/* Eval Velocity */}
+  {velDays.length > 1 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+            Eval Velocity
+            <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px; font-size: var(--font-xs);">evals/day · last 60 days</span>
+          </div>
+          <svg viewBox={`0 0 ${velDays.length * 8} 60`} style="width: 100%; height: 60px; overflow: visible;" preserveAspectRatio="none">
+            {/* Full evals (bottom) */}
+            {velFull.map((v, i) => {
+              const h = velMax > 0 ? (v / velMax) * 56 : 0;
+              return h > 0 ? <rect x={i * 8} y={60 - h} width={7} height={h} fill="#16a34a" opacity="0.8" /> : null;
+            })}
+            {/* Light evals (stacked on top) */}
+            {velLight.map((v, i) => {
+              const hFull = velMax > 0 ? (velFull[i] / velMax) * 56 : 0;
+              const hLight = velMax > 0 ? (v / velMax) * 56 : 0;
+              return hLight > 0 ? <rect x={i * 8} y={60 - hFull - hLight} width={7} height={hLight} fill="#d56500" opacity="0.8" /> : null;
+            })}
+          </svg>
+          <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs); color: #5b7279;">
+            <span><span style="color: #16a34a;">■</span> full</span>
+            <span><span style="color: #d56500;">■</span> light</span>
+            {velDays.length > 0 && <span style="margin-left: auto;">{velDays[0].slice(5)} – {velDays[velDays.length - 1].slice(5)}</span>}
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
 
   {/* Operations — always visible (promoted from collapsed tertiary) */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">

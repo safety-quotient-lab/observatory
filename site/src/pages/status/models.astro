@@ -23,6 +23,7 @@ import {
   getMisclassificationSummary,
   getModelDriftStats,
   getGlobalGateStats,
+  getModelChannelAverages,
 } from '../../lib/db';
 import { cachedQuery } from '../../lib/db-utils';
 
@@ -34,7 +35,7 @@ const [
   models, modelComparison, raterSummary,
   lastCalibration, lastLightCalibration,
   signalCompleteness, ctValidation, ctDisagreement, ctMisclass,
-  driftStats, globalGate,
+  driftStats, globalGate, channelAverages,
 ] = await Promise.all([
   getMultiModelStories(db, 500),
   getModelComparisonAggregates(db),
@@ -53,6 +54,7 @@ const [
   cachedQuery(kv, 'sys:ctMisclass', () => getMisclassificationSummary(db), 300).catch(() => ({ structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 })),
   cachedQuery(kv, 'sys:modelDrift', () => getModelDriftStats(db), 300),
   cachedQuery(kv, 'sys:globalGate', () => getGlobalGateStats(db), 600),
+  getModelChannelAverages(db).catch(() => [] as Awaited<ReturnType<typeof getModelChannelAverages>>),
 ]);
 const trustByModel = groupTrustByModel(trustHistory);
 
@@ -260,6 +262,73 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
               );
             })}
           </table>
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* ═══ Channel Averages (HRCB · E · S per model) ═══ */}
+  {channelAverages.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+            Channel Averages
+            <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px; font-size: var(--font-xs);">avg HRCB · E · S per model · done evals</span>
+          </div>
+          {(() => {
+            const MAX_BAR = Math.max(0.01, ...channelAverages.flatMap(r => [
+              Math.abs(r.avg_hrcb ?? 0),
+              Math.abs(r.avg_e ?? 0),
+              Math.abs(r.avg_s ?? 0),
+            ]));
+            const BAR_W = 80; // max bar width px
+            return channelAverages.map(r => {
+              const hrcbW = Math.round((Math.abs(r.avg_hrcb ?? 0) / MAX_BAR) * BAR_W);
+              const eW    = Math.round((Math.abs(r.avg_e    ?? 0) / MAX_BAR) * BAR_W);
+              const sW    = r.avg_s != null ? Math.round((Math.abs(r.avg_s) / MAX_BAR) * BAR_W) : null;
+              const isLight = r.prompt_mode === 'light';
+              return (
+                <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid #0d4655; font-size: var(--font-xs);">
+                  <div style="width: 140px; color: #98a8a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;" title={r.eval_model}>
+                    {modelDisplayName(r.eval_model)}
+                    {isLight && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
+                  </div>
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                    {/* HRCB bar */}
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">HRCB</span>
+                      <div style={`width: ${hrcbW}px; height: 7px; background: #259d94; border-radius: 2px;`}></div>
+                      <span class="score-font" style={`color: ${scoreToColor(r.avg_hrcb)}; font-size: var(--font-xs);`}>{r.avg_hrcb != null ? r.avg_hrcb.toFixed(3) : '—'}</span>
+                    </div>
+                    {/* E bar */}
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">E</span>
+                      <div style={`width: ${eW}px; height: 7px; background: #60a5fa; border-radius: 2px;`}></div>
+                      <span class="score-font" style={`color: ${scoreToColor(r.avg_e)}; font-size: var(--font-xs);`}>{r.avg_e != null ? r.avg_e.toFixed(3) : '—'}</span>
+                    </div>
+                    {/* S bar — full models only */}
+                    {!isLight && (
+                      <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">S</span>
+                        {sW != null
+                          ? <div style={`width: ${sW}px; height: 7px; background: #a78bfa; border-radius: 2px;`}></div>
+                          : <span style="color: #1a5568; font-size: 8px;">n/a</span>
+                        }
+                        <span class="score-font" style={`color: ${scoreToColor(r.avg_s)}; font-size: var(--font-xs);`}>{r.avg_s != null ? r.avg_s.toFixed(3) : '—'}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div style="color: #1a5568; font-size: 8px; flex-shrink: 0; width: 36px; text-align: right;">{r.n.toLocaleString()}</div>
+                </div>
+              );
+            });
+          })()}
+          <div style="display: flex; gap: 12px; margin-top: 8px; padding-top: 6px; border-top: 1px solid #0d4655; font-size: var(--font-xs); color: #5b7279;">
+            <span><span style="color: #259d94;">■</span> HRCB</span>
+            <span><span style="color: #60a5fa;">■</span> E editorial</span>
+            <span><span style="color: #a78bfa;">■</span> S structural</span>
           </div>
         </td>
       </tr>

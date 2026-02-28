@@ -55,15 +55,15 @@ rounds. 30/43 items already fixed; remaining items below.
 ### Round 4 — Analytics (runs on existing data, no migrations needed)
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
-  - [x] **Model mix over time** — stacked bar: which models did evals each day. *(done 2026-02-28)*
-  - [x] **Eval velocity chart** — evals/day line chart, light vs full overlay. *(done 2026-02-28)*
+  - [x] **Model channel averages** — HRCB/E/S triple bar per model on `/status/models`. *(done 2026-02-28)*
+  - [x] **Eval velocity chart** — stacked bar evals/day (full+light) on `/status`. *(done 2026-02-28)*
   - [ ] **Coverage progression** — daily funnel: no-coverage → light → full → multi-model.
     Needs `daily_coverage_stats` materialized table or query from `stories` + `rater_evals`
   - [ ] **Per-content-type eval mix** — which content types (ED, PO, LP, PR, etc.) are
     getting evaluated vs skipped
   - [ ] **Truncation impact dashboard** — distribution of `content_truncation_pct` across
     models, correlation with score divergence. Data from migration 0040.
-  - **Placement:** Enhance Seldon page (add tabs) or new `/status/metrics` sub-page.
+  - **Placement:** `/status` (velocity) and `/status/models` (channel averages). Remaining items: `/status/metrics` sub-page or Seldon tabs.
 
 - [ ] **SETL spike alerting**
   - Alert system for sudden SETL spikes across a domain or story cluster

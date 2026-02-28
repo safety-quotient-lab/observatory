@@ -1164,26 +1164,31 @@ export async function getDailyEvalVelocity(db: D1Database, days = 60): Promise<D
   return results;
 }
 
-// --- Model mix over time (evals per model per day) ---
+// --- Model channel averages (HRCB / E / S per model) ---
 
-export interface DailyModelMix {
-  day: string;
+export interface ModelChannelAverage {
   eval_model: string;
-  count: number;
+  prompt_mode: string;
+  n: number;
+  avg_hrcb: number | null;
+  avg_e: number | null;
+  avg_s: number | null;
 }
 
-export async function getDailyModelMix(db: D1Database, days = 30): Promise<DailyModelMix[]> {
+export async function getModelChannelAverages(db: D1Database): Promise<ModelChannelAverage[]> {
   const { results } = await db
     .prepare(
-      `SELECT DATE(evaluated_at) as day, eval_model, COUNT(*) as count
+      `SELECT eval_model, prompt_mode,
+         COUNT(*) as n,
+         AVG(hcb_weighted_mean) as avg_hrcb,
+         AVG(hcb_editorial_mean) as avg_e,
+         AVG(hcb_structural_mean) as avg_s
        FROM rater_evals
        WHERE eval_status = 'done'
-         AND evaluated_at IS NOT NULL
-         AND evaluated_at >= datetime('now', '-' || ? || ' days')
-       GROUP BY day, eval_model
-       ORDER BY day ASC`
+         AND hcb_editorial_mean IS NOT NULL
+       GROUP BY eval_model, prompt_mode
+       ORDER BY n DESC`
     )
-    .bind(days)
-    .all<DailyModelMix>();
+    .all<ModelChannelAverage>();
   return results;
 }
