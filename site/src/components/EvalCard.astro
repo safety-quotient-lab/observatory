@@ -68,10 +68,10 @@ function timeAgo(unixTime: number): string {
         <div class="tripartite-score">
           <div class="score-row" data-channel="hrcb">
             <span class="score-font score-label">{isLightOnly ? '' : 'HRCB'}</span>
-            {isLightOnly && <span class="lite-icon" title="Lite eval (editorial only)">L</span>}
             <span class="score-font score-value" style={`color: ${displayColor};`}>
               {formatScore(displayScore)}
             </span>
+            {isLightOnly && <span class="lite-icon" title="Lite eval (editorial only)">L</span>}
           </div>
           <div class="score-row" data-channel="editorial">
             <span class="score-font score-label">E</span>
