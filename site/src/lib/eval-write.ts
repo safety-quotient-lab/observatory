@@ -566,6 +566,10 @@ export async function writeRaterEvalResult(
   const hcbEditorialMean = editorials.length > 0 ? editorials.reduce((a, b) => a + b, 0) / editorials.length : null;
   const hcbStructuralMean = structurals.length > 0 ? structurals.reduce((a, b) => a + b, 0) / structurals.length : null;
 
+  // Guard: full eval must have structural scores. If model returned editorial-only,
+  // demote to lite-like behavior — write rater data but don't promote story to done.
+  const missingStructural = hcbStructuralMean === null && editorials.length > 0;
+
   // SETL + Confidence
   const hcbSetl = computeSetl(result.scores);
   let confWeightedSum = 0;
@@ -756,10 +760,19 @@ export async function writeRaterEvalResult(
 
   // Promote story to done: first full eval wins, later evals don't overwrite.
   // All models are peers — no primary model special case.
+  // Guard: don't promote if structural channel is entirely missing (malformed full eval).
   const story = await db.prepare(
     `SELECT eval_status FROM stories WHERE hn_id = ?`
   ).bind(hnId).first<{ eval_status: string }>();
-  const promoted = story && story.eval_status !== 'done' && story.eval_status !== 'rescoring';
+  const promoted = story && story.eval_status !== 'done' && story.eval_status !== 'rescoring' && !missingStructural;
+  if (missingStructural) {
+    await logEvent(db, {
+      hn_id: hnId,
+      event_type: 'eval_skip',
+      model: modelId,
+      detail: `Full eval missing structural channel (${editorials.length} editorial, 0 structural) — not promoting to done`,
+    });
+  }
   if (promoted) {
     // writeEvalResult also calls refreshDomainAggregate internally
     await writeEvalResult(db, hnId, result, modelId, promptHash);

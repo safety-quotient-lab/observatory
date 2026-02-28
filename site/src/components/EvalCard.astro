@@ -16,7 +16,9 @@ const { story, rank, raterModels } = Astro.props;
 const otherModels = (raterModels || []).filter(m => m.eval_model !== story.eval_model);
 
 const hasEval = story.hcb_weighted_mean !== null || story.hcb_editorial_mean !== null;
-const isLiteOnly = hasEval && story.hcb_weighted_mean === null;
+// Lite-only: no weighted_mean, OR weighted_mean exists but structural channel is missing
+// (malformed full eval that returned editorial-only — treat as lite for display)
+const isLiteOnly = hasEval && (story.hcb_weighted_mean === null || story.hcb_structural_mean === null);
 // Display HRCB: weighted_mean for full evals, editorial_mean for lite-only
 const displayScore = story.hcb_weighted_mean ?? story.hcb_editorial_mean;
 const displayColor = hasEval ? scoreToColor(displayScore) : '#5b7279';
