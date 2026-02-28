@@ -1279,6 +1279,41 @@ export async function getTruncationImpact(db: D1Database): Promise<TruncationImp
 
 // --- Cost attribution (token usage + estimated cost per model) ---
 
+export interface DailyCostRow {
+  eval_day: string;      // 'YYYY-MM-DD'
+  eval_model: string;
+  eval_provider: string;
+  tokens_in: number;
+  tokens_out: number;
+  eval_count: number;
+}
+
+export async function getDailyCostStats(db: D1Database): Promise<DailyCostRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT DATE(re.evaluated_at) as eval_day,
+                re.eval_model,
+                re.eval_provider,
+                SUM(COALESCE(re.input_tokens, 0)) as tokens_in,
+                SUM(COALESCE(re.output_tokens, 0)) as tokens_out,
+                COUNT(*) as eval_count
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+           AND re.hn_id > 0
+           AND re.evaluated_at >= datetime('now', '-14 days')
+         GROUP BY eval_day, re.eval_model, re.eval_provider
+         ORDER BY eval_day ASC, tokens_in DESC`
+      )
+      .all<DailyCostRow>();
+    return results;
+  } catch (err) {
+    console.error('[getDailyCostStats]', err);
+    return [];
+  }
+}
+
 export interface CostStatRow {
   eval_model: string;
   eval_provider: string;

@@ -26,6 +26,7 @@ import {
   getContentTypeEvalMix,
   getTruncationImpact,
   getCostStats,
+  getDailyCostStats,
   MODEL_COMPARISON_KV_KEY,
 } from '../../lib/db';
 import type { ModelComparisonBlob, ComparedStory } from '../../lib/db';
@@ -55,6 +56,7 @@ let coverageProgression: Awaited<ReturnType<typeof getCoverageProgression>> = []
 let ctEvalMix: Awaited<ReturnType<typeof getContentTypeEvalMix>> = [];
 let truncationImpact: Awaited<ReturnType<typeof getTruncationImpact>> = [];
 let costStats: Awaited<ReturnType<typeof getCostStats>> = [];
+let dailyCostStats: Awaited<ReturnType<typeof getDailyCostStats>> = [];
 
 // Timed query helper — wraps cachedQuery + records per-query timing
 const _timings: { name: string; ms: number }[] = [];
@@ -91,6 +93,7 @@ try {
   ctEvalMix       = await tq('ctEvalMix',    'sys:ctEvalMix',     () => getContentTypeEvalMix(db), 600, [] as typeof ctEvalMix);
   truncationImpact = await tq('truncImpact', 'sys:truncImpact',   () => getTruncationImpact(db), 300, [] as typeof truncationImpact);
   costStats       = await tq('costStats',    'sys:costStats',     () => getCostStats(db), 300, [] as typeof costStats);
+  dailyCostStats  = await tq('dailyCost',    'sys:dailyCost',     () => getDailyCostStats(db), 300, [] as typeof dailyCostStats);
 } catch (err: unknown) {
   _pageError = `Query phase: ${err instanceof Error ? err.message : String(err)}`;
 }
@@ -167,6 +170,15 @@ function modelCost(model: string, tokIn: number, tokOut: number): number {
   if (!p) return 0;
   return (tokIn / 1_000_000) * p.inPerMTok + (tokOut / 1_000_000) * p.outPerMTok;
 }
+
+// Daily burn rate chart data
+const dcDays = [...new Set(dailyCostStats.map(r => r.eval_day))].sort();
+const dcTotals = dcDays.map(d =>
+  dailyCostStats
+    .filter(r => r.eval_day === d)
+    .reduce((s, r) => s + modelCost(r.eval_model, r.tokens_in, r.tokens_out), 0)
+);
+const dcMax = Math.max(0.001, ...dcTotals);
 ---
 
 <Base title="Models">
@@ -648,6 +660,7 @@ function modelCost(model: string, tokIn: number, tokOut: number): number {
             <td style="padding: 3px 6px; text-align: right;">Evals 30d</td>
             <td style="padding: 3px 6px; text-align: right;">Tok In 7d</td>
             <td style="padding: 3px 6px; text-align: right;">Tok Out 7d</td>
+            <td style="padding: 3px 6px; text-align: right;">$/eval 7d</td>
             <td style="padding: 3px 6px; text-align: right;">Est Cost 7d</td>
             <td style="padding: 3px 6px; text-align: right;">Est Cost 30d</td>
           </tr>
@@ -656,6 +669,7 @@ function modelCost(model: string, tokIn: number, tokOut: number): number {
             const cost30d = modelCost(r.eval_model, r.tokens_in_30d, r.tokens_out_30d);
             const isFree  = !MODEL_PRICING[r.eval_model];
             const costColor = cost7d > 5 ? '#eab308' : cost7d > 1 ? '#98a8a8' : '#5b7279';
+            const cpe = r.evals_7d > 0 && !isFree ? cost7d / r.evals_7d : null;
             return (
               <tr style="border-bottom: 1px solid #093946;">
                 <td style="padding: 3px 6px; color: #98a8a8;">
@@ -666,6 +680,9 @@ function modelCost(model: string, tokIn: number, tokOut: number): number {
                 <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{r.evals_30d}</td>
                 <td style="padding: 3px 6px; text-align: right; color: #5b7279; font-family: monospace;">{(r.tokens_in_7d / 1000).toFixed(0)}k</td>
                 <td style="padding: 3px 6px; text-align: right; color: #5b7279; font-family: monospace;">{(r.tokens_out_7d / 1000).toFixed(0)}k</td>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? '#1a5568' : '#5b7279'};`}>
+                  {isFree ? 'free' : cpe == null ? '—' : `$${cpe < 0.01 ? cpe.toFixed(4) : cpe.toFixed(3)}`}
+                </td>
                 <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? '#1a5568' : costColor};`}>
                   {isFree ? 'free' : cost7d === 0 ? '—' : `$${cost7d.toFixed(3)}`}
                 </td>
@@ -679,7 +696,7 @@ function modelCost(model: string, tokIn: number, tokOut: number): number {
             <td style="padding: 3px 6px; color: #5b7279;">Total</td>
             <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{totalEvals7d}</td>
             <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{totalEvals30d}</td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
             <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${totalCost7d > 5 ? '#eab308' : '#98a8a8'};`}>
               ${totalCost7d.toFixed(3)}
             </td>
@@ -689,6 +706,28 @@ function modelCost(model: string, tokIn: number, tokOut: number): number {
           </tr>
         </table>
         </div>
+
+        {/* Daily burn rate chart */}
+        {dcDays.length > 1 && (
+          <div style="margin-top: 10px;">
+            <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+              Daily burn rate
+              <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px;">last 14 days · billed models only</span>
+            </div>
+            <svg viewBox={`0 0 ${dcDays.length * 10} 48`} style="width: 100%; height: 48px; overflow: visible;" preserveAspectRatio="none">
+              {dcTotals.map((cost, i) => {
+                const h = dcMax > 0 ? (cost / dcMax) * 44 : 0;
+                return h > 0 ? <rect x={i * 10} y={44 - h} width={9} height={h} fill="#eab308" opacity="0.75" /> : null;
+              })}
+            </svg>
+            <div style="display: flex; justify-content: space-between; margin-top: 2px; font-size: 9px; color: #5b7279; font-family: monospace;">
+              <span>{dcDays[0]?.slice(5)}</span>
+              <span style="color: #98a8a8;">peak ${dcMax.toFixed(3)}/day</span>
+              <span>{dcDays[dcDays.length - 1]?.slice(5)}</span>
+            </div>
+          </div>
+        )}
+
         <div style="margin-top: 4px; color: #1a5568; font-size: 9px;">
           Pricing approximate (Anthropic list rates). Workers AI and free-tier OpenRouter models not billed. Zero token rows = pre-2026-02-28 evals with no token data.
         </div>
