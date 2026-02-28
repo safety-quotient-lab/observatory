@@ -358,9 +358,13 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
       if (ev.editorial !== null) repairs.push(`Coerced editorial to number: ${ev.editorial}`);
     }
     if (ev.editorial !== null) {
-      const clamped = Math.max(0, Math.min(100, ev.editorial));
+      const raw = ev.editorial;
+      const clamped = Math.max(0, Math.min(100, raw));
       ev.editorial = Math.round(((clamped - 50) / 50) * 1000) / 1000;
-      repairs.push(`Normalized integer ${clamped} \u2192 ${ev.editorial}`);
+      // Only log as repair if clamping was needed (out-of-range); normal 0-100 → [-1,+1] conversion is expected behavior
+      if (clamped !== raw) {
+        repairs.push(`Clamped+normalized integer ${raw} \u2192 ${clamped} \u2192 ${ev.editorial}`);
+      }
     }
   } else {
     // lite-1.3 float format: clamp to [-1, +1]
