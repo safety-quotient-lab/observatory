@@ -129,7 +129,7 @@ service and data depth are.
 *(Added 2026-02-27 — three-phase plan based on Opus analysis)*
 
 ### Phase 1 — Repo cleanup (2–4 weeks)
-- Remove `claude.key`, raw eval output files, personal files from git history
+- Remove raw eval output files and personal files from git history
 - Add `.gitignore` entries for secrets and artifacts
 - Write real `README.md` with architecture overview and screenshots
 - Add `LICENSE` (AGPL-3.0) and `LICENSE-DATA` (CC BY-NC-SA 4.0)
@@ -185,9 +185,9 @@ correct license when the value is in the running service, not in code secrecy.
 
 Before any `git push` to a public repo:
 
-- Revoke `claude.key` (Anthropic key) — regardless of publishing plans
-- Revoke `site/.dev.vars` OpenRouter key + TRIGGER_SECRET + cron token
+- Revoke/rotate credentials in `site/.dev.vars` (ANTHROPIC_API_KEY, OPENROUTER_API_KEY,
+  TRIGGER_SECRET) and `site/.cron-secret` before any public exposure
 - Replace hardcoded Cloudflare account ID in `test-workers-ai.sh` with env var
 - Replace real D1/KV resource IDs in `wrangler*.toml` with placeholder comments
-- Run `git log --all --full-history -- claude.key site/.dev.vars site/.cron-secret`
+- Run `git log --all --full-history -- site/.dev.vars site/.cron-secret`
   to confirm secrets were never committed; purge with `git filter-repo` if found
