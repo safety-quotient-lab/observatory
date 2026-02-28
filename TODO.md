@@ -129,10 +129,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Housekeeping (no urgency)
 
-- [ ] **Remaining `i += 100` literals in hn-bot.ts** *(code quality, CQ-02 partial)*
-  - `D1_BATCH_SIZE = 100` exported from `db-utils.ts` but 10+ manual `i += 100` chunking loops in `hn-bot.ts` and `cron.ts` still hardcode 100
-  - Replace with `D1_BATCH_SIZE` import where not already using `safeBatch()`
-
 - [ ] **Materialize `getUserIntelligence`** *(audit step 14, LOW)*
   - Currently a live CTE scan over full stories table
   - Create `user_aggregates` materialized table (like `domain_aggregates`)
