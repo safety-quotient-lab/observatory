@@ -30,6 +30,15 @@ rounds. 30/43 items already fixed; remaining items below.
 - [x] **Guard Promise.all on users.astro and domains.astro** *(done 2026-02-27)*
 - [x] **Replace `SELECT *` with explicit columns** *(done 2026-02-27)*
 
+### Round 3 — Data Integrity
+
+- [ ] **Investigate S-not-E / E-not-S channel asymmetry in rater_scores** *(data quality)*
+  - 2,426 sections have structural score but null editorial; 1,919 have editorial but null structural
+  - Affects 315+ stories; primarily deepseek-v3.2 and claude-haiku-4-5 full evals
+  - Root cause unknown — parser dropping one channel? model omitting editorial when no direct evidence?
+  - Check: does `computeAggregates()` handle null editorial gracefully or silently skew weighted_mean?
+  - Fix: either parser repair pass or re-eval of affected stories
+
 ### Round 3 — Ops Visibility
 
 - [ ] **Rate limit exhaustion forecasting**

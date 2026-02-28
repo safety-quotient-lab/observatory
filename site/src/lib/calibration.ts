@@ -62,7 +62,7 @@ export const DRIFT_THRESHOLDS = {
 /**
  * The 15-URL calibration set for the light prompt (editorial-only, hcb_editorial).
  * Compatible with light-1.3 and light-1.4 — ranges are in normalized [-1,+1] scale.
- * Source: scripts/validate-light.mjs; validated 15/15 on back-to-back passes 12 & 13 (light-1.3).
+ * Calibrated 15/15 via server pipeline (POST /calibrate?mode=light + evaluate-standalone.mjs), 2026-02-27.
  *
  * URL selection notes:
  *   EX-1 → shopify.com (Temu triggers parametric labor/Uyghur knowledge)

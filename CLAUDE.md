@@ -168,13 +168,13 @@ The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry
 ### Local scripts (run with `node scripts/...`)
 - `scripts/evaluate-standalone.mjs` — Fetch queue from `/api/queue`, evaluate with `claude -p`, post to `/api/ingest`. Modes: `--mode light` (default) or `--mode full`. Spawns claude with `{ CLAUDECODE: undefined, ANTHROPIC_API_KEY: undefined }` — both must be unset or the subprocess either refuses (CLAUDECODE) or uses depleted API credits instead of the OAuth subscription (ANTHROPIC_API_KEY). Failure mode: exit 1, "Credit balance is too low" on stdout, empty stderr.
 - `scripts/backfill-daemon.sh` — Batch loop with 15s sleep. Self-launches into `tmux new-session -d -s backfill` if not already in tmux. Stop with `touch .backfill-stop`.
-- `scripts/validate-light.mjs` — 15-URL calibration validator for `light-1.2` model. Passes 15/15 against final calibration set (EP-1..5, EN-1..5, EX-1..5). Run: `node scripts/validate-light.mjs [--concurrency N]`.
-- `scripts/validate-light-dcp.mjs` — Two-step DCP-enhanced validator (root page → DCP profile → editorial eval). Passes 15/15. Adds ~17s per URL overhead. DCP limitation: archive.org profiled as "utility" (misses digital rights mission).
-
-**Light calibration workflow:**
+**Light calibration workflow (server-side — canonical path):**
 1. `curl -X POST .../calibrate?mode=light` — inserts hn_ids -2001..-2015 as pending
 2. `node scripts/evaluate-standalone.mjs --mode light` — evaluates and posts to /api/ingest
 3. `curl -X POST .../calibrate/check?mode=light` — reads rater_evals, runs check, writes to calibration_runs
+
+**Spot-checking a single URL during prompt development** (no server write):
+`INGEST_URL=... INGEST_SECRET=... node scripts/evaluate-standalone.mjs --mode light --dry-run --url https://example.com --hn-id -9999`
 
 ## Factions Page
 
