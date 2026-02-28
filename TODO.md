@@ -67,10 +67,6 @@ rounds. 30/43 items already fixed; remaining items below.
     models, correlation with score divergence. Data from migration 0040.
   - **Placement:** Enhance Seldon page (add tabs) or new `/status/metrics` sub-page.
 
-- [ ] **Eval consistency check for re-evaluations**
-  - Compare hcb_weighted_mean across models for same URL
-  - Alert if divergence > ±0.25
-
 - [ ] **SETL spike alerting**
   - Alert system for sudden SETL spikes across a domain or story cluster
 

@@ -149,7 +149,7 @@ npx wrangler tail hn-hrcb-consumer-workers-ai --format pretty
 
 ## Event Types
 
-The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `rater_auto_disable`, `dcp_stale`, `r2_cleanup`, `story_flagged`, `content_drift`.
+The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `parse_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `rater_auto_disable`, `dcp_stale`, `r2_cleanup`, `story_flagged`, `content_drift`, `model_divergence`.
 
 ## Methodology Files
 

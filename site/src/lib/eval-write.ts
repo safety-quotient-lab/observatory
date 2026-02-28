@@ -8,6 +8,7 @@ import { computeSetl } from './compute-aggregates';
 import { ALL_SECTIONS, type EvalResult, type LightEvalResponse } from './eval-types';
 import { computeLightAggregates } from './eval-parse';
 import { PRIMARY_MODEL_ID } from './models';
+import { logEvent } from './events';
 
 // --- DB write helpers ---
 
@@ -290,6 +291,19 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
       )
       .bind(consensusScore, results.length, spread, hnId)
       .run();
+
+    // Alert on high cross-model divergence
+    if (spread > 0.25) {
+      const models = results.map(r => r.eval_model);
+      const scoreMap = Object.fromEntries(results.map(r => [r.eval_model, r.hcb_weighted_mean ?? r.hcb_editorial_mean]));
+      await logEvent(db, {
+        hn_id: hnId,
+        event_type: 'model_divergence',
+        severity: spread > 0.50 ? 'error' : 'warn',
+        message: `Cross-model spread ${spread.toFixed(2)} exceeds threshold (${results.length} models)`,
+        details: { spread, consensus_score: consensusScore, model_count: results.length, models, scores: scoreMap },
+      });
+    }
   } catch (err) {
     // Non-throwing — consensus is best-effort
     console.error(`[eval-write] updateConsensusScore failed for hn_id=${hnId}:`, err);

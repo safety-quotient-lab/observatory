@@ -31,7 +31,8 @@ export type EventType =
   | 'auto_calibration'
   | 'dcp_stale'
   | 'r2_cleanup'
-  | 'content_drift';
+  | 'content_drift'
+  | 'model_divergence';
 
 export type Severity = 'info' | 'warn' | 'error';
 
