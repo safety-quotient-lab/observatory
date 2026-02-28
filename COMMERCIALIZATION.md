@@ -66,25 +66,46 @@ instance:
 - Governments / IGOs (policy research, academic use)
 - Legal / compliance teams (due diligence on media partners)
 
-**Key advantage:** The methodology (HRCB, SETL, Fair Witness, signal channels)
-is the proprietary differentiator — not the HN data. A white-label deployment
-would evaluate their own content corpus, not HN stories.
+**Key advantage:** The HRCB methodology (dual-channel scoring, SETL, Fair
+Witness, signal channels, multi-model consensus) is the differentiator — not
+the HN data. A white-label deployment would evaluate their own corpus.
 
 ---
 
 ## Competitive Moat
 
+*(Updated 2026-02-27 based on open-source strategy analysis — see GitHub
+Publishing Strategy below.)*
+
 A static dataset snapshot is not the moat. The moat is:
 
 1. **Live pipeline** — continuously evaluated, model-agnostic, model-versioned
-2. **Methodology** — HRCB + SETL + Fair Witness + DCP is the IP; prompts are not published
-3. **Domain temporal history** — accumulating trend data competitors can't retroactively create
-4. **Multi-model consensus** — no single model is trusted; ensemble + trust index is a feature
-5. **HN-native** — the community scoring, velocity, and faction data is a unique contextual layer
+2. **Accumulated data** — months of multi-model evaluation history, domain temporal
+   profiles, consensus scores, calibration runs. A competitor starting today has
+   none of this and cannot retroactively create it.
+3. **Domain temporal history** — `domain_profile_snapshots` accumulates daily;
+   this time-series depth is not clonable from the code alone
+4. **Multi-model consensus** — no single model is trusted; ensemble + trust
+   index is a feature; replicating the validated calibration set takes months
+5. **First-mover positioning** — "UDHR-based content evaluation" is an
+   unoccupied niche; brand recognition and research citations compound over time
+6. **Operational engineering** — 41 migrations of battle-tested distributed
+   systems work (eval_queue pull model, rater health auto-disable, content gate,
+   truncation weight discounting); the complexity of getting this right is a
+   real barrier
+
+**What is NOT the moat (revised):** The prompts in `prompts.ts` are not
+defensible IP. They operationalize published academic frameworks (PTC-18
+propaganda taxonomy, CRAAP epistemic quality, Russell's Circumplex emotional
+tone) that are fully documented in the methodology `.txt` files. Keeping
+`prompts.ts` private while publishing `methodology-v3.4.txt` is incoherent —
+the prompt IS the methodology operationalized. It also makes open-source
+contributions impossible (no one can run a local dev instance). The prompts
+should be published.
 
 ---
 
-## Dataset Strategy (see also: license section)
+## Dataset Strategy
 
 The dataset being publicly accessible is a **strategic asset** for a service
 business:
@@ -92,11 +113,51 @@ business:
 - Research citations → academic credibility → discovery
 - Open data → trust → API adoption
 - SEO surface → organic inbound
-- The methodology remains proprietary even if the scored data is open
 
-A competitor cloning a static dataset snapshot cannot replicate the live
-pipeline, the model ensemble, the calibration infrastructure, or the daily
-domain snapshot accumulation. The data is not the moat.
+License split: **AGPL-3.0 for the code, CC BY-NC-SA 4.0 for the dataset.**
+These require separate LICENSE files or headers.
+
+A competitor cloning the code + dataset cannot replicate the live pipeline,
+the model ensemble, the calibration infrastructure, or the accumulated temporal
+history. The data is not the moat — but neither is code secrecy. The running
+service and data depth are.
+
+---
+
+## GitHub Publishing Strategy
+
+*(Added 2026-02-27 — three-phase plan based on Opus analysis)*
+
+### Phase 1 — Repo cleanup (2–4 weeks)
+- Remove `claude.key`, raw eval output files, personal files from git history
+- Add `.gitignore` entries for secrets and artifacts
+- Write real `README.md` with architecture overview and screenshots
+- Add `LICENSE` (AGPL-3.0) and `LICENSE-DATA` (CC BY-NC-SA 4.0)
+- Verify no secrets appear in `git log --all`
+
+### Phase 2 — Build the API moat (1–2 months)
+- Implement `api_keys` D1 table and key issuance endpoint
+- Replace IP-based rate limit with key-based quota on `/api/v1/`
+- Ship at least one bulk export format (stories.jsonl → R2)
+- Get `/data` page out of stub/501 state
+- **This is the step that makes open-sourcing safe:** value shifts to the
+  service and accumulated data, not the code
+
+### Phase 3 — Publish (after Phase 2)
+- Open-source the full codebase under AGPL-3.0 — **including `prompts.ts`
+  and calibration files** — do not strip them
+- AGPL forces derivative network services to publish their modifications;
+  a well-funded competitor cannot fork privately and compete silently
+- Keep methodology documentation (v3.4, calibration set, baselines) in the
+  repo — they are already inferrable from the public site's API output
+- **Do not publish `IDEAS.md`** if you want to protect roadmap details;
+  everything else is fine
+
+### Why AGPL over MIT/Apache
+MIT/Apache lets a competitor take the pipeline, improve it privately, and
+compete with you using your own work. AGPL requires any entity running a
+modified version as a network service to publish their source. This is the
+correct license when the value is in the running service, not in code secrecy.
 
 ---
 
@@ -116,16 +177,17 @@ domain snapshot accumulation. The data is not the moat.
    stories. Backed by `domain_profile_snapshots` + `domain_aggregates`.
 
 5. **White-label packaging** — Terraform/wrangler config bundle for deploying a
-   private instance. Methodology docs + calibration set as paid deliverable.
+   private instance. Methodology docs + calibration set included (not hidden).
 
 ---
 
-## Notes
+## Security Before Publishing (Critical)
 
-- The current Cloudflare Workers architecture scales well for a startup; D1
-  has limits at very high volume but Workers + KV handle burst traffic cheaply.
-- Stripe + Cloudflare Workers integration is well-documented; no new infra needed.
-- The methodology (prompts, calibration, signal architecture) should remain
-  internal even if the dataset is openly licensed.
-- A `/pricing` page and a `/api-keys` management UI are the main front-end
-  additions needed at launch.
+Before any `git push` to a public repo:
+
+- Revoke `claude.key` (Anthropic key) — regardless of publishing plans
+- Revoke `site/.dev.vars` OpenRouter key + TRIGGER_SECRET + cron token
+- Replace hardcoded Cloudflare account ID in `test-workers-ai.sh` with env var
+- Replace real D1/KV resource IDs in `wrangler*.toml` with placeholder comments
+- Run `git log --all --full-history -- claude.key site/.dev.vars site/.cron-secret`
+  to confirm secrets were never committed; purge with `git filter-repo` if found
