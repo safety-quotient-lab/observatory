@@ -81,12 +81,14 @@ function timeAgo(unixTime: number): string {
               {story.hcb_editorial_mean !== null ? formatScore(story.hcb_editorial_mean) : '--'}
             </span>
           </div>
-          <div class="score-row" data-channel="structural">
-            <span class="score-font score-label">S</span>
-            <span class="score-font score-value" style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : 'var(--fg-secondary)'};`}>
-              {structuralScore !== null ? formatScore(structuralScore) : '--'}
-            </span>
-          </div>
+          {!isLiteOnly && (
+            <div class="score-row" data-channel="structural">
+              <span class="score-font score-label">S</span>
+              <span class="score-font score-value" style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : 'var(--fg-secondary)'};`}>
+                {structuralScore !== null ? formatScore(structuralScore) : '--'}
+              </span>
+            </div>
+          )}
         </div>
       </a>
     ) : story.eval_status === 'evaluating' ? (

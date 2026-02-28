@@ -285,7 +285,8 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
          FROM rater_evals re
          INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.hn_id = ? AND re.eval_status = 'done'
-           AND (re.hcb_weighted_mean IS NOT NULL OR re.hcb_editorial_mean IS NOT NULL)`
+           AND (re.hcb_weighted_mean IS NOT NULL OR re.hcb_editorial_mean IS NOT NULL)
+           AND re.schema_version NOT IN ('lite-1.3', 'light-1.3')`
       )
       .bind(hnId)
       .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null; content_truncation_pct: number | null }>();
