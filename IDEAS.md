@@ -1,59 +1,110 @@
-# Ideas: Untapped HN API & System Data
+# Ideas
 
-## From the HN API (untapped endpoints)
+Architectural options, deferred enhancements, and someday-maybe features.
+Items here are **not committed work** — they're pre-researched options to
+pull from when the time is right. Active work lives in `TODO.md`.
 
-### 1. New Stories + Best Stories Feeds
-`/v0/newstories.json` + `/v0/beststories.json` — Currently only fetching `topstories`. These two additional feeds give a different population: new stories catch content *before* community filtering (raw signal), and best stories represent the *curated consensus*. Comparing HRCB distributions across all three feeds would reveal whether community voting amplifies or suppresses rights-aligned content.
+---
 
-*Asimov / Psychohistory angle*: With all three feeds over time, build a **"Seldon Index"** — statistical prediction of how the HN hivemind's rights-alignment drifts over weeks and months. Not individual prediction, but macro-trend forecasting of collective attention.
+## Shipped Ideas (archive)
 
-### 2. Dedicated Ask HN + Show HN Polling
-`/v0/askstories.json` + `/v0/showstories.json` — `hn_type` column already exists in the schema but these are only captured incidentally. Dedicated polling would enable comparison: do Ask HN discussions (community deliberation) score differently from Show HN (product launches)?
+These were the original brainstorm. All built as of 2026-02-28.
 
-### 3. User Profiles
-`/v0/user/<id>.json` — `karma`, `created`, `about`, `submitted` — `hn_by` is stored but the poster is never looked up. User karma, account age, and submission history are all available.
+1. **New/Best Stories feeds + Seldon Index** — `/api/v0/{new,best}stories.json`, `/seldon` with rolling averages and regime change detection
+2. **Ask HN + Show HN polling** — `hn_type` filtering, dedicated feed sources
+3. **User Profiles** — `hn_users` table, `/users`, `/user/[username]`, karma-HRCB correlation
+4. **Score Velocity tracking** — `story_snapshots`, `/velocity`, `/dynamics`
+5. **Cross-Article Correlation Network** — `/rights/network` with MST + Pearson
+6. **Domain Factions** — `/factions` with 8D clustering, PCA, 3D Three.js viz
+7. **SETL Temporal tracking** — `getGlobalSetlHistory()`, spike detection on `/seldon`
+8. **Job Stories** — polled, stored, evaluated in pipeline
+9. **Psychohistory Dashboard** — `/seldon` with rolling 7/30-day averages, regime changes
 
-*Heinlein / Competent Man angle*: **Poster Profiles** — Does a high-karma, decade-old account submit content that scores differently than a new account? Are there "competent posters" whose submissions reliably align with (or against) specific UDHR articles? Pattern recognition on public data already in the DB.
+---
 
-### 4. Full Comment Trees
-`/v0/item/<id>.json` — `kids` (comment tree), `text`, `dead`, `deleted` — Some comments are fetched, but the full recursive comment tree is available. Each comment has its own `score`, `by`, `kids`, `text`.
+## Enhancement Ideas (built features, unbuilt extensions)
 
-*Robert Anton Wilson / Reality Tunnels angle*: **Comment Sentiment Divergence** — When a story scores strong-positive on Article 19 (freedom of expression), do the *comments* argue for or against that framing? The story and its comment section may inhabit completely different reality tunnels. Evaluate top-level comments against the same UDHR rubric and measure the *divergence* between what content says and what the community says about it. A **"fnord detector"** — finding hidden tension between surface content and community interpretation.
+### Comment Sentiment Divergence *(the "fnord detector")*
+Comment trees are crawled and stored (`story_comments` table) but not evaluated.
+- Per-comment HRCB lean score — compare aggregate comment lean vs story HRCB
+- Flag stories where comments strongly disagree with assessment
+- Divergence badge on item page, comment sentiment distribution chart
+- *Prerequisite*: Enhanced comments (TODO Round 5) builds the crawl depth + refresh infra first
 
-### 5. Updates Feed (Changed Items & Profiles)
-`/v0/updates.json` — Real-time stream of modifications. Score changes, comment additions, title edits. Track *score velocity* (how fast a story gains points) and correlate with HRCB.
+### Faction Drift + Force-Directed Network
+Factions page has static clustering. Extensions:
+- Track faction membership changes over time (which domains migrate between clusters)
+- Force-directed network visualization of inter-faction affinity
+- "Chapel Perilous" detector — moments when a domain's SETL maximally diverges
 
-*Gibson / Pattern Recognition angle*: **Cayce Pollard Mode** — Track stories whose HN score is rising fastest and evaluate them in near-real-time. The "viral moment" of a story is when it's most culturally relevant. Does high-velocity content lean differently than slow-burner content?
+### Seldon Confidence Bands + Event Annotations
+Seldon has rolling averages and regime detection. Extensions:
+- Per-article daily trend lines (not just global)
+- Confidence interval bands on rolling averages
+- Real-world event annotation layer (manual or automated via news API)
 
-## From Within the System (existing data, new combinations)
+### Rights Network Temporal Evolution
+Network page shows static correlations. Extensions:
+- Cluster detection (community finding algorithm)
+- Temporal network evolution — how article correlations shift over months
 
-### 6. Cross-Article Correlation Network
-`getArticlePairStats` already computes Pearson correlations, but the *network* isn't visualized. Which UDHR articles form clusters? If Article 12 (privacy) and Article 19 (expression) are anti-correlated in HN content, that reveals how the tech community frames rights as zero-sum.
+### Story Comparison View
+`/compare/[id1]/[id2]` — side-by-side scores, classification, sentiment.
+Section-by-section score differences, E vs S channel divergence.
 
-*Stephenson / Cryptonomicon angle*: **The Rights Graph** — Force-directed graph where articles are nodes and correlation strength is edge weight. Reveals the **hidden information architecture** of how rights relate to each other in practice — not in theory (where they're "universal and indivisible") but in actual tech-world content.
+---
 
-### 7. Domain Factions via DCP + Fingerprints
-`domain_dcp` stores privacy policies, ToS, accessibility, ownership. Combined with domain fingerprints (per-article score profiles), each domain becomes a "faction" with a characteristic rights profile.
+## Architectural Options (researched, not actionable yet)
 
-*Stackpole / BattleTech angle*: **Domain Factions** — Treat domains as factions in a political simulation. Each has a "mech loadout" (DCP + fingerprint). Compute **faction similarity** (cosine similarity between fingerprint vectors), identify **alliances** (domains that cluster together), track **faction drift** over time. Is `nytimes.com`'s rights profile converging with or diverging from `theguardian.com`?
+### Cloudflare Analytics Engine *(researched 2026-02-28)*
+ClickHouse-backed write-once event store. Evaluated for replacing D1 time-series queries.
 
-### 8. SETL Temporal Tracking (Hypocrisy Index)
-SETL (Structural-Editorial Tension Level) is already computed. A site that *says* the right things (high editorial) but *does* the wrong things (low structural) has high SETL. But SETL over time per domain isn't tracked.
+**Verdict: Not worth it at current scale.** Revisit when per-eval write latency
+exceeds 3s or materialized table count reaches 12 (currently 7, ceiling ~10-12).
 
-*Wilson / Illuminatus! angle*: **The Hypocrisy Index** — Track domain SETL trends. When a company is in a PR crisis, does their editorial score spike (damage control) while structural stays low? Build a **"Chapel Perilous" detector** — moments when a domain's editorial and structural signals maximally diverge.
+Key findings:
+- Free tier fits easily: <1% writes (450/100K), 7-28% reads (700-2800/10K)
+- 38% of analytics functions have good AE fit (daily velocity, latency, cost, DLQ trend)
+- 47% structurally incompatible (mutable state, per-section data, cross-table JOINs)
+- 3-month retention only — no all-time trends
+- 20 doubles per data point — full eval needs 35 numerics, requires splitting
+- KV caching already solves the read-performance problem for hot queries
+- The expensive D1 queries (domain_aggregates ORDER BY) are the ones AE can't replace
 
-### 9. Job Stories as Corporate Rights Signals
-`/v0/jobstories.json` is completely untapped. Job postings reveal what companies *value* structurally — remote work (Article 24, rest/leisure), equal opportunity language (Article 2, non-discrimination), benefits (Article 25, standard of living). Structural signals from inside the hiring process.
+### Lobsters (lobste.rs) as Data Source
+Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`.
+Tagged content (no upvote-only ranking) gives different signal than HN.
 
-*Heinlein / TANSTAAFL angle*: Job postings are the one place companies can't hide behind editorial polish. The lunch is never free — what a company offers in a job post reveals what it demands. HRCB-evaluating job posts would give the most honest structural signal in the entire dataset.
+Requirements:
+- `source` column on stories (migration) — enables source-aware analytics downstream
+- Cron extension for Lobsters polling
+- Top-N auto-eval logic (Lobsters has lower volume than HN)
+- Source-aware feed filtering on all dashboard pages
 
-### 10. Temporal Psychohistory Dashboard
-`getDailyHrcb` exists but only renders a simple line chart. With accumulating daily data, build something deeper.
+### Rate Limit Exhaustion Forecasting
+Project time-to-exhaustion from rolling 1h token usage window.
+Alert event when projected exhaustion <24h. Dashboard headroom widget.
+No current pain point — self-throttle + credit pause handle rate limits adequately.
 
-*Asimov / Foundation angle*: **The Seldon Dashboard** — Rolling 7/30/90-day averages of overall HRCB, per-article HRCB, per-content-type HRCB, per-domain HRCB. Detect **regime changes** (statistical breakpoints where the distribution shifts). Correlate with real-world events. When a major privacy law passes, does Article 12 content shift? Psychohistory for a microcosm — the HN readership is small enough to measure, large enough to matter.
+### Velocity Alerts + Decay Analysis
+Stories hitting score threshold → alert event. Velocity decay analysis
+(how fast HRCB momentum drops after initial eval). Nice-to-have analytics.
+
+### A/B Testing Framework for Methodology
+`eval_variant` column, dashboard comparing outcome distributions across variants.
+Far-future platform feature — useful when methodology changes need controlled rollout.
+
+### Materialize getUserIntelligence
+Currently a live CTE scan over full stories table. Could create `user_aggregates`
+materialized table (like `domain_aggregates`). Deferred because the query depends
+on user-controlled sort/filter params — simple cachedQuery won't work,
+full materialization adds a write-path step for marginal gain.
+
+---
 
 ## The Synthesis
 
-The most powerful thing buildable from all of this is what Stephenson might call a **"Primer"** — a self-updating, interactive document that teaches you about the state of human rights in the tech information ecosystem by simply watching what Hacker News reads, discusses, and votes on.
-
-The data is all there or one API call away.
+The most powerful thing buildable from all of this is what Stephenson might call
+a **"Primer"** — a self-updating, interactive document that teaches you about
+the state of human rights in the tech information ecosystem by simply watching
+what Hacker News reads, discusses, and votes on.

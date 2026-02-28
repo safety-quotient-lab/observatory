@@ -37,14 +37,6 @@ rounds. 30/43 items already fixed; remaining items below.
     hcb_weighted_mean re-derived for 372 stories; 132 all-bad stories reset to pending.
     E-not-S rows (1,900+) are intentional behavior — no fix needed.
 
-### Round 3 — Ops Visibility
-
-- [ ] **Rate limit exhaustion forecasting** *(deferred)*
-  - Project time-to-exhaustion from rolling 1h token usage window
-  - Alert event when projected exhaustion <24h
-  - Dashboard headroom widget
-
-
 ### Round 3.5 — Triage UX Audit
 
 - [x] **UX audit findings** — 29/31 done *(2026-02-28)*
@@ -67,10 +59,6 @@ rounds. 30/43 items already fixed; remaining items below.
 - [x] **Cost attribution widget** — estimated API spend (7d/30d) per model on `/status/models`. MODEL_PRICING hardcoded.
 - [x] **SETL spike alerting** — `sweep=setl_spikes` emits `setl_spike` warn events. Rate limit forecasting deferred.
 
-- [ ] **Velocity enhancements**
-  - Velocity alerts (stories hitting score threshold)
-  - Velocity decay analysis
-
 ### Round 4.5 — Search + Longitudinal *(done 2026-02-28)*
 
 - [x] **Passthrough FTS** — `/search?q=...` page with Algolia + D1 enrichment, SLEEPER_RULES eager consumer, donor-gated play button
@@ -78,18 +66,13 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Round 5 — Data Expansion
 
-- [ ] **Enhanced comments** *(deep dive before Lobsters)*
+- [ ] **Enhanced comments**
   - Deep comment crawling (recursive depth 2+ for high-engagement stories)
   - Comment refresh for active discussions; comment score tracking over time
   - Lightweight sentiment on top comments (lite prompt mode)
   - Per-comment HRCB lean score — compare aggregate comment lean vs story HRCB
   - Flag stories where comments strongly disagree with assessment
   - UI: divergence badge on item page, comment sentiment distribution chart
-
-- [ ] **Add Lobsters (lobste.rs) as a data source** *(after comments)*
-  - Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`
-  - Need: `source` column on stories, cron extension, top-N auto-eval logic
-  - *Migration first — enables source-aware analytics downstream*
 
 ### Round 6 — User-Facing Features
 
@@ -113,9 +96,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Round 7 — Platform
 
-- [ ] **A/B testing framework for methodology**
-  - `eval_variant` column, dashboard comparing outcome distributions across variants
-
 - [ ] **Bulk re-evaluation endpoint**
   - Re-enqueue by domain, date range, model, methodology_hash
   - Rate-limited to prevent queue flooding
@@ -123,16 +103,8 @@ rounds. 30/43 items already fixed; remaining items below.
 ### Round 8 — Infrastructure Optimization
 
 - [x] **Prerender static pages** *(done 2026-02-28)* — `/about`, `/data`, `/support` prerendered; `Astro.site` replaces `Astro.request.url`
-- [ ] **Cloudflare Analytics Engine** — write data points per eval in consumers (model, score, latency, prompt_mode). Replace D1 scans (`getDailyEvalVelocity`, `getEvalLatencyStats`) with AE queries. Free: 100K writes/day.
 - [x] **D1 Read Replication** *(done 2026-02-28)* — enabled in dashboard; `readDb()`/`writeDb()` session helpers in `db-utils.ts`; 23 pages + 14 API routes + 6 workers wrapped. Falls back to raw db if `withSession` unavailable (compat date `2024-09-23` may not support it — activates on compat date bump or Pages→Workers migration).
 - [x] **Investigate Pages → Workers migration** *(researched 2026-02-28)* — not feasible: no Astro Workers adapter exists, `@astrojs/cloudflare` is Pages-only. Only `factions.astro` genuinely exceeds 10ms CPU (O(n²) clustering). Fix: cron pre-computation → KV blob (same pattern as status/models).
-
-### Housekeeping (no urgency)
-
-- [ ] **Materialize `getUserIntelligence`** *(audit step 14, LOW)*
-  - Currently a live CTE scan over full stories table
-  - Create `user_aggregates` materialized table (like `domain_aggregates`)
-  - Update on eval write, query from materialized data
 
 ---
 
