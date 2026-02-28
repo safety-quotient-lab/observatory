@@ -1149,6 +1149,7 @@ export async function getModelChannelAverages(db: D1Database): Promise<ModelChan
        WHERE re.eval_status = 'done'
          AND re.hcb_editorial_mean IS NOT NULL
          AND re.hn_id > 0
+         AND mr.enabled = 1
        GROUP BY re.eval_model, re.prompt_mode
        ORDER BY n DESC`
     )
