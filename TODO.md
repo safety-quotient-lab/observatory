@@ -45,10 +45,12 @@ rounds. 30/43 items already fixed; remaining items below.
   - Dashboard headroom widget
 
 - [ ] **Cost attribution per model**
-  - Daily cost per model from eval_history token counts + pricing table
+  - Blocked: token counts missing for Anthropic (consumer doesn't write usage) and Workers AI (CF doesn't expose usage). Only DeepSeek/OpenRouter has data.
+  - Prerequisites: fix Anthropic consumer to extract `usage.input_tokens`/`output_tokens` from API response; Workers AI = $0 (hardcode)
+  - Daily cost per model from rater_evals token counts + pricing table
   - Dashboard widget: cost/eval by model, daily burn rate
   - *Directly informs Phase 2 pricing tiers*
-  - Note: `getCostStats` function already exists (orphaned query — wire it up)
+  - `getCostStats` removed (2026-02-28) — was showing zeros. Rebuild when token data is reliable.
 
 - [ ] **Adaptive daemon parallelism**
   - Real-time backpressure: adjust `--parallel` between batches based on signals

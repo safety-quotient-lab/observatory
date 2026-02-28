@@ -9,7 +9,6 @@ import {
   getProviderStats,
   getModelQueueStats,
   getDlqStats,
-  getCostStats,
   getRecentEvents,
   getDailyEvalVelocity,
 } from '../lib/db';
@@ -22,14 +21,13 @@ const status = await getStatusCounts(db);
 
 const [
   velocity, cronRuns, providerStats, modelQueueStats,
-  dlqStats, costStats, recentPipelineEvents, evalVelocity, lastDlqRow,
+  dlqStats, recentPipelineEvents, evalVelocity, lastDlqRow,
 ] = await Promise.all([
   getVelocityStats(db, status.pending),
   getCronRuns(db, 5).catch(() => [] as Awaited<ReturnType<typeof getCronRuns>>),
   getProviderStats(db).catch(() => [] as Awaited<ReturnType<typeof getProviderStats>>),
   getModelQueueStats(db).catch(() => [] as Awaited<ReturnType<typeof getModelQueueStats>>),
   getDlqStats(db),
-  cachedQuery(kv, 'sys:costStats', () => getCostStats(db), 120),
   getRecentEvents(db, 15).catch(() => [] as Awaited<ReturnType<typeof getRecentEvents>>),
   getDailyEvalVelocity(db, 60).catch(() => [] as Awaited<ReturnType<typeof getDailyEvalVelocity>>),
   db.prepare("SELECT created_at FROM events WHERE event_type IN ('dlq','dlq_replay','dlq_auto_replay') ORDER BY created_at DESC LIMIT 1").first<{created_at: string}>().catch(() => null),
@@ -40,13 +38,6 @@ const velDays = [...new Set(evalVelocity.map(r => r.day))].sort();
 const velFull = velDays.map(d => evalVelocity.find(r => r.day === d && r.prompt_mode === 'full')?.count ?? 0);
 const velLite = velDays.map(d => evalVelocity.find(r => r.day === d && (r.prompt_mode === 'lite' || r.prompt_mode === 'light'))?.count ?? 0);
 const velMax = Math.max(1, ...velFull.map((f, i) => f + velLite[i]));
-
-// Format token counts for display
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
-  return String(n);
-}
 
 // Worker health helpers
 function relativeTime(ts: string | null | undefined): string {
@@ -374,28 +365,6 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
           <tr>
             <td style="color: #5b7279;">Score refresh</td>
             <td style="color: #98a8a8;">Every 5 min (updates) · 48h sweep every 10 min</td>
-          </tr>
-          <tr>
-            <td style="color: #5b7279;">Today</td>
-            <td>
-              <span class="score-font" style="color: #eab308;">{costStats.today_evals}</span>
-              <span style="color: #5b7279;"> evals · </span>
-              <span class="score-font" style="color: #5b7279;">{formatTokens(costStats.today_input_tokens)}</span>
-              <span style="color: #5b7279;"> in · </span>
-              <span class="score-font" style="color: #5b7279;">{formatTokens(costStats.today_output_tokens)}</span>
-              <span style="color: #5b7279;"> out</span>
-            </td>
-          </tr>
-          <tr>
-            <td style="color: #5b7279;">All time</td>
-            <td>
-              <span class="score-font" style="color: #16a34a;">{costStats.total_evals}</span>
-              <span style="color: #5b7279;"> evals · </span>
-              <span class="score-font" style="color: #5b7279;">{formatTokens(costStats.total_input_tokens)}</span>
-              <span style="color: #5b7279;"> in · </span>
-              <span class="score-font" style="color: #5b7279;">{formatTokens(costStats.total_output_tokens)}</span>
-              <span style="color: #5b7279;"> out</span>
-            </td>
           </tr>
           <tr>
             <td style="color: #5b7279;">Crawl surface</td>

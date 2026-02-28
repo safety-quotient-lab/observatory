@@ -26,46 +26,6 @@ export async function getModelComparisonStats(db: D1Database): Promise<ModelComp
   return results;
 }
 
-// --- Cost tracking ---
-
-export interface CostStats {
-  total_evals: number;
-  total_input_tokens: number;
-  total_output_tokens: number;
-  today_evals: number;
-  today_input_tokens: number;
-  today_output_tokens: number;
-}
-
-export async function getCostStats(db: D1Database): Promise<CostStats> {
-  const row = await db
-    .prepare(
-      `SELECT
-        COUNT(*) as total_evals,
-        COALESCE(SUM(input_tokens), 0) as total_input_tokens,
-        COALESCE(SUM(output_tokens), 0) as total_output_tokens,
-        SUM(CASE WHEN evaluated_at >= date('now') THEN 1 ELSE 0 END) as today_evals,
-        COALESCE(SUM(CASE WHEN evaluated_at >= date('now') THEN input_tokens ELSE 0 END), 0) as today_input_tokens,
-        COALESCE(SUM(CASE WHEN evaluated_at >= date('now') THEN output_tokens ELSE 0 END), 0) as today_output_tokens
-       FROM eval_history`
-    )
-    .first<{
-      total_evals: number;
-      total_input_tokens: number;
-      total_output_tokens: number;
-      today_evals: number;
-      today_input_tokens: number;
-      today_output_tokens: number;
-    }>();
-  return {
-    total_evals: row?.total_evals ?? 0,
-    total_input_tokens: row?.total_input_tokens ?? 0,
-    total_output_tokens: row?.total_output_tokens ?? 0,
-    today_evals: row?.today_evals ?? 0,
-    today_input_tokens: row?.today_input_tokens ?? 0,
-    today_output_tokens: row?.today_output_tokens ?? 0,
-  };
-}
 
 // --- Article sparklines ---
 
