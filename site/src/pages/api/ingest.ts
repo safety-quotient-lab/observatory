@@ -103,9 +103,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     const agg = computeLightAggregates(light);
 
-    // writeLightRaterEvalResult above handles promotion (pending→done),
-    // hcb_editorial_mean, eval_model, theme_tag, etc. via COALESCE fill-in.
-    // No redundant UPDATE needed here.
+    // writeLightRaterEvalResult above fills hcb_editorial_mean, theme_tag, etc. via COALESCE.
+    // eval_status is NOT changed — stories remain pending/queued until full eval promotes them.
     return new Response(JSON.stringify({
       ok: true, hn_id, model_id, prompt_mode: 'light',
       weighted_mean: agg.weighted_mean,

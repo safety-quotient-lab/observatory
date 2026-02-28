@@ -15,8 +15,8 @@ const { story, rank, raterModels } = Astro.props;
 // Non-primary models that have evaluated this story
 const otherModels = (raterModels || []).filter(m => m.eval_model !== PRIMARY_MODEL_ID);
 
-const hasEval = story.eval_status === 'done' && (story.hcb_weighted_mean !== null || story.hcb_editorial_mean !== null);
-const isLightOnly = hasEval && story.hcb_weighted_mean === null && story.hcb_editorial_mean !== null;
+const hasEval = story.hcb_weighted_mean !== null || story.hcb_editorial_mean !== null;
+const isLightOnly = hasEval && story.hcb_weighted_mean === null;
 // Display HRCB: weighted_mean for full evals, editorial_mean for light-only
 const displayScore = story.hcb_weighted_mean ?? story.hcb_editorial_mean;
 const displayColor = hasEval ? scoreToColor(displayScore) : '#5b7279';
@@ -67,7 +67,8 @@ function timeAgo(unixTime: number): string {
       <a href={`/item/${story.hn_id}`} style="text-decoration: none;" title={`Editorial: ${formatScore(displayScore)} — ${classLabel} | Conf: ${formatConfidence(confidence)} | Structural: ${structuralScore !== null ? formatScore(structuralScore) : 'ND'} | SETL: ${formatSetl(aggSetl)}`}>
         <div class="tripartite-score">
           <div class="score-row" data-channel="hrcb">
-            <span class="score-font score-label">{isLightOnly ? '~lite' : 'HRCB'}</span>
+            <span class="score-font score-label">{isLightOnly ? '' : 'HRCB'}</span>
+            {isLightOnly && <span class="lite-icon" title="Lite eval (editorial only)">L</span>}
             <span class="score-font score-value" style={`color: ${displayColor};`}>
               {formatScore(displayScore)}
             </span>

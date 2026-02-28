@@ -960,8 +960,8 @@ export async function writeLightRaterEvalResult(
     )
     .run();
 
-  // COALESCE fill-in: write light signals to stories where full eval hasn't set them
-  // Also promote pending/queued stories to done (first light eval wins)
+  // COALESCE fill-in: write light signals to stories where full eval hasn't set them yet.
+  // Does NOT change eval_status — stories remain pending/queued until full eval promotes them to done.
   await db.prepare(
     `UPDATE stories SET
        eq_score = COALESCE(eq_score, ?),
@@ -970,9 +970,6 @@ export async function writeLightRaterEvalResult(
        et_primary_tone = COALESCE(et_primary_tone, ?),
        et_valence = COALESCE(et_valence, ?),
        et_arousal = COALESCE(et_arousal, ?),
-       eval_status = CASE WHEN eval_status IN ('pending', 'queued') THEN 'done' ELSE eval_status END,
-       evaluated_at = CASE WHEN eval_status IN ('pending', 'queued') THEN datetime('now') ELSE evaluated_at END,
-       eval_model = CASE WHEN eval_status IN ('pending', 'queued') THEN ? ELSE eval_model END,
        hcb_editorial_mean = COALESCE(hcb_editorial_mean, ?),
        hcb_theme_tag = COALESCE(hcb_theme_tag, ?),
        hcb_sentiment_tag = COALESCE(hcb_sentiment_tag, ?),
@@ -985,7 +982,6 @@ export async function writeLightRaterEvalResult(
     light.primary_tone ?? null, // tone
     light.valence ?? null,    // VA
     light.arousal ?? null,    // AR
-    modelId,                  // eval_model (for promotion)
     light.evaluation.editorial ?? null,  // hcb_editorial_mean
     light.theme_tag || null,  // hcb_theme_tag
     light.sentiment_tag || null, // hcb_sentiment_tag

@@ -443,6 +443,27 @@ export async function enqueueForEvaluation(
   const limit = 100;
   console.log(`[queue] Dispatching up to ${limit} pending stories`);
 
+  // Stuck-queued recovery: when Anthropic is available, reset queued stories (with no full eval)
+  // back to pending so they're re-dispatched. Stories can get stranded in 'queued' state if a
+  // credit pause was active when they were originally dispatched and the full consumer never ran.
+  const recoveryPaused = await checkCreditPause(kv, 'anthropic');
+  if (!recoveryPaused) {
+    try {
+      const recoveryResult = await db.prepare(
+        `UPDATE stories SET eval_status = 'pending'
+         WHERE eval_status = 'queued'
+           AND hn_id > 0
+           AND hcb_weighted_mean IS NULL`
+      ).run();
+      const changed = (recoveryResult.meta as any)?.changes ?? 0;
+      if (changed > 0) {
+        console.log(`[queue] Stuck-queued recovery: reset ${changed} stranded queued stories to pending`);
+      }
+    } catch (err) {
+      console.error('[queue] Stuck-queued recovery failed (non-fatal):', err);
+    }
+  }
+
   const { results: pending } = await db
     .prepare(
       `SELECT hn_id, url, title, domain, hn_text, hn_score, hn_comments FROM stories
@@ -644,9 +665,9 @@ export async function enqueueForEvaluation(
     }
   }
 
-  // Light-dispatch: send ALL pending stories to Workers AI light queue.
-  // When Anthropic is credit-paused, light evals are the primary path to 'done'.
-  // When Anthropic is active, light evals provide fast ~lite feed presence.
+  // Light-dispatch: send ALL stories to Workers AI light queue.
+  // Light evals fill hcb_editorial_mean + supplementary signals for ~lite feed display
+  // while stories await full eval. Does not promote stories to 'done'.
   if (lightQueue) {
     for (const msg of messages) {
       try {
