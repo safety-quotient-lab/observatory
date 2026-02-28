@@ -68,6 +68,7 @@ export interface QueueMessage {
   eval_model?: string;
   eval_provider?: string;
   prompt_mode?: 'full' | 'light';
+  batch_id?: string | null;
 }
 
 /** Wake-up signal sent to CF Queues instead of full story payloads (pull model). */
@@ -83,6 +84,7 @@ export interface EvalQueueClaim {
   target_provider: string;
   target_model: string;
   prompt_mode: 'full' | 'light';
+  batch_id: string | null;
 }
 
 // --- eval_queue pull model helpers ---
@@ -123,7 +125,7 @@ export async function claimFromEvalQueue(
 
   // Fetch what we actually claimed (concurrent workers may have taken some)
   const { results: claimed } = await db.prepare(
-    `SELECT id, hn_id, target_provider, target_model, prompt_mode
+    `SELECT id, hn_id, target_provider, target_model, prompt_mode, batch_id
      FROM eval_queue WHERE id IN (${placeholders}) AND claimed_by=?`
   ).bind(...ids, workerId).all<EvalQueueClaim>();
 
@@ -164,6 +166,7 @@ export function makeEvalQueueMsg(
     eval_model: claim.target_model,
     eval_provider: claim.target_provider,
     prompt_mode: claim.prompt_mode,
+    batch_id: claim.batch_id ?? null,
   };
 
   return {
@@ -568,7 +571,7 @@ export async function processLightResult(
   const lightMethodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_LIGHT);
 
   // Write
-  await writeLightRaterEvalResult(db, story.hn_id, lightParsed, prep.msgModelId, prep.provider, lightPromptHash, lightMethodologyHash, inputTokens, outputTokens, prep.contentTruncationPct);
+  await writeLightRaterEvalResult(db, story.hn_id, lightParsed, prep.msgModelId, prep.provider, lightPromptHash, lightMethodologyHash, inputTokens, outputTokens, prep.contentTruncationPct, story.batch_id ?? null);
 
   // Invalidate domain caches — light eval fills hcb_editorial_mean which affects feed/domain display
   const cacheKeys = [
@@ -654,7 +657,7 @@ export async function processFullResult(
   const methodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_SLIM);
 
   // Write to rater tables (always) — writeRaterEvalResult also writes to stories/scores/fair_witness if primary
-  await writeRaterEvalResult(db, story.hn_id, fullResult, prep.msgModelId, prep.provider, promptHash, methodologyHash, inputTokens, outputTokens, prep.contentTruncationPct);
+  await writeRaterEvalResult(db, story.hn_id, fullResult, prep.msgModelId, prep.provider, promptHash, methodologyHash, inputTokens, outputTokens, prep.contentTruncationPct, story.batch_id ?? null);
 
   // Primary model: write methodology hash + content hash + invalidate query caches
   if (prep.isPrimary) {

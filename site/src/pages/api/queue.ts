@@ -57,7 +57,8 @@ export const GET: APIRoute = async ({ locals, request }) => {
              AND r.eval_status = 'done'
          )
          ${inflightFilter}
-       ORDER BY CASE WHEN s.hn_type = 'calibration' THEN 0 ELSE 1 END ASC, s.hn_score DESC
+       ORDER BY CASE WHEN s.hn_type = 'calibration' THEN 0 ELSE 1 END ASC,
+                COALESCE(s.eval_priority_score, s.hn_score, 0) DESC
        LIMIT ?`
     )
     .bind(provider, ...inflightIds, limit)

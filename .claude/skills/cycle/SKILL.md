@@ -1,6 +1,6 @@
 ---
 name: cycle
-description: Post-development checklist — update docs, about page, CLAUDE.md, memory, build, commit, and cleanup after code changes
+description: Post-development checklist — update docs, about page, CLAUDE.md, memory, build, commit, deploy, and cleanup after code changes
 user-invocable: true
 argument-hint: [summary of what changed]
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task
@@ -73,13 +73,26 @@ Work through each step. Skip any that don't apply to the changes described in $A
 - Commit using the standard Co-Authored-By trailer
 - Run `git status` after to verify clean working tree
 
-### 9. Cleanup
+### 9. Deploy
+
+- Deploy the site: `cd site && npx wrangler pages deploy dist --project-name hn-hrcb`
+- If worker files changed (functions/*.ts), deploy the affected workers too:
+  - `npx wrangler deploy --config wrangler.cron.toml` (cron)
+  - `npx wrangler deploy --config wrangler.consumer-anthropic.toml` (Anthropic consumer)
+  - `npx wrangler deploy --config wrangler.consumer-openrouter.toml` (OpenRouter consumer)
+  - `npx wrangler deploy --config wrangler.consumer-workers-ai.toml` (Workers AI consumer)
+  - `npx wrangler deploy --config wrangler.dlq.toml` (DLQ worker)
+- If new migrations were added, apply them first: `npx wrangler d1 migrations apply hrcb-db --remote`
+- **Note:** `wrangler.toml` has scrubbed resource IDs for open-source prep. Before deploying, temporarily restore real IDs from the deploy environment (do NOT commit real IDs). After deploy, revert: `git checkout -- wrangler.toml`
+- Report the deployment URL
+
+### 10. Cleanup
 
 - Remove any scratch/temp files created during development (e.g., `*.tmp`, `*.bak`, test outputs)
 - Check for any `console.log` or debug statements that should be removed from production code
 - Verify `.gitignore` covers any new generated directories (e.g., `.astro/`, `dist/`)
 - If new untracked files remain after commit, flag them — they may be intentionally untracked or accidentally missed
 
-### 10. Summary
+### 11. Summary
 
-Report what was updated, what was committed, and what was skipped (with reason).
+Report what was updated, what was committed, what was deployed, and what was skipped (with reason).

@@ -48,6 +48,7 @@ export interface QueueMessage {
   eval_model?: string;
   eval_provider?: string;
   prompt_mode?: 'full' | 'light';
+  batch_id?: string | null;
 }
 
 export interface DomainHealth {
@@ -432,6 +433,74 @@ export function determineEvalDepth(
   return 'light';
 }
 
+// ─── Priority scoring ───
+
+/**
+ * Compute a time-decayed priority score for a story.
+ * Higher score = evaluate sooner.
+ *
+ * Components:
+ *   base:     HN score * time-decay (24h half-life)
+ *   comments: HN comments * 0.5 * time-decay
+ *   karma:    log10(submitter karma) * 10
+ *   feeds:    number of HN feeds story appeared on * 5
+ */
+function computePriorityScore(
+  hnScore: number | null,
+  hnComments: number | null,
+  hnTime: number,
+  submitterKarma: number | null,
+  feedCount: number,
+): number {
+  const hoursOld = (Date.now() / 1000 - hnTime) / 3600;
+  const decay = Math.exp(-hoursOld / 24);
+  const base = (hnScore ?? 0) * decay;
+  const comments = (hnComments ?? 0) * 0.5 * decay;
+  const karma = Math.log10(Math.max(submitterKarma ?? 1, 1)) * 10;
+  const feeds = feedCount * 5;
+  return base + comments + karma + feeds;
+}
+
+/**
+ * Compute and persist eval_priority_score for all pending/queued stories.
+ * Joins hn_users for submitter karma and story_feeds for feed membership count.
+ * Non-fatal — errors are logged but don't interrupt the dispatch cycle.
+ */
+async function updatePriorityScores(db: D1Database): Promise<void> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT s.hn_id, s.hn_score, s.hn_comments, s.hn_time,
+              u.karma, COUNT(sf.feed) AS feed_count
+       FROM stories s
+       LEFT JOIN hn_users u ON u.username = s.hn_by
+       LEFT JOIN story_feeds sf ON sf.hn_id = s.hn_id
+       WHERE s.eval_status IN ('pending', 'queued') AND s.hn_id > 0
+       GROUP BY s.hn_id`
+    ).all<{
+      hn_id: number;
+      hn_score: number | null;
+      hn_comments: number | null;
+      hn_time: number;
+      karma: number | null;
+      feed_count: number;
+    }>();
+
+    if (results.length === 0) return;
+
+    const stmts = results.map(r =>
+      db.prepare(`UPDATE stories SET eval_priority_score = ? WHERE hn_id = ?`)
+        .bind(
+          computePriorityScore(r.hn_score, r.hn_comments, r.hn_time, r.karma, r.feed_count),
+          r.hn_id,
+        )
+    );
+    await safeBatch(db, stmts);
+    console.log(`[queue] Priority scores updated for ${results.length} stories`);
+  } catch (err) {
+    console.error('[queue] updatePriorityScores failed (non-fatal):', err);
+  }
+}
+
 // ─── Queue dispatch ───
 
 export async function enqueueForEvaluation(
@@ -443,6 +512,12 @@ export async function enqueueForEvaluation(
 ): Promise<void> {
   const limit = 100;
   console.log(`[queue] Dispatching up to ${limit} pending stories`);
+
+  // Generate a batch ID for this dispatch cycle — links all eval_queue rows to the same cron run
+  const batchId = `batch_${Date.now()}`;
+
+  // Compute priority scores before fetching (non-fatal)
+  await updatePriorityScores(db);
 
   // Stuck-queued recovery: when Anthropic is available, reset queued stories (with no full eval)
   // back to pending so they're re-dispatched. Stories can get stranded in 'queued' state if a
@@ -473,14 +548,7 @@ export async function enqueueForEvaluation(
        ORDER BY
          CASE WHEN hn_rank IS NOT NULL THEN 0 ELSE 1 END,
          hn_rank ASC,
-         (
-           COALESCE(hn_score, 0) / 500.0
-           + 0.3 * CASE
-              WHEN hn_score IS NOT NULL AND hn_comments IS NOT NULL AND (hn_score + hn_comments) > 0
-              THEN ABS(CAST(hn_comments - hn_score AS REAL) / (hn_comments + hn_score))
-              ELSE 0
-            END
-         ) DESC
+         COALESCE(eval_priority_score, hn_score, 0) DESC
        LIMIT ?`
     )
     .bind(limit)
@@ -643,8 +711,8 @@ export async function enqueueForEvaluation(
       for (const model of freeModels) {
         const freeStmts = enqueuedIds.map(hnId =>
           db.prepare(
-            `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority) VALUES (?, ?, ?, ?, 0)`
-          ).bind(hnId, model.provider, model.id, model.prompt_mode ?? 'full')
+            `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id) VALUES (?, ?, ?, ?, 0, ?)`
+          ).bind(hnId, model.provider, model.id, model.prompt_mode ?? 'full', batchId)
         );
         if (freeStmts.length > 0) await safeBatch(db, freeStmts);
 
@@ -667,8 +735,8 @@ export async function enqueueForEvaluation(
     // Insert eval_queue rows for Anthropic primary model
     const anthStmts = enqueuedIds.map(hnId =>
       db.prepare(
-        `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority) VALUES (?, 'anthropic', ?, 'full', 0)`
-      ).bind(hnId, PRIMARY_MODEL_ID)
+        `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id) VALUES (?, 'anthropic', ?, 'full', 0, ?)`
+      ).bind(hnId, PRIMARY_MODEL_ID, batchId)
     );
     if (anthStmts.length > 0) await safeBatch(db, anthStmts);
 
@@ -687,8 +755,8 @@ export async function enqueueForEvaluation(
     for (const model of waiModels) {
       const waiStmts = enqueuedIds.map(hnId =>
         db.prepare(
-          `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority) VALUES (?, 'workers-ai', ?, 'light', 0)`
-        ).bind(hnId, model.id)
+          `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id) VALUES (?, 'workers-ai', ?, 'light', 0, ?)`
+        ).bind(hnId, model.id, batchId)
       );
       if (waiStmts.length > 0) await safeBatch(db, waiStmts);
     }
@@ -699,11 +767,11 @@ export async function enqueueForEvaluation(
     }
   }
 
-  // Mark stories as queued in stories table
+  // Mark stories as queued and record the batch ID in stories table
   const updateStmts = enqueuedIds.map(hnId =>
     db
-      .prepare(`UPDATE stories SET eval_status = 'queued' WHERE hn_id = ?`)
-      .bind(hnId)
+      .prepare(`UPDATE stories SET eval_status = 'queued', eval_batch_id = ? WHERE hn_id = ?`)
+      .bind(batchId, hnId)
   );
 
   if (updateStmts.length > 0) {
