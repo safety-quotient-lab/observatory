@@ -30,28 +30,7 @@ try {
 const domainCount = profiles.length;
 const storyCount = profiles.reduce((s, p) => s + p.count, 0);
 
-// --- Aggregate metrics (single pass) ---
-let sumSetl = 0, cSetl = 0;
-let sumFw = 0, cFw = 0;
-let sumConf = 0, cConf = 0;
-let minHrcb = Infinity, maxHrcb = -Infinity;
-
-for (const p of profiles) {
-  if (p.avg_setl != null) { sumSetl += p.avg_setl; cSetl++; }
-  if (p.avg_fw_ratio != null) { sumFw += p.avg_fw_ratio; cFw++; }
-  if (p.avg_confidence != null) { sumConf += p.avg_confidence; cConf++; }
-  if (p.avg_hrcb != null) {
-    if (p.avg_hrcb < minHrcb) minHrcb = p.avg_hrcb;
-    if (p.avg_hrcb > maxHrcb) maxHrcb = p.avg_hrcb;
-  }
-}
-const avgSetl = cSetl > 0 ? sumSetl / cSetl : null;
-const avgFw = cFw > 0 ? sumFw / cFw : null;
-const avgConf = cConf > 0 ? sumConf / cConf : null;
-const hrcbSpreadMin = minHrcb === Infinity ? null : minHrcb;
-const hrcbSpreadMax = maxHrcb === -Infinity ? null : maxHrcb;
-
-// --- Signal Leaders (8 dimensions) ---
+// --- Pre-computed source metrics (KV-cached, avoids repeated CPU work) ---
 interface SignalLeader {
   label: string;
   fullName: string;
@@ -64,64 +43,6 @@ interface SignalLeader {
   note: string;
 }
 
-type SignalKey = 'avg_eq' | 'avg_so' | 'avg_sr' | 'avg_td' | 'avg_pt_count' | 'avg_valence' | 'avg_arousal' | 'avg_fw_ratio';
-
-const signalDims: { key: SignalKey; label: string; fullName: string; color: string; note: string }[] = [
-  { key: 'avg_eq', label: 'EQ', fullName: 'Epistemic Quality', color: '#f59e0b', note: '' },
-  { key: 'avg_so', label: 'SO', fullName: 'Solution Orientation', color: '#16a34a', note: '' },
-  { key: 'avg_sr', label: 'SR', fullName: 'Stakeholder Voice', color: '#60a5fa', note: '' },
-  { key: 'avg_td', label: 'TD', fullName: 'Transparency', color: '#16a34a', note: '' },
-  { key: 'avg_pt_count', label: 'PT', fullName: 'Propaganda Flags', color: '#dc2626', note: 'inv' },
-  { key: 'avg_valence', label: 'VA', fullName: 'Valence', color: '#a855f7', note: '' },
-  { key: 'avg_arousal', label: 'AR', fullName: 'Arousal', color: '#818cf8', note: '' },
-  { key: 'avg_fw_ratio', label: 'FW', fullName: 'Fair Witness Ratio', color: '#22c55e', note: '' },
-];
-
-const leaders: SignalLeader[] = [];
-for (const dim of signalDims) {
-  let topDomain = '--', bottomDomain = '--';
-  let topVal = -Infinity, bottomVal = Infinity;
-  let sum = 0, cnt = 0;
-  for (const p of profiles) {
-    const v = p[dim.key];
-    if (v == null) continue;
-    sum += v; cnt++;
-    if (v > topVal) { topVal = v; topDomain = p.domain; }
-    if (v < bottomVal) { bottomVal = v; bottomDomain = p.domain; }
-  }
-  if (cnt > 0) {
-    leaders.push({
-      label: dim.label,
-      fullName: dim.fullName,
-      color: dim.color,
-      topDomain,
-      topVal,
-      bottomDomain,
-      bottomVal,
-      mean: sum / cnt,
-      note: dim.note,
-    });
-  }
-}
-
-// --- Dominant distributions ---
-const toneCounts: Record<string, number> = {};
-const scopeCounts: Record<string, number> = {};
-const levelCounts: Record<string, number> = {};
-for (const p of profiles) {
-  if (p.dominant_tone) toneCounts[p.dominant_tone] = (toneCounts[p.dominant_tone] || 0) + 1;
-  if (p.dominant_scope) scopeCounts[p.dominant_scope] = (scopeCounts[p.dominant_scope] || 0) + 1;
-  if (p.dominant_reading_level) levelCounts[p.dominant_reading_level] = (levelCounts[p.dominant_reading_level] || 0) + 1;
-}
-
-const toneEntries = Object.entries(toneCounts).sort((a, b) => b[1] - a[1]);
-const maxTone = toneEntries.length > 0 ? toneEntries[0][1] : 1;
-const scopeEntries = Object.entries(scopeCounts).sort((a, b) => b[1] - a[1]);
-const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
-const levelEntries = Object.entries(levelCounts).sort((a, b) => b[1] - a[1]);
-const maxLevel = levelEntries.length > 0 ? levelEntries[0][1] : 1;
-
-// --- HRCB Band Distribution ---
 interface HrcbBand {
   label: string;
   min: number;
@@ -129,23 +50,114 @@ interface HrcbBand {
   count: number;
   color: string;
 }
-const bands: HrcbBand[] = [
-  { label: 'Strong Pos', min: 0.5, max: Infinity, count: 0, color: scoreToColor(0.9) },
-  { label: 'Mod Pos', min: 0.2, max: 0.5, count: 0, color: scoreToColor(0.55) },
-  { label: 'Mild Pos', min: 0.05, max: 0.2, count: 0, color: scoreToColor(0.25) },
-  { label: 'Neutral', min: -0.05, max: 0.05, count: 0, color: scoreToColor(0) },
-  { label: 'Mild Neg', min: -0.2, max: -0.05, count: 0, color: scoreToColor(-0.25) },
-  { label: 'Mod Neg', min: -0.5, max: -0.2, count: 0, color: scoreToColor(-0.55) },
-  { label: 'Strong Neg', min: -Infinity, max: -0.5, count: 0, color: scoreToColor(-0.9) },
-];
-for (const p of profiles) {
-  if (p.avg_hrcb == null) continue;
-  for (const b of bands) {
-    if (p.avg_hrcb >= b.min && p.avg_hrcb < b.max) { b.count++; break; }
-  }
+
+interface SourceMetrics {
+  avgSetl: number | null;
+  avgFw: number | null;
+  avgConf: number | null;
+  hrcbSpreadMin: number | null;
+  hrcbSpreadMax: number | null;
+  leaders: SignalLeader[];
+  toneEntries: [string, number][];
+  scopeEntries: [string, number][];
+  levelEntries: [string, number][];
+  bands: HrcbBand[];
 }
-// Edge case: exactly +0.5 goes to Mod Pos, adjust Strong Pos to include upper boundary
-// Actually the >= on min handles it: 0.5 >= 0.5 => Strong Pos. Good.
+
+function computeSourceMetrics(profs: DomainSignalProfile[]): SourceMetrics {
+  // Aggregate metrics (single pass)
+  let sumSetl = 0, cSetl = 0;
+  let sumFw = 0, cFw = 0;
+  let sumConf = 0, cConf = 0;
+  let minHrcb = Infinity, maxHrcb = -Infinity;
+
+  for (const p of profs) {
+    if (p.avg_setl != null) { sumSetl += p.avg_setl; cSetl++; }
+    if (p.avg_fw_ratio != null) { sumFw += p.avg_fw_ratio; cFw++; }
+    if (p.avg_confidence != null) { sumConf += p.avg_confidence; cConf++; }
+    if (p.avg_hrcb != null) {
+      if (p.avg_hrcb < minHrcb) minHrcb = p.avg_hrcb;
+      if (p.avg_hrcb > maxHrcb) maxHrcb = p.avg_hrcb;
+    }
+  }
+
+  // Signal Leaders (8 dimensions)
+  type SignalKey = 'avg_eq' | 'avg_so' | 'avg_sr' | 'avg_td' | 'avg_pt_count' | 'avg_valence' | 'avg_arousal' | 'avg_fw_ratio';
+  const signalDims: { key: SignalKey; label: string; fullName: string; color: string; note: string }[] = [
+    { key: 'avg_eq', label: 'EQ', fullName: 'Epistemic Quality', color: '#f59e0b', note: '' },
+    { key: 'avg_so', label: 'SO', fullName: 'Solution Orientation', color: '#16a34a', note: '' },
+    { key: 'avg_sr', label: 'SR', fullName: 'Stakeholder Voice', color: '#60a5fa', note: '' },
+    { key: 'avg_td', label: 'TD', fullName: 'Transparency', color: '#16a34a', note: '' },
+    { key: 'avg_pt_count', label: 'PT', fullName: 'Propaganda Flags', color: '#dc2626', note: 'inv' },
+    { key: 'avg_valence', label: 'VA', fullName: 'Valence', color: '#a855f7', note: '' },
+    { key: 'avg_arousal', label: 'AR', fullName: 'Arousal', color: '#818cf8', note: '' },
+    { key: 'avg_fw_ratio', label: 'FW', fullName: 'Fair Witness Ratio', color: '#22c55e', note: '' },
+  ];
+
+  const leaders: SignalLeader[] = [];
+  for (const dim of signalDims) {
+    let topDomain = '--', bottomDomain = '--';
+    let topVal = -Infinity, bottomVal = Infinity;
+    let sum = 0, cnt = 0;
+    for (const p of profs) {
+      const v = p[dim.key];
+      if (v == null) continue;
+      sum += v; cnt++;
+      if (v > topVal) { topVal = v; topDomain = p.domain; }
+      if (v < bottomVal) { bottomVal = v; bottomDomain = p.domain; }
+    }
+    if (cnt > 0) {
+      leaders.push({ label: dim.label, fullName: dim.fullName, color: dim.color,
+        topDomain, topVal, bottomDomain, bottomVal, mean: sum / cnt, note: dim.note });
+    }
+  }
+
+  // Dominant distributions
+  const toneCounts: Record<string, number> = {};
+  const scopeCounts: Record<string, number> = {};
+  const levelCounts: Record<string, number> = {};
+  for (const p of profs) {
+    if (p.dominant_tone) toneCounts[p.dominant_tone] = (toneCounts[p.dominant_tone] || 0) + 1;
+    if (p.dominant_scope) scopeCounts[p.dominant_scope] = (scopeCounts[p.dominant_scope] || 0) + 1;
+    if (p.dominant_reading_level) levelCounts[p.dominant_reading_level] = (levelCounts[p.dominant_reading_level] || 0) + 1;
+  }
+
+  // HRCB Band Distribution
+  const bands: HrcbBand[] = [
+    { label: 'Strong Pos', min: 0.5, max: Infinity, count: 0, color: scoreToColor(0.9) },
+    { label: 'Mod Pos', min: 0.2, max: 0.5, count: 0, color: scoreToColor(0.55) },
+    { label: 'Mild Pos', min: 0.05, max: 0.2, count: 0, color: scoreToColor(0.25) },
+    { label: 'Neutral', min: -0.05, max: 0.05, count: 0, color: scoreToColor(0) },
+    { label: 'Mild Neg', min: -0.2, max: -0.05, count: 0, color: scoreToColor(-0.25) },
+    { label: 'Mod Neg', min: -0.5, max: -0.2, count: 0, color: scoreToColor(-0.55) },
+    { label: 'Strong Neg', min: -Infinity, max: -0.5, count: 0, color: scoreToColor(-0.9) },
+  ];
+  for (const p of profs) {
+    if (p.avg_hrcb == null) continue;
+    for (const b of bands) {
+      if (p.avg_hrcb >= b.min && p.avg_hrcb < b.max) { b.count++; break; }
+    }
+  }
+
+  return {
+    avgSetl: cSetl > 0 ? sumSetl / cSetl : null,
+    avgFw: cFw > 0 ? sumFw / cFw : null,
+    avgConf: cConf > 0 ? sumConf / cConf : null,
+    hrcbSpreadMin: minHrcb === Infinity ? null : minHrcb,
+    hrcbSpreadMax: maxHrcb === -Infinity ? null : maxHrcb,
+    leaders,
+    toneEntries: Object.entries(toneCounts).sort((a, b) => b[1] - a[1]),
+    scopeEntries: Object.entries(scopeCounts).sort((a, b) => b[1] - a[1]),
+    levelEntries: Object.entries(levelCounts).sort((a, b) => b[1] - a[1]),
+    bands,
+  };
+}
+
+const metrics = await cachedQuery<SourceMetrics>(kv, 'sys:sourceMetrics', () => Promise.resolve(computeSourceMetrics(profiles)), 120);
+const { avgSetl, avgFw, avgConf, hrcbSpreadMin, hrcbSpreadMax, leaders, toneEntries, scopeEntries, levelEntries, bands } = metrics;
+const maxTone = toneEntries.length > 0 ? toneEntries[0][1] : 1;
+const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
+const maxLevel = levelEntries.length > 0 ? levelEntries[0][1] : 1;
 const maxBand = Math.max(...bands.map(b => b.count), 1);
 
 // --- Hub cards ---

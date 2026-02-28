@@ -23,13 +23,13 @@ const [domains, signalProfilesArr, karmaMapArr] = await Promise.all([
   }, 600),
 ]);
 const karmaMap = new Map(karmaMapArr.map(k => [k.domain, k]));
-const signalProfiles = new Map(signalProfilesArr.map(p => [p.domain, p]));
 
 const evaluatedDomains = domains.filter(d => d.avg_score !== null && d.count >= 3);
 const domainScoreMap = new Map(evaluatedDomains.map(d => [d.domain, d.avg_score]));
 
-// --- 2. Signal dimension definitions ---
-const SIGNAL_DIMS: { code: string; fullLabel: string; label: string; color: string; extract: (p: DomainSignalProfile) => number | null }[] = [
+// --- Signal dimension definitions (used by both computation and template) ---
+type SignalDimDef = { code: string; fullLabel: string; label: string; color: string };
+const SIGNAL_DIMS: (SignalDimDef & { extract: (p: DomainSignalProfile) => number | null })[] = [
   { code: 'EQ', fullLabel: 'Epistemic Quality', label: 'epistemic quality', color: '#60a5fa', extract: p => p.avg_eq },
   { code: 'SO', fullLabel: 'Solution Orientation', label: 'solution orientation', color: '#4ade80', extract: p => p.avg_so },
   { code: 'SR', fullLabel: 'Stakeholder Rep', label: 'stakeholder rep', color: '#a78bfa', extract: p => p.avg_sr },
@@ -40,8 +40,103 @@ const SIGNAL_DIMS: { code: string; fullLabel: string; label: string; color: stri
   { code: 'FW', fullLabel: 'Fair Witness', label: 'fair witness', color: '#22d3ee', extract: p => p.avg_fw_ratio },
 ];
 
+// --- FactionsData: all computed results for template rendering ---
+interface EnrichedCluster {
+  id: number;
+  members: string[];
+  centroid: number[];
+  rawCentroid: number[];
+  avgScore: number | null;
+  name: string;
+  archetype: string;
+  description: string;
+  icon: string;
+  color: string;
+  insight: string;
+  dominantTone: string | null;
+  dominantScope: string | null;
+  dominantReadingLevel: string | null;
+  dominantSentiment: string | null;
+  avgSetl: number | null;
+  avgHnScore: number;
+  avgHnComments: number;
+  avgKarma: number | null;
+  storyCount: number;
+  hrcbPositive: number;
+  hrcbNeutral: number;
+  hrcbNegative: number;
+  liminalMembers: { domain: string; secondCluster: string; similarity: number }[];
+}
+
+interface SignalHistogram {
+  code: string;
+  fullLabel: string;
+  color: string;
+  bins: { x0: number; x1: number; count: number }[];
+  min: number;
+  max: number;
+  maxCount: number;
+  clusterMarkers: { name: string; value: number; color: string }[];
+}
+
+interface PcLine {
+  domain: string;
+  color: string;
+  opacity: number;
+  points: string;
+  clusterName: string | null;
+}
+
+interface OutlierEntry {
+  domain: string;
+  score: number | null;
+  outlierScore: number;
+  nearestCluster: string;
+  nearestSim: number;
+  keySignal: string;
+  tone: string | null;
+}
+
+interface FactionsData {
+  enrichedClusters: EnrichedCluster[];
+  loneWolfDomains: string[];
+  histograms: SignalHistogram[];
+  coreHistograms: SignalHistogram[];
+  crossClusterPairs: { a: string; b: string; similarity: number; clusterA: string; clusterB: string }[];
+  sameClusterDivergent: { a: string; b: string; similarity: number; cluster: string }[];
+  outlierEntries: OutlierEntry[];
+  pcLines: PcLine[];
+  pcCentroidLines: { name: string; color: string; points: string }[];
+  interClusterVar: { code: string; label: string; color: string; variance: number }[];
+  affinityMatrix: number[][];
+  signalSpacePoints: { domain: string; zVector: number[]; hcbScore: number | null; storyCount: number; clusterName: string | null; clusterColor: string }[];
+  totalDomains: number;
+  totalClusters: number;
+  unalignedCount: number;
+  loneWolfRatio: number;
+  mostDiff: { code: string; label: string; color: string; variance: number } | null;
+  leastDiff: { code: string; label: string; color: string; variance: number } | null;
+  maxVar: number;
+  nClusters: number;
+  profileCount: number;
+  pcDimMins: number[];
+  pcDimMaxs: number[];
+  populationMedian: number[];
+  dimValues: number[][];
+  // Domain score lookup for template member rendering
+  domainScores: Record<string, number | null>;
+}
+
+// Wrap all CPU-heavy computation in cachedQuery (25-35ms CPU without cache)
+function computeFactionsData(
+  signalProfilesArr: DomainSignalProfile[],
+  domainScoreMapIn: Map<string, number | null>,
+  karmaMapIn: Map<string, { domain: string; avg_karma: number; user_count: number }>,
+): FactionsData {
+  const signalProfilesLocal = new Map(signalProfilesArr.map(p => [p.domain, p]));
+
 // --- 3. Build 8D signal vectors per domain + z-normalize ---
-const profileEntries = [...signalProfiles.entries()];
+const profileEntries = [...signalProfilesLocal.entries()];
 const domainNames = profileEntries.map(([d]) => d);
 const rawVectors = new Map<string, number[]>();
 
@@ -253,33 +348,6 @@ const ARCHETYPE_RULES: { name: string; desc: string; icon: string; test: (hi: Se
   { name: 'Measured Tone', desc: 'Low arousal and restrained editorial energy. Calm, analytical coverage.', icon: '\u{1F30A}', test: (_hi, lo) => lo.has('AR') },
 ];
 
-interface EnrichedCluster {
-  id: number;
-  members: string[];
-  centroid: number[];
-  rawCentroid: number[]; // un-normalized for display
-  avgScore: number | null;
-  name: string;
-  archetype: string;
-  description: string;
-  icon: string;
-  color: string;
-  insight: string;
-  dominantTone: string | null;
-  dominantScope: string | null;
-  dominantReadingLevel: string | null;
-  dominantSentiment: string | null;
-  avgSetl: number | null;
-  avgHnScore: number;
-  avgHnComments: number;
-  avgKarma: number | null;
-  storyCount: number;
-  hrcbPositive: number;
-  hrcbNeutral: number;
-  hrcbNegative: number;
-  liminalMembers: { domain: string; secondCluster: string; similarity: number }[];
-}
-
 // Population medians (for radar overlay)
 const populationMedian = new Array(nDims).fill(0);
 {
@@ -405,14 +473,14 @@ for (const cl of clusterList) {
   }
   if (rc > 0) for (let i = 0; i < nDims; i++) rawCentroid[i] /= rc;
 
-  const scores = cl.members.map(m => domainScoreMap.get(m)).filter((s): s is number => s != null);
+  const scores = cl.members.map(m => domainScoreMapIn.get(m)).filter((s): s is number => s != null);
   const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
 
   const arch = assignArchetype(rawCentroid);
   const insight = generateInsight(rawCentroid, arch.name);
 
   // Aggregate metadata
-  const profiles = cl.members.map(m => signalProfiles.get(m)).filter(Boolean) as DomainSignalProfile[];
+  const profiles = cl.members.map(m => signalProfilesLocal.get(m)).filter(Boolean) as DomainSignalProfile[];
   const dominantTone = mode(profiles.map(p => p.dominant_tone));
   const dominantScope = mode(profiles.map(p => p.dominant_scope));
   const dominantReadingLevel = mode(profiles.map(p => p.dominant_reading_level));
@@ -425,7 +493,7 @@ for (const cl of clusterList) {
   const avgHnComments = hnComments.length > 0 ? hnComments.reduce((a, b) => a + b, 0) / hnComments.length : 0;
 
   // Karma per cluster
-  const karmaVals = cl.members.map(m => karmaMap.get(m)?.avg_karma).filter((v): v is number => v != null);
+  const karmaVals = cl.members.map(m => karmaMapIn.get(m)?.avg_karma).filter((v): v is number => v != null);
   const avgKarma = karmaVals.length > 0 ? Math.round(karmaVals.reduce((a, b) => a + b, 0) / karmaVals.length) : null;
 
   // Story count per cluster
@@ -522,13 +590,6 @@ function pcValY(val: number, dim: number): number {
 }
 
 // Build polylines per domain
-interface PcLine {
-  domain: string;
-  color: string;
-  opacity: number;
-  points: string;
-  clusterName: string | null;
-}
 const pcLines: PcLine[] = [];
 
 // Draw unaligned domains first (behind), then cluster members
@@ -583,30 +644,7 @@ for (let i = 0; i < nClusters; i++) {
   }
 }
 
-function affinityColor(sim: number): string {
-  if (sim >= factionThreshold) return '#34d399';
-  if (sim >= allianceThreshold) return '#4ade80';
-  if (sim >= acquaintanceThreshold) return '#fbbf24';
-  if (sim >= 0) return '#0d4655';
-  return '#f87171';
-}
-
-function affinityOpacity(sim: number): number {
-  return Math.min(Math.abs(sim) * 0.8 + 0.2, 1);
-}
-
 // --- 13. Signal distribution histograms with cluster overlays ---
-interface SignalHistogram {
-  code: string;
-  fullLabel: string;
-  color: string;
-  bins: { x0: number; x1: number; count: number }[];
-  min: number;
-  max: number;
-  maxCount: number;
-  clusterMarkers: { name: string; value: number; color: string }[];
-}
-
 function buildHistogramFromValues(code: string, fullLabel: string, color: string, raw: number[], markers: { name: string; value: number; color: string }[]): SignalHistogram {
   if (raw.length === 0) return { code, fullLabel, color, bins: [], min: 0, max: 0, maxCount: 0, clusterMarkers: [] };
   const min = Math.min(...raw);
@@ -627,7 +665,7 @@ function buildHistogramFromValues(code: string, fullLabel: string, color: string
 }
 
 function buildHistograms(): SignalHistogram[] {
-  const vals = [...signalProfiles.values()];
+  const vals = [...signalProfilesLocal.values()];
   const extractors: { code: string; fullLabel: string; color: string; fn: (p: DomainSignalProfile) => number | null }[] = [
     { code: 'EQ', fullLabel: 'Epistemic Quality (EQ)', color: '#60a5fa', fn: p => p.avg_eq },
     { code: 'SO', fullLabel: 'Solution Orientation (SO)', color: '#4ade80', fn: p => p.avg_so },
@@ -654,7 +692,7 @@ const histograms = buildHistograms();
 
 // --- 13b. Core signal histograms (HRCB, Editorial, Structural, Confidence, SETL) ---
 function buildCoreHistograms(): SignalHistogram[] {
-  const vals = [...signalProfiles.values()];
+  const vals = [...signalProfilesLocal.values()];
   const coreExtractors: { code: string; fullLabel: string; color: string; fn: (p: DomainSignalProfile) => number | null }[] = [
     { code: 'HRCB', fullLabel: 'HRCB Score', color: '#e879f9', fn: p => p.avg_hrcb },
     { code: 'E', fullLabel: 'Editorial Channel', color: '#7d80d1', fn: p => p.avg_editorial },
@@ -668,7 +706,7 @@ function buildCoreHistograms(): SignalHistogram[] {
     // Compute cluster averages for markers
     const markers = enrichedClusters.map(cl => {
       const memberVals = cl.members
-        .map(m => signalProfiles.get(m))
+        .map(m => signalProfilesLocal.get(m))
         .filter(Boolean)
         .map(p => ext.fn(p!))
         .filter((v): v is number => v !== null);
@@ -713,16 +751,6 @@ for (const pair of reverseSorted) {
 }
 
 // --- 15. Outlier scoring ---
-interface OutlierEntry {
-  domain: string;
-  score: number | null;
-  outlierScore: number;
-  nearestCluster: string;
-  nearestSim: number;
-  keySignal: string;
-  tone: string | null;
-}
-
 const outlierEntries: OutlierEntry[] = [];
 for (const domain of loneWolfDomains) {
   const dv = zVectors.get(domain);
@@ -746,10 +774,10 @@ for (const domain of loneWolfDomains) {
     if (absZ > maxAbsZ) { maxAbsZ = absZ; keySignal = SIGNAL_DIMS[i].code; }
   }
 
-  const profile = signalProfiles.get(domain);
+  const profile = signalProfilesLocal.get(domain);
   outlierEntries.push({
     domain,
-    score: domainScoreMap.get(domain) ?? null,
+    score: domainScoreMapIn.get(domain) ?? null,
     outlierScore,
     nearestCluster: nearestName,
     nearestSim: Math.max(nearestSim, 0),
@@ -767,10 +795,79 @@ const loneWolfRatio = totalDomains > 0 ? unalignedCount / totalDomains : 0;
 const mostDiff = interClusterVar.length > 0 ? interClusterVar[0] : null;
 const leastDiff = interClusterVar.length > 0 ? interClusterVar[interClusterVar.length - 1] : null;
 
-// Signal bar helper
-function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
+// --- Signal Space data (for SignalSpace component) ---
+const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
+  const cluster = domainToCluster.get(domain);
+  const enriched = cluster ? enrichedClusters.find(c => c.id === cluster.id) : null;
+  const profile = signalProfilesLocal.get(domain);
+  return {
+    domain,
+    zVector,
+    hcbScore: domainScoreMapIn.get(domain) ?? null,
+    storyCount: profile?.count ?? 1,
+    clusterName: enriched?.name ?? null,
+    clusterColor: enriched?.color ?? '#5b7279',
+  };
+});
 
-// Tier label helper
+// Build domain scores lookup for template rendering
+const domainScores: Record<string, number | null> = {};
+for (const [d, s] of domainScoreMapIn) {
+  domainScores[d] = s;
+}
+
+return {
+  enrichedClusters, loneWolfDomains, histograms, coreHistograms,
+  crossClusterPairs, sameClusterDivergent, outlierEntries,
+  pcLines, pcCentroidLines, interClusterVar, affinityMatrix,
+  signalSpacePoints, totalDomains, totalClusters, unalignedCount,
+  loneWolfRatio, mostDiff, leastDiff, maxVar, nClusters,
+  profileCount: signalProfilesLocal.size,
+  pcDimMins, pcDimMaxs, populationMedian, dimValues, domainScores,
+};
+} // end computeFactionsData
+
+const fd = await cachedQuery<FactionsData>(kv, 'sys:factions', () =>
+  Promise.resolve(computeFactionsData(signalProfilesArr, domainScoreMap, karmaMap)), 120);
+
+const {
+  enrichedClusters, loneWolfDomains, histograms, coreHistograms,
+  crossClusterPairs, sameClusterDivergent, outlierEntries,
+  pcLines, pcCentroidLines, interClusterVar, affinityMatrix,
+  signalSpacePoints, totalDomains, totalClusters, unalignedCount,
+  loneWolfRatio, mostDiff, leastDiff, maxVar, nClusters,
+  profileCount, pcDimMins, pcDimMaxs, populationMedian, dimValues, domainScores,
+} = fd;
+
+// --- Template helper functions (cannot be cached) ---
+const nDims = SIGNAL_DIMS.length;
+const PHI = (1 + Math.sqrt(5)) / 2;
+const factionThreshold = 1 / PHI;
+const allianceThreshold = 1 / (PHI * PHI);
+const acquaintanceThreshold = 1 / (PHI * PHI * PHI);
+
+// Parallel coordinates constants
+const pcW = 700, pcH = 300, pcPadL = 30, pcPadR = 30, pcPadT = 30, pcPadB = 40;
+const pcInnerW = pcW - pcPadL - pcPadR;
+const pcInnerH = pcH - pcPadT - pcPadB;
+const axisSpacing = pcInnerW / (nDims - 1);
+function pcAxisX(dim: number): number { return pcPadL + dim * axisSpacing; }
+function pcValY(val: number, dim: number): number {
+  const norm = (val - pcDimMins[dim]) / ((pcDimMaxs[dim] - pcDimMins[dim]) || 1);
+  return pcPadT + pcInnerH * (1 - norm);
+}
+
+function affinityColor(sim: number): string {
+  if (sim >= factionThreshold) return '#34d399';
+  if (sim >= allianceThreshold) return '#4ade80';
+  if (sim >= acquaintanceThreshold) return '#fbbf24';
+  if (sim >= 0) return '#0d4655';
+  return '#f87171';
+}
+function affinityOpacity(sim: number): number {
+  return Math.min(Math.abs(sim) * 0.8 + 0.2, 1);
+}
+function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
 function tierLabel(sim: number): { label: string; color: string } {
   if (sim >= factionThreshold) return { label: 'Faction', color: '#a78bfa' };
   if (sim >= allianceThreshold) return { label: 'Alliance', color: '#34d399' };
@@ -778,21 +875,6 @@ function tierLabel(sim: number): { label: string; color: string } {
   if (sim >= 0) return { label: 'Neutral', color: '#5b7279' };
   return { label: 'Rival', color: '#f87171' };
 }
-
-// --- Signal Space data (for SignalSpace component) ---
-const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
-  const cluster = domainToCluster.get(domain);
-  const enriched = cluster ? enrichedClusters.find(c => c.id === cluster.id) : null;
-  const profile = signalProfiles.get(domain);
-  return {
-    domain,
-    zVector,
-    hcbScore: domainScoreMap.get(domain) ?? null,
-    storyCount: profile?.count ?? 1,
-    clusterName: enriched?.name ?? null,
-    clusterColor: enriched?.color ?? '#5b7279',
-  };
-});
 ---
 
 <Base title="Domain Factions — HN HRCB">
@@ -835,7 +917,7 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
             <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
               Signal Landscape
               <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
-                how {signalProfiles.size} domains distribute across core and editorial dimensions · colored lines mark cluster centroids
+                how {profileCount} domains distribute across core and editorial dimensions · colored lines mark cluster centroids
               </span>
             </div>
 
@@ -1303,7 +1385,7 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
                     <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">Members</div>
                     <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                       {cl.members.map(m => {
-                        const score = domainScoreMap.get(m);
+                        const score = domainScores[m] ?? undefined;
                         const isLiminal = cl.liminalMembers.some(l => l.domain === m);
                         return (
                           <a href={`/domain/${m}`}

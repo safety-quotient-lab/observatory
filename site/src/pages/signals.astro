@@ -2,9 +2,10 @@
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { getStatusCounts, getSignalOverview } from '../lib/db';
-import { readDb } from '../lib/db-utils';
+import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
+const kv = (Astro.locals as any).runtime.env.CONTENT_CACHE as KVNamespace;
 
 let storyCount = 0;
 let signalData: Awaited<ReturnType<typeof getSignalOverview>> | null = null;
@@ -12,7 +13,7 @@ let signalData: Awaited<ReturnType<typeof getSignalOverview>> | null = null;
 try {
   const [status, signals] = await Promise.all([
     getStatusCounts(db),
-    getSignalOverview(db),
+    cachedQuery(kv, 'sys:signalOverview', () => getSignalOverview(db), 120),
   ]);
   storyCount = status.done;
   signalData = signals;

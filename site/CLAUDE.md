@@ -16,9 +16,9 @@ Site-specific detail for the Astro + Cloudflare Pages frontend and Workers pipel
 
 **Page taxonomy:**
 - **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]` (merged audit trail: eval_history + events)
-- **Signals** (`/signals`): live data dashboard — Core HRCB summary, Global Averages bar chart + 4 distribution charts, Derived Metrics cards, Supplementary Signals cards, Fair Witness one-liner, Eval Modes one-liner. Every signal links to `/about#anchor`. Uses `getStatusCounts` + `getSignalOverview`.
+- **Signals** (`/signals`): live data dashboard — Core HRCB summary, Global Averages bar chart + 4 distribution charts, Derived Metrics cards, Supplementary Signals cards, Fair Witness one-liner, Eval Modes one-liner. Every signal links to `/about#anchor`. Uses `getStatusCounts` + `getSignalOverview` (KV-cached `sys:signalOverview`, 120s TTL).
 - **Rights** (`/rights`): hub → `/rights/observatory`, `/rights/articles`, `/rights/network`, `/article/[n]`
-- **Sources** (`/sources`): live source intelligence dashboard — Source Universe one-liner, Source Metrics 4-card grid, Signal Leaders 8-card grid, Editorial Character 3 distribution charts, Source HRCB Distribution 7-band bar chart, Deep Dive hub cards. Data from `getDomainSignalProfiles(db)` (KV-cached). Sub-pages: `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
+- **Sources** (`/sources`): live source intelligence dashboard — Source Universe one-liner, Source Metrics 4-card grid, Signal Leaders 8-card grid, Editorial Character 3 distribution charts, Source HRCB Distribution 7-band bar chart, Deep Dive hub cards. Data from `getDomainSignalProfiles(db)` (KV-cached). CPU computation extracted to `computeSourceMetrics()`, KV-cached (`sys:sourceMetrics`, 120s TTL). Sub-pages: `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
 - **Trends** (`/trends`): hub → `/seldon`, `/velocity`, `/dynamics`
 - **Status** (`/status`): pipeline health — Coverage Spectrum funnel, Workers Health, Queue Breakdown, Eval Velocity stacked bar, Operations. Sub-pages: `/status/models` (model registry + performance + measurement integrity — multi-model comparison sections read pre-computed KV blob `sys:models:comparison` built by cron every 10 min at `minute%10===5`; lightweight queries run inline), `/status/events` (activity log + diagnostics). All pages use `cachedQuery` with KV (keys `sys:*`, TTLs 60-600s); ops-critical data stays uncached.
 - **About** (`/about`): 3-tier progressive disclosure — Tier 1 always visible, Tier 2 `<details open>`, Tier 3 `<details>` collapsed. Reference sections have anchor IDs (e.g., `#classification`, `#setl`) for deep linking from `/signals`.
@@ -65,7 +65,7 @@ Site-specific detail for the Astro + Cloudflare Pages frontend and Workers pipel
 
 **Page sections:** Signal Landscape → Parallel Coordinates → Signal Space (2D PCA scatter + 3D Three.js orbit) → Differentiation → Cluster Cards (radar charts, members, distributions, liminal flags) → Affinity Matrix → Interesting Pairs → Outliers → Methodology Notes.
 
-**Data flow:** `getDomainSignalProfiles(db)` → z-normalize → cluster → enrich → render. KV-cached (`q:domainSignalProfiles`, 5-min TTL). `Map<string, DomainSignalProfile>` is not JSON-serializable — cache arrays, reconstruct Map.
+**Data flow:** `getDomainSignalProfiles(db)` → `computeFactionsData()` (z-normalize → cluster → enrich) → render. DB query KV-cached (`q:domainSignalProfiles`, 5-min TTL). Full computation result KV-cached (`sys:factions`, 120s TTL — bypasses 25-35ms CPU cost). `Map<string, DomainSignalProfile>` is not JSON-serializable — cache arrays, reconstruct Map.
 
 **Signal Space** (`site/src/components/SignalSpace.astro`): Server-side PCA (power iteration, 3 components). 2D SVG scatter + 3D Three.js orbit (CDN lazy import via `<script is:inline define:vars>`). Toggle buttons for 2D/3D.
 
