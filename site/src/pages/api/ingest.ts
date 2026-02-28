@@ -125,7 +125,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   const channelWeights = slim.evaluation.channel_weights ?? { editorial: 0.5, structural: 0.5 };
   const aggregates = computeAggregates(slim.scores, channelWeights);
-  const fullResult: EvalResult = { ...(slim as any), aggregates };
+  const dcp = typeof slim.domain_context_profile === 'string'
+    ? { domain: slim.evaluation.domain, eval_date: slim.evaluation.date, elements: {} }
+    : slim.domain_context_profile;
+  const fullResult: EvalResult = { ...slim, domain_context_profile: dcp, aggregates };
 
   await writeRaterEvalResult(
     env.DB, hn_id, fullResult, model_id, provider,
@@ -133,11 +136,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     safeInputTokens, safeOutputTokens, 0,
   );
 
-  // Mark story as done so it doesn't get re-queued
-  await env.DB
-    .prepare(`UPDATE stories SET eval_status = 'done', evaluated_at = datetime('now') WHERE hn_id = ? AND eval_status IN ('pending', 'queued')`)
-    .bind(hn_id)
-    .run();
+  // writeRaterEvalResult already promotes eval_status to 'done' via writeEvalResult
 
   return new Response(JSON.stringify({
     ok: true, hn_id, model_id, prompt_mode: 'full',
