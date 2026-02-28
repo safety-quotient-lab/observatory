@@ -5,37 +5,19 @@ sequenced prerequisites for GitHub publishing and commercialization respectively
 
 ---
 
-## Immediate
-
-- [ ] **Revoke live credentials** *(independent of any GitHub plans)*
-  - `ANTHROPIC_API_KEY` in `site/.dev.vars` — revoke at console.anthropic.com → API Keys,
-    generate new one, run `wrangler secret put ANTHROPIC_API_KEY` on each worker
-  - `OPENROUTER_API_KEY` in `site/.dev.vars` — revoke at openrouter.ai → Keys, same process
-  - `TRIGGER_SECRET` in `site/.dev.vars` — rotate: `openssl rand -base64 32`, update
-    `site/.dev.vars`, run `wrangler secret put TRIGGER_SECRET` on each worker
-  - **Status:** never committed (`git log` verified); `.gitignore` covers `*.key` + `.dev.vars`
-
----
-
 ## Phase 1 — Open Source Prep
 *Prerequisite for creating the public GitHub repo. ~2–4 weeks of part-time work.*
 
-- [ ] **Replace real Cloudflare resource IDs** in committed code
-  - `site/scripts/test-workers-ai.sh:9` — hardcoded account ID `82cd6d38...`
-    → replace with `${CLOUDFLARE_ACCOUNT_ID:-<your-account-id>}`
-  - All 7 `wrangler*.toml` files — D1 database ID `8d46e768...`
-    → replace with `# replace with your D1 database ID`
-  - 5 `wrangler*.toml` files — KV namespace ID `ffe31e8b...`
-    → replace with `# replace with your KV namespace ID`
+- [x] **Replace real Cloudflare resource IDs** in committed code *(done 2026-02-27)*
+- [x] **Remove personal eval sample files** from repo root *(done 2026-02-27)*
 
-- [ ] **Remove personal eval sample files** from repo root
-  - `git rm` or move to `examples/`: `berthub-eu-us-clouds.*`,
-    `economictimes-shopping-list-psychology.*`, `hn-viking-dna-study.*`,
-    `kashifshah-net.*` (x3), `nytimes-evolution-vertebrate-eye.*`,
-    `pen-org-mongolian-language.*`, `top-100-sfw-udhr-evaluation.txt`,
-    `top-100-websites-2026-*.txt`
+- [ ] **Decide on `LICENSE`** — license strategy TBD (AGPL-3.0 was considered; not yet decided)
 
-- [ ] **Add `LICENSE`** — AGPL-3.0 for code (see `COMMERCIALIZATION.md` for rationale)
+- [ ] **Revoke/rotate live credentials** — do before any `git push` to a public repo
+  - `ANTHROPIC_API_KEY` — revoke at console.anthropic.com → API Keys, re-issue, `wrangler secret put`
+  - `OPENROUTER_API_KEY` — revoke at openrouter.ai → Keys, re-issue, `wrangler secret put`
+  - `TRIGGER_SECRET` — rotate: `openssl rand -base64 32`, update `site/.dev.vars`, `wrangler secret put`
+  - **Status:** never committed (`git log` verified); `.gitignore` covers `*.key` + `.dev.vars`
 
 - [ ] **Write `README.md`** — architecture overview, what it does, screenshots, local dev setup
 
