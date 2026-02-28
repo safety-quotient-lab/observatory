@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { getStatusCounts, getSignalOverview, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates } from '../lib/db';
+import { getMeanSetl } from '../lib/db-entities';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -72,6 +73,9 @@ const tdRows = tdData ? [
   { label: 'Funding disclosed',   pct: tdData.funding_disclosed_pct },
 ] : [];
 
+let meanSetl: number | null = null;
+try { meanSetl = await getMeanSetl(db); } catch {}
+
 let complexityData: Awaited<ReturnType<typeof getComplexityAggregates>> | null = null;
 try {
   complexityData = await cachedQuery(kv, 'sys:complexityAggregates', () => getComplexityAggregates(db), 600);
@@ -96,6 +100,16 @@ const knowledgeRows = complexityData ? [
   { label: 'Expert only',       count: complexityData.knowledge_expert },
 ] : [];
 const maxKnowledge = knowledgeRows.length > 0 ? Math.max(...knowledgeRows.map(r => r.count), 1) : 1;
+
+const horizonRows = temporalData ? [
+  { label: 'Immediate',   count: temporalData.horizon_immediate },
+  { label: 'Short-term',  count: temporalData.horizon_short_term },
+  { label: 'Medium-term', count: temporalData.horizon_medium_term },
+  { label: 'Long-term',   count: temporalData.horizon_long_term },
+  { label: 'Historical',  count: temporalData.horizon_historical },
+  { label: 'Unspecified', count: temporalData.horizon_unspecified },
+].filter(r => r.count > 0) : [];
+const maxHorizon = horizonRows.length > 0 ? Math.max(...horizonRows.map(r => r.count), 1) : 1;
 
 const focusRows = temporalData ? [
   { label: 'Retrospective', count: temporalData.retrospective, pct: temporalData.retrospective_pct, color: 'var(--color-amber)' },
@@ -262,7 +276,8 @@ const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count),
         <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
           <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
             <a href="/about#setl" style="color: var(--color-sentiment); font-weight: bold; text-decoration: none;">SETL</a>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span>
+            {meanSetl !== null && <span class="score-font" style="float: right; color: var(--color-sentiment);">{meanSetl.toFixed(2)}</span>}<br>
             <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Channel divergence — says one thing, does another.</span>
           </div>
           <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
@@ -481,6 +496,24 @@ const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count),
                   </tr>
                 ))}
               </table>
+              {horizonRows.length > 0 && (
+                <>
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 10px 0 4px 0; font-weight: bold;">Time Horizon</p>
+                  <table cellpadding="2" cellspacing="0" style="font-size: var(--font-xs); width: 100%;">
+                    {horizonRows.map(({ label, count }) => (
+                      <tr>
+                        <td style="width: 90px; color: var(--fg-secondary); white-space: nowrap;">{label}</td>
+                        <td style="padding: 0 6px;">
+                          <div style="background: var(--bg-primary); border-radius: 2px; height: 10px; width: 100%;">
+                            <div style={`background: var(--fg-secondary); opacity: 0.3; border-radius: 2px; height: 10px; width: ${Math.round((count / maxHorizon) * 100)}%;`}></div>
+                          </div>
+                        </td>
+                        <td style="width: 40px; text-align: right; color: var(--fg-secondary);" class="score-font">{count.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </table>
+                </>
+              )}
               <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
                 {temporalData.retrospective_pct !== null && temporalData.prospective_pct !== null && temporalData.prospective_pct > 0 && (
                   <>Tech coverage looks backward <span class="score-font">{(temporalData.retrospective_pct / temporalData.prospective_pct).toFixed(1)}×</span> more than forward. </>

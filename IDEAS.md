@@ -207,7 +207,7 @@ Ideas that aggregate invisible patterns into visible statements about rights. Hi
 | **Transparency disclosure rates** ✅ *(done 2026-02-28)* | Transparency Observatory on `/signals`. "Only 34% of stories identify their author" — **shipped.** |
 | **Comment sentiment divergence** | "The article scored +0.4 on Article 19 but commenters disagree" — directly exposes tension between editorial assessment and community perception. That's a human rights discussion happening naturally. |
 | **Rights network temporal evolution** | Shows users that UDHR articles aren't independent — privacy and expression are in tension in tech. Temporal shifts reveal how discourse changes. This is rights-relationship pedagogy. |
-| **Story comparison view** | "Why did this story score differently on Article 19 vs Article 12?" — the comparison forces engagement with specific provisions. The comparison *is* the pedagogy. |
+| **Story comparison view** ~~deferred~~ | High mission alignment but high effort and low discoverability — users rarely know two story IDs to compare. Deferred indefinitely. |
 | **Filtered RSS feeds** ✅ *(done 2026-02-28)* | Filter+article+domain params on `/feed.xml`, OPML index. Per-provision feeds live. |
 | **Jargon/knowledge-level aggregate** ✅ *(done 2026-02-28)* | Content Accessibility on `/signals`. Jargon density + assumed knowledge distributions. Article 26 framing — **shipped.** |
 | **Content type browse page** | "How do editorial articles differ from policy documents on Article 12?" — browsing by content type teaches that the medium shapes the rights message. Policy docs have high structural weight (0.7) for a reason. |
@@ -228,7 +228,7 @@ No direct mission connection — serve the tool, not the mission.
 Analytics Engine, rate limit forecasting, velocity alerts, A/B testing, batch regression isolation, date-range filter, DCP staleness fix.
 
 ### Implication
-Tier 1 ideas should be prioritized when they become feasible. Tier 3 should stay in IDEAS but deprioritized — they serve the tool, not the reason the tool exists. Of the remaining unshipped Tier 1 items, **Story comparison view** is highest mission alignment per interaction but higher effort. **Content type browse page** is moderate effort and extends browsing pedagogy.
+Tier 1 ideas should be prioritized when they become feasible. Tier 3 should stay in IDEAS but deprioritized — they serve the tool, not the reason the tool exists. Of the remaining unshipped Tier 1 items, **Content type browse page** is next highest-leverage — data exists, no new collection needed, moderate effort.
 
 ---
 

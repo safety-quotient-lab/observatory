@@ -15,7 +15,8 @@ import { sanitizeHtml } from '../../lib/sanitize';
 import { readDb } from '../../lib/db-utils';
 
 const { id } = Astro.params;
-const db = readDb(Astro.locals.runtime.env.DB);
+const rawDb = Astro.locals.runtime.env.DB;
+const db = readDb(rawDb);
 const url = new URL(Astro.request.url);
 const modelParam = url.searchParams.get('model');
 const viewParam = url.searchParams.get('view');
@@ -25,16 +26,49 @@ if (isNaN(hnId)) {
   return Astro.redirect('/');
 }
 
-const storyData = await getStory(db, hnId);
+const storyData = await getStory(rawDb, hnId);
 if (!storyData) {
   return Astro.redirect('/');
 }
 
-// Fetch multi-model evals for tabs
+// Batch fetch: single D1 round-trip for all independent queries to stay within CPU budget.
+// Uses rawDb (not session-wrapped db) because batch() may not be available on session proxy.
+const batchStatements: D1PreparedStatement[] = [
+  rawDb.prepare(`SELECT * FROM rater_evals WHERE hn_id = ? ORDER BY evaluated_at DESC`).bind(hnId),
+  rawDb.prepare(`SELECT comment_id, parent_id, author, text, time, depth, hn_score FROM story_comments WHERE hn_id = ? ORDER BY depth ASC, time ASC LIMIT 50`).bind(hnId),
+  rawDb.prepare(`SELECT event_type, severity, message, created_at, investigated, resolved FROM events WHERE hn_id = ? ORDER BY created_at DESC LIMIT 20`).bind(hnId),
+  rawDb.prepare(`SELECT eval_model, hcb_weighted_mean, hcb_classification, input_tokens, output_tokens, evaluated_at FROM eval_history WHERE hn_id = ? ORDER BY evaluated_at DESC`).bind(hnId),
+  rawDb.prepare(`SELECT hn_score, hn_comments, hn_rank, snapshot_at, ROUND((julianday(snapshot_at) - julianday((SELECT MIN(snapshot_at) FROM story_snapshots WHERE hn_id = ?))) * 24 * 60, 0) as minutes_elapsed FROM story_snapshots WHERE hn_id = ? ORDER BY snapshot_at`).bind(hnId, hnId),
+];
+// DCP query only if domain exists
+if (storyData.domain) {
+  batchStatements.push(
+    rawDb.prepare(`SELECT dcp_json FROM domain_dcp WHERE domain = ?`).bind(storyData.domain)
+  );
+}
+
 let raterEvals: Awaited<ReturnType<typeof getRaterEvalsForStory>> = [];
+let comments: Awaited<ReturnType<typeof getStoryComments>> = [];
+let storyEvents: Awaited<ReturnType<typeof getEventsForStory>> = [];
+let evalHistory: Awaited<ReturnType<typeof getEvalHistoryForStory>> = [];
+let storyTimeline: Awaited<ReturnType<typeof getStoryTimeline>> = [];
+let _dcpJson: string | null = null;
+
 try {
-  raterEvals = await getRaterEvalsForStory(db, hnId);
-} catch { /* table may not exist yet */ }
+  const batchResults = await rawDb.batch(batchStatements);
+  raterEvals = (batchResults[0]?.results ?? []) as typeof raterEvals;
+  comments = (batchResults[1]?.results ?? []) as typeof comments;
+  storyEvents = (batchResults[2]?.results ?? []) as typeof storyEvents;
+  evalHistory = (batchResults[3]?.results ?? []) as typeof evalHistory;
+  storyTimeline = (batchResults[4]?.results ?? []) as typeof storyTimeline;
+  if (storyData.domain && batchResults[5]) {
+    const dcpRow = batchResults[5].results?.[0] as { dcp_json: string } | undefined;
+    _dcpJson = dcpRow?.dcp_json ?? null;
+  }
+} catch {
+  // Batch failed — queries may not exist yet, fall back gracefully
+}
+
 const hasMultipleModels = raterEvals.length > 1;
 
 // If viewing a non-primary model, load its scores
@@ -42,7 +76,7 @@ let altModelScores: Awaited<ReturnType<typeof getRaterScores>> = [];
 let altModelEval = modelParam ? raterEvals.find(e => e.eval_model === modelParam) : null;
 if (modelParam && altModelEval) {
   try {
-    altModelScores = await getRaterScores(db, hnId, modelParam);
+    altModelScores = await getRaterScores(rawDb, hnId, modelParam);
   } catch { /* table may not exist yet */ }
 }
 
@@ -51,7 +85,7 @@ const compareScoresByModel: Record<string, Awaited<ReturnType<typeof getRaterSco
 if (viewParam === 'compare' && raterEvals.length >= 2) {
   for (const re of raterEvals) {
     try {
-      compareScoresByModel[re.eval_model] = await getRaterScores(db, hnId, re.eval_model);
+      compareScoresByModel[re.eval_model] = await getRaterScores(rawDb, hnId, re.eval_model);
     } catch { /* ignore */ }
   }
 }
@@ -65,16 +99,13 @@ const isPending = storyData.eval_status === 'pending' || storyData.eval_status =
 const isLiteOnlyEval = !isDone && storyData.hcb_editorial_mean !== null && storyData.hcb_weighted_mean === null && raterEvals.some(re => isLiteMode(re.prompt_mode));
 const liteEval = isLiteOnlyEval ? (raterEvals.find(re => isLiteMode(re.prompt_mode)) ?? null) : null;
 
-// DCP: fetch from D1 table (for both done and failed states)
+// DCP: parse from parallel-fetched result
 let dcpElements: any[] | null = null;
-if (storyData.domain) {
-  const cachedDcp = await getDomainDcp(db, storyData.domain);
-  if (cachedDcp) {
-    try {
-      const dcpData = JSON.parse(cachedDcp);
-      dcpElements = dcpData.elements || dcpData;
-    } catch { /* ignore parse errors */ }
-  }
+if (_dcpJson) {
+  try {
+    const dcpData = JSON.parse(_dcpJson);
+    dcpElements = dcpData.elements || dcpData;
+  } catch { /* ignore parse errors */ }
 }
 
 // Scores from the scores table (already fetched by getStory)
@@ -90,9 +121,9 @@ if (isDone && scores.length > 0) {
 const classColor = storyData.hcb_classification ? classificationColor(storyData.hcb_classification) : 'var(--fg-secondary)';
 const classText = storyData.hcb_classification ? classificationTextColor(storyData.hcb_classification) : 'var(--fg-primary)';
 
-// Fair Witness: fetch from rater_witness table
+// Fair Witness: fetch from rater_witness table (depends on raterEvals for model name)
 const fwEvalModel = storyData.eval_model || raterEvals.find(re => re.prompt_mode === 'full')?.eval_model || null;
-const fwFacts = isDone ? await getFairWitnessForStory(db, hnId, fwEvalModel) : [];
+const fwFacts = isDone ? await getFairWitnessForStory(rawDb, hnId, fwEvalModel) : [];
 const hasFairWitness = fwFacts.length > 0;
 
 // Group FW facts by section and merge into display scores
@@ -215,31 +246,7 @@ const tdData = storyData.td_score != null ? {
 } : null;
 const hasSignals = eqScore !== null || ptFlagCount > 0 || soData !== null || etData !== null || srData !== null || tfData !== null || gsData !== null || clData !== null || tdData !== null;
 
-let comments: Awaited<ReturnType<typeof getStoryComments>> = [];
-try {
-  comments = await getStoryComments(db, hnId);
-} catch {
-  // story_comments table may not exist yet — graceful fallback
-}
-
-let storyEvents: Awaited<ReturnType<typeof getEventsForStory>> = [];
-try {
-  storyEvents = await getEventsForStory(db, hnId, 20);
-} catch {
-  // events table may not exist yet — graceful fallback
-}
-
-let evalHistory: Awaited<ReturnType<typeof getEvalHistoryForStory>> = [];
-try {
-  evalHistory = await getEvalHistoryForStory(db, hnId);
-} catch {
-  // eval_history table may not exist yet
-}
-
-let storyTimeline: Awaited<ReturnType<typeof getStoryTimeline>> = [];
-try {
-  storyTimeline = await getStoryTimeline(db, hnId);
-} catch { /* story_snapshots table may not exist yet */ }
+// comments, storyEvents, evalHistory, storyTimeline fetched in parallel above
 
 // Merge events and eval_history into a unified audit trail, sorted newest first
 interface AuditEntry {

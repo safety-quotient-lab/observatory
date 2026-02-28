@@ -31,10 +31,6 @@ Completed rounds (1–4.7, 5.5, 8) archived in git history.
   - Confidence interval bands
   - Real-world event annotation layer
 
-- [ ] **Story comparison view** (`/compare/[id1]/[id2]`)
-  - Side-by-side scores, classification, sentiment
-  - Section-by-section score differences, E vs S channel divergence
-
 - [ ] **Rights network enhancements**
   - Cluster detection (community finding algorithm)
   - Temporal network evolution (how correlations shift)
