@@ -89,8 +89,16 @@ rounds. 30/43 items already fixed; remaining items below.
   - Flag stories where comments strongly disagree with assessment
   - UI: divergence badge on item page, comment sentiment distribution chart
 
-### Round 6 — User-Facing Features
+### Round 5.5 — Submission Mirror *(done 2026-02-28)*
 
+- [x] **user_aggregates materialization** *(done 2026-02-28)* — migration 0054; replaces CTE double full-table scan on /users; 4 refresh triggers (eval write × 3 + crawl-path INSERT). KV cache 60s per sort+minStories key.
+- [x] **Two editorial lenses** — `avg_editorial_full` (Claude, section-aggregate) vs `avg_editorial_lite` (Llama, holistic); r=0.44 validated distinct constructs. Divergence callout on /user/[username].
+- [x] **Submission coverage** — `submitted_count` from HN API stored in `hn_users`; shown on /user/[username] as "We've seen N of ~M submissions".
+- [x] **/user/[username] redesign** — Coverage → Deep Read → Quick Scan → Divergence → Fingerprint → SETL → feed. No gamification language.
+- [x] **/users page updates** — karma column, EQ column, full/lite evals fraction, KV cache.
+- [x] **sweepRefreshUserAggregates + sweepExpandFromSubmitted** — two new sweep endpoints.
+
+### Round 6 — User-Facing Features
 
 - [ ] **Domain factions enhancements**
   - Faction drift tracking over time
