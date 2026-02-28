@@ -19,6 +19,7 @@ import { extractDomain, markSkipped, fetchUrlContent, getEnabledFreeModels, getM
 import { cleanHtml, hasReadableText } from './html-clean';
 import { classifyContent } from './content-gate';
 import { logEvent } from './events';
+import { checkCreditPause } from '../../functions/rate-limit';
 
 // ─── Types ───
 
@@ -590,10 +591,21 @@ export async function enqueueForEvaluation(
     enqueuedIds.push(...filteredIds);
   }
 
-  // Send to queue in batches of 25 (Queue.sendBatch limit)
-  for (let i = 0; i < messages.length; i += 25) {
-    const batch = messages.slice(i, i + 25);
-    await queue.sendBatch(batch);
+  // Check Anthropic credit pause before dispatching to primary queue
+  const anthropicPaused = await checkCreditPause(kv, 'anthropic');
+  if (anthropicPaused) {
+    console.warn('[queue] Anthropic credit pause active — skipping primary queue dispatch');
+    await logEvent(db, {
+      event_type: 'eval_skip', severity: 'warn',
+      message: `Skipped primary queue dispatch: Anthropic credit pause active (${messages.length} stories held)`,
+      details: { reason: 'credit_pause', provider: 'anthropic', held: messages.length },
+    });
+  } else {
+    // Send to queue in batches of 25 (Queue.sendBatch limit)
+    for (let i = 0; i < messages.length; i += 25) {
+      const batch = messages.slice(i, i + 25);
+      await queue.sendBatch(batch);
+    }
   }
 
   // Selective light-dispatch: only low-signal stories get the Workers AI ~lite preview.
