@@ -31,7 +31,7 @@ DOMAIN=""
 MIN_SCORE=""
 PARALLEL="${PARALLEL:-3}"
 DELAY="${DELAY:-2}"
-MODEL="${MODEL:-haiku}"
+MODEL="${MODEL:-claude-haiku-4-5-20251001}"
 DRY_RUN=false
 POSITIONAL_IDS=()
 
@@ -53,7 +53,7 @@ Options:
   --min-score N     Only stories with hn_score >= N
   --parallel N      Max concurrent evaluations (default: 3, env: PARALLEL)
   --delay N         Seconds between launches (default: 2, env: DELAY)
-  --model MODEL     Claude model to use (default: haiku, env: MODEL)
+  --model MODEL     Claude model ID (default: claude-haiku-4-5-20251001, env: MODEL)
   --dry-run         Show what would be evaluated, don't run
   --status          Show pipeline stats and exit
   -h, --help        Show this help
@@ -398,6 +398,8 @@ USERMSG
     --system-prompt "$SYSTEM_PROMPT" \
     --output-format json \
     --model "$MODEL" \
+    --tools "" \
+    --no-session-persistence \
     < "$TMPFILE" > "$RESULT_FILE" 2>/dev/null; then
     CLAUDE_END=$(date +%s%3N)
     CLAUDE_MS=$((CLAUDE_END - CLAUDE_START))

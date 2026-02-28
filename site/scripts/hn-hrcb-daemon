@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# hn-hrcb-daemon — continuously evaluates pending stories via hn-hrcb-evaluate.
+#
+# Dispatches batches of stories with parallelism (default: 3 at a time).
+# Each story is one claude -p call. Self-launches into a tmux session.
+#
+# Usage:
+#   ./scripts/hn-hrcb-daemon                     # default: haiku, 3 parallel
+#   ./scripts/hn-hrcb-daemon --model sonnet      # use a different model
+#   ./scripts/hn-hrcb-daemon --parallel 5        # 5 concurrent evals
+#   ./scripts/hn-hrcb-daemon --min-score 100     # only high-scoring stories
+#   ./scripts/hn-hrcb-daemon --domain nytimes.com
+#
+# Monitor:
+#   tail -f site/daemon.log
+#   tmux attach -t hrcb-daemon
+#
+# Stop gracefully (finishes current batch first):
+#   touch site/.daemon-stop
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SITE_DIR="$(dirname "$SCRIPT_DIR")"
+EVALUATOR="$SCRIPT_DIR/hn-hrcb-evaluate"
+
+# ── Defaults ──
+MODEL="claude-haiku-4-5-20251001"
+PARALLEL=3
+MIN_SCORE=""
+DOMAIN=""
+SLEEP_BETWEEN=5         # seconds between batches
+SLEEP_EMPTY_QUEUE=300   # seconds when nothing to do (5 min)
+
+# ── Parse arguments ──
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --model)     MODEL="${2:?--model requires a value}"; shift 2 ;;
+    --parallel)  PARALLEL="${2:?--parallel requires a number}"; shift 2 ;;
+    --min-score) MIN_SCORE="$2"; shift 2 ;;
+    --domain)    DOMAIN="$2"; shift 2 ;;
+    --sleep)     SLEEP_BETWEEN="${2:?--sleep requires a number}"; shift 2 ;;
+    -h|--help)
+      sed -n '2,/^$/s/^# \?//p' "$0"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1 (try --help)"
+      exit 1
+      ;;
+  esac
+done
+
+# ── Self-launch into tmux if not already inside one ──
+LOG_FILE="$SITE_DIR/daemon.log"
+STOP_FILE="$SITE_DIR/.daemon-stop"
+
+if [ -z "${TMUX:-}" ]; then
+  DAEMON_ARGS=("--model" "$MODEL" "--parallel" "$PARALLEL" "--sleep" "$SLEEP_BETWEEN")
+  [ -n "$MIN_SCORE" ] && DAEMON_ARGS+=("--min-score" "$MIN_SCORE")
+  [ -n "$DOMAIN" ] && DAEMON_ARGS+=("--domain" "$DOMAIN")
+
+  echo "Launching daemon in tmux session 'hrcb-daemon'..."
+  tmux new-session -d -s hrcb-daemon bash "$0" "${DAEMON_ARGS[@]}"
+  echo "Started. Attach with: tmux attach -t hrcb-daemon"
+  echo "Monitor with:         tail -f $LOG_FILE"
+  echo "Stop with:            touch $STOP_FILE"
+  exit 0
+fi
+
+# ── Inside tmux — run the loop ──
+
+# Allow running inside Claude Code session
+unset CLAUDECODE 2>/dev/null || true
+
+# Load nvm (needed for npx/node in evaluator)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+log() {
+  local msg="[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+  echo "$msg" | tee -a "$LOG_FILE"
+}
+
+log "════════════════════════════════════════"
+log "hn-hrcb-daemon starting"
+log "  Model: $MODEL | Parallel: $PARALLEL | Sleep: ${SLEEP_BETWEEN}s"
+[ -n "$MIN_SCORE" ] && log "  Min score: $MIN_SCORE"
+[ -n "$DOMAIN" ] && log "  Domain: $DOMAIN"
+log "  Log: $LOG_FILE"
+log "  Stop: touch $STOP_FILE"
+log "════════════════════════════════════════"
+
+# Build evaluator args
+build_eval_args() {
+  local args=("--pending" "$PARALLEL" "--model" "$MODEL" "--parallel" "$PARALLEL")
+  [ -n "$MIN_SCORE" ] && args+=("--min-score" "$MIN_SCORE")
+  [ -n "$DOMAIN" ] && args+=("--domain" "$DOMAIN")
+  echo "${args[@]}"
+}
+
+consecutive_errors=0
+total_evaluated=0
+daemon_start=$(date +%s)
+
+while true; do
+  # Check stop sentinel
+  if [ -f "$STOP_FILE" ]; then
+    log "Stop file found — shutting down."
+    rm -f "$STOP_FILE"
+    break
+  fi
+
+  log "── batch (total so far: $total_evaluated) ──"
+
+  # Run evaluator
+  set +e
+  eval_args=$(build_eval_args)
+  output=$("$EVALUATOR" $eval_args 2>&1)
+  exit_code=$?
+  set -e
+
+  # Log output (timestamped)
+  echo "$output" | while IFS= read -r line; do
+    echo "[$(date '+%H:%M:%S')]   $line" | tee -a "$LOG_FILE"
+  done
+
+  if [ $exit_code -ne 0 ]; then
+    consecutive_errors=$((consecutive_errors + 1))
+    log "Batch failed (exit $exit_code). Consecutive errors: $consecutive_errors"
+    if [ $consecutive_errors -ge 5 ]; then
+      log "5 consecutive errors — stopping to prevent hammering."
+      break
+    fi
+    log "Sleeping 60s before retry..."
+    sleep 60
+    continue
+  fi
+
+  consecutive_errors=0
+
+  # Check if queue was empty
+  if echo "$output" | grep -q "Nothing to do"; then
+    log "Queue empty — sleeping ${SLEEP_EMPTY_QUEUE}s..."
+    sleep "$SLEEP_EMPTY_QUEUE"
+  else
+    # Count successes from output
+    ok_count=$(echo "$output" | grep -c "→ done" || true)
+    total_evaluated=$((total_evaluated + ok_count))
+    log "Batch done (+${ok_count}). Sleeping ${SLEEP_BETWEEN}s..."
+    sleep "$SLEEP_BETWEEN"
+  fi
+done
+
+elapsed=$(( $(date +%s) - daemon_start ))
+elapsed_min=$((elapsed / 60))
+log "════════════════════════════════════════"
+log "Daemon stopped. Total evaluated: $total_evaluated in ${elapsed_min}m"
+log "════════════════════════════════════════"
