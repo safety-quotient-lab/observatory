@@ -6,19 +6,38 @@
 
 @layer base {
   :root {
-    /* OkSolar color palette */
+    /* OkSolar color palette — core */
     --bg-primary: #002d38;
     --bg-highlight: #093946;
+    --bg-surface: #0d4655;
     --fg-primary: #98a8a8;
     --fg-emphasis: #8faaab;
     --fg-secondary: #5b7279;
     --color-orange: #d56500;
     --color-blue: #2b90d8;
     --color-cyan: #259d94;
-    --color-green: #819500;
-    --color-red: #f23749;
     --color-violet: #7d80d1;
     --color-border: #1a5568;
+
+    /* Channel colors (HRCB tripartite display) */
+    --channel-hrcb: var(--color-cyan);
+    --channel-editorial: #60a5fa;
+    --channel-structural: #a78bfa;
+
+    /* Semantic status colors */
+    --color-negative: #dc2626;
+    --color-negative-light: #f87171;
+    --color-warning: #eab308;
+    --color-warning-light: #fbbf24;
+    --color-positive: #16a34a;
+    --color-positive-medium: #34d399;
+    --color-positive-light: #4ade80;
+    --color-nd: #4b5563;
+    --color-muted: #6b7280;
+
+    /* Categorical colors */
+    --color-sentiment: #22d3ee;
+    --color-theme: var(--color-violet);
 
     /* Golden ratio type scale (φ = 1.618, base = 10pt) */
     --phi: 1.618;
@@ -329,6 +348,25 @@
   .collapsible-section > :not(summary) {
     margin-top: 10px;
   }
+
+  /* Semantic badge variants (replaces inline rgba+color pattern) */
+  .badge-positive   { background: rgba(22, 163, 74, 0.15);  color: var(--color-positive); }
+  .badge-negative   { background: rgba(220, 38, 38, 0.15);  color: var(--color-negative); }
+  .badge-warning    { background: rgba(234, 179, 8, 0.15);  color: var(--color-warning); }
+  .badge-theme      { background: rgba(125, 128, 209, 0.15); color: var(--color-violet); }
+  .badge-sentiment  { background: rgba(34, 211, 238, 0.15); color: var(--color-sentiment); }
+  .badge-editorial  { background: rgba(96, 165, 250, 0.15); color: var(--channel-editorial); }
+  .badge-structural { background: rgba(167, 139, 250, 0.15); color: var(--channel-structural); }
+  .badge-hrcb       { background: rgba(37, 157, 148, 0.15); color: var(--channel-hrcb); }
+  .badge-neutral    { background: rgba(107, 114, 128, 0.15); color: var(--color-muted); }
+
+  /* Text semantic shortcuts */
+  .text-positive { color: var(--color-positive); }
+  .text-negative { color: var(--color-negative); }
+  .text-warning  { color: var(--color-warning); }
+  .text-muted    { color: var(--fg-secondary); }
+  .text-emphasis { color: var(--fg-primary); }
+  .text-nd       { color: var(--color-nd); }
 }
 
 /* Respect reduced motion preference */

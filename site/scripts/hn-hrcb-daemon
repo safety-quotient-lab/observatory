@@ -101,6 +101,11 @@ rotate_log() {
   fi
 }
 
+# ── Adaptive parallelism state (must be before startup banner) ──
+INITIAL_PARALLEL=$PARALLEL
+MAX_PARALLEL=$((PARALLEL * 3))
+[ "$MAX_PARALLEL" -lt 5 ] && MAX_PARALLEL=5
+
 log "════════════════════════════════════════"
 log "hn-hrcb-daemon starting"
 if $ADAPTIVE; then
@@ -125,11 +130,6 @@ build_eval_args() {
 consecutive_errors=0
 total_evaluated=0
 daemon_start=$(date +%s)
-
-# ── Adaptive parallelism state ──
-INITIAL_PARALLEL=$PARALLEL
-MAX_PARALLEL=$((PARALLEL * 3))
-[ "$MAX_PARALLEL" -lt 5 ] && MAX_PARALLEL=5
 
 # Parse evaluator stdout for decision signals. All vars prefixed sig_.
 # Every extraction has || true — parse failure = hold steady.

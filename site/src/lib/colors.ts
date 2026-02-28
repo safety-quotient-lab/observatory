@@ -155,7 +155,7 @@ export function modifierColor(mod: number | null): string {
 /** Content gate category color */
 export function gateToColor(category: string): string {
   switch (category) {
-    case 'paywall': return '#d56500';
+    case 'paywall': return '#dc2626';
     case 'bot_protection': return '#dc2626';
     case 'captcha': return '#eab308';
     case 'login_wall': return '#a78bfa';

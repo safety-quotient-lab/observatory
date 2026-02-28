@@ -58,18 +58,10 @@ rounds. 30/43 items already fixed; remaining items below.
   - Done: NAV-01, NAV-02, NAV-03, NAV-04, NAV-05, MOB-01, MOB-02, MOB-03, A11Y-01, A11Y-02, A11Y-03, VIS-01, VIS-02, VIS-03, VIS-04, VIS-07
   - Key next: NAV-07 (back-to-top), A11Y-04 (aria-label vs title), MOB-04 (SignalSpace mobile panel), VIS-05 (about tier progression), VIS-06 (FW naming), VIS-08 (typography), VIS-09 (confidence/evidence merge), VIS-10 (DCP table)
 
-- [ ] **Semantic color system** — replace 1,400+ hardcoded hex values with CSS variables
-  - Heading colors + text-shadows moved to global CSS *(done 2026-02-28)*
-  - Remaining: ~1,400 inline `color: #hex` across 31 .astro files → `var(--color-*)` refs
-  - **Orange overload** — `#d56500` means paywall gate, lite eval badge, nav accent, and active toggle.
-    Resolve: keep orange for brand/nav; paywall → red family; lite badge already outlined (box style)
-  - **Green fragmentation** — 3 different greens (`#819500`, `#4ade80`, `#22c55e`) for "positive."
-    `--color-green` (#819500) defined in CSS but never used (scores use Tailwind greens)
-  - **Purple fragmentation** — 3 shades (`#7d80d1`, `#a78bfa`, `#c084fc`) for related concepts
-  - **Unused palette vars** — `--color-green` and `--color-red` defined but score coloring uses
-    Tailwind classes instead. Either use the palette vars or drop them.
-  - Approach: create semantic CSS classes (`.text-positive`, `.text-negative`, `.text-neutral`,
-    `.text-muted`, `.text-emphasis`) and migrate inline styles file by file
+- [ ] **Semantic color system — per-file migration**
+  - Foundation done *(2026-02-28)*: 30+ CSS vars, 9 badge classes, 6 text classes, paywall→red, unused vars removed
+  - Remaining: ~1,395 inline `color: #hex` across 48 .astro files → `var(--color-*)` / utility class refs
+  - Top 10 files = 82% of instances: about (242), item/[id] (170), status/models (152), signals (114), factions (107), rights/observatory (89), status (84), users (70), status/events (70), dynamics (53)
 
 ### Round 4 — Analytics (runs on existing data, no migrations needed)
 
