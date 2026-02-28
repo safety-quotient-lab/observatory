@@ -136,7 +136,13 @@ rounds. 30/43 items already fixed; remaining items below.
 - [x] **Prerender static pages** *(done 2026-02-28)* — `/about`, `/data`, `/support` prerendered; `Astro.site` replaces `Astro.request.url`
 - [ ] **Cloudflare Analytics Engine** — write data points per eval in consumers (model, score, latency, prompt_mode). Replace D1 scans (`getDailyEvalVelocity`, `getEvalLatencyStats`) with AE queries. Free: 100K writes/day.
 - [x] **D1 Read Replication** *(done 2026-02-28)* — enabled in dashboard; `readDb()`/`writeDb()` session helpers in `db-utils.ts`; 23 pages + 14 API routes + 6 workers wrapped. Falls back to raw db if `withSession` unavailable (compat date `2024-09-23` may not support it — activates on compat date bump or Pages→Workers migration).
-- [ ] **Investigate Pages → Workers migration** — get 30s CPU (vs 10ms free Pages). Would eliminate KV pre-computation workaround. Needs `compat_date 2024-09-23` testing.
+- [x] **Investigate Pages → Workers migration** *(researched 2026-02-28)* — not feasible: no Astro Workers adapter exists, `@astrojs/cloudflare` is Pages-only. Only `factions.astro` genuinely exceeds 10ms CPU (O(n²) clustering). Fix: cron pre-computation → KV blob (same pattern as status/models).
+
+- [ ] **Pre-compute factions clustering in cron** — move z-normalize + cosine sim + hierarchical clustering + PCA from `factions.astro` to `computeFactionsBlobFn()` in cron worker. Publish to KV `sys:factions:clusters`. Page reads blob. Currently 25-35ms CPU (fails Pages 10ms limit).
+
+- [ ] **Pre-compute sources metrics in cron** — move signal leader aggregation + distributions from `sources.astro` to cron. Publish to KV `sys:sourceMetrics`. Currently 10-18ms CPU (borderline, grows with domain count).
+
+- [ ] **Add cachedQuery to signals.astro** — wrap `getSignalOverview(db)` in `cachedQuery(kv, 'sys:signalOverview', fn, 120)`. Quick win — avoids repeated JSON parsing of PT technique distribution.
 
 ### Housekeeping (no urgency)
 
