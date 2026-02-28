@@ -7,52 +7,34 @@ GitHub publishing respectively.
 ---
 
 ## Phase 1 — Active Engineering
-*Fully unblocked. Pure engineering — deployable anytime.*
+*Fully unblocked. Ordered by dependency and value.*
 
-### Pipeline & Data Quality
+### Round 1 — Foundational (unlock the rest)
+
+- [ ] **Eval batch tracking**
+  - `eval_batch_id` to link related evals from same cron cycle
+  - Useful for isolating regressions to a specific run
+  - *Small migration + cron change — cheap to add now*
+
+- [ ] **Story priority scoring**
+  - Composite score: HN score + comment count + time-decay + feed membership
+    + `log10(submitter_karma) * 0.1` + score acceleration from rank snapshots
+  - `eval_priority_score` computed by cron, factored into eval dispatch order
+  - *Prerequisite for meaningful eval queue prioritization*
+
+### Round 2 — Ops Visibility
 
 - [ ] **Rate limit exhaustion forecasting**
   - Project time-to-exhaustion from rolling 1h token usage window
   - Alert event when projected exhaustion <24h
   - Dashboard headroom widget
 
-- [ ] **Eval consistency check for re-evaluations**
-  - Compare hcb_weighted_mean across models for same URL
-  - Alert if divergence > ±0.25
-
 - [ ] **Cost attribution per model**
   - Daily cost per model from eval_history token counts + pricing table
   - Dashboard widget: cost/eval by model, daily burn rate
+  - *Directly informs Phase 2 pricing tiers*
 
-- [ ] **Eval batch tracking**
-  - `eval_batch_id` to link related evals from same cron cycle
-  - Useful for isolating regressions to a specific run
-
-- [ ] **Bulk re-evaluation endpoint**
-  - Re-enqueue by domain, date range, model, methodology_hash
-  - Rate-limited to prevent queue flooding
-
-### Data Sources & Crawling
-
-- [ ] **Add Lobsters (lobste.rs) as a data source**
-  - Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`
-  - Need: `source` column on stories, cron extension, top-N auto-eval logic
-
-- [ ] **Story priority scoring** *(consolidates 3 related items)*
-  - Composite score: HN score + comment count + time-decay + feed membership
-    + `log10(submitter_karma) * 0.1` + score acceleration from rank snapshots
-  - `eval_priority_score` computed by cron, factored into eval dispatch order
-  - Prerequisite for meaningful eval queue prioritization
-
-- [ ] **Enhanced comments** *(consolidates user-facing + crawler items)*
-  - Deep comment crawling (recursive depth 2+ for high-engagement stories)
-  - Comment refresh for active discussions; comment score tracking over time
-  - Lightweight sentiment on top comments (light prompt mode)
-  - Per-comment HRCB lean score — compare aggregate comment lean vs story HRCB
-  - Flag stories where comments strongly disagree with assessment
-  - UI: divergence badge on item page, comment sentiment distribution chart
-
-### Analytics & Ops Dashboard
+### Round 3 — Analytics (runs on existing data, no migrations needed)
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
   - [ ] **Model mix over time** — stacked bar: which models did evals each day.
@@ -67,6 +49,10 @@ GitHub publishing respectively.
     models, correlation with score divergence. Data from migration 0040.
   - **Placement:** Enhance Seldon page (add tabs) or new `/status/metrics` sub-page.
 
+- [ ] **Eval consistency check for re-evaluations**
+  - Compare hcb_weighted_mean across models for same URL
+  - Alert if divergence > ±0.25
+
 - [ ] **SETL spike alerting**
   - Alert system for sudden SETL spikes across a domain or story cluster
 
@@ -74,20 +60,27 @@ GitHub publishing respectively.
   - Velocity alerts (stories hitting score threshold)
   - Velocity decay analysis
 
-### User-Facing Features
+### Round 4 — Data Expansion
 
-- [ ] **Story comparison view** (`/compare/[id1]/[id2]`)
-  - Side-by-side scores, classification, sentiment
-  - Section-by-section score differences, E vs S channel divergence
+- [ ] **Add Lobsters (lobste.rs) as a data source**
+  - Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`
+  - Need: `source` column on stories, cron extension, top-N auto-eval logic
+  - *Migration first — enables source-aware analytics downstream*
+
+- [ ] **Enhanced comments** *(consolidates user-facing + crawler items)*
+  - Deep comment crawling (recursive depth 2+ for high-engagement stories)
+  - Comment refresh for active discussions; comment score tracking over time
+  - Lightweight sentiment on top comments (light prompt mode)
+  - Per-comment HRCB lean score — compare aggregate comment lean vs story HRCB
+  - Flag stories where comments strongly disagree with assessment
+  - UI: divergence badge on item page, comment sentiment distribution chart
+
+### Round 5 — User-Facing Features
 
 - [ ] **Article deep dive enhancements** (`/article/[n]`)
   - Stddev distribution, evidence strength breakdown
   - Top 3 positive/negative stories per article
   - Directionality marker distribution, theme tag word cloud
-
-- [ ] **Rights network enhancements**
-  - Cluster detection (community finding algorithm)
-  - Temporal network evolution (how correlations shift)
 
 - [ ] **Domain factions enhancements**
   - Faction drift tracking over time
@@ -98,10 +91,22 @@ GitHub publishing respectively.
   - Confidence interval bands
   - Real-world event annotation layer
 
-### Platform & Architecture
+- [ ] **Story comparison view** (`/compare/[id1]/[id2]`)
+  - Side-by-side scores, classification, sentiment
+  - Section-by-section score differences, E vs S channel divergence
+
+- [ ] **Rights network enhancements**
+  - Cluster detection (community finding algorithm)
+  - Temporal network evolution (how correlations shift)
+
+### Round 6 — Platform
 
 - [ ] **A/B testing framework for methodology**
   - `eval_variant` column, dashboard comparing outcome distributions across variants
+
+- [ ] **Bulk re-evaluation endpoint**
+  - Re-enqueue by domain, date range, model, methodology_hash
+  - Rate-limited to prevent queue flooding
 
 ---
 
