@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, jsonResponse, errorResponse, itemCacheHeaders } from '../../../../lib/api-v1';
+import { readDb } from '../../../../lib/db-utils';
 
 export const GET: APIRoute = async ({ locals, request, params }) => {
   if (request.method === 'OPTIONS') {
@@ -7,6 +8,7 @@ export const GET: APIRoute = async ({ locals, request, params }) => {
   }
 
   const env = locals.runtime.env as { DB: D1Database; CONTENT_CACHE?: KVNamespace };
+  const db = readDb(env.DB);
   const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For') ?? 'unknown';
 
   if (env.CONTENT_CACHE) {
@@ -20,7 +22,7 @@ export const GET: APIRoute = async ({ locals, request, params }) => {
   }
 
   const [story, raterEvals] = await Promise.all([
-    env.DB
+    db
       .prepare(
         `SELECT hn_id, url, title, domain, hn_score, hn_time,
                 hcb_weighted_mean, hcb_editorial_mean, hcb_classification,
@@ -31,7 +33,7 @@ export const GET: APIRoute = async ({ locals, request, params }) => {
       )
       .bind(hnId)
       .first<Record<string, unknown>>(),
-    env.DB
+    db
       .prepare(
         `SELECT re.eval_model, re.eval_provider, re.prompt_mode, re.eval_status,
                 re.hcb_editorial_mean, re.hcb_weighted_mean, re.evaluated_at

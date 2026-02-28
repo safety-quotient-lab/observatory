@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { readDb } from '../../lib/db-utils';
 
 /**
  * SSE endpoint for real-time evaluation updates.
@@ -23,7 +24,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  const db = locals.runtime.env.DB;
+  const db = readDb(locals.runtime.env.DB);
   const encoder = new TextEncoder();
 
   let lastSeen = new Date().toISOString();

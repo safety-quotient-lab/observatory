@@ -43,6 +43,7 @@ import { cleanHtml, hasReadableText } from '../src/lib/html-clean';
 import { classifyContent } from '../src/lib/content-gate';
 import { computeContentHash } from '../src/lib/content-drift';
 import { logEvent } from '../src/lib/events';
+import { writeDb } from '../src/lib/db-utils';
 import { checkCreditPause } from './rate-limit';
 
 // --- Shared types ---
@@ -346,7 +347,7 @@ export async function prepareContent(
   msg: Message<QueueMessage>,
   env: Env,
 ): Promise<PreparedContent | null> {
-  const db = env.DB;
+  const db = writeDb(env.DB);
   const story = msg.body;
 
   const msgModelId = story.eval_model || env.EVAL_MODEL_OVERRIDE || PRIMARY_MODEL_ID;
@@ -516,7 +517,7 @@ export async function processLiteResult(
   outputTokens: number,
   evalStartMs: number,
 ): Promise<boolean> {
-  const db = env.DB;
+  const db = writeDb(env.DB);
   const story = msg.body;
 
   // Parse
@@ -586,7 +587,7 @@ export async function processFullResult(
   evalStartMs: number,
   cachedDcp: Record<string, unknown> | null,
 ): Promise<boolean> {
-  const db = env.DB;
+  const db = writeDb(env.DB);
   const story = msg.body;
 
   // Handle DCP "cached" string — substitute from cached DCP
@@ -724,7 +725,7 @@ export async function lookupCachedDcp(
   if (!domain) return null;
   const kvDcp = await env.CONTENT_CACHE.get(`dcp:${domain}`, 'json');
   if (kvDcp) return kvDcp as Record<string, unknown>;
-  return await getCachedDcp(env.DB, domain);
+  return await getCachedDcp(writeDb(env.DB), domain);
 }
 
 // --- Failure handler for outer catch ---
@@ -736,7 +737,7 @@ export async function handleMessageFailure(
   error: unknown,
   evalStartMs: number,
 ): Promise<void> {
-  const db = env.DB;
+  const db = writeDb(env.DB);
   const story = msg.body;
   const msgModelId = prep?.msgModelId || story.eval_model || PRIMARY_MODEL_ID;
   const provider = prep?.provider || story.eval_provider || 'unknown';

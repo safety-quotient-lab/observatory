@@ -37,6 +37,7 @@ import {
 } from '../src/lib/shared-eval';
 
 import { logEvent } from '../src/lib/events';
+import { writeDb } from '../src/lib/db-utils';
 import { callOpenRouterApi } from './providers';
 import { addJitter } from './rate-limit';
 
@@ -144,7 +145,7 @@ async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: 
  * Pull path: claim rows from eval_queue and process them.
  */
 async function processOpenRouterPullBatch(env: Env): Promise<void> {
-  const db = env.DB;
+  const db = writeDb(env.DB);
   if (!env.OPENROUTER_API_KEY) {
     console.warn('[consumer-openrouter] Pull: no OPENROUTER_API_KEY, skipping');
     return;
@@ -172,7 +173,7 @@ export default {
     batch: MessageBatch<QueueMessage>,
     env: Env,
   ): Promise<void> {
-    const db = env.DB;
+    const db = writeDb(env.DB);
 
     // Batch-level API key check — retry all messages if key is missing
     if (!env.OPENROUTER_API_KEY) {

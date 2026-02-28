@@ -3,6 +3,7 @@ import { writeRaterEvalResult, writeLiteRaterEvalResult, writeCalibrationEval } 
 import { validateSlimEvalResponse, validateLiteEvalResponse, computeLiteAggregates } from '../../lib/eval-parse';
 import { computeAggregates } from '../../lib/compute-aggregates';
 import type { EvalResult, SlimEvalResponse, LiteEvalResponse } from '../../lib/eval-types';
+import { writeDb } from '../../lib/db-utils';
 
 /**
  * POST /api/ingest — accepts a pre-computed evaluation result from the standalone evaluator.
@@ -22,6 +23,7 @@ import type { EvalResult, SlimEvalResponse, LiteEvalResponse } from '../../lib/e
  */
 export const POST: APIRoute = async ({ locals, request }) => {
   const env = locals.runtime.env as { DB: D1Database; TRIGGER_SECRET?: string; CONTENT_CACHE?: KVNamespace };
+  const db = writeDb(env.DB);
 
   const auth = request.headers.get('Authorization') ?? '';
   if (!env.TRIGGER_SECRET || auth !== `Bearer ${env.TRIGGER_SECRET}`) {
@@ -87,7 +89,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       }
 
       await writeLiteRaterEvalResult(
-        env.DB, hn_id, lite, model_id, provider,
+        db, hn_id, lite, model_id, provider,
         prompt_hash ?? null, methodology_hash ?? null,
         safeInputTokens, safeOutputTokens, 0,
       );
@@ -99,7 +101,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
           ?? await env.CONTENT_CACHE.get('calibration:light:current_run').catch(() => null); // backward compat
         const calibrationRun = runStr ? parseInt(runStr, 10) : NaN;
         if (!isNaN(calibrationRun)) {
-          await writeCalibrationEval(env.DB, calibrationRun, hn_id, lite, model_id, provider);
+          await writeCalibrationEval(db, calibrationRun, hn_id, lite, model_id, provider);
         }
       }
 
@@ -165,7 +167,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const fullResult: EvalResult = { ...slim, domain_context_profile: dcp, aggregates };
 
     await writeRaterEvalResult(
-      env.DB, hn_id, fullResult, model_id, provider,
+      db, hn_id, fullResult, model_id, provider,
       prompt_hash ?? null, methodology_hash ?? null,
       safeInputTokens, safeOutputTokens, 0,
     );

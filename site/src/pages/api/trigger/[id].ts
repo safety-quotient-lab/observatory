@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { fetchUrlContent, callClaude } from '../../../lib/evaluate';
 import { writeRaterEvalResult } from '../../../lib/eval-write';
 import { logEvent } from '../../../lib/events';
+import { writeDb } from '../../../lib/db-utils';
 
 export const POST: APIRoute = async ({ params, locals, request }) => {
   const hnId = parseInt(params.id!, 10);
@@ -20,7 +21,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const db = locals.runtime.env.DB;
+  const db = writeDb(locals.runtime.env.DB);
   const apiKey = locals.runtime.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {

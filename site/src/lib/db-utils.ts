@@ -2,6 +2,26 @@
  * D1 database utility helpers.
  */
 
+/**
+ * Read-only D1 session — routes queries to the nearest replica.
+ * Falls back to raw db if withSession is not available (older compat dates).
+ */
+export function readDb(db: D1Database): D1Database {
+  try {
+    return (db as any).withSession('first-unconstrained') as D1Database;
+  } catch { return db; }
+}
+
+/**
+ * Write D1 session — ensures read-after-write consistency within the invocation.
+ * Falls back to raw db if withSession is not available (older compat dates).
+ */
+export function writeDb(db: D1Database): D1Database {
+  try {
+    return (db as any).withSession('first-primary') as D1Database;
+  } catch { return db; }
+}
+
 /** SQL fragment for the SETL (Structural-Editorial Tension Level) formula. Pass the table alias. */
 export const SETL_CASE_SQL = (alias: string): string =>
   `CASE WHEN ${alias}.editorial >= ${alias}.structural` +

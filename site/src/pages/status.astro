@@ -12,9 +12,9 @@ import {
   getRecentEvents,
   getDailyEvalVelocity,
 } from '../lib/db';
-import { cachedQuery } from '../lib/db-utils';
+import { cachedQuery, readDb } from '../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const status = await getStatusCounts(db);

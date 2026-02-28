@@ -1,5 +1,6 @@
 import type { APIContext } from 'astro';
 import { corsHeaders, checkRateLimit, jsonResponse, errorResponse, listCacheHeaders } from '../../../lib/api-v1';
+import { readDb } from '../../../lib/db-utils';
 
 export const prerender = false;
 
@@ -8,6 +9,7 @@ export async function GET(context: APIContext): Promise<Response> {
   const env = (context.locals as any).runtime?.env;
   if (!env?.DB) return errorResponse('Service unavailable', 503);
 
+  const db = readDb(env.DB);
   const ip = context.request.headers.get('cf-connecting-ip') ?? 'unknown';
   if (env.CONTENT_CACHE && !(await checkRateLimit(env.CONTENT_CACHE, ip))) {
     return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
@@ -16,7 +18,7 @@ export async function GET(context: APIContext): Promise<Response> {
     });
   }
 
-  const { results } = await env.DB
+  const { results } = await db
     .prepare(
       `SELECT hn_id FROM stories
        WHERE hn_type != 'calibration'

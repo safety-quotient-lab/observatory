@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, jsonResponse, errorResponse, listCacheHeaders } from '../../../lib/api-v1';
+import { readDb } from '../../../lib/db-utils';
 
 export const GET: APIRoute = async ({ locals, request }) => {
   // OPTIONS preflight
@@ -8,6 +9,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   }
 
   const env = locals.runtime.env as { DB: D1Database; CONTENT_CACHE?: KVNamespace };
+  const db = readDb(env.DB);
   const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For') ?? 'unknown';
 
   if (env.CONTENT_CACHE) {
@@ -27,7 +29,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   const statusFilter = status === 'done' ? `AND s.eval_status = 'done'` : '';
 
   const [{ results }, totalRow] = await Promise.all([
-    env.DB
+    db
       .prepare(
         `SELECT s.hn_id, s.url, s.title, s.domain, s.hn_score, s.hn_time,
                 s.hcb_weighted_mean, s.hcb_editorial_mean, s.hcb_classification,
@@ -43,7 +45,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
       )
       .bind(limit, offset)
       .all<Record<string, unknown>>(),
-    env.DB
+    db
       .prepare(
         `SELECT COUNT(*) as total FROM stories s
          WHERE s.url NOT LIKE 'item?id=%' AND s.hn_id > 0 ${statusFilter}`

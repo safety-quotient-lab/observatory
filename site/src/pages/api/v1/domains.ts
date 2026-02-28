@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, jsonResponse, errorResponse, listCacheHeaders } from '../../../lib/api-v1';
+import { readDb } from '../../../lib/db-utils';
 
 export const GET: APIRoute = async ({ locals, request }) => {
   if (request.method === 'OPTIONS') {
@@ -7,6 +8,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   }
 
   const env = locals.runtime.env as { DB: D1Database; CONTENT_CACHE?: KVNamespace };
+  const db = readDb(env.DB);
   const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For') ?? 'unknown';
 
   if (env.CONTENT_CACHE) {
@@ -25,7 +27,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
                           'story_count DESC';
 
   const [{ results }, totalRow] = await Promise.all([
-    env.DB
+    db
       .prepare(
         `SELECT domain, story_count, evaluated_count,
                 avg_hrcb, avg_setl, avg_editorial, avg_structural,
@@ -39,7 +41,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
       )
       .bind(limit)
       .all<Record<string, unknown>>(),
-    env.DB
+    db
       .prepare(`SELECT COUNT(*) as total FROM domain_aggregates WHERE evaluated_count >= 1`)
       .first<{ total: number }>(),
   ]);

@@ -38,6 +38,7 @@ import {
 } from '../src/lib/shared-eval';
 
 import { logEvent } from '../src/lib/events';
+import { writeDb } from '../src/lib/db-utils';
 
 import {
   readRateLimitHeaders,
@@ -244,7 +245,7 @@ async function runAnthropicEval(
  * Called when a wake-up signal is received.
  */
 async function processAnthropicPullBatch(env: Env): Promise<void> {
-  const db = env.DB;
+  const db = writeDb(env.DB);
   if (!env.ANTHROPIC_API_KEY) {
     console.warn('[consumer-anthropic] Pull: no ANTHROPIC_API_KEY, skipping');
     return;
@@ -287,7 +288,7 @@ export default {
     batch: MessageBatch<QueueMessage>,
     env: Env,
   ): Promise<void> {
-    const db = env.DB;
+    const db = writeDb(env.DB);
 
     // Batch-level API key check — retry all messages if key is missing
     if (!env.ANTHROPIC_API_KEY) {

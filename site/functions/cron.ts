@@ -18,7 +18,7 @@ import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, LITE_CALIBRATION_SET, LITE_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
 import { shouldAutoDisableFromCalibration, raterHealthKvKey, emptyRaterHealth, type RaterHealthState } from '../src/lib/rater-health';
 import { getPipelineHealth, computeModelComparisonBlob, MODEL_COMPARISON_KV_KEY, MODEL_COMPARISON_TTL } from '../src/lib/db';
-import { safeBatch } from '../src/lib/db-utils';
+import { safeBatch, writeDb } from '../src/lib/db-utils';
 import { runScheduledCoverageStrategy } from '../src/lib/coverage-crawl';
 import {
   computeAggregates,
@@ -58,7 +58,7 @@ export interface Env {
 
 export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    const db = env.DB;
+    const db = writeDb(env.DB);
     const minute = new Date(event.scheduledTime).getMinutes();
 
     // ─── Pre-compute model comparison blob (lock-free, safe to overlap) ───
@@ -620,7 +620,7 @@ export default {
           valid_types: Object.keys(SWEEP_HANDLERS),
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
-      return handler({ db: env.DB, env, ctx, url });
+      return handler({ db: writeDb(env.DB), env, ctx, url });
     }
 
     // POST /calibrate — enqueue 15 calibration URLs for evaluation (all enabled models)
@@ -629,7 +629,7 @@ export default {
       const authErr = checkAuth();
       if (authErr) return authErr;
 
-      const db = env.DB;
+      const db = writeDb(env.DB);
       const mode = url.searchParams.get('mode');
 
       // Lite mode: insert LITE_CALIBRATION_SET stories as pending (hn_ids -2001 to -2015).
@@ -769,7 +769,7 @@ export default {
       const authErr = checkAuth();
       if (authErr) return authErr;
 
-      const db = env.DB;
+      const db = writeDb(env.DB);
       const modeParam = url.searchParams.get('mode');
 
       // Lite mode: read from rater_evals (prompt_mode='lite') for hn_ids -2001 to -2015
@@ -977,7 +977,7 @@ export default {
       const authErr = checkAuth();
       if (authErr) return authErr;
 
-      const db = env.DB;
+      const db = writeDb(env.DB);
 
       // Content type → channel weights lookup (from methodology section 2)
       const CHANNEL_WEIGHTS: Record<string, { editorial: number; structural: number }> = {
@@ -1178,7 +1178,7 @@ export default {
 
     // GET /health — pipeline health check (no auth required)
     if (path === '/health' && request.method === 'GET') {
-      const health = await getPipelineHealth(env.DB);
+      const health = await getPipelineHealth(writeDb(env.DB));
       return new Response(JSON.stringify(health), {
         status: health.healthy ? 200 : 503,
         headers: { 'Content-Type': 'application/json' },

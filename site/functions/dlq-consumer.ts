@@ -13,6 +13,7 @@
  */
 
 import { logEvent } from '../src/lib/events';
+import { writeDb } from '../src/lib/db-utils';
 import { extractDomain, getModelDef } from '../src/lib/shared-eval';
 import { MODEL_QUEUE_BINDINGS, PRIMARY_MODEL_ID } from '../src/lib/models';
 
@@ -78,7 +79,7 @@ export default {
     batch: MessageBatch<QueueMessage>,
     env: Env,
   ): Promise<void> {
-    const db = env.DB;
+    const db = writeDb(env.DB);
 
     for (const msg of batch.messages) {
       const story = msg.body;
@@ -157,7 +158,7 @@ export default {
       const authErr = checkAuth(request, env);
       if (authErr) return authErr;
 
-      const db = env.DB;
+      const db = writeDb(env.DB);
       const singleIdMatch = path.match(/^\/replay\/(\d+)$/);
 
       let rows: DlqRow[];

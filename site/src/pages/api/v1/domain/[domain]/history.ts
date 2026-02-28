@@ -1,5 +1,6 @@
 import type { APIContext } from 'astro';
 import { corsHeaders, checkRateLimit, jsonResponse, errorResponse, listCacheHeaders } from '../../../../../lib/api-v1';
+import { readDb } from '../../../../../lib/db-utils';
 
 export const prerender = false;
 
@@ -28,6 +29,7 @@ export async function GET(context: APIContext): Promise<Response> {
   const env = (context.locals as any).runtime?.env;
   if (!env?.DB) return errorResponse('Service unavailable', 503);
 
+  const db = readDb(env.DB);
   const domain = context.params.domain ?? '';
   if (!domain) return errorResponse('Domain required', 400);
 
@@ -42,7 +44,7 @@ export async function GET(context: APIContext): Promise<Response> {
     });
   }
 
-  const { results } = await env.DB
+  const { results } = await db
     .prepare(
       `SELECT snapshot_date, story_count, evaluated_count,
               avg_hrcb, avg_setl, avg_editorial, avg_structural,
@@ -57,7 +59,7 @@ export async function GET(context: APIContext): Promise<Response> {
 
   if (results.length === 0) {
     // Check if domain exists at all
-    const exists = await env.DB
+    const exists = await db
       .prepare(`SELECT 1 FROM domain_aggregates WHERE domain = ? LIMIT 1`)
       .bind(domain)
       .first();

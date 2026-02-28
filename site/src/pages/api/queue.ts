@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { readDb } from '../../lib/db-utils';
 
 /**
  * GET /api/queue — returns pending stories for the standalone evaluator on gray-box.
@@ -10,6 +11,7 @@ import type { APIRoute } from 'astro';
  */
 export const GET: APIRoute = async ({ locals, request }) => {
   const env = locals.runtime.env as { DB: D1Database; TRIGGER_SECRET?: string; CONTENT_CACHE?: KVNamespace };
+  const db = readDb(env.DB);
 
   const auth = request.headers.get('Authorization') ?? '';
   if (!env.TRIGGER_SECRET || auth !== `Bearer ${env.TRIGGER_SECRET}`) {
@@ -44,7 +46,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
     inflightFilter = `AND s.hn_id NOT IN (${placeholders})`;
   }
 
-  const { results } = await env.DB
+  const { results } = await db
     .prepare(
       `SELECT s.hn_id, s.url, s.title
        FROM stories s

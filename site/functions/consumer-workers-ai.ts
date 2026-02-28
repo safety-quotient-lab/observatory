@@ -33,6 +33,7 @@ import {
 } from '../src/lib/shared-eval';
 
 import { logEvent } from '../src/lib/events';
+import { writeDb } from '../src/lib/db-utils';
 import { callWorkersAi } from './providers';
 
 async function processWaiClaim(env: Env, msg: Message<QueueMessage>, db: D1Database): Promise<void> {
@@ -95,7 +96,7 @@ async function processWaiClaim(env: Env, msg: Message<QueueMessage>, db: D1Datab
  * Pull path: claim rows from eval_queue and process them.
  */
 async function processWaiPullBatch(env: Env): Promise<void> {
-  const db = env.DB;
+  const db = writeDb(env.DB);
   if (!env.AI) {
     console.warn('[consumer-workers-ai] Pull: no AI binding, skipping');
     return;
@@ -123,7 +124,7 @@ export default {
     batch: MessageBatch<QueueMessage>,
     env: Env,
   ): Promise<void> {
-    const db = env.DB;
+    const db = writeDb(env.DB);
 
     for (const msg of batch.messages) {
       const body = msg.body as any;

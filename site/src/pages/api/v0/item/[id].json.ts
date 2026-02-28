@@ -1,5 +1,6 @@
 import type { APIContext } from 'astro';
 import { corsHeaders, checkRateLimit, jsonResponse, errorResponse, itemCacheHeaders } from '../../../../lib/api-v1';
+import { readDb } from '../../../../lib/db-utils';
 
 export const prerender = false;
 
@@ -37,6 +38,7 @@ export async function GET(context: APIContext): Promise<Response> {
   const env = (context.locals as any).runtime?.env;
   if (!env?.DB) return errorResponse('Service unavailable', 503);
 
+  const db = readDb(env.DB);
   // Astro captures "[id].json" as the param — strip the .json suffix
   const rawId = context.params.id ?? '';
   const hnId = parseInt(rawId.replace(/\.json$/, ''), 10);
@@ -50,7 +52,7 @@ export async function GET(context: APIContext): Promise<Response> {
     });
   }
 
-  const story = await env.DB
+  const story = await db
     .prepare(
       `SELECT hn_id, hn_type, hn_by, hn_time, url, hn_score, title, hn_comments,
               eval_status, hcb_weighted_mean, hcb_editorial_mean, hcb_classification,
