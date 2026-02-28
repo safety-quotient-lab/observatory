@@ -106,7 +106,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'meta-llama/llama-3.3-70b-instruct:free',
     is_free: true,
-    enabled: true,
+    enabled: false, // disabled: chronic 429s on OpenRouter free tier — use llama-3.3-70b-wai instead
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -145,11 +145,11 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
     is_free: true,
-    enabled: false, // disabled: not ready for production yet, pending testing
+    enabled: true, // replaces llama-3.3-70b (OpenRouter) which was chronic 429s; light mode via WORKERS_AI_QUEUE
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
-    prompt_mode: 'full',
+    prompt_mode: 'light',
   },
   {
     id: 'llama-4-scout-wai',
