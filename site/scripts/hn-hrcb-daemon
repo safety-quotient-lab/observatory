@@ -137,9 +137,8 @@ while true; do
 
   rotate_log
 
-  # Periodic self-heal: every 20 batches, reset stuck evaluating stories
+  # Periodic self-heal: every 20 evals, reset stuck evaluating stories
   if [ $((total_evaluated % 20)) -eq 0 ] && [ "$total_evaluated" -gt 0 ]; then
-    local stuck
     stuck=$(npx wrangler d1 execute hrcb-db --remote --json --command \
       "SELECT COUNT(*) AS cnt FROM stories WHERE eval_status = 'evaluating' AND evaluated_at < datetime('now', '-10 minutes')" \
       2>/dev/null | jq -r '.[0].results[0].cnt // 0' 2>/dev/null || echo 0)

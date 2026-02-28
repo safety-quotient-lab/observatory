@@ -347,10 +347,14 @@ eval_story() {
   CONTENT=""
 
   if [ -n "$URL" ]; then
-    CONTENT=$(curl -sL -m 20 -A "HN-HRCB-Bot/1.0" "$URL" \
-      | sed 's/<script[^>]*>.*<\/script>//g; s/<style[^>]*>.*<\/style>//g; s/<[^>]*>//g' \
+    # Fetch raw HTML, then strip tags. Multi-line script/style removal uses perl.
+    local RAW_HTML
+    RAW_HTML=$(curl -sL -m 20 -A "HN-HRCB-Bot/1.0" "$URL" 2>/dev/null || echo "[fetch failed]")
+    CONTENT=$(echo "$RAW_HTML" \
+      | perl -0777 -pe 's/<script[^>]*>.*?<\/script>//gsi; s/<style[^>]*>.*?<\/style>//gsi' \
+      | sed 's/<[^>]*>//g' \
       | tr -s '[:space:]' ' ' \
-      | head -c 20000 2>/dev/null || echo "[fetch failed]")
+      | head -c 20000)
   fi
 
   FETCH_END=$(date +%s%3N)
@@ -358,19 +362,38 @@ eval_story() {
   CONTENT_LEN=${#CONTENT}
   [ -n "$URL" ] && echo "  fetch: $(fmt_ms $FETCH_MS) (${CONTENT_LEN} chars)"
 
-  # --- Content length guard ---
-  # Cloud pipeline uses hasReadableText() >= 100 chars, but our fetch is cruder
-  # (simple tag stripping vs full HTML parser), so we use a higher threshold.
-  # 115-char HN vote page produced a garbage neutral-0 eval — use 200 as floor.
+  # --- Content quality guard ---
+  # Two checks: (1) minimum char count, (2) minimum word count (catches nav-only pages)
+  # Cloud pipeline uses hasReadableText() which strips script/style + checks prose.
+  # We do: MIN_CONTENT_CHARS=200 + MIN_WORD_COUNT=50 (avg article has 500+ words)
   local MIN_CONTENT_CHARS=200
+  local MIN_WORD_COUNT=150
   local EFFECTIVE_LEN=$CONTENT_LEN
   [ -z "$URL" ] && EFFECTIVE_LEN=${#HN_TEXT}
 
   if [ "$EFFECTIVE_LEN" -lt "$MIN_CONTENT_CHARS" ]; then
     echo "  SKIP: content too short (${EFFECTIVE_LEN} chars < ${MIN_CONTENT_CHARS} min)"
     run_d1_silent "UPDATE stories SET eval_status = 'skipped', eval_error = 'content too short (${EFFECTIVE_LEN} chars)', gate_category = 'no_content', gate_confidence = 1.0 WHERE hn_id = $HN_ID"
-    local SKIP_TOTAL=$(( $(date +%s%3N) - STORY_START ))
+    SKIP_TOTAL=$(( $(date +%s%3N) - STORY_START ))
     emit_metric "$HN_ID" "skip" "$FETCH_MS" 0 0 0 "$SKIP_TOTAL" 0 "" "none" "$DOMAIN_VAL" "content too short (${EFFECTIVE_LEN} chars)"
+    echo "skip	$FETCH_MS	0	0	0	none" > "$RESULT"
+    return
+  fi
+
+  # Word count check: real articles have prose with spaces between words.
+  # JS-rendered pages often have 2K+ chars but < 50 real words (nav menus, metadata).
+  local WORD_COUNT=0
+  if [ -n "$URL" ]; then
+    WORD_COUNT=$(echo "$CONTENT" | wc -w | tr -d ' ')
+  else
+    WORD_COUNT=$(echo "$HN_TEXT" | wc -w | tr -d ' ')
+  fi
+
+  if [ "$WORD_COUNT" -lt "$MIN_WORD_COUNT" ]; then
+    echo "  SKIP: insufficient prose (${WORD_COUNT} words < ${MIN_WORD_COUNT} min, likely JS-rendered)"
+    run_d1_silent "UPDATE stories SET eval_status = 'skipped', eval_error = 'insufficient prose (${WORD_COUNT} words)', gate_category = 'js_rendered', gate_confidence = 0.8 WHERE hn_id = $HN_ID"
+    SKIP_TOTAL=$(( $(date +%s%3N) - STORY_START ))
+    emit_metric "$HN_ID" "skip" "$FETCH_MS" 0 0 0 "$SKIP_TOTAL" 0 "" "none" "$DOMAIN_VAL" "insufficient prose (${WORD_COUNT} words)"
     echo "skip	$FETCH_MS	0	0	0	none" > "$RESULT"
     return
   fi
