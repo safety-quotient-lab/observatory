@@ -175,7 +175,7 @@ Far-future platform feature — useful when methodology changes need controlled 
 
 ### Methodology Improvements
 
-- **Confidence-weighted consensus** — use `hcb_confidence` in `updateConsensusScore` instead of flat 1.0/0.5.
+- **Confidence-weighted consensus** — promoted to `TODO.md` Round 4.8. Knock-on analysis complete.
 - **Outlier rejection in consensus** — trimmed mean or IQR filter when 4+ models rate a story.
 - **Calibration: add strongly-negative site** — EX class ranges -0.18 to -0.02. No site < -0.3 in cal set.
 - **DCP staleness window fix** — KV expires at 7d, alert at 30d. Silent 8-30d gap where DCP refreshes without logging.
