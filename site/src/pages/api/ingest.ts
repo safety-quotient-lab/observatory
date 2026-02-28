@@ -141,6 +141,22 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     const channelWeights = slim.evaluation.channel_weights ?? { editorial: 0.5, structural: 0.5 };
+
+    // Compute final/combined/context_modifier if missing (standalone evaluator omits these)
+    for (const score of slim.scores) {
+      if (score.final === undefined || score.final === null) {
+        const e = score.editorial;
+        const s = score.structural;
+        if (e !== null && e !== undefined && s !== null && s !== undefined) {
+          score.final = e * channelWeights.editorial + s * channelWeights.structural;
+        } else {
+          score.final = e ?? s ?? null;
+        }
+      }
+      if (score.combined === undefined) score.combined = null;
+      if (score.context_modifier === undefined) score.context_modifier = null;
+    }
+
     const aggregates = computeAggregates(slim.scores, channelWeights);
     const dcp = typeof slim.domain_context_profile === 'string'
       ? { domain: slim.evaluation.domain, eval_date: slim.evaluation.date, elements: {} }

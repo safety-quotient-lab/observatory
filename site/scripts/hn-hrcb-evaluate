@@ -286,6 +286,28 @@ fmt_ms() {
   fi
 }
 
+emit_metric() {
+  local hn_id="$1" status="$2" fetch_ms="$3" dcp_ms="$4" claude_ms="$5" ingest_ms="$6"
+  local total_ms="$7" scores="$8" hrcb="$9" dcp_status="${10}" domain="${11}" error="${12}"
+  jq -cn \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --argjson hn_id "$hn_id" \
+    --arg status "$status" \
+    --argjson fetch_ms "$fetch_ms" \
+    --argjson dcp_ms "$dcp_ms" \
+    --argjson claude_ms "$claude_ms" \
+    --argjson ingest_ms "$ingest_ms" \
+    --argjson total_ms "$total_ms" \
+    --argjson scores "$scores" \
+    --arg hrcb "$hrcb" \
+    --arg model "$MODEL" \
+    --arg dcp "$dcp_status" \
+    --arg domain "$domain" \
+    --arg error "$error" \
+    '{ts:$ts,hn_id:$hn_id,status:$status,fetch_ms:$fetch_ms,dcp_ms:$dcp_ms,claude_ms:$claude_ms,ingest_ms:$ingest_ms,total_ms:$total_ms,scores:$scores,hrcb:$hrcb,model:$model,dcp:$dcp,domain:$domain} + (if $error != "" then {error:$error} else {} end)' \
+    | sed 's/^/METRIC /'
+}
+
 # ── Worker: evaluate a single story ──
 eval_story() {
   local ROW="$1" SLOT="$2" COUNT="$3"
@@ -406,6 +428,8 @@ USERMSG
     echo "  claude: $(fmt_ms $CLAUDE_MS) FAILED (non-zero exit)"
     run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'claude-p failed' WHERE hn_id = $HN_ID"
     rm -f "$TMPFILE" "$RESULT_FILE"
+    local FAIL_TOTAL=$(( $(date +%s%3N) - STORY_START ))
+    emit_metric "$HN_ID" "fail" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" 0 "$FAIL_TOTAL" 0 "" "$DCP_STATUS" "$DOMAIN_VAL" "claude-p failed"
     echo "fail	$FETCH_MS	$DCP_MS	$CLAUDE_MS	0	$DCP_STATUS" > "$RESULT"
     return
   fi
@@ -421,6 +445,8 @@ USERMSG
   if [ -z "$EVAL_JSON" ]; then
     echo "  claude: $(fmt_ms $CLAUDE_MS) FAILED (no .result)"
     run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'no result in claude-p output' WHERE hn_id = $HN_ID"
+    local FAIL_TOTAL=$(( $(date +%s%3N) - STORY_START ))
+    emit_metric "$HN_ID" "fail" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" 0 "$FAIL_TOTAL" 0 "" "$DCP_STATUS" "$DOMAIN_VAL" "no result"
     echo "fail	$FETCH_MS	$DCP_MS	$CLAUDE_MS	0	$DCP_STATUS" > "$RESULT"
     return
   fi
@@ -436,6 +462,8 @@ USERMSG
       echo "  claude: $(fmt_ms $CLAUDE_MS) FAILED (invalid JSON)"
       run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'invalid eval JSON from claude-p' WHERE hn_id = $HN_ID"
       rm -f "$EVAL_FILE"
+      local FAIL_TOTAL=$(( $(date +%s%3N) - STORY_START ))
+      emit_metric "$HN_ID" "fail" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" 0 "$FAIL_TOTAL" 0 "" "$DCP_STATUS" "$DOMAIN_VAL" "invalid JSON"
       echo "fail	$FETCH_MS	$DCP_MS	$CLAUDE_MS	0	$DCP_STATUS" > "$RESULT"
       return
     fi
@@ -446,6 +474,8 @@ USERMSG
     echo "  claude: $(fmt_ms $CLAUDE_MS) FAILED (empty scores)"
     run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'empty scores array' WHERE hn_id = $HN_ID"
     rm -f "$EVAL_FILE"
+    local FAIL_TOTAL=$(( $(date +%s%3N) - STORY_START ))
+    emit_metric "$HN_ID" "fail" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" 0 "$FAIL_TOTAL" 0 "" "$DCP_STATUS" "$DOMAIN_VAL" "empty scores"
     echo "fail	$FETCH_MS	$DCP_MS	$CLAUDE_MS	0	$DCP_STATUS" > "$RESULT"
     return
   fi
@@ -506,6 +536,11 @@ USERMSG
     CLS=$(echo "$INGEST_RESP" | jq -r '.classification // "?"')
     REPAIRS=$(echo "$INGEST_RESP" | jq -r '.repairs | length // 0')
     echo "  ingest: $(fmt_ms $DB_MS) → done (hrcb=$WM, $CLS, ${REPAIRS} repairs)"
+    STORY_END=$(date +%s%3N)
+    STORY_MS=$((STORY_END - STORY_START))
+    echo "  total: $(fmt_ms $STORY_MS)"
+    emit_metric "$HN_ID" "ok" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" "$DB_MS" "$STORY_MS" "$SCORE_COUNT" "$WM" "$DCP_STATUS" "$DOMAIN_VAL" ""
+    echo "ok	$FETCH_MS	$DCP_MS	$CLAUDE_MS	$DB_MS	$DCP_STATUS" > "$RESULT"
   else
     local ERR_MSG
     ERR_MSG=$(echo "$INGEST_RESP" | jq -r '([.error, .detail, (.details | if type == "array" then join("; ") else . end)] | map(select(. != null)) | join(": "))' 2>/dev/null)
@@ -516,18 +551,11 @@ USERMSG
     STORY_END=$(date +%s%3N)
     STORY_MS=$((STORY_END - STORY_START))
     echo "  total: $(fmt_ms $STORY_MS)"
+    emit_metric "$HN_ID" "fail" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" "$DB_MS" "$STORY_MS" "$SCORE_COUNT" "" "$DCP_STATUS" "$DOMAIN_VAL" "$ERR_MSG"
     echo "fail	$FETCH_MS	$DCP_MS	$CLAUDE_MS	$DB_MS	$DCP_STATUS" > "$RESULT"
-    return
   fi
 
-  STORY_END=$(date +%s%3N)
-  STORY_MS=$((STORY_END - STORY_START))
-
   rm -f "$EVAL_FILE"
-
-  echo "  total: $(fmt_ms $STORY_MS)"
-
-  echo "ok	$FETCH_MS	$DCP_MS	$CLAUDE_MS	$DB_MS	$DCP_STATUS" > "$RESULT"
 }
 
 # ── Main execution ──
