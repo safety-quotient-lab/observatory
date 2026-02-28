@@ -136,12 +136,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Housekeeping (no urgency)
 
-- [ ] **One-time repair: lite-promoted stories** *(data integrity)*
-  - Before C2 fix (2026-02-28), `writeLiteRaterEvalResult` promoted `eval_status='done'`
-  - Stories promoted by lite eval have `hcb_weighted_mean IS NULL` (no structural channel)
-  - Repair: `UPDATE stories SET eval_status='pending', eval_model=NULL, evaluated_at=NULL WHERE eval_status='done' AND hcb_weighted_mean IS NULL AND hcb_editorial_mean IS NOT NULL;`
-  - Run via `wrangler d1 execute hrcb-db --remote --command "..."` then sweep=failed to re-evaluate
-
 - [ ] **Remaining `i += 100` literals in hn-bot.ts** *(code quality, CQ-02 partial)*
   - `D1_BATCH_SIZE = 100` exported from `db-utils.ts` but 10+ manual `i += 100` chunking loops in `hn-bot.ts` and `cron.ts` still hardcode 100
   - Replace with `D1_BATCH_SIZE` import where not already using `safeBatch()`

@@ -981,8 +981,9 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
               </div>
             )}
 
-            {/* Parallel coordinates chart */}
-            <svg width="100%" viewBox={`0 0 ${pcW} ${pcH}`} style={`max-width: ${pcW}px; height: auto;`}>
+            {/* Parallel coordinates chart — scrollable on mobile, no label shrink */}
+            <div style="overflow-x: auto;">
+            <svg width={pcW} viewBox={`0 0 ${pcW} ${pcH}`} style="display: block;">
               {/* Background */}
               <rect x="0" y="0" width={pcW} height={pcH} fill="#002d38" rx="4" />
 
@@ -1043,6 +1044,7 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
                 ))
               )}
             </svg>
+            </div>
 
             {/* Legend row */}
             <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
@@ -1093,7 +1095,8 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
                   inter-cluster variance per signal dimension
                 </span>
               </div>
-              <svg width="100%" viewBox={`0 0 500 ${interClusterVar.length * 28 + 10}`} style="max-width: 500px; height: auto;">
+              <div style="overflow-x: auto;">
+              <svg width="500" viewBox={`0 0 500 ${interClusterVar.length * 28 + 10}`} style="display: block;">
                 {interClusterVar.map((v, i) => {
                   const barW = (v.variance / maxVar) * 350;
                   const y = i * 28 + 5;
@@ -1109,6 +1112,7 @@ const signalSpacePoints = [...zVectors.entries()].map(([domain, zVector]) => {
                   );
                 })}
               </svg>
+              </div>
             </td>
           </tr>
         </table>

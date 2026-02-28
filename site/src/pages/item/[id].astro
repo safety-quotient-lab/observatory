@@ -152,6 +152,11 @@ const aggSetl = storyData.hcb_setl ?? (setlValues.length > 0
 
 // Confidence (evidence-weighted)
 const confidence = computeConfidence(storyData.hcb_evidence_h, storyData.hcb_evidence_m, storyData.hcb_evidence_l, storyData.hcb_nd_count);
+const _evTotal = (storyData.hcb_evidence_h ?? 0) + (storyData.hcb_evidence_m ?? 0) + (storyData.hcb_evidence_l ?? 0) + (storyData.hcb_nd_count ?? 0);
+const _evH = _evTotal > 0 ? Math.round((storyData.hcb_evidence_h ?? 0) / _evTotal * 100) : 0;
+const _evM = _evTotal > 0 ? Math.round((storyData.hcb_evidence_m ?? 0) / _evTotal * 100) : 0;
+const _evL = _evTotal > 0 ? Math.round((storyData.hcb_evidence_l ?? 0) / _evTotal * 100) : 0;
+const _evND = _evTotal > 0 ? (100 - _evH - _evM - _evL) : 0; // remainder avoids rounding gap
 
 // Story-level labels
 const themeTag = storyData.hcb_theme_tag || null;
@@ -635,10 +640,8 @@ function timeAgo(unixTime: number): string {
               <td class="score-font" style="color: #5b7279;">{aggregates.nd_count}</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;"><abbr title="Proportion of UDHR articles with scoreable evidence — scored sections ÷ total sections">Confidence</abbr> <a href="/about#confidence" style="color: #5b7279; text-decoration: none; font-size: var(--font-xs);" title="About Confidence">ℹ</a></td>
-              <td class="score-font" style={`color: ${confidenceToColor(confidence)};`} title={`${aggregates.signal_sections}/${aggregates.signal_sections + aggregates.nd_count} articles scored`}>{formatConfidence(confidence)}</td>
               <td style="color: #5b7279;">Volatility</td>
-              <td class="score-font" style="color: #98a8a8;">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
+              <td class="score-font" style="color: #98a8a8;" colspan="3">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
             </tr>
             <tr>
               <td style="color: #5b7279;">Negative</td>
@@ -664,19 +667,26 @@ function timeAgo(unixTime: number): string {
               </tr>
             )}
           </table>
-          <div style="margin-top: 6px;">
-            <span style="color: #5b7279; font-size: var(--font-xs);">Evidence: </span>
-            {Object.entries(aggregates.evidence_profile).map(([key, count]) => {
-              const label = EVIDENCE_LABELS[key] || key;
-              return (
-                <span
-                  class="badge"
-                  style={`background: ${evidenceColor(key === 'ND' ? null : key)}30; color: ${evidenceColor(key === 'ND' ? null : key)}; font-size: var(--font-xs); margin-right: 3px;`}
-                >
-                  {label}: {count}
-                </span>
-              );
-            })}
+          {/* Confidence + Evidence merged visualization */}
+          <div style="margin-top: 8px;">
+            <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 3px;">
+              <span style="color: #5b7279; font-size: var(--font-xs);">Evidence</span>
+              <span class="score-font" style={`color: ${confidenceToColor(confidence)}; font-size: var(--font-xs);`} title={`${aggregates.signal_sections}/${aggregates.signal_sections + aggregates.nd_count} articles scored`}>{formatConfidence(confidence)}</span>
+              <span style="color: #5b7279; font-size: var(--font-xs);">coverage</span>
+              <a href="/about#confidence" style="color: #5b7279; text-decoration: none; font-size: var(--font-xs);" title="About Confidence">ℹ</a>
+            </div>
+            <div style="display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: #0d4655; gap: 1px;">
+              {_evH > 0 && <div style={`width: ${_evH}%; background: ${evidenceColor('H')}; flex-shrink: 0;`} title={`High evidence: ${storyData.hcb_evidence_h} sections`} />}
+              {_evM > 0 && <div style={`width: ${_evM}%; background: ${evidenceColor('M')}; flex-shrink: 0;`} title={`Medium evidence: ${storyData.hcb_evidence_m} sections`} />}
+              {_evL > 0 && <div style={`width: ${_evL}%; background: ${evidenceColor('L')}; flex-shrink: 0;`} title={`Low evidence: ${storyData.hcb_evidence_l} sections`} />}
+              {_evND > 0 && <div style={`width: ${_evND}%; background: ${evidenceColor(null)}; flex-shrink: 0;`} title={`No data: ${storyData.hcb_nd_count} sections`} />}
+            </div>
+            <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 2px; font-family: monospace;">
+              {(storyData.hcb_evidence_h ?? 0) > 0 && <span style={`color: ${evidenceColor('H')};`}>{storyData.hcb_evidence_h}H </span>}
+              {(storyData.hcb_evidence_m ?? 0) > 0 && <span style={`color: ${evidenceColor('M')};`}>{storyData.hcb_evidence_m}M </span>}
+              {(storyData.hcb_evidence_l ?? 0) > 0 && <span style={`color: ${evidenceColor('L')};`}>{storyData.hcb_evidence_l}L </span>}
+              {(storyData.hcb_nd_count ?? 0) > 0 && <span style={`color: ${evidenceColor(null)};`}>{storyData.hcb_nd_count} ND</span>}
+            </div>
           </div>
         </div>
     </div>

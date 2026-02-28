@@ -271,6 +271,9 @@ const clientData = JSON.stringify({
       .slice(0, k);
   }
 
+  // Escape user-supplied strings before injecting into innerHTML
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
   // Detail panel
   function renderDetail(el, pt) {
     if (!pt) {
@@ -296,13 +299,13 @@ const clientData = JSON.stringify({
     const nbrs = nearest(pt, 3);
     const nearHtml = nbrs.length
       ? `<div style="color:#5b7279;font-size:9px;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;">Nearest</div>`
-        + nbrs.map(nb => `<div title="${nb.d}" style="color:#5b7279;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">→ <a href="/domain/${nb.d}" style="color:#8faaab;text-decoration:none;">${nb.d}</a></div>`).join('')
+        + nbrs.map(nb => `<div title="${esc(nb.d)}" style="color:#5b7279;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">→ <a href="/domain/${esc(nb.d)}" style="color:#8faaab;text-decoration:none;">${esc(nb.d)}</a></div>`).join('')
       : '';
     el.innerHTML = `
-      <a href="/domain/${pt.d}" style="color:#98a8a8;font-weight:bold;text-decoration:none;font-size:10px;word-break:break-all;">${pt.d}</a>
+      <a href="/domain/${esc(pt.d)}" style="color:#98a8a8;font-weight:bold;text-decoration:none;font-size:10px;word-break:break-all;">${esc(pt.d)}</a>
       <div style="color:${hcbColor(pt.sc)};font-size:11px;font-weight:bold;margin-top:3px;">HRCB ${scoreStr}</div>
       ${scoreBar}
-      ${pt.cn ? `<div style="color:${pt.cc};font-size:9px;margin-top:3px;">${pt.cn}</div>` : `<div style="color:#5b7279;font-size:9px;margin-top:3px;">Unaligned</div>`}
+      ${pt.cn ? `<div style="color:${pt.cc};font-size:9px;margin-top:3px;">${esc(pt.cn)}</div>` : `<div style="color:#5b7279;font-size:9px;margin-top:3px;">Unaligned</div>`}
       <div style="color:#5b7279;font-size:9px;">${pt.n} ${pt.n === 1 ? 'story' : 'stories'}</div>
       ${signals}${nearHtml}`;
   }

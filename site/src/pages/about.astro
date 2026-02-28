@@ -84,52 +84,52 @@ const jsonLd = {
         </table>
         </div>
 
-        <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">Classification Labels</h2>
+        <details class="collapsible-section" style="margin: 15px 0;">
+          <summary>Classification &amp; Sentiment Reference</summary>
 
-        <div class="table-wrap">
-        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px; background: #093946; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
-          <tr><td style="color: #16a34a; padding: 2px 8px; width: 160px;">Strong positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.60 to +1.00</td></tr>
-          <tr><td style="color: #4ade80; padding: 2px 8px;">Positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.30 to +0.59</td></tr>
-          <tr><td style="color: #86efac; padding: 2px 8px;">Leaning positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.10 to +0.29</td></tr>
-          <tr><td style="color: #5b7279; padding: 2px 8px;">Neutral</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.09 to +0.09</td></tr>
-          <tr><td style="color: #fca5a5; padding: 2px 8px;">Leaning negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.10 to -0.29</td></tr>
-          <tr><td style="color: #f87171; padding: 2px 8px;">Negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.30 to -0.59</td></tr>
-          <tr><td style="color: #dc2626; padding: 2px 8px;">Strong negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.60 to -1.00</td></tr>
-        </table>
-        </div>
+          <h2 id="classification" style="font-size: var(--font-base); margin: 12px 0 6px 0;">Classification Labels</h2>
 
-        <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">Story-Level Labels</h2>
+          <div class="table-wrap">
+          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px; background: #093946; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
+            <tr><td style="color: #16a34a; padding: 2px 8px; width: 160px;">Strong positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.60 to +1.00</td></tr>
+            <tr><td style="color: #4ade80; padding: 2px 8px;">Positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.30 to +0.59</td></tr>
+            <tr><td style="color: #86efac; padding: 2px 8px;">Leaning positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.10 to +0.29</td></tr>
+            <tr><td style="color: #5b7279; padding: 2px 8px;">Neutral</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.09 to +0.09</td></tr>
+            <tr><td style="color: #fca5a5; padding: 2px 8px;">Leaning negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.10 to -0.29</td></tr>
+            <tr><td style="color: #f87171; padding: 2px 8px;">Negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.30 to -0.59</td></tr>
+            <tr><td style="color: #dc2626; padding: 2px 8px;">Strong negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.60 to -1.00</td></tr>
+          </table>
+          </div>
 
-        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
-          Each evaluation generates three story-level labels that provide a quick overview:
-        </p>
+          <h2 style="font-size: var(--font-base); margin: 12px 0 6px 0;">Story-Level Labels</h2>
 
-        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
-          <tr>
-            <td><span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1;">Theme Tag</span></td>
-            <td style="color: #5b7279; padding-left: 6px;">Dominant human rights theme (e.g., "Privacy & Surveillance", "Free Expression")</td>
-          </tr>
-          <tr>
-            <td><span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee;">Sentiment</span></td>
-            <td style="color: #5b7279; padding-left: 6px;">Overall disposition: Champions, Advocates, Acknowledges, Neutral, Neglects, Undermines, Hostile</td>
-          </tr>
-          <tr>
-            <td><span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279;">Summary</span></td>
-            <td style="color: #5b7279; padding-left: 6px;">2-3 sentence narrative summary in Fair Witness style</td>
-          </tr>
-        </table>
+          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 12px;">
+            <tr>
+              <td><span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1;">Theme Tag</span></td>
+              <td style="color: #5b7279; padding-left: 6px;">Dominant human rights theme (e.g., "Privacy &amp; Surveillance", "Free Expression")</td>
+            </tr>
+            <tr>
+              <td><span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee;">Sentiment</span></td>
+              <td style="color: #5b7279; padding-left: 6px;">Overall disposition: Champions, Advocates, Acknowledges, Neutral, Neglects, Undermines, Hostile</td>
+            </tr>
+            <tr>
+              <td><span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279;">Summary</span></td>
+              <td style="color: #5b7279; padding-left: 6px;">2-3 sentence narrative summary in Fair Witness style</td>
+            </tr>
+          </table>
 
-        <h2 id="sentiment" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Sentiment Labels</h2>
+          <h2 id="sentiment" style="font-size: var(--font-base); margin: 12px 0 6px 0;">Sentiment Labels</h2>
 
-        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
-          <tr><td><span class="badge" style="background: #16a34a22; color: #16a34a;">Champions</span></td><td style="color: #5b7279; padding-left: 6px;">Strongest positive alignment — content actively defends and promotes UDHR provisions</td></tr>
-          <tr><td><span class="badge" style="background: #4ade8022; color: #4ade80;">Advocates</span></td><td style="color: #5b7279; padding-left: 6px;">Actively promotes rights-aligned positions with clear editorial support</td></tr>
-          <tr><td><span class="badge" style="background: #86efac22; color: #86efac;">Acknowledges</span></td><td style="color: #5b7279; padding-left: 6px;">Recognizes rights issues without strong advocacy or opposition</td></tr>
-          <tr><td><span class="badge" style="background: #5b727922; color: #5b7279;">Neutral</span></td><td style="color: #5b7279; padding-left: 6px;">Balanced or no clear directional lean on human rights</td></tr>
-          <tr><td><span class="badge" style="background: #fca5a522; color: #fca5a5;">Neglects</span></td><td style="color: #5b7279; padding-left: 6px;">Overlooks or minimizes rights concerns that are relevant to the topic</td></tr>
-          <tr><td><span class="badge" style="background: #f8717122; color: #f87171;">Undermines</span></td><td style="color: #5b7279; padding-left: 6px;">Actively works against rights provisions through content or framing</td></tr>
-          <tr><td><span class="badge" style="background: #dc262622; color: #dc2626;">Hostile</span></td><td style="color: #5b7279; padding-left: 6px;">Strongest negative alignment — content attacks or denies fundamental rights</td></tr>
-        </table>
+          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 6px;">
+            <tr><td><span class="badge" style="background: #16a34a22; color: #16a34a;">Champions</span></td><td style="color: #5b7279; padding-left: 6px;">Strongest positive alignment — content actively defends and promotes UDHR provisions</td></tr>
+            <tr><td><span class="badge" style="background: #4ade8022; color: #4ade80;">Advocates</span></td><td style="color: #5b7279; padding-left: 6px;">Actively promotes rights-aligned positions with clear editorial support</td></tr>
+            <tr><td><span class="badge" style="background: #86efac22; color: #86efac;">Acknowledges</span></td><td style="color: #5b7279; padding-left: 6px;">Recognizes rights issues without strong advocacy or opposition</td></tr>
+            <tr><td><span class="badge" style="background: #5b727922; color: #5b7279;">Neutral</span></td><td style="color: #5b7279; padding-left: 6px;">Balanced or no clear directional lean on human rights</td></tr>
+            <tr><td><span class="badge" style="background: #fca5a522; color: #fca5a5;">Neglects</span></td><td style="color: #5b7279; padding-left: 6px;">Overlooks or minimizes rights concerns that are relevant to the topic</td></tr>
+            <tr><td><span class="badge" style="background: #f8717122; color: #f87171;">Undermines</span></td><td style="color: #5b7279; padding-left: 6px;">Actively works against rights provisions through content or framing</td></tr>
+            <tr><td><span class="badge" style="background: #dc262622; color: #dc2626;">Hostile</span></td><td style="color: #5b7279; padding-left: 6px;">Strongest negative alignment — content attacks or denies fundamental rights</td></tr>
+          </table>
+        </details>
 
         <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">No Data vs 0.0</h2>
 

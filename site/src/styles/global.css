@@ -383,6 +383,12 @@
   }
 }
 
+/* Tablet breakpoint — collapse multi-column layouts on 768px and below */
+@media (max-width: 768px) {
+  .two-col { grid-template-columns: 1fr; }
+  .insight-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* Mobile responsiveness */
 @media (max-width: 640px) {
   :root {
