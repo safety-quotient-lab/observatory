@@ -208,8 +208,9 @@ build_query() {
       ;;
   esac
 
-  # Content filter: must have URL or substantial self-text
+  # Content filter: must have URL or substantial self-text, and not already gated
   CONDITIONS="$CONDITIONS AND (url IS NOT NULL OR (hn_text IS NOT NULL AND LENGTH(hn_text) >= 50))"
+  CONDITIONS="$CONDITIONS AND gate_category IS NULL"
 
   # Optional domain filter
   if [ -n "$DOMAIN" ]; then
