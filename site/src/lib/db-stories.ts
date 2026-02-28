@@ -77,6 +77,7 @@ export interface Story {
   // Content drift
   content_hash: string | null;
   content_last_fetched: string | null;
+  eval_priority_score: number | null;
   // Detail-only columns (not in STORY_LIST_COLS)
   hcb_setl: number | null;
   hcb_confidence: number | null;
@@ -102,7 +103,7 @@ const STORY_LIST_COLS = `hn_id, url, title, domain, hn_score, hn_comments, hn_by
   cl_reading_level, cl_jargon_density, cl_assumed_knowledge,
   td_score, td_author_identified, td_conflicts_disclosed, td_funding_disclosed,
   consensus_score, consensus_model_count, consensus_spread, consensus_updated_at,
-  content_hash, content_last_fetched`;
+  content_hash, content_last_fetched, eval_priority_score`;
 
 // Detail-view columns — adds hn_text for self-post display, gate columns, archive. Still omits hcb_json (~12-15KB blob).
 const STORY_DETAIL_COLS = `${STORY_LIST_COLS},

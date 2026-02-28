@@ -368,7 +368,13 @@ export async function getEvalsPerCycle(
   }
 
   return boundaries.map((b, i) => {
-    const details = b.details ? JSON.parse(b.details) : null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let details: any = null;
+    try {
+      details = b.details ? JSON.parse(b.details) : null;
+    } catch {
+      details = null;
+    }
     return {
       cycle_start: b.start,
       cycle_end: b.end,

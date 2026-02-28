@@ -441,10 +441,11 @@ export async function refreshDailySectionStats(
   scores: Array<{ section: string; final: number | null }>
 ): Promise<void> {
   const today = new Date().toISOString().split('T')[0];
+  const stmts: D1PreparedStatement[] = [];
   for (const score of scores) {
     if (score.final === null) continue;
-    try {
-      await db
+    stmts.push(
+      db
         .prepare(
           `INSERT INTO daily_section_stats (day, section, mean_final, min_final, max_final, eval_count)
            VALUES (?, ?, ?, ?, ?, 1)
@@ -455,10 +456,13 @@ export async function refreshDailySectionStats(
              eval_count  = eval_count + 1`
         )
         .bind(today, score.section, score.final, score.final, score.final)
-        .run();
-    } catch (err) {
-      console.error(`[eval-write] refreshDailySectionStats failed for ${score.section}:`, err);
-    }
+    );
+  }
+  if (stmts.length === 0) return;
+  try {
+    await db.batch(stmts);
+  } catch (err) {
+    console.error(`[eval-write] refreshDailySectionStats batch failed:`, err);
   }
 }
 
@@ -602,7 +606,7 @@ export async function writeRaterEvalResult(
         hcb_theme_tag, hcb_sentiment_tag, hcb_executive_summary,
         fw_ratio, fw_observable_count, fw_inference_count,
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
-        eq_score, so_score, et_primary_tone, et_valence,
+        eq_score, so_score, et_primary_tone, et_valence, et_arousal,
         sr_score, pt_flag_count, td_score,
         input_tokens, output_tokens, content_truncation_pct,
         eval_batch_id, evaluated_at
@@ -616,7 +620,7 @@ export async function writeRaterEvalResult(
         ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?, ?,
-        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?,
         ?, datetime('now')
@@ -651,6 +655,7 @@ export async function writeRaterEvalResult(
         so_score = excluded.so_score,
         et_primary_tone = excluded.et_primary_tone,
         et_valence = excluded.et_valence,
+        et_arousal = excluded.et_arousal,
         sr_score = excluded.sr_score,
         pt_flag_count = excluded.pt_flag_count,
         td_score = excluded.td_score,
@@ -675,7 +680,7 @@ export async function writeRaterEvalResult(
       hcbEditorialMean, hcbStructuralMean, hcbSetl, hcbConfidence,
       eq?.eq_score ?? null,
       so?.so_score ?? null,
-      et?.primary_tone ?? null, et?.valence ?? null,
+      et?.primary_tone ?? null, et?.valence ?? null, et?.arousal ?? null,
       sr?.sr_score ?? null,
       pt ? pt.length : 0,
       td?.td_score ?? null,

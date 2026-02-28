@@ -119,6 +119,10 @@ export interface RaterEvalRow {
   evaluated_at: string | null;
   created_at: string;
   prompt_mode: string | null;
+  et_arousal: number | null;
+  eval_batch_id: string | null;
+  content_truncation_pct: number | null;
+  reasoning: string | null;
 }
 
 export interface RaterScore {
