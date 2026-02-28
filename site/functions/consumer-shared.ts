@@ -222,7 +222,7 @@ export async function handleParseFailure(
   let health = emptyRaterHealth();
   try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
   health = updateRaterHealthOnParseFailure(health);
-  await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+  try { await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 }); } catch {}
 
   if (health.disabled_at) {
     await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${modelId} auto-disabled: ${health.disabled_reason}`, details: { model: modelId, reason: health.disabled_reason, consecutive_parse_failures: health.consecutive_parse_failures } });
@@ -254,7 +254,7 @@ export async function handleValidationFailure(
   let health = emptyRaterHealth();
   try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
   health = updateRaterHealthOnParseFailure(health);
-  await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+  try { await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 }); } catch {}
 
   if (health.disabled_at) {
     await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_disable', severity: 'error', message: `Model ${modelId} auto-disabled: ${health.disabled_reason}`, details: { model: modelId, reason: health.disabled_reason } });
@@ -277,7 +277,7 @@ export async function handleApiFailure(
   let health = emptyRaterHealth();
   try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
   health = updateRaterHealthOnApiFailure(health);
-  await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+  try { await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 }); } catch {}
   await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_retry', severity: 'error', message: `${provider === 'openrouter' ? 'OpenRouter' : 'API'} error ${status} model=${modelId}`, details: { status, body_preview: body.slice(0, 500), model: modelId } });
 }
 
@@ -292,7 +292,7 @@ export async function handleRaterHealthSuccess(
   try { const s = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null; if (s) health = s; } catch {}
   const wasDisabled = !!health.disabled_at;
   health = updateRaterHealthOnSuccess(health);
-  await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 });
+  try { await env.CONTENT_CACHE.put(healthKey, JSON.stringify(health), { expirationTtl: 86400 }); } catch {}
 
   if (wasDisabled) {
     await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_auto_enable', severity: 'info', message: `Model ${modelId} auto-re-enabled after successful probe`, details: { model: modelId } });
@@ -701,9 +701,7 @@ export async function processFullResult(
     if (!cachedDcp && prep.domain && typeof slim.domain_context_profile !== 'string' && dcpObj?.elements) {
       const dcpElements = dcpObj.elements;
       await cacheDcp(db, prep.domain, dcpElements);
-      await env.CONTENT_CACHE.put(`dcp:${prep.domain}`, JSON.stringify(dcpElements), {
-        expirationTtl: 604800,
-      });
+      try { await env.CONTENT_CACHE.put(`dcp:${prep.domain}`, JSON.stringify(dcpElements), { expirationTtl: 604800 }); } catch {}
     }
   }
 

@@ -49,28 +49,33 @@ export async function getAllDomainStats(
   sort: DomainSortOption = 'count',
   limit = 50
 ): Promise<DomainStat[]> {
-  let orderBy = 'count DESC';
-  switch (sort) {
-    case 'score': orderBy = 'avg_score DESC NULLS LAST'; break;
-    case 'setl': orderBy = 'avg_setl DESC NULLS LAST'; break;
-    case 'conf': orderBy = 'avg_conf DESC NULLS LAST'; break;
+  try {
+    let orderBy = 'count DESC';
+    switch (sort) {
+      case 'score': orderBy = 'avg_score DESC NULLS LAST'; break;
+      case 'setl': orderBy = 'avg_setl DESC NULLS LAST'; break;
+      case 'conf': orderBy = 'avg_conf DESC NULLS LAST'; break;
+    }
+    const { results } = await db
+      .prepare(
+        `SELECT s.domain, COUNT(*) as count,
+                SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_setl END) as avg_setl,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_confidence END) as avg_conf
+         FROM stories s
+         WHERE s.domain IS NOT NULL
+         GROUP BY s.domain
+         ORDER BY ${orderBy}
+         LIMIT ?`
+      )
+      .bind(limit)
+      .all<DomainStat>();
+    return results;
+  } catch (err) {
+    console.error('[getAllDomainStats] DB error:', err);
+    return [];
   }
-  const { results } = await db
-    .prepare(
-      `SELECT s.domain, COUNT(*) as count,
-              SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
-              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
-              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_setl END) as avg_setl,
-              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_confidence END) as avg_conf
-       FROM stories s
-       WHERE s.domain IS NOT NULL
-       GROUP BY s.domain
-       ORDER BY ${orderBy}
-       LIMIT ?`
-    )
-    .bind(limit)
-    .all<DomainStat>();
-  return results;
 }
 
 // --- Domain Intelligence ---
@@ -104,6 +109,7 @@ export async function getDomainIntelligence(
   minStories = 2,
   limit = 100
 ): Promise<DomainIntelligence[]> {
+  try {
   const t0 = Date.now();
   let orderBy: string;
   switch (sort) {
@@ -156,6 +162,10 @@ export async function getDomainIntelligence(
   const ms = Date.now() - t0;
   if (ms > 200) console.warn(`[getDomainIntelligence] slow query: ${ms}ms, ${results.length} rows`);
   return results;
+  } catch (err) {
+    console.error('[getDomainIntelligence] DB error:', err);
+    return [];
+  }
 }
 
 // --- Domain fingerprints (per-domain, per-article score profiles) ---
@@ -306,7 +316,7 @@ export interface HnUser {
 export async function getHnUser(db: D1Database, username: string): Promise<HnUser | null> {
   try {
     return await db
-      .prepare(`SELECT * FROM hn_users WHERE username = ?`)
+      .prepare(`SELECT username, karma, created, about, cached_at FROM hn_users WHERE username = ?`)
       .bind(username)
       .first<HnUser>();
   } catch (err) {
@@ -907,6 +917,7 @@ export async function getUserIntelligence(
   minStories = 3,
   limit = 150
 ): Promise<UserIntelligence[]> {
+  try {
   const t0 = Date.now();
   let orderBy: string;
   switch (sort) {
@@ -973,4 +984,8 @@ export async function getUserIntelligence(
   const ms = Date.now() - t0;
   if (ms > 200) console.warn(`[getUserIntelligence] slow query: ${ms}ms, ${results.length} rows`);
   return results;
+  } catch (err) {
+    console.error('[getUserIntelligence] DB error:', err);
+    return [];
+  }
 }

@@ -22,32 +22,13 @@ rounds. 30/43 items already fixed; remaining items below.
 ### Round 2 — Hardening
 *Production readiness fixes. Merged from audit (2026-02-27). Items marked with audit step ID.*
 
-- [ ] **Add try/catch to unguarded DB query functions** *(audit step 10, HIGH)*
-  - ~8 functions lack error handling: `getFilteredStoriesWithScores` (score subquery),
-    `getDomainIntelligence`, `getAllDomainStats`, `getUserIntelligence`,
-    `getArticleCoverage`, `getArticleRanking`, `getArticleDetailedStats`, `getQueueStories`
-  - Pattern: wrap in try/catch, log `console.error`, return safe default ([] or null)
-
-- [ ] **Log silent catch blocks** *(audit step 24, MED)*
-  - `getFairWitnessForStory`, `getEvalHistoryForStory` (db-stories.ts),
-    `getDlqTrend`, `getSelfThrottleImpact` (db-analytics.ts) — bare `catch { return ...; }`
-  - Add `console.error('[fnName]', err)` before the return
-
-- [ ] **Wrap KV writes in try/catch in consumer-shared.ts** *(audit step 33, MED)*
-  - Rater health KV puts (4 locations) propagate on failure
-  - KV reads are already guarded; writes should match
-
-- [ ] **Fix diverged `CONTENT_MAX_CHARS` in content-drift.ts** *(audit step 38, MED)*
-  - `content-drift.ts` defines `CONTENT_MAX_CHARS = 50000` locally
-  - `shared-eval.ts` canonical value is `20_000`
-  - Either import from shared-eval or rename the local to `DRIFT_FETCH_MAX_CHARS`
-
-- [ ] **Cap `getRegionDistribution` LIMIT** *(audit step 21, MED)*
-  - Currently `LIMIT 50000` — reduce to a reasonable cap (e.g., 5000)
-  - `getStakeholderOverview` has `LIMIT 10000` — review if that's also too high
-
-- [ ] **Guard Promise.all on users.astro and domains.astro** *(audit steps 42+43, LOW)*
-  - Add `.catch(() => [])` on individual promises to prevent full page crash
+- [x] **Add try/catch to unguarded DB query functions** *(done 2026-02-27)*
+- [x] **Log silent catch blocks** *(done 2026-02-27)*
+- [x] **Wrap KV writes in try/catch in consumer-shared.ts** *(done 2026-02-27)*
+- [x] **Fix diverged `CONTENT_MAX_CHARS` in content-drift.ts** *(done 2026-02-27)*
+- [x] **Cap `getRegionDistribution` LIMIT** *(done 2026-02-27)*
+- [x] **Guard Promise.all on users.astro and domains.astro** *(done 2026-02-27)*
+- [x] **Replace `SELECT *` with explicit columns** *(done 2026-02-27)*
 
 - [ ] **Clean up `as any` casts** *(audit steps 2+7, LOW)*
   - `eval-parse.ts`: `parsed: any` params in validators — add proper type

@@ -571,7 +571,7 @@ export async function getStakeholderOverview(db: D1Database): Promise<Stakeholde
       `SELECT sr_who_speaks, sr_who_spoken_about
        FROM stories
        WHERE eval_status = 'done' AND (sr_who_speaks IS NOT NULL OR sr_who_spoken_about IS NOT NULL)
-       LIMIT 10000`
+       LIMIT 5000`
     )
     .all<{ sr_who_speaks: string | null; sr_who_spoken_about: string | null }>();
 
@@ -622,7 +622,7 @@ export async function getRegionDistribution(db: D1Database): Promise<{ regions: 
       `SELECT gs_regions_json
        FROM stories
        WHERE eval_status = 'done' AND gs_regions_json IS NOT NULL
-       LIMIT 50000`
+       LIMIT 5000`
     )
     .all<{ gs_regions_json: string }>();
 
@@ -763,7 +763,8 @@ export async function getDlqTrend(db: D1Database): Promise<DlqTrend> {
     const backlogGrowing = today > weekAgo;
 
     return { days: results, backlog_growing: backlogGrowing, current_pending: currentPending };
-  } catch {
+  } catch (err) {
+    console.error('[getDlqTrend] DB error:', err);
     return { days: [], backlog_growing: false, current_pending: 0 };
   }
 }
@@ -791,7 +792,8 @@ export async function getSelfThrottleImpact(db: D1Database): Promise<SelfThrottl
       )
       .all<SelfThrottleImpact>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getSelfThrottleImpact] DB error:', err);
     return [];
   }
 }

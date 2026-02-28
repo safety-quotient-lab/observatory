@@ -391,7 +391,7 @@ export async function getStory(db: D1Database, hnId: number): Promise<StoryWithS
       }
       if (targetModel) {
         const { results: scoreRows } = await db
-          .prepare(`SELECT * FROM rater_scores WHERE hn_id = ? AND eval_model = ? ORDER BY sort_order`)
+          .prepare(`SELECT hn_id, section, eval_model, sort_order, final, editorial, structural, evidence, directionality, note, editorial_note, structural_note, combined, context_modifier FROM rater_scores WHERE hn_id = ? AND eval_model = ? ORDER BY sort_order`)
           .bind(hnId, targetModel)
           .all<ScoreRow>();
         scores = scoreRows.map(scoreRowToScore);
@@ -434,7 +434,8 @@ export async function getFairWitnessForStory(db: D1Database, hnId: number, evalM
       .bind(hnId)
       .all<FairWitnessFact>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getFairWitnessForStory] DB error:', err);
     return [];
   }
 }
@@ -447,25 +448,30 @@ export async function getArticleRanking(
   limit = 30,
   offset = 0
 ): Promise<ArticleRankingRow[]> {
-  const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
-  const { results } = await db
-    .prepare(
-      `SELECT s.hn_id, s.title, s.domain, s.url, s.hn_score, s.hn_comments,
-              s.hcb_weighted_mean, s.hcb_editorial_mean, s.hcb_classification,
-              s.hcb_signal_sections, s.hcb_nd_count,
-              s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l,
-              sc.section, sc.final, sc.editorial, sc.structural,
-              sc.evidence, sc.note
-       FROM rater_scores sc
-       JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'
-         AND sc.eval_model = s.eval_model
-       ORDER BY sc.final DESC
-       LIMIT ? OFFSET ?`
-    )
-    .bind(section, limit, offset)
-    .all<ArticleRankingRow>();
-  return results;
+  try {
+    const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
+    const { results } = await db
+      .prepare(
+        `SELECT s.hn_id, s.title, s.domain, s.url, s.hn_score, s.hn_comments,
+                s.hcb_weighted_mean, s.hcb_editorial_mean, s.hcb_classification,
+                s.hcb_signal_sections, s.hcb_nd_count,
+                s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l,
+                sc.section, sc.final, sc.editorial, sc.structural,
+                sc.evidence, sc.note
+         FROM rater_scores sc
+         JOIN stories s ON s.hn_id = sc.hn_id
+         WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'
+           AND sc.eval_model = s.eval_model
+         ORDER BY sc.final DESC
+         LIMIT ? OFFSET ?`
+      )
+      .bind(section, limit, offset)
+      .all<ArticleRankingRow>();
+    return results;
+  } catch (err) {
+    console.error('[getArticleRanking] DB error:', err);
+    return [];
+  }
 }
 
 export interface ArticleCoverageRow {
@@ -476,19 +482,24 @@ export interface ArticleCoverageRow {
 }
 
 export async function getArticleCoverage(db: D1Database): Promise<ArticleCoverageRow[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT sc.section, sc.sort_order,
-              SUM(CASE WHEN sc.final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
-              AVG(sc.final) as avg_final
-       FROM rater_scores sc
-       JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE sc.eval_model = s.eval_model
-       GROUP BY sc.section
-       ORDER BY sc.sort_order`
-    )
-    .all<ArticleCoverageRow>();
-  return results;
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT sc.section, sc.sort_order,
+                SUM(CASE WHEN sc.final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
+                AVG(sc.final) as avg_final
+         FROM rater_scores sc
+         JOIN stories s ON s.hn_id = sc.hn_id
+         WHERE sc.eval_model = s.eval_model
+         GROUP BY sc.section
+         ORDER BY sc.sort_order`
+      )
+      .all<ArticleCoverageRow>();
+    return results;
+  } catch (err) {
+    console.error('[getArticleCoverage] DB error:', err);
+    return [];
+  }
 }
 
 // --- Stats ---
@@ -587,14 +598,19 @@ export interface ContentTypeStat {
 }
 
 export async function getContentTypeStats(db: D1Database): Promise<ContentTypeStat[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT content_type, COUNT(*) as count, AVG(hcb_weighted_mean) as avg_score
-       FROM stories WHERE eval_status = 'done'
-       GROUP BY content_type ORDER BY count DESC`
-    )
-    .all<ContentTypeStat>();
-  return results;
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT content_type, COUNT(*) as count, AVG(hcb_weighted_mean) as avg_score
+         FROM stories WHERE eval_status = 'done'
+         GROUP BY content_type ORDER BY count DESC`
+      )
+      .all<ContentTypeStat>();
+    return results;
+  } catch (err) {
+    console.error('[getContentTypeStats] DB error:', err);
+    return [];
+  }
 }
 
 export interface ArticleDetailedStat {
@@ -612,30 +628,35 @@ export interface ArticleDetailedStat {
 }
 
 export async function getArticleDetailedStats(db: D1Database): Promise<ArticleDetailedStat[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT sc.section, sc.sort_order,
-              AVG(sc.final) as avg_final,
-              AVG(sc.editorial) as avg_editorial,
-              AVG(sc.structural) as avg_structural,
-              AVG(sc.final * sc.final) as avg_final_sq,
-              SUM(CASE WHEN sc.final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
-              SUM(CASE WHEN sc.final IS NULL THEN 1 ELSE 0 END) as nd_count,
-              SUM(CASE WHEN sc.evidence = 'H' THEN 1 ELSE 0 END) as evidence_h,
-              SUM(CASE WHEN sc.evidence = 'M' THEN 1 ELSE 0 END) as evidence_m,
-              SUM(CASE WHEN sc.evidence = 'L' THEN 1 ELSE 0 END) as evidence_l
-       FROM rater_scores sc
-       JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE sc.eval_model = s.eval_model
-       GROUP BY sc.section ORDER BY sc.sort_order`
-    )
-    .all<ArticleDetailedStat & { avg_final_sq: number | null }>();
-  return results.map(r => {
-    const avgFinalSq = r.avg_final_sq ?? 0;
-    const avgFinal = r.avg_final ?? 0;
-    const stddev = Math.sqrt(Math.max(0, avgFinalSq - avgFinal * avgFinal));
-    return { ...r, stddev_final: stddev };
-  });
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT sc.section, sc.sort_order,
+                AVG(sc.final) as avg_final,
+                AVG(sc.editorial) as avg_editorial,
+                AVG(sc.structural) as avg_structural,
+                AVG(sc.final * sc.final) as avg_final_sq,
+                SUM(CASE WHEN sc.final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
+                SUM(CASE WHEN sc.final IS NULL THEN 1 ELSE 0 END) as nd_count,
+                SUM(CASE WHEN sc.evidence = 'H' THEN 1 ELSE 0 END) as evidence_h,
+                SUM(CASE WHEN sc.evidence = 'M' THEN 1 ELSE 0 END) as evidence_m,
+                SUM(CASE WHEN sc.evidence = 'L' THEN 1 ELSE 0 END) as evidence_l
+         FROM rater_scores sc
+         JOIN stories s ON s.hn_id = sc.hn_id
+         WHERE sc.eval_model = s.eval_model
+         GROUP BY sc.section ORDER BY sc.sort_order`
+      )
+      .all<ArticleDetailedStat & { avg_final_sq: number | null }>();
+    return results.map(r => {
+      const avgFinalSq = r.avg_final_sq ?? 0;
+      const avgFinal = r.avg_final ?? 0;
+      const stddev = Math.sqrt(Math.max(0, avgFinalSq - avgFinal * avgFinal));
+      return { ...r, stddev_final: stddev };
+    });
+  } catch (err) {
+    console.error('[getArticleDetailedStats] DB error:', err);
+    return [];
+  }
 }
 
 export async function getTopPositiveStories(db: D1Database, limit = 5): Promise<Story[]> {
@@ -667,7 +688,7 @@ export interface SetlStory extends Story {
 export async function getTopSetlStories(db: D1Database, limit = 5): Promise<SetlStory[]> {
   const { results } = await db
     .prepare(
-      `SELECT s.*,
+      `SELECT ${STORY_LIST_COLS},
               (SELECT AVG(${SETL_CASE_SQL('sc')})
                FROM rater_scores sc
                WHERE sc.hn_id = s.hn_id AND sc.eval_model = s.eval_model
@@ -685,7 +706,7 @@ export async function getTopSetlStories(db: D1Database, limit = 5): Promise<Setl
 export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<SetlStory[]> {
   const { results } = await db
     .prepare(
-      `SELECT s.*,
+      `SELECT ${STORY_LIST_COLS},
               (SELECT AVG(${SETL_CASE_SQL('sc')})
                FROM rater_scores sc
                WHERE sc.hn_id = s.hn_id AND sc.eval_model = s.eval_model
@@ -722,34 +743,44 @@ export interface DomainStat {
 }
 
 export async function getDomainStats(db: D1Database, limit = 10): Promise<DomainStat[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT s.domain,
-              COUNT(*) as count,
-              SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
-              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
-              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_setl END) as avg_setl,
-              AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_confidence END) as avg_conf
-       FROM stories s WHERE s.domain IS NOT NULL
-       GROUP BY s.domain ORDER BY count DESC LIMIT ?`
-    )
-    .bind(limit)
-    .all<DomainStat>();
-  return results;
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT s.domain,
+                COUNT(*) as count,
+                SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_setl END) as avg_setl,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_confidence END) as avg_conf
+         FROM stories s WHERE s.domain IS NOT NULL
+         GROUP BY s.domain ORDER BY count DESC LIMIT ?`
+      )
+      .bind(limit)
+      .all<DomainStat>();
+    return results;
+  } catch (err) {
+    console.error('[getDomainStats] DB error:', err);
+    return [];
+  }
 }
 
 export async function getQueueStories(db: D1Database, limit = 100): Promise<Story[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status IN ('pending', 'evaluating')
-       ORDER BY
-         CASE eval_status WHEN 'evaluating' THEN 0 WHEN 'pending' THEN 1 END,
-         hn_time DESC
-       LIMIT ?`
-    )
-    .bind(limit)
-    .all<Story>();
-  return results;
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status IN ('pending', 'evaluating')
+         ORDER BY
+           CASE eval_status WHEN 'evaluating' THEN 0 WHEN 'pending' THEN 1 END,
+           hn_time DESC
+         LIMIT ?`
+      )
+      .bind(limit)
+      .all<Story>();
+    return results;
+  } catch (err) {
+    console.error('[getQueueStories] DB error:', err);
+    return [];
+  }
 }
 
 export interface ModelStat {
@@ -759,25 +790,35 @@ export interface ModelStat {
 }
 
 export async function getModelStats(db: D1Database): Promise<ModelStat[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT eval_model, COUNT(*) as count, AVG(hcb_weighted_mean) as avg_score
-       FROM stories WHERE eval_status = 'done' AND eval_model IS NOT NULL
-       GROUP BY eval_model ORDER BY count DESC`
-    )
-    .all<ModelStat>();
-  return results;
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT eval_model, COUNT(*) as count, AVG(hcb_weighted_mean) as avg_score
+         FROM stories WHERE eval_status = 'done' AND eval_model IS NOT NULL
+         GROUP BY eval_model ORDER BY count DESC`
+      )
+      .all<ModelStat>();
+    return results;
+  } catch (err) {
+    console.error('[getModelStats] DB error:', err);
+    return [];
+  }
 }
 
 export async function getFailedStories(db: D1Database, limit = 10): Promise<Story[]> {
-  const { results } = await db
-    .prepare(
-      `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status = 'failed'
-       ORDER BY created_at DESC LIMIT ?`
-    )
-    .bind(limit)
-    .all<Story>();
-  return results;
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT ${STORY_LIST_COLS} FROM stories WHERE eval_status = 'failed'
+         ORDER BY created_at DESC LIMIT ?`
+      )
+      .bind(limit)
+      .all<Story>();
+    return results;
+  } catch (err) {
+    console.error('[getFailedStories] DB error:', err);
+    return [];
+  }
 }
 
 // --- Domain pages ---
@@ -868,6 +909,7 @@ export interface EntityDetailStats {
 export type DomainDetailStats = EntityDetailStats;
 
 export async function getEntityDetailStats(db: D1Database, type: 'domain' | 'user', value: string): Promise<EntityDetailStats> {
+  try {
   const col = type === 'domain' ? 'domain' : 'hn_by';
   const stats = await db
     .prepare(
@@ -914,6 +956,10 @@ export async function getEntityDetailStats(db: D1Database, type: 'domain' | 'use
     topStory: top ?? null,
     bottomStory: bottom ?? null,
   };
+  } catch (err) {
+    console.error('[getEntityDetailStats] DB error:', err);
+    return { avgConf: null, avgEditorial: null, avgStructural: null, evaluatedCount: 0, topStory: null, bottomStory: null };
+  }
 }
 
 // --- Story Dynamics ---
@@ -1105,7 +1151,8 @@ export async function getEvalHistoryForStory(
       .bind(hnId)
       .all<EvalHistoryRow>();
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[getEvalHistoryForStory] DB error:', err);
     return [];
   }
 }

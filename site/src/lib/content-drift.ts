@@ -9,7 +9,9 @@ import { fetchUrlContent } from './shared-eval';
 import { cleanHtml, hasReadableText } from './html-clean';
 import { logEvent } from './events';
 
-const CONTENT_MAX_CHARS = 50000;
+/** Max chars for drift comparison fetch — intentionally larger than eval's DRIFT_FETCH_MAX_CHARS (20K)
+ *  to capture more of the page for hash comparison without truncation artifacts. */
+const DRIFT_FETCH_MAX_CHARS = 50_000;
 
 /**
  * Compute SHA-256 hash of content (first 16 bytes as hex, 32 chars).
@@ -72,7 +74,7 @@ export async function checkContentDrift(
         continue;
       }
 
-      const cleaned = cleanHtml(rawHtml, CONTENT_MAX_CHARS);
+      const cleaned = cleanHtml(rawHtml, DRIFT_FETCH_MAX_CHARS);
       const newHash = await computeContentHash(cleaned);
       checked++;
 

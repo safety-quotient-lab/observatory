@@ -20,13 +20,13 @@ const safeClassify = validClassify.includes(classify) ? classify : 'all';
 
 // Fetch more to allow filtering
 const [allDomains, intelDomains, gatekeptDomains, karmaMapArr] = await Promise.all([
-  cachedQuery(kv, `allDomainStats:${safeSort}:200`, () => getAllDomainStats(db, safeSort, 200)),
-  cachedQuery(kv, 'domainIntelligence', () => getDomainIntelligence(db, 'stories', 3, 150)),
-  cachedQuery(kv, 'mostGatekeptDomains', () => getMostGatekeptDomains(db)),
+  cachedQuery(kv, `allDomainStats:${safeSort}:200`, () => getAllDomainStats(db, safeSort, 200)).catch(() => []),
+  cachedQuery(kv, 'domainIntelligence', () => getDomainIntelligence(db, 'stories', 3, 150)).catch(() => []),
+  cachedQuery(kv, 'mostGatekeptDomains', () => getMostGatekeptDomains(db)).catch(() => []),
   cachedQuery<{domain: string; avg_karma: number; user_count: number}[]>(kv, 'domainKarmaMap', async () => {
     const m = await getDomainKarmaMap(db);
     return [...m.values()];
-  }, 600),
+  }, 600).catch(() => []),
 ]);
 const karmaMap = new Map(karmaMapArr.map(k => [k.domain, k]));
 

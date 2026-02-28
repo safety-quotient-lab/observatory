@@ -16,10 +16,10 @@ const safeSort = validSorts.includes(sort) ? sort : 'stories';
 const minStories = Math.max(2, Math.min(20, parseInt(url.searchParams.get('min') || '3', 10) || 3));
 
 const [users, hourly, daily, karmaCorr] = await Promise.all([
-  getUserIntelligence(db, safeSort, minStories, 200),
-  getHourlyPatterns(db),
-  getDayOfWeekPatterns(db),
-  cachedQuery(kv, 'karmaHrcbCorrelation', () => getKarmaHrcbCorrelation(db), 600),
+  getUserIntelligence(db, safeSort, minStories, 200).catch(() => []),
+  getHourlyPatterns(db).catch(() => []),
+  getDayOfWeekPatterns(db).catch(() => []),
+  cachedQuery(kv, 'karmaHrcbCorrelation', () => getKarmaHrcbCorrelation(db), 600).catch(() => ({ points: [], pearson_r: null, pearson_p: null, n: 0 })),
 ]);
 
 // Aggregate stats
