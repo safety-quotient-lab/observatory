@@ -155,8 +155,8 @@ const clientData = JSON.stringify({
       </span>
     </div>
     <div style="display: flex; gap: 4px;">
-      <button id="ss-btn-2d" style="padding: 3px 10px; background: #1a5568; border: 1px solid #60a5fa; border-radius: 3px; color: #60a5fa; font-size: var(--font-xs); cursor: pointer; font-family: monospace;">2D</button>
-      <button id="ss-btn-3d" style="padding: 3px 10px; background: #002d38; border: 1px solid #0d4655; border-radius: 3px; color: #5b7279; font-size: var(--font-xs); cursor: pointer; font-family: monospace;">3D</button>
+      <button id="ss-btn-2d" aria-label="Switch to 2D scatter view" style="padding: 3px 10px; background: #1a5568; border: 1px solid #60a5fa; border-radius: 3px; color: #60a5fa; font-size: var(--font-xs); cursor: pointer; font-family: monospace;">2D</button>
+      <button id="ss-btn-3d" aria-label="Switch to 3D orbit view" style="padding: 3px 10px; background: #002d38; border: 1px solid #0d4655; border-radius: 3px; color: #5b7279; font-size: var(--font-xs); cursor: pointer; font-family: monospace;">3D</button>
     </div>
   </div>
 
@@ -167,27 +167,27 @@ const clientData = JSON.stringify({
   ) : (
     <>
       {/* 2D view */}
-      <div id="ss-2d-wrap" style="display: flex; gap: 10px; align-items: flex-start;">
+      <div id="ss-2d-wrap" style="display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 0; overflow: hidden;">
           <svg id="ss-svg" viewBox="0 0 560 340" width="100%" style="display: block; max-width: 560px; background: #002d38; border-radius: 4px; cursor: crosshair;" role="img" aria-label="Signal space 2D cluster map — hover points for domain details">
             <text x="280" y="175" fill="#1a5568" font-size="11" text-anchor="middle" font-family="monospace">rendering…</text>
           </svg>
         </div>
-        <div id="ss-detail-2d" style="width: 196px; flex-shrink: 0; background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: #5b7279; min-height: 160px;">
+        <div id="ss-detail-2d" class="ss-detail-panel" style="background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: #5b7279; min-height: 160px;">
           <div style="color: #1a5568; font-size: 9px;">hover a point for details</div>
         </div>
       </div>
 
       {/* 3D view */}
       <div id="ss-3d-wrap" style="display: none; flex-direction: column; gap: 6px;">
-        <div style="display: flex; gap: 10px; align-items: flex-start;">
+        <div style="display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;">
           <div style="flex: 1; min-width: 0; position: relative;">
             <canvas id="ss-3d-canvas" style="display: block; width: 100%; max-width: 560px; height: 340px; border-radius: 4px; background: #002d38;" aria-label="Signal space 3D cluster visualization"></canvas>
             <div id="ss-3d-loading" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5b7279; font-size: var(--font-xs); background: #002d38; border-radius: 4px;">
               Loading 3D engine&hellip;
             </div>
           </div>
-          <div id="ss-detail-3d" style="width: 196px; flex-shrink: 0; background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: #5b7279; min-height: 160px;">
+          <div id="ss-detail-3d" class="ss-detail-panel" style="background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: #5b7279; min-height: 160px;">
             <div style="color: #1a5568; font-size: 9px;">click a sphere for details</div>
           </div>
         </div>
@@ -219,6 +219,20 @@ const clientData = JSON.stringify({
     </>
   )}
 </div>
+
+<style>
+  .ss-detail-panel {
+    width: 196px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 400px) {
+    .ss-detail-panel {
+      width: 100%;
+      flex-shrink: 1;
+      min-height: auto;
+    }
+  }
+</style>
 
 <script is:inline define:vars={{ clientData }}>
 (function() {

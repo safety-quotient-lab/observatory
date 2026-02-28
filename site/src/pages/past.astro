@@ -59,7 +59,7 @@ const displayDate = dayDate.toLocaleDateString('en-US', { weekday: 'long', year:
           <a href="/past">yesterday</a>
           <span style="color: #1a5568;"> | </span>
           <span style="color: #5b7279;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
-          {page > 1 && <span style="color: #5b7279;"> · page {page}</span>}
+          <span style="color: #5b7279;"> · page {page}{hasMore ? '' : ' (last)'}</span>
         </div>
       </td>
     </tr>
@@ -89,7 +89,7 @@ const displayDate = dayDate.toLocaleDateString('en-US', { weekday: 'long', year:
       <tr>
         <td style="padding-left: 40px;">
           <a href={`/past?day=${safeDay}&p=${page + 1}`} class="morelink" style="color: #5b7279; font-size: var(--font-base);">
-            More
+            Next → <span style="color: #1a5568; font-size: var(--font-sm);">(page {page + 1})</span>
           </a>
         </td>
       </tr>

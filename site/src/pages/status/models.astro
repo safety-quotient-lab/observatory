@@ -65,7 +65,9 @@ async function tq<T>(name: string, key: string, fn: () => Promise<T>, ttl: numbe
   }
 }
 
-// 14 lightweight queries + 3 heavy multi-model queries (reduced LIMIT)
+// 15 sequential queries — CF Pages worker limit is ~16 D1 round-trips.
+// getModelComparisonAggregates and getModelSectionAverages eliminated:
+// aggregates computed client-side from multiModel stories data instead.
 const _t0 = Date.now();
 try {
   models         = await tq('modelStats',    'sys:modelStats',    () => getModelStats(db), 120, [] as Awaited<ReturnType<typeof getModelStats>>);
@@ -82,9 +84,7 @@ try {
   ctValidation    = await tq('ctValid',      'sys:ctValidation',  () => getContentTypeValidation(db), 300, [] as Awaited<ReturnType<typeof getContentTypeValidation>>);
   ctDisagreement  = await tq('ctDisagree',   'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300, [] as Awaited<ReturnType<typeof getContentTypeDisagreement>>);
   ctMisclass      = await tq('ctMisclass',   'sys:ctMisclass',    () => getMisclassificationSummary(db), 300, { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 });
-  // Test: multiModel + compAgg
-  stories         = await tq('multiModel',   'sys:multiModel',    () => getMultiModelStories(db, 100), 300, [] as Awaited<ReturnType<typeof getMultiModelStories>>);
-  allAggregates   = await tq('compAgg',      'sys:compAgg',       () => getModelComparisonAggregates(db), 300, [] as Awaited<ReturnType<typeof getModelComparisonAggregates>>);
+  stories         = await tq('multiModel',   'sys:multiModel',    () => getMultiModelStories(db, 500), 300, [] as Awaited<ReturnType<typeof getMultiModelStories>>);
 } catch (err: unknown) {
   _pageError = `Query phase: ${err instanceof Error ? err.message : String(err)}`;
 }

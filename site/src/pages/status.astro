@@ -165,13 +165,13 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
         <div class="table-wrap">
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
           <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
-            <td style="padding: 2px 6px; width: 12px;"></td>
+            <td style="padding: 2px 6px;"></td>
             <td style="padding: 2px 6px;">Worker</td>
             <td style="padding: 2px 6px;">Role</td>
             <td style="padding: 2px 6px; text-align: right;">Last Active</td>
-            <td style="padding: 2px 6px; text-align: right; width: 50px;">24h</td>
-            <td style="padding: 2px 6px; text-align: right; width: 50px;">7d</td>
-            <td style="padding: 2px 6px; text-align: right; width: 50px;">Errs 24h</td>
+            <td style="padding: 2px 6px; text-align: right;">24h</td>
+            <td style="padding: 2px 6px; text-align: right;">7d</td>
+            <td style="padding: 2px 6px; text-align: right;">Errs 24h</td>
           </tr>
 
           {/* Cron worker */}
@@ -249,14 +249,14 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
         <div class="table-wrap">
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
           <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
-            <td style="padding: 2px 6px; width: 12px;"></td>
+            <td style="padding: 2px 6px;"></td>
             <td style="padding: 2px 6px;">Queue</td>
             <td style="padding: 2px 6px;">Model</td>
             <td style="padding: 2px 6px;">Consumer</td>
             <td style="padding: 2px 6px; text-align: right;">Last Eval</td>
-            <td style="padding: 2px 6px; text-align: right; width: 55px;" title="Items in rater_evals with queued/evaluating status">In-flight</td>
-            <td style="padding: 2px 6px; text-align: right; width: 40px;">24h</td>
-            <td style="padding: 2px 6px; text-align: right; width: 48px;">avg/d</td>
+            <td style="padding: 2px 6px; text-align: right;" title="Items in rater_evals with queued/evaluating status">In-flight</td>
+            <td style="padding: 2px 6px; text-align: right;">24h</td>
+            <td style="padding: 2px 6px; text-align: right;">avg/d</td>
           </tr>
 
           {QUEUE_CONFIG.map(qc => {

@@ -1,4 +1,6 @@
-// No imports from other db modules needed - self-contained
+import { scoreToColor, formatScore } from './colors';
+import { ALL_SECTIONS } from './eval-types';
+import { ARTICLE_TITLES } from './udhr';
 
 // --- Model Agreement ---
 
@@ -391,4 +393,263 @@ export async function getModelSectionAverages(db: D1Database): Promise<{
     )
     .all<{ model: string; section: string; avg_final: number; count: number }>();
   return results;
+}
+
+// --- Pre-computed model comparison blob (cron worker → KV → models page) ---
+// Moves heavy queries + O(n²) compute out of CF Pages (10ms CPU limit) into
+// cron worker (30s CPU budget). Models page reads single KV blob.
+
+export const MODEL_COMPARISON_KV_KEY = 'sys:models:comparison';
+export const MODEL_COMPARISON_TTL = 600; // 10 minutes
+
+/** JSON-serializable blob with all multi-model comparison data pre-computed */
+export interface ModelComparisonBlob {
+  // Per-model aggregates (from getModelComparisonAggregates)
+  aggregates: {
+    model: string;
+    story_count: number;
+    avg_score: number;
+    avg_abs_score: number;
+    positive_pct: number;
+    negative_pct: number;
+    neutral_pct: number;
+  }[];
+
+  // Computed stats
+  modelIds: string[];
+  totalStories: number;
+  agreeCount: number;
+  agreePct: number;
+  classAgreeCount: number;
+  classAgreePct: number;
+  avgDelta: number;
+  medianDelta: number;
+
+  // Pair correlations
+  pairCorrelations: { modelA: string; modelB: string; r: number | null; n: number }[];
+
+  // Histograms (Map serialized as array)
+  histograms: { model: string; counts: number[] }[];
+  histMaxCount: number;
+
+  // Section divergence (pre-sorted by delta)
+  sectionDivergence: { section: string; idx: number; vals: (number | null)[]; delta: number; title: string }[];
+  topDivergent: { section: string; idx: number; vals: (number | null)[]; delta: number; title: string }[];
+
+  // Bias analysis
+  biasAnalysis: { model: string; higher: number; lower: number; total: number; higherPct: number; lowerPct: number }[];
+
+  // Most disagreed/agreed (top 10 each, pre-colored)
+  mostDisagreed: ComparedStory[];
+  mostAgreed: ComparedStory[];
+
+  // All compared stories (pre-colored for template rendering)
+  comparedStories: ComparedStory[];
+
+  // Excluded models (< MIN_STORIES shared)
+  excludedModels: { model: string; story_count: number }[];
+
+  // Section averages lookup: { model, section, avg_final }[]
+  sectionAverages: { model: string; section: string; avg_final: number }[];
+
+  // Metadata
+  computedAt: string;
+}
+
+export interface ComparedStory {
+  hn_id: number;
+  title: string;
+  domain: string | null;
+  allAgree: boolean;
+  classAgree: boolean;
+  maxDelta: number;
+  models: { model: string; score: number; scoreColor: string; scoreFormatted: string; classification: string | null }[];
+}
+
+const CMP_MIN_STORIES = 10;
+const CMP_BINS = 10;
+const CMP_BIN_MIN = -0.5;
+const CMP_BIN_MAX = 0.5;
+const CMP_BIN_WIDTH = (CMP_BIN_MAX - CMP_BIN_MIN) / CMP_BINS;
+
+function pearsonCorrelation(xs: number[], ys: number[]): number | null {
+  if (xs.length < 3) return null;
+  const n = xs.length;
+  const meanX = xs.reduce((a, b) => a + b, 0) / n;
+  const meanY = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0, denomX = 0, denomY = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = xs[i] - meanX;
+    const dy = ys[i] - meanY;
+    num += dx * dy;
+    denomX += dx * dx;
+    denomY += dy * dy;
+  }
+  const denom = Math.sqrt(denomX * denomY);
+  return denom === 0 ? null : num / denom;
+}
+
+/** Pre-compute everything the models page comparison sections need.
+ *  Runs in cron worker (30s CPU) — result stored in KV for page to read. */
+export async function computeModelComparisonBlob(db: D1Database): Promise<ModelComparisonBlob> {
+  // 1. Run the 3 heavy queries
+  const [stories, allAggregates, sectionAvgs] = await Promise.all([
+    getMultiModelStories(db, 500),
+    getModelComparisonAggregates(db),
+    getModelSectionAverages(db),
+  ]);
+
+  // 2. Filter to models with enough shared stories
+  const aggregates = allAggregates.filter(a => a.story_count >= CMP_MIN_STORIES);
+  const modelIds = aggregates.map(a => a.model);
+
+  // 3. Filter stories to only include qualifying models
+  const filteredStories = stories.map(s => ({
+    ...s,
+    models: s.models.filter(m => modelIds.includes(m.model)),
+  })).filter(s => s.models.length >= 2);
+
+  // 4. Build section averages lookup
+  const sectionByModelMap = new Map<string, Map<string, number>>();
+  for (const row of sectionAvgs) {
+    if (!modelIds.includes(row.model)) continue;
+    if (!sectionByModelMap.has(row.model)) sectionByModelMap.set(row.model, new Map());
+    sectionByModelMap.get(row.model)!.set(row.section, row.avg_final);
+  }
+
+  // 5. Per-story agreement and delta
+  const storyStats = filteredStories.map(s => {
+    const scores = s.models.map(m => m.score);
+    const signs = scores.map(sc => sc >= 0 ? 1 : -1);
+    const allAgree = signs.every(sg => sg === signs[0]);
+    const maxDelta = scores.length >= 2 ? Math.max(...scores) - Math.min(...scores) : 0;
+    const classes = s.models.map(m => m.classification).filter(Boolean);
+    const classAgree = classes.length >= 2 && classes.every(c => c === classes[0]);
+    return { ...s, allAgree, classAgree, maxDelta };
+  });
+
+  const totalStories = storyStats.length;
+  const agreeCount = storyStats.filter(s => s.allAgree).length;
+  const agreePct = totalStories > 0 ? Math.round((agreeCount / totalStories) * 100) : 0;
+  const classAgreeCount = storyStats.filter(s => s.classAgree).length;
+  const classAgreePct = totalStories > 0 ? Math.round((classAgreeCount / totalStories) * 100) : 0;
+  const avgDelta = totalStories > 0 ? storyStats.reduce((sum, s) => sum + s.maxDelta, 0) / totalStories : 0;
+  const medianDelta = (() => {
+    const sorted = [...storyStats].map(s => s.maxDelta).sort((a, b) => a - b);
+    if (sorted.length === 0) return 0;
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  })();
+
+  // 6. Most disagreed / agreed (pre-compute colors for template)
+  const sortedByDelta = [...storyStats].sort((a, b) => b.maxDelta - a.maxDelta);
+
+  function toComparedStory(s: typeof storyStats[0]): ComparedStory {
+    return {
+      hn_id: s.hn_id,
+      title: s.title,
+      domain: s.domain,
+      allAgree: s.allAgree,
+      classAgree: s.classAgree,
+      maxDelta: s.maxDelta,
+      models: s.models.map(m => ({
+        model: m.model,
+        score: m.score,
+        scoreColor: scoreToColor(m.score),
+        scoreFormatted: formatScore(m.score),
+        classification: m.classification,
+      })),
+    };
+  }
+
+  const mostDisagreed = sortedByDelta.slice(0, 10).map(toComparedStory);
+  const mostAgreed = [...storyStats].sort((a, b) => a.maxDelta - b.maxDelta).slice(0, 10).map(toComparedStory);
+  const comparedStories = sortedByDelta.map(toComparedStory);
+
+  // 7. Pair correlations
+  const pairCorrelations: ModelComparisonBlob['pairCorrelations'] = [];
+  for (let i = 0; i < modelIds.length; i++) {
+    for (let j = i + 1; j < modelIds.length; j++) {
+      const a = modelIds[i], b = modelIds[j];
+      const xs: number[] = [], ys: number[] = [];
+      for (const s of filteredStories) {
+        const sa = s.models.find(m => m.model === a);
+        const sb = s.models.find(m => m.model === b);
+        if (sa && sb) { xs.push(sa.score); ys.push(sb.score); }
+      }
+      pairCorrelations.push({ modelA: a, modelB: b, r: pearsonCorrelation(xs, ys), n: xs.length });
+    }
+  }
+
+  // 8. Histograms
+  const histograms: ModelComparisonBlob['histograms'] = [];
+  for (const mid of modelIds) {
+    const counts = new Array(CMP_BINS).fill(0);
+    for (const s of filteredStories) {
+      const me = s.models.find(m => m.model === mid);
+      if (!me) continue;
+      const bin = Math.min(CMP_BINS - 1, Math.max(0, Math.floor((me.score - CMP_BIN_MIN) / CMP_BIN_WIDTH)));
+      counts[bin]++;
+    }
+    histograms.push({ model: mid, counts });
+  }
+  const histMaxCount = Math.max(1, ...histograms.flatMap(h => h.counts));
+
+  // 9. Section divergence
+  const sectionDivergence = ALL_SECTIONS.map((section, idx) => {
+    const vals = modelIds.map(m => sectionByModelMap.get(m)?.get(section) ?? null);
+    const validVals = vals.filter((v): v is number => v !== null);
+    const delta = validVals.length >= 2 ? Math.max(...validVals) - Math.min(...validVals) : 0;
+    const title = idx > 0 && idx <= 30 ? (ARTICLE_TITLES[idx - 1] ?? 'Preamble') : 'Preamble';
+    return { section, idx, vals, delta, title };
+  }).sort((a, b) => b.delta - a.delta);
+
+  // 10. Bias analysis
+  const biasAnalysis = modelIds.map(mid => {
+    let higher = 0, lower = 0, total = 0;
+    for (const s of storyStats) {
+      const me = s.models.find(m => m.model === mid);
+      if (!me || s.models.length < 2) continue;
+      const otherScores = s.models.filter(m => m.model !== mid).map(m => m.score);
+      const otherMean = otherScores.reduce((a, b) => a + b, 0) / otherScores.length;
+      if (me.score > otherMean + 0.01) higher++;
+      else if (me.score < otherMean - 0.01) lower++;
+      total++;
+    }
+    return { model: mid, higher, lower, total, higherPct: total > 0 ? Math.round((higher / total) * 100) : 0, lowerPct: total > 0 ? Math.round((lower / total) * 100) : 0 };
+  });
+
+  // 11. Excluded models
+  const excludedModels = allAggregates
+    .filter(a => a.story_count < CMP_MIN_STORIES && a.story_count > 0)
+    .map(a => ({ model: a.model, story_count: a.story_count }));
+
+  // 12. Section averages (serialized from map)
+  const sectionAverages = sectionAvgs
+    .filter(r => modelIds.includes(r.model))
+    .map(r => ({ model: r.model, section: r.section, avg_final: r.avg_final }));
+
+  return {
+    aggregates,
+    modelIds,
+    totalStories,
+    agreeCount,
+    agreePct,
+    classAgreeCount,
+    classAgreePct,
+    avgDelta,
+    medianDelta,
+    pairCorrelations,
+    histograms,
+    histMaxCount,
+    sectionDivergence,
+    topDivergent: sectionDivergence.slice(0, 5),
+    biasAnalysis,
+    mostDisagreed,
+    mostAgreed,
+    comparedStories,
+    excludedModels,
+    sectionAverages,
+    computedAt: new Date().toISOString(),
+  };
 }

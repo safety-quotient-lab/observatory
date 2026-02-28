@@ -549,8 +549,9 @@ function timeAgo(unixTime: number): string {
             id="fw-toggle"
             style="margin-left: 8px; background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); cursor: pointer; padding: 2px 8px; font-size: var(--font-xs); color: #a855f7; border-radius: 4px;"
             title="Toggle Fair Witness mode: show only observable facts vs interpretive inferences"
+            aria-label="Toggle Fair Witness (evidence breakdown) mode: show only observable facts vs interpretive inferences"
           >
-            Fair Witness: OFF
+            Fair Witness (Evidence): OFF
           </button>
         )}
       </td>
@@ -1307,7 +1308,7 @@ function timeAgo(unixTime: number): string {
     var fwOn = false;
     toggle.addEventListener('click', function() {
       fwOn = !fwOn;
-      toggle.textContent = 'Fair Witness: ' + (fwOn ? 'ON' : 'OFF');
+      toggle.textContent = 'Fair Witness (Evidence): ' + (fwOn ? 'ON' : 'OFF');
       toggle.style.background = fwOn ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.15)';
 
       // Show/hide FW-only elements

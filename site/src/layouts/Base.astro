@@ -159,10 +159,15 @@ try {
       function showDonateModal(btn: HTMLElement) {
         pendingTriggerBtn = btn;
         donateModal.style.display = 'flex';
+        // Focus first focusable element in modal
+        const firstBtn = donateModal.querySelector<HTMLElement>('button, a[href], input');
+        firstBtn?.focus();
       }
 
       function hideDonateModal() {
         donateModal.style.display = 'none';
+        // Restore focus to the element that opened the modal
+        pendingTriggerBtn?.focus();
       }
 
       function markDonated() {
@@ -211,9 +216,16 @@ try {
         onDonationConfirmed();
       });
 
-      // Close modal on overlay click
+      // Close modal on overlay click or Escape key
       donateModal.addEventListener('click', (e) => {
         if (e.target === donateModal) {
+          hideDonateModal();
+          pendingTriggerBtn = null;
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && donateModal.style.display === 'flex') {
           hideDonateModal();
           pendingTriggerBtn = null;
         }

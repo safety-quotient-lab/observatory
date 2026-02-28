@@ -105,6 +105,9 @@ function timeAgo(unixTime: number): string {
         title={story.eval_status === 'skipped'
             ? `Skipped: ${story.eval_error || ''} — click to evaluate now`
             : 'Evaluate now'}
+        aria-label={story.eval_status === 'skipped'
+            ? `Skipped: ${story.eval_error || ''} — click to evaluate now`
+            : 'Evaluate now'}
         style={`background: none; border: none; cursor: pointer; padding: var(--space-xs) var(--space-sm); font-size: var(--font-base); color: ${story.eval_status === 'pending' ? '#eab308' : '#5b7279'}; transition: color 0.15s;`}
       >
         &#9654;

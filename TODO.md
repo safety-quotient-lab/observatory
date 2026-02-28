@@ -39,12 +39,12 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Round 3 — Ops Visibility
 
-- [ ] **Rate limit exhaustion forecasting**
+- [ ] **Rate limit exhaustion forecasting** *(deferred)*
   - Project time-to-exhaustion from rolling 1h token usage window
   - Alert event when projected exhaustion <24h
   - Dashboard headroom widget
 
-- [ ] **Cost attribution per model**
+- [ ] **Cost attribution per model** *(deferred)*
   - [x] Anthropic trigger path now writes real token counts *(done 2026-02-28 — `callClaude()` extracts `usage`; consumer-anthropic.ts was already correct)*
   - Historical 278 Anthropic evals have 0 tokens (not backfilled). Workers AI = $0 (CF doesn't expose usage; hardcode).
   - Daily cost per model from rater_evals token counts + pricing table
@@ -53,10 +53,12 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Round 3.5 — Triage UX Audit
 
-- [ ] **UX audit findings** — 15 remaining of 31 items (16 done)
+- [ ] **UX audit findings** — 6 remaining of 31 items (25 done)
   - Full plan: `.claude/plans/ux-audit-2026-02-28.md`
-  - Done: NAV-01, NAV-02, NAV-03, NAV-04, NAV-05, MOB-01, MOB-02, MOB-03, A11Y-01, A11Y-02, A11Y-03, VIS-01, VIS-02, VIS-03, VIS-04, VIS-07
-  - Key next: NAV-07 (back-to-top), A11Y-04 (aria-label vs title), MOB-04 (SignalSpace mobile panel), VIS-05 (about tier progression), VIS-06 (FW naming), VIS-08 (typography), VIS-09 (confidence/evidence merge), VIS-10 (DCP table)
+  - Done: NAV-01, NAV-02, NAV-03, NAV-04, NAV-05, NAV-06, NAV-09, MOB-01, MOB-02, MOB-03, MOB-04, MOB-05, A11Y-01, A11Y-02, A11Y-03, A11Y-04, A11Y-05, VIS-01, VIS-02, VIS-03, VIS-04, VIS-06, VIS-07, VIS-08, VIS-10
+  - Deferred: NAV-07 (back-to-top), NAV-08 (Phase 2 FTS)
+  - Remaining M-effort: VIS-05 (about tier progression), VIS-09 (confidence/evidence merge), MOB-06 (SVG labels), MOB-07 (768px breakpoint)
+  - Remaining S-effort: A11Y-06 (innerHTML → textContent in SignalSpace)
 
 - [ ] **Semantic color system — per-file migration**
   - Foundation done *(2026-02-28)*: 30+ CSS vars, 9 badge classes, 6 text classes, paywall→red, unused vars removed
