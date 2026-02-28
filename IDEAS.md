@@ -128,6 +128,51 @@ full materialization adds a write-path step for marginal gain.
 
 ---
 
+## Mission Alignment Analysis *(2026-02-28)*
+
+Each idea evaluated against the core mission: **human rights pedagogy through utility** — users learn UDHR provisions as a side effect of the tool being useful.
+
+### Tier 1 — Direct Pedagogy
+Ideas that aggregate invisible patterns into visible statements about rights. Highest mission alignment.
+
+| Idea | Why it teaches |
+|---|---|
+| **Transparency disclosure rates** | "Only 34% of stories identify their author" — makes invisible structural patterns visible |
+| **Comment sentiment divergence** | Shows when community perception conflicts with measured HR impact — teaches critical reading |
+| **Story comparison view** | Side-by-side scores teach what makes one source better/worse on rights |
+| **Filtered RSS feeds** | Users self-select into rights-filtered content streams — habituates rights-aware consumption |
+| **Jargon/knowledge-level aggregate** | "Most tech news assumes expert knowledge" — surfaces accessibility barriers |
+| **Content type browse page** | Browse by editorial/propaganda/landing page — teaches content classification as rights lens |
+
+### Tier 2 — Mission-Supportive
+Ideas that improve accuracy, trust, or reach — don't teach directly but make the teaching more credible.
+
+| Idea | Why it matters |
+|---|---|
+| **Evidence caps enforcement** | *(done)* Prevents overstating scores beyond evidence strength |
+| **Confidence-weighted consensus** | Better ensemble scores = more trustworthy teaching material |
+| **Cross-model PT agreement** | Reduces propaganda false positives = maintains credibility |
+| **Calibration negative site** | Validates the scale's negative end = trustworthy measurements |
+| **Outlier rejection** | Statistical robustness = defensible claims |
+| **Methodology drift detector** | Internal consistency auditing |
+
+### Tier 3 — Infrastructure
+No direct mission connection — pure platform capability.
+
+| Idea | Category |
+|---|---|
+| Analytics Engine | Storage optimization |
+| Lobsters as source | Data expansion |
+| Rate limit forecasting | Ops monitoring |
+| A/B testing framework | Methodology tooling |
+| Velocity alerts | Analytics |
+| Batch regression isolation | Quality assurance |
+
+### Implication
+Tier 1 ideas should be prioritized for Phase 1 (Active Engineering) when they become feasible. The highest-leverage single feature for mission is **Transparency Disclosure Rates** — it requires no new data collection, just aggregating existing `td_*` fields into a visible dashboard section.
+
+---
+
 ## The Synthesis
 
 The most powerful thing buildable from all of this is what Stephenson might call
