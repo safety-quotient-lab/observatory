@@ -65,13 +65,13 @@ export function formatScore(score: number | null): string {
   return `${sign}${score.toFixed(2)}`;
 }
 
-/** Evidence badge color */
+/** Evidence badge color — OkSolar teal brightness ramp (distinct from score red→green) */
 export function evidenceColor(evidence: string | null): string {
   switch (evidence) {
-    case 'H': return '#22c55e';
-    case 'M': return '#eab308';
-    case 'L': return '#6b7280';
-    default: return '#1a5568';
+    case 'H': return '#259d94'; // cyan (bright)
+    case 'M': return '#98a8a8'; // fg-primary (neutral)
+    case 'L': return '#5b7279'; // fg-secondary (muted)
+    default:  return '#1a5568'; // border (dim)
   }
 }
 
@@ -123,21 +123,17 @@ export function computeConfidence(
   return (evidenceH * 1.0 + evidenceM * 0.6 + evidenceL * 0.2) / total;
 }
 
-/** Map confidence (0–1) to a color: red (0) → amber (0.5) → green (1.0) */
+/** Map confidence (0–1) to a color: gray (0) → cyan (1.0)
+ *  Uses fg-secondary → color-cyan interpolation (distinct from score red→green) */
 export function confidenceToColor(confidence: number | null): string {
   if (confidence === null) return '#4b5563';
   const c = Math.max(0, Math.min(1, confidence));
 
-  // Piecewise hue: 0→0° (red), 0.5→40° (amber), 1.0→142° (green)
-  let hue: number;
-  if (c < 0.5) {
-    hue = 40 * (c / 0.5); // 0→0°, 0.5→40°
-  } else {
-    hue = 40 + 102 * ((c - 0.5) / 0.5); // 0.5→40°, 1.0→142°
-  }
-
-  const sat = 0.75 + 0.15 * Math.abs(c * 2 - 1);
-  const lit = 0.42 + 0.08 * Math.abs(c * 2 - 1);
+  // Gray → Cyan: fg-secondary (#5b7279) at 0 → color-cyan (#259d94) at 1
+  // Both hue and luminance vary for accessibility
+  const hue = 195 - 21 * c;         // 195° → 174°
+  const sat = 0.13 + 0.47 * c;      // 0.13 → 0.60
+  const lit = 0.41 - 0.03 * c;      // 0.41 → 0.38
 
   return hslToRgb(hue, sat, lit);
 }
