@@ -101,15 +101,15 @@ const latestDailyScore = dailyReversed.length > 0 ? dailyReversed[dailyReversed.
 
 // Group colors
 const groupColors: Record<string, string> = {
-  'Foundation': '#a78bfa',
-  'Security': '#f87171',
-  'Legal': '#22d3ee',
-  'Privacy & Movement': '#34d399',
-  'Personal': '#60a5fa',
-  'Expression': '#fbbf24',
-  'Economic & Social': '#fb923c',
+  'Foundation': 'var(--channel-structural)',
+  'Security': 'var(--color-negative-light)',
+  'Legal': 'var(--color-sentiment)',
+  'Privacy & Movement': 'var(--color-positive-medium)',
+  'Personal': 'var(--channel-editorial)',
+  'Expression': 'var(--color-warning-light)',
+  'Economic & Social': 'var(--color-amber-light)',
   'Cultural': '#e879f9',
-  'Order & Duties': '#7d80d1',
+  'Order & Duties': 'var(--color-violet)',
 };
 ---
 
@@ -120,36 +120,36 @@ const groupColors: Record<string, string> = {
 
     <!-- 1. Header -->
     <div style="margin-bottom: 16px;">
-      <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Human Rights Observatory</span>
-      <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-sm);">
+      <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Human Rights Observatory</span>
+      <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-sm);">
         Deep-dive research dashboard
       </span>
     </div>
 
     <!-- Stats row -->
     <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Evaluated</div>
-        <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold;" class="score-font">{totalEvaluated.toLocaleString()}</div>
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Evaluated</div>
+        <div style="color: var(--fg-primary); font-size: var(--font-md); font-weight: bold;" class="score-font">{totalEvaluated.toLocaleString()}</div>
       </div>
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Mean HRCB</div>
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Mean HRCB</div>
         <div style={`font-size: var(--font-md); font-weight: bold; color: ${scoreToColor(meanHrcb)};`} class="score-font">
           {formatScore(meanHrcb)}
         </div>
       </div>
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 10px 16px; min-width: 120px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Coverage</div>
-        <div style="color: #98a8a8; font-size: var(--font-md); font-weight: bold;" class="score-font">{coveragePct}%</div>
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Coverage</div>
+        <div style="color: var(--fg-primary); font-size: var(--font-md); font-weight: bold;" class="score-font">{coveragePct}%</div>
       </div>
     </div>
 
     <!-- 2. UDHR Rights Heatmap -->
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">UDHR Rights Heatmap</div>
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">UDHR Rights Heatmap</div>
 
       {Object.entries(ARTICLE_GROUPS).map(([group, sectionIds]) => {
-        const color = groupColors[group] || '#5b7279';
+        const color = groupColors[group] || 'var(--fg-secondary)';
         return (
           <div style="margin-bottom: 10px;">
             <div style={`color: ${color}; font-size: var(--font-xs); margin-bottom: 4px; opacity: 0.8;`}>{group}</div>
@@ -176,36 +176,36 @@ const groupColors: Record<string, string> = {
                   }).join(' ');
                 }
                 return (
-                  <tr style="border-top: 1px solid #0d4655;">
-                    <td style={`width: 22px; padding: 3px 4px; color: ${score !== null ? color : '#0d4655'}; font-weight: bold;`} class="score-font">
+                  <tr style="border-top: 1px solid var(--bg-surface);">
+                    <td style={`width: 22px; padding: 3px 4px; color: ${score !== null ? color : 'var(--bg-surface)'}; font-weight: bold;`} class="score-font">
                       <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{label}</a>
                     </td>
-                    <td title={title} style={`padding: 3px 4px; color: ${score !== null ? '#98a8a8' : '#5b7279'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
+                    <td title={title} style={`padding: 3px 4px; color: ${score !== null ? 'var(--fg-primary)' : 'var(--fg-secondary)'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
                       <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{title}</a>
                     </td>
                     <td style="width: 140px; padding: 3px 4px;">
                       {score !== null ? (
                         <div style="display: flex; align-items: center; gap: 4px;">
-                          <div style="flex: 1; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                          <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
                             <div style={`width: ${barWidth}%; height: 100%; background: ${barColor}; border-radius: 3px;`}></div>
                           </div>
                           <span style={`color: ${barColor}; font-size: var(--font-xs); min-width: 36px; text-align: right;`} class="score-font">{formatScore(score)}</span>
                         </div>
                       ) : (
-                        <span style="color: #0d4655;">--</span>
+                        <span style="color: var(--bg-surface);">--</span>
                       )}
                     </td>
-                    <td style="width: 50px; padding: 3px 4px; text-align: right; color: #5b7279;" class="score-font">
+                    <td style="width: 50px; padding: 3px 4px; text-align: right; color: var(--fg-secondary);" class="score-font">
                       {count > 0 ? count : '--'}
                     </td>
                     <td style="width: 90px; padding: 3px 4px; text-align: center;">
                       {spark.length > 1 ? (
                         <svg width="80" height="20" viewBox="0 0 80 20">
-                          <line x1="0" y1="10" x2="80" y2="10" stroke="#0d4655" stroke-width="0.5" />
+                          <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
                           <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
                         </svg>
                       ) : (
-                        <span style="color: #0d4655;">--</span>
+                        <span style="color: var(--bg-surface);">--</span>
                       )}
                     </td>
                   </tr>
@@ -220,15 +220,15 @@ const groupColors: Record<string, string> = {
     <!-- 3. Rights Under Pressure -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px;">
       <!-- Most Negative -->
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Negative</div>
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Negative</div>
         <table cellpadding="0" cellspacing="0" width="100%">
           {mostNegative.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
             return (
-              <tr style="border-top: 1px solid #0d4655;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
                 <td style="padding: 4px 0;">
-                  <a href={`/article/${section?.number ?? 0}`} style="color: #98a8a8; font-size: var(--font-xs); text-decoration: none;">
+                  <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
                     {ARTICLE_TITLES[a.section] ?? a.section}
                   </a>
                 </td>
@@ -242,20 +242,20 @@ const groupColors: Record<string, string> = {
       </div>
 
       <!-- Most Triggered -->
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Triggered</div>
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Triggered</div>
         <table cellpadding="0" cellspacing="0" width="100%">
           {mostTriggered.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
             return (
-              <tr style="border-top: 1px solid #0d4655;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
                 <td style="padding: 4px 0;">
-                  <a href={`/article/${section?.number ?? 0}`} style="color: #98a8a8; font-size: var(--font-xs); text-decoration: none;">
+                  <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
                     {ARTICLE_TITLES[a.section] ?? a.section}
                   </a>
                 </td>
                 <td style="width: 50px; text-align: right; padding: 4px 0;">
-                  <span style="color: #5b7279; font-size: var(--font-xs);" class="score-font">{a.signal_count}</span>
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{a.signal_count}</span>
                 </td>
               </tr>
             );
@@ -264,20 +264,20 @@ const groupColors: Record<string, string> = {
       </div>
 
       <!-- Lowest Coverage -->
-      <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Lowest Coverage</div>
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Lowest Coverage</div>
         <table cellpadding="0" cellspacing="0" width="100%">
           {lowestCoverage.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
             return (
-              <tr style="border-top: 1px solid #0d4655;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
                 <td style="padding: 4px 0;">
-                  <a href={`/article/${section?.number ?? 0}`} style="color: #98a8a8; font-size: var(--font-xs); text-decoration: none;">
+                  <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
                     {ARTICLE_TITLES[a.section] ?? a.section}
                   </a>
                 </td>
                 <td style="width: 50px; text-align: right; padding: 4px 0;">
-                  <span style="color: #5b7279; font-size: var(--font-xs);" class="score-font">{a.signal_count}</span>
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{a.signal_count}</span>
                 </td>
               </tr>
             );
@@ -287,13 +287,13 @@ const groupColors: Record<string, string> = {
     </div>
 
     <!-- 4. Evidence Transparency -->
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Evidence Transparency — Weakest Fair Witness Ratios</div>
-      <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 10px;">
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Evidence Transparency — Weakest Fair Witness Ratios</div>
+      <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 10px;">
         FW Ratio = High-evidence signals / total evidence signals. Lower = more inference-heavy.
       </div>
       <table cellpadding="0" cellspacing="0" width="100%">
-        <tr style="color: #5b7279; font-size: var(--font-xs);">
+        <tr style="color: var(--fg-secondary); font-size: var(--font-xs);">
           <td style="padding: 4px 0;">Article</td>
           <td style="width: 200px; padding: 4px 0;">Ratio</td>
           <td style="width: 50px; text-align: right; padding: 4px 0;">%</td>
@@ -303,14 +303,14 @@ const groupColors: Record<string, string> = {
           const pct = a.fw_ratio !== null ? Math.round(a.fw_ratio * 100) : 0;
           const barColor = fwRatioColor(a.fw_ratio);
           return (
-            <tr style="border-top: 1px solid #0d4655;">
+            <tr style="border-top: 1px solid var(--bg-surface);">
               <td style="padding: 4px 0;">
-                <a href={`/article/${section?.number ?? 0}`} style="color: #98a8a8; font-size: var(--font-xs); text-decoration: none;">
+                <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
                   {ARTICLE_TITLES[a.section] ?? a.section}
                 </a>
               </td>
               <td style="width: 200px; padding: 4px 0;">
-                <div style="height: 8px; background: #0d4655; border-radius: 4px; overflow: hidden;">
+                <div style="height: 8px; background: var(--bg-surface); border-radius: 4px; overflow: hidden;">
                   <div style={`width: ${pct}%; height: 100%; background: ${barColor}; border-radius: 4px;`}></div>
                 </div>
               </td>
@@ -322,31 +322,31 @@ const groupColors: Record<string, string> = {
         })}
       </table>
       {articlesWithFwRatio.length === 0 && (
-        <div style="color: #5b7279; font-size: var(--font-xs); padding: 8px 0;">No evidence data available yet.</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); padding: 8px 0;">No evidence data available yet.</div>
       )}
     </div>
 
     <!-- 5. Propaganda Landscape -->
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Propaganda Landscape</div>
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Propaganda Landscape</div>
 
       {techniqueEntries.length > 0 && (
         <div style="margin-bottom: 14px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 6px;">Technique Distribution</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 6px;">Technique Distribution</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {techniqueEntries.map(([technique, count]) => {
               const pct = maxTechniqueCount > 0 ? Math.round((count / maxTechniqueCount) * 100) : 0;
               return (
                 <tr>
-                  <td title={technique} style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <td title={technique} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {technique}
                   </td>
                   <td style="padding: 3px 8px;">
-                    <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                      <div style={`width: ${pct}%; height: 100%; background: #f87171; border-radius: 3px;`}></div>
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--color-negative-light); border-radius: 3px;`}></div>
                     </div>
                   </td>
-                  <td style="width: 40px; text-align: right; padding: 3px 0; color: #5b7279; font-size: var(--font-xs);" class="score-font">
+                  <td style="width: 40px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
                     {count}
                   </td>
                 </tr>
@@ -358,24 +358,24 @@ const groupColors: Record<string, string> = {
 
       {propagandaStories.length > 0 ? (
         <div>
-          <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 6px;">Top Flagged Stories</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 6px;">Top Flagged Stories</div>
           <div class="table-wrap">
           <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
-            <tr style="color: #5b7279;">
+            <tr style="color: var(--fg-secondary);">
               <td style="padding: 4px 0;">Title</td>
               <td style="width: 120px; padding: 4px 0;">Domain</td>
               <td style="width: 50px; text-align: right; padding: 4px 0;">Flags</td>
               <td style="width: 60px; text-align: right; padding: 4px 0;">HRCB</td>
             </tr>
             {propagandaStories.map(s => (
-              <tr style="border-top: 1px solid #0d4655;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
                 <td title={s.title} style="padding: 4px 0; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  <a href={`/item/${s.hn_id}`} style="color: #98a8a8; text-decoration: none;">{s.title}</a>
+                  <a href={`/item/${s.hn_id}`} style="color: var(--fg-primary); text-decoration: none;">{s.title}</a>
                 </td>
-                <td title={s.domain ?? '--'} style="width: 120px; padding: 4px 0; color: #5b7279; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  {s.domain ? <a href={`/domain/${s.domain}`} style="color: #5b7279; text-decoration: none;">{s.domain}</a> : '--'}
+                <td title={s.domain ?? '--'} style="width: 120px; padding: 4px 0; color: var(--fg-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {s.domain ? <a href={`/domain/${s.domain}`} style="color: var(--fg-secondary); text-decoration: none;">{s.domain}</a> : '--'}
                 </td>
-                <td style="width: 50px; text-align: right; padding: 4px 0; color: #f87171;" class="score-font">
+                <td style="width: 50px; text-align: right; padding: 4px 0; color: var(--color-negative-light);" class="score-font">
                   {s.pt_flag_count}
                 </td>
                 <td style="width: 60px; text-align: right; padding: 4px 0;">
@@ -387,29 +387,29 @@ const groupColors: Record<string, string> = {
           </div>
         </div>
       ) : (
-        <div style="color: #5b7279; font-size: var(--font-xs); padding: 8px 0;">No propaganda flags detected yet.</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); padding: 8px 0;">No propaganda flags detected yet.</div>
       )}
     </div>
 
     <!-- 6. Stakeholder Voice -->
     {(speaksEntries.length > 0 || aboutEntries.length > 0) && (
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Speaks</div>
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Speaks</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {speaksEntries.map(([name, count]) => {
               const pct = maxSpeaks > 0 ? Math.round((count / maxSpeaks) * 100) : 0;
               return (
                 <tr>
-                  <td title={name} style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <td title={name} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {name}
                   </td>
                   <td style="padding: 3px 8px;">
-                    <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                      <div style={`width: ${pct}%; height: 100%; background: #a78bfa; border-radius: 3px;`}></div>
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--channel-structural); border-radius: 3px;`}></div>
                     </div>
                   </td>
-                  <td style="width: 30px; text-align: right; padding: 3px 0; color: #5b7279; font-size: var(--font-xs);" class="score-font">
+                  <td style="width: 30px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
                     {count}
                   </td>
                 </tr>
@@ -417,26 +417,26 @@ const groupColors: Record<string, string> = {
             })}
           </table>
           {speaksEntries.length === 0 && (
-            <div style="color: #5b7279; font-size: var(--font-xs);">No data.</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No data.</div>
           )}
         </div>
 
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Is Spoken About</div>
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Is Spoken About</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {aboutEntries.map(([name, count]) => {
               const pct = maxAbout > 0 ? Math.round((count / maxAbout) * 100) : 0;
               return (
                 <tr>
-                  <td title={name} style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <td title={name} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {name}
                   </td>
                   <td style="padding: 3px 8px;">
-                    <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                      <div style={`width: ${pct}%; height: 100%; background: #22d3ee; border-radius: 3px;`}></div>
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
                     </div>
                   </td>
-                  <td style="width: 30px; text-align: right; padding: 3px 0; color: #5b7279; font-size: var(--font-xs);" class="score-font">
+                  <td style="width: 30px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
                     {count}
                   </td>
                 </tr>
@@ -444,7 +444,7 @@ const groupColors: Record<string, string> = {
             })}
           </table>
           {aboutEntries.length === 0 && (
-            <div style="color: #5b7279; font-size: var(--font-xs);">No data.</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No data.</div>
           )}
         </div>
       </div>
@@ -453,22 +453,22 @@ const groupColors: Record<string, string> = {
     <!-- 7. Geographic Coverage -->
     {(scopeEntries.length > 0 || regionEntries.length > 0) && (
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Scope Distribution</div>
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Scope Distribution</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {scopeEntries.map(([scope, count]) => {
               const pct = maxScopeCount > 0 ? Math.round((count / maxScopeCount) * 100) : 0;
               return (
                 <tr>
-                  <td style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); width: 100px;">
+                  <td style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 100px;">
                     {scope}
                   </td>
                   <td style="padding: 3px 8px;">
-                    <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                      <div style={`width: ${pct}%; height: 100%; background: #34d399; border-radius: 3px;`}></div>
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--color-positive-medium); border-radius: 3px;`}></div>
                     </div>
                   </td>
-                  <td style="width: 40px; text-align: right; padding: 3px 0; color: #5b7279; font-size: var(--font-xs);" class="score-font">
+                  <td style="width: 40px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
                     {count}
                   </td>
                 </tr>
@@ -476,26 +476,26 @@ const groupColors: Record<string, string> = {
             })}
           </table>
           {scopeEntries.length === 0 && (
-            <div style="color: #5b7279; font-size: var(--font-xs);">No scope data.</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No scope data.</div>
           )}
         </div>
 
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Region Distribution</div>
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Region Distribution</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {regionEntries.map(r => {
               const pct = maxRegionCount > 0 ? Math.round((r.count / maxRegionCount) * 100) : 0;
               return (
                 <tr>
-                  <td title={r.region} style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <td title={r.region} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {r.region}
                   </td>
                   <td style="padding: 3px 8px;">
-                    <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                      <div style={`width: ${pct}%; height: 100%; background: #60a5fa; border-radius: 3px;`}></div>
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--channel-editorial); border-radius: 3px;`}></div>
                     </div>
                   </td>
-                  <td style="width: 30px; text-align: right; padding: 3px 0; color: #5b7279; font-size: var(--font-xs);" class="score-font">
+                  <td style="width: 30px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
                     {r.count}
                   </td>
                 </tr>
@@ -503,15 +503,15 @@ const groupColors: Record<string, string> = {
             })}
           </table>
           {regionEntries.length === 0 && (
-            <div style="color: #5b7279; font-size: var(--font-xs);">No region data.</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No region data.</div>
           )}
         </div>
       </div>
     )}
 
     <!-- 8. Temporal Trends -->
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Temporal Trends — 60-Day HRCB</div>
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Temporal Trends — 60-Day HRCB</div>
       {dailyReversed.length > 1 ? (() => {
         const chartW = 400;
         const chartH = 100;
@@ -532,7 +532,7 @@ const groupColors: Record<string, string> = {
         return (
           <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;">
             {/* Zero reference line */}
-            <line x1="0" y1={lineAreaH / 2} x2={chartW} y2={lineAreaH / 2} stroke="#1a5568" stroke-width="0.5" stroke-dasharray="4,4" />
+            <line x1="0" y1={lineAreaH / 2} x2={chartW} y2={lineAreaH / 2} stroke="var(--color-border)" stroke-width="0.5" stroke-dasharray="4,4" />
             {/* Score line */}
             <path d={linePath} fill="none" stroke={scoreToColor(latestDailyScore)} stroke-width="1.5" />
             {/* Daily count bars */}
@@ -541,40 +541,40 @@ const groupColors: Record<string, string> = {
               const barH = maxDailyCount > 0 ? (d.count / maxDailyCount) * barAreaH : 0;
               const barY = chartH - barH;
               return (
-                <rect x={x.toFixed(1)} y={barY.toFixed(1)} width={barW.toFixed(1)} height={barH.toFixed(1)} fill="#1a5568" rx="1" />
+                <rect x={x.toFixed(1)} y={barY.toFixed(1)} width={barW.toFixed(1)} height={barH.toFixed(1)} fill="var(--color-border)" rx="1" />
               );
             })}
           </svg>
         );
       })() : (
-        <div style="color: #5b7279; font-size: var(--font-xs);">Not enough data for trend chart.</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs);">Not enough data for trend chart.</div>
       )}
       <div style="display: flex; justify-content: space-between; margin-top: 6px;">
-        <span style="color: #5b7279; font-size: var(--font-xs);">
+        <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
           {dailyReversed.length > 0 ? dailyReversed[0].day : ''}
         </span>
         <div style="display: flex; gap: 12px;">
-          <span style="color: #5b7279; font-size: var(--font-xs);">
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
             <span style={`display: inline-block; width: 8px; height: 2px; background: ${scoreToColor(latestDailyScore)}; vertical-align: middle; margin-right: 4px;`}></span>
             avg HRCB
           </span>
-          <span style="color: #5b7279; font-size: var(--font-xs);">
-            <span style="display: inline-block; width: 8px; height: 6px; background: #1a5568; vertical-align: middle; margin-right: 4px;"></span>
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+            <span style="display: inline-block; width: 8px; height: 6px; background: var(--color-border); vertical-align: middle; margin-right: 4px;"></span>
             eval count
           </span>
         </div>
-        <span style="color: #5b7279; font-size: var(--font-xs);">
+        <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
           {dailyReversed.length > 0 ? dailyReversed[dailyReversed.length - 1].day : ''}
         </span>
       </div>
     </div>
 
     <!-- 9. Domain Rights Profiles -->
-    <div style="background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Domain Rights Profiles — Top 10</div>
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Domain Rights Profiles — Top 10</div>
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
-        <tr style="color: #5b7279;">
+        <tr style="color: var(--fg-secondary);">
           <td style="padding: 4px 0;">Domain</td>
           <td style="width: 60px; text-align: right; padding: 4px 0;">HRCB</td>
           <td style="width: 50px; text-align: right; padding: 4px 0;">Stories</td>
@@ -583,21 +583,21 @@ const groupColors: Record<string, string> = {
         {topDomains.map(d => {
           const fp = domainFingerprints.get(d.domain);
           return (
-            <tr style="border-top: 1px solid #0d4655;">
+            <tr style="border-top: 1px solid var(--bg-surface);">
               <td style="padding: 4px 0;">
-                <a href={`/domain/${d.domain}`} style="color: #98a8a8; text-decoration: none;">{d.domain}</a>
+                <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); text-decoration: none;">{d.domain}</a>
               </td>
               <td style="width: 60px; text-align: right; padding: 4px 0;">
                 <span style={`color: ${scoreToColor(d.avg_score)};`} class="score-font">{formatScore(d.avg_score)}</span>
               </td>
-              <td style="width: 50px; text-align: right; padding: 4px 0; color: #5b7279;" class="score-font">
+              <td style="width: 50px; text-align: right; padding: 4px 0; color: var(--fg-secondary);" class="score-font">
                 {d.count}
               </td>
               <td style="padding: 4px 8px;">
                 {fp ? (
                   <div style="display: flex; gap: 1px; align-items: center;">
                     {fp.map((val, idx) => {
-                      const bg = val !== null ? scoreToColor(val) : '#0d4655';
+                      const bg = val !== null ? scoreToColor(val) : 'var(--bg-surface)';
                       const opacity = val !== null ? '1' : '0.3';
                       return (
                         <div style={`width: 6px; height: 10px; background: ${bg}; border-radius: 1px; opacity: ${opacity};`} title={`${SECTIONS[idx]?.id ?? idx}: ${val !== null ? formatScore(val) : 'ND'}`}></div>
@@ -605,7 +605,7 @@ const groupColors: Record<string, string> = {
                     })}
                   </div>
                 ) : (
-                  <span style="color: #0d4655;">--</span>
+                  <span style="color: var(--bg-surface);">--</span>
                 )}
               </td>
             </tr>

@@ -29,12 +29,12 @@ const avgArousal = signalData?.avg_arousal ?? null;
 const avgDominance = signalData?.avg_dominance ?? null;
 
 const barSignals = [
-  { label: 'EQ', value: avgEq, barW: avgEq, color: '#f59e0b', note: '' },
-  { label: 'SO', value: avgSo, barW: avgSo, color: '#16a34a', note: '' },
-  { label: 'SR', value: avgSr, barW: avgSr, color: '#60a5fa', note: '' },
-  { label: 'TD', value: avgTd, barW: avgTd, color: '#16a34a', note: '' },
-  { label: 'PT', value: avgPt, barW: Math.max(0, 1 - avgPt / 5), color: '#dc2626', note: 'inv' },
-  { label: 'VA', value: avgValence, barW: avgValence !== null ? (avgValence + 1) / 2 : 0, color: '#a855f7', note: 'val' },
+  { label: 'EQ', value: avgEq, barW: avgEq, color: 'var(--color-amber)', note: '' },
+  { label: 'SO', value: avgSo, barW: avgSo, color: 'var(--color-positive)', note: '' },
+  { label: 'SR', value: avgSr, barW: avgSr, color: 'var(--channel-editorial)', note: '' },
+  { label: 'TD', value: avgTd, barW: avgTd, color: 'var(--color-positive)', note: '' },
+  { label: 'PT', value: avgPt, barW: Math.max(0, 1 - avgPt / 5), color: 'var(--color-negative)', note: 'inv' },
+  { label: 'VA', value: avgValence, barW: avgValence !== null ? (avgValence + 1) / 2 : 0, color: 'var(--color-inference)', note: 'val' },
   { label: 'AR', value: avgArousal, barW: avgArousal ?? 0, color: '#818cf8', note: '' },
   { label: 'DO', value: avgDominance, barW: avgDominance ?? 0, color: '#38bdf8', note: '' },
 ];
@@ -67,28 +67,28 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
     <tr>
       <td>
         <h1 style="font-size: var(--font-md); margin-bottom: 4px;">Signal Dashboard</h1>
-        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 20px;">
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 20px;">
           Live measurement dashboard across {storyCount.toLocaleString()} evaluated stories.
         </p>
 
         {/* ═══ SECTION 1 — Core HRCB ═══ */}
 
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-          <span style="background: rgba(213,101,0,0.15); color: #d56500; border-radius: 3px; padding: 2px 7px; font-size: var(--font-xs); font-weight: bold; white-space: nowrap;">{storyCount.toLocaleString()} stories</span>
-          <span style="color: #98a8a8; font-size: var(--font-sm);">
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+          <span style="background: rgba(213,101,0,0.15); color: var(--color-orange); border-radius: 3px; padding: 2px 7px; font-size: var(--font-xs); font-weight: bold; white-space: nowrap;">{storyCount.toLocaleString()} stories</span>
+          <span style="color: var(--fg-primary); font-size: var(--font-sm);">
             <b>Core HRCB</b> — HRCB score [-1,+1] across Editorial and Structural channels.
           </span>
-          <a href="/about#classification" style="color: #259d94; font-size: var(--font-xs); white-space: nowrap;">How it works &rarr;</a>
+          <a href="/about#classification" style="color: var(--channel-hrcb); font-size: var(--font-xs); white-space: nowrap;">How it works &rarr;</a>
         </div>
 
         {/* ═══ Global Averages ═══ */}
 
         {signalData && signalData.total_with_signals > 0 && (
           <div style="margin-bottom: 20px;">
-            <p style="font-size: var(--font-sm); color: #98a8a8; font-weight: bold; margin: 0 0 6px 0;">
-              Global Averages <span style="color: #5b7279; font-weight: normal;">({signalData.total_with_signals.toLocaleString()} stories)</span>
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">
+              Global Averages <span style="color: var(--fg-secondary); font-weight: normal;">({signalData.total_with_signals.toLocaleString()} stories)</span>
             </p>
-            <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm);">
                 {barSignals.map((s) => {
                   const displayVal = s.note === 'inv'
@@ -101,36 +101,36 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
                     <tr>
                       <td style={`color: ${s.color}; width: 30px;`} class="score-font">{s.label}</td>
                       <td style="padding: 0 8px; width: 200px;">
-                        <div style="background: #002d38; border-radius: 3px; height: 14px; width: 100%; position: relative;">
+                        <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
                           <div style={`background: ${s.color}; opacity: 0.5; border-radius: 3px; height: 14px; width: ${barPct}%;`}></div>
                         </div>
                       </td>
-                      <td style="color: #98a8a8;" class="score-font">{displayVal}</td>
+                      <td style="color: var(--fg-primary);" class="score-font">{displayVal}</td>
                     </tr>
                   );
                 })}
               </table>
             </div>
-            <p style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px;">PT bar inverted (lower = better). VA bar normalized from [-1,+1] to [0,1]; actual value shown.</p>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 4px;">PT bar inverted (lower = better). VA bar normalized from [-1,+1] to [0,1]; actual value shown.</p>
 
             {(toneEntries.length > 0 || scopeEntries.length > 0 || levelEntries.length > 0 || techEntries.length > 0) && (
               <div class="insight-grid" style="margin-top: 14px;">
 
                 {toneEntries.length > 0 && (
-                  <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-                    <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Tone Distribution</p>
+                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                    <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Tone Distribution</p>
                     <table cellpadding="0" cellspacing="0" width="100%">
                       {toneEntries.map(([label, count]) => {
                         const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
                         return (
                           <tr>
-                            <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                            <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
                             <td style="padding: 2px 8px;">
-                              <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                                <div style={`width: ${pct}%; height: 100%; background: #a855f7; border-radius: 3px;`}></div>
+                              <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                                <div style={`width: ${pct}%; height: 100%; background: var(--color-inference); border-radius: 3px;`}></div>
                               </div>
                             </td>
-                            <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                            <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
                           </tr>
                         );
                       })}
@@ -139,20 +139,20 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
                 )}
 
                 {scopeEntries.length > 0 && (
-                  <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-                    <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
+                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                    <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
                     <table cellpadding="0" cellspacing="0" width="100%">
                       {scopeEntries.map(([label, count]) => {
                         const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
                         return (
                           <tr>
-                            <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                            <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
                             <td style="padding: 2px 8px;">
-                              <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                                <div style={`width: ${pct}%; height: 100%; background: #22d3ee; border-radius: 3px;`}></div>
+                              <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                                <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
                               </div>
                             </td>
-                            <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                            <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
                           </tr>
                         );
                       })}
@@ -161,20 +161,20 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
                 )}
 
                 {levelEntries.length > 0 && (
-                  <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-                    <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Reading Level</p>
+                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                    <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Reading Level</p>
                     <table cellpadding="0" cellspacing="0" width="100%">
                       {levelEntries.map(([label, count]) => {
                         const pct = maxLevel > 0 ? Math.round((count / maxLevel) * 100) : 0;
                         return (
                           <tr>
-                            <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                            <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
                             <td style="padding: 2px 8px;">
-                              <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                                <div style={`width: ${pct}%; height: 100%; background: #eab308; border-radius: 3px;`}></div>
+                              <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                                <div style={`width: ${pct}%; height: 100%; background: var(--color-warning); border-radius: 3px;`}></div>
                               </div>
                             </td>
-                            <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                            <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
                           </tr>
                         );
                       })}
@@ -183,21 +183,21 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
                 )}
 
                 {techEntries.length > 0 && (
-                  <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-                    <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Top Propaganda Techniques</p>
+                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                    <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Top Propaganda Techniques</p>
                     <table cellpadding="0" cellspacing="0" width="100%">
                       {techEntries.map(([technique, count]) => {
                         const pct = maxTech > 0 ? Math.round((count / maxTech) * 100) : 0;
                         const displayName = technique.replace(/_/g, ' ');
                         return (
                           <tr>
-                            <td title={displayName} style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{displayName}</td>
+                            <td title={displayName} style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{displayName}</td>
                             <td style="padding: 2px 8px;">
-                              <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                                <div style={`width: ${pct}%; height: 100%; background: #f87171; border-radius: 3px;`}></div>
+                              <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                                <div style={`width: ${pct}%; height: 100%; background: var(--color-negative-light); border-radius: 3px;`}></div>
                               </div>
                             </td>
-                            <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                            <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
                           </tr>
                         );
                       })}
@@ -215,113 +215,113 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
         <h2 style="font-size: var(--font-base); margin: 0 0 8px 0;">Derived Metrics</h2>
 
         <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <a href="/about#setl" style="color: #22d3ee; font-weight: bold; text-decoration: none;">SETL</a>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Channel divergence — says one thing, does another.</span>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <a href="/about#setl" style="color: var(--color-sentiment); font-weight: bold; text-decoration: none;">SETL</a>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Channel divergence — says one thing, does another.</span>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <a href="/about#evidence" style="color: #f59e0b; font-weight: bold; text-decoration: none;">Confidence</a>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Evidence-weighted strength across provisions.</span>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <a href="/about#evidence" style="color: var(--color-amber); font-weight: bold; text-decoration: none;">Confidence</a>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Evidence-weighted strength across provisions.</span>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <a href="/about#volatility" style="color: #a855f7; font-weight: bold; text-decoration: none;">Volatility</a>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Score consistency across provisions.</span>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <a href="/about#volatility" style="color: var(--color-inference); font-weight: bold; text-decoration: none;">Volatility</a>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Score consistency across provisions.</span>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <a href="/about#consensus" style="color: #d56500; font-weight: bold; text-decoration: none;">Consensus</a>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Multi-model agreement score.</span>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <a href="/about#consensus" style="color: var(--color-orange); font-weight: bold; text-decoration: none;">Consensus</a>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Multi-model agreement score.</span>
           </div>
         </div>
 
         {/* ═══ SECTION 3 — Supplementary Signals ═══ */}
 
         <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Supplementary Signals</h2>
-        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">9 dimensions capturing how content communicates</p>
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">9 dimensions capturing how content communicates</p>
 
         <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 14px;">
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(245,158,11,0.15); color: #f59e0b;">EQ</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Epistemic Quality</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Source quality, evidence reasoning, uncertainty handling, purpose transparency.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(245,158,11,0.15); color: var(--color-amber);">EQ</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Epistemic Quality</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Source quality, evidence reasoning, uncertainty handling, purpose transparency.</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(220,38,38,0.15); color: #dc2626;">PT</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Propaganda Flags</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">count</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Detects 18 propaganda techniques: loaded language, fear appeals, ad hominem, and more.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(220,38,38,0.15); color: var(--color-negative);">PT</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Propaganda Flags</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">count</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Detects 18 propaganda techniques: loaded language, fear appeals, ad hominem, and more.</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">SO</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Solution Orientation</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Problem-only vs solution-oriented framing. High SO = content empowers, not just alarms.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive);">SO</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Solution Orientation</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Problem-only vs solution-oriented framing. High SO = content empowers, not just alarms.</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7;">ET</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Emotional Tone</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">VAD</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Primary tone label + VAD: valence [-1,+1], arousal [0,1], dominance [0,1].</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference);">ET</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Emotional Tone</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">VAD</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Primary tone label + VAD: valence [-1,+1], arousal [0,1], dominance [0,1].</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">SR</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Stakeholder Voice</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Who speaks vs who is spoken about — perspective count, voice balance, power axis.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">SR</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Stakeholder Voice</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Who speaks vs who is spoken about — perspective count, voice balance, power axis.</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">TF</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Temporal Framing</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Retrospective, present, or prospective focus with time horizon.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">TF</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Temporal Framing</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Retrospective, present, or prospective focus with time horizon.</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">GS</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Geographic Scope</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Local, national, regional, or global scope with specific regions.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">GS</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Geographic Scope</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Local, national, regional, or global scope with specific regions.</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308;">CL</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Complexity Level</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Reading level, jargon density, and assumed knowledge requirements.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(234,179,8,0.15); color: var(--color-warning);">CL</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Complexity Level</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Reading level, jargon density, and assumed knowledge requirements.</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">TD</span>
-            <b style="color: #98a8a8; margin-left: 4px;">Transparency &amp; Disclosure</b>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: #5b7279; font-size: var(--font-sm);">Author identified, conflicts of interest disclosed, funding sources disclosed.</span>
-            <br><a href="/about#supplementary" style="color: #259d94; font-size: var(--font-xs);">details &rarr;</a>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+            <span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive);">TD</span>
+            <b style="color: var(--fg-primary); margin-left: 4px;">Transparency &amp; Disclosure</b>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Author identified, conflicts of interest disclosed, funding sources disclosed.</span>
+            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
         </div>
 
         {/* ═══ SECTION 4 — Fair Witness ═══ */}
 
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px 12px; margin-bottom: 10px;">
-          <b style="color: #22c55e;">Fair Witness</b>
-          <span style="color: #5b7279; font-size: var(--font-sm); margin-left: 6px;">Evidence transparency layer — observable facts vs inferences.</span>
-          <a href="/about#fair-witness" style="color: #259d94; font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">details &rarr;</a>
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 10px;">
+          <b style="color: var(--color-positive-vivid);">Fair Witness</b>
+          <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 6px;">Evidence transparency layer — observable facts vs inferences.</span>
+          <a href="/about#fair-witness" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">details &rarr;</a>
         </div>
 
         {/* ═══ SECTION 5 — Evaluation Modes ═══ */}
 
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px 12px; margin-bottom: 10px;">
-          <b style="color: #98a8a8;">Evaluation Modes</b>
-          <span style="color: #5b7279; font-size: var(--font-sm); margin-left: 6px;">Full evaluation vs <span style="color: #d56500;" class="score-font">~lite</span> — cost/quality trade-offs.</span>
-          <a href="/about#eval-modes" style="color: #259d94; font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">details &rarr;</a>
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 10px;">
+          <b style="color: var(--fg-primary);">Evaluation Modes</b>
+          <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 6px;">Full evaluation vs <span style="color: var(--color-orange);" class="score-font">~lite</span> — cost/quality trade-offs.</span>
+          <a href="/about#eval-modes" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">details &rarr;</a>
         </div>
 
       </td>

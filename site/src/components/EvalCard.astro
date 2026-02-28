@@ -21,7 +21,7 @@ const hasEval = story.hcb_weighted_mean !== null || story.hcb_editorial_mean !==
 const isLiteOnly = hasEval && (story.hcb_weighted_mean === null || story.hcb_structural_mean === null);
 // Display HRCB: weighted_mean for full evals, editorial_mean for lite-only
 const displayScore = story.hcb_weighted_mean ?? story.hcb_editorial_mean;
-const displayColor = hasEval ? scoreToColor(displayScore) : '#5b7279';
+const displayColor = hasEval ? scoreToColor(displayScore) : 'var(--fg-secondary)';
 const structuralScore = story.hcb_structural_mean;
 const classLabel = story.hcb_classification?.split(' — ')[0] || story.hcb_classification;
 
@@ -60,7 +60,7 @@ function timeAgo(unixTime: number): string {
 {/* Title row */}
 <tr class="athing">
   <td align="right" valign="top" class="title" style="padding-right: 5px;">
-    <span style="color: #5b7279; font-size: var(--font-base);">
+    <span style="color: var(--fg-secondary); font-size: var(--font-base);">
       {rank !== undefined ? `${rank}.` : ''}
     </span>
   </td>
@@ -70,31 +70,31 @@ function timeAgo(unixTime: number): string {
         <div class="tripartite-score">
           <div class="score-row" data-channel="hrcb">
             <abbr class="score-font score-label" style="text-decoration: none;" title="Human Rights Compatibility Bias: directional lean of content relative to UDHR provisions, from −1.0 to +1.0">HRCB</abbr>
-            <span class="score-font score-value" style={`color: ${isLiteOnly ? '#5b7279' : displayColor};`}>
+            <span class="score-font score-value" style={`color: ${isLiteOnly ? 'var(--fg-secondary)' : displayColor};`}>
               {formatScore(displayScore)}
             </span>
             {isLiteOnly && <span class="lite-icon" title="Lite eval (editorial only) — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}
           </div>
           <div class="score-row" data-channel="editorial">
             <span class="score-font score-label">E</span>
-            <span class="score-font score-value" style={`color: ${story.hcb_editorial_mean !== null ? scoreToColor(story.hcb_editorial_mean) : '#5b7279'};`}>
+            <span class="score-font score-value" style={`color: ${story.hcb_editorial_mean !== null ? scoreToColor(story.hcb_editorial_mean) : 'var(--fg-secondary)'};`}>
               {story.hcb_editorial_mean !== null ? formatScore(story.hcb_editorial_mean) : '--'}
             </span>
           </div>
           <div class="score-row" data-channel="structural">
             <span class="score-font score-label">S</span>
-            <span class="score-font score-value" style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : '#5b7279'};`}>
+            <span class="score-font score-value" style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : 'var(--fg-secondary)'};`}>
               {structuralScore !== null ? formatScore(structuralScore) : '--'}
             </span>
           </div>
         </div>
       </a>
     ) : story.eval_status === 'evaluating' ? (
-      <span class="eval-spinner" style="color: #60a5fa; font-size: var(--font-sm); display: inline-block;" title="Evaluating...">&#9881;</span>
+      <span class="eval-spinner" style="color: var(--channel-editorial); font-size: var(--font-sm); display: inline-block;" title="Evaluating...">&#9881;</span>
     ) : story.eval_status === 'failed' ? (
       <a href={`/item/${story.hn_id}`}
          title={`Failed: ${story.eval_error || 'unknown error'} — click for details`}
-         style="text-decoration: none; padding: var(--space-xs) var(--space-sm); font-size: var(--font-base); color: #dc2626;"
+         style="text-decoration: none; padding: var(--space-xs) var(--space-sm); font-size: var(--font-base); color: var(--color-negative);"
       >
         &#10007;
       </a>
@@ -108,7 +108,7 @@ function timeAgo(unixTime: number): string {
         aria-label={story.eval_status === 'skipped'
             ? `Skipped: ${story.eval_error || ''} — click to evaluate now`
             : 'Evaluate now'}
-        style={`background: none; border: none; cursor: pointer; padding: var(--space-xs) var(--space-sm); font-size: var(--font-base); color: ${story.eval_status === 'pending' ? '#eab308' : '#5b7279'}; transition: color 0.15s;`}
+        style={`background: none; border: none; cursor: pointer; padding: var(--space-xs) var(--space-sm); font-size: var(--font-base); color: ${story.eval_status === 'pending' ? 'var(--color-warning)' : 'var(--fg-secondary)'}; transition: color 0.15s;`}
       >
         &#9654;
       </button>
@@ -135,7 +135,7 @@ function timeAgo(unixTime: number): string {
   <tr>
     <td colspan="2"></td>
     <td style="padding: 2px 0 0 0;">
-      <span style="color: #5b7279; font-size: var(--font-sm); font-style: italic;">
+      <span style="color: var(--fg-secondary); font-size: var(--font-sm); font-style: italic;">
         {hnTextPreview.length >= 100 ? hnTextPreview + '...' : hnTextPreview}
       </span>
     </td>
@@ -157,15 +157,15 @@ function timeAgo(unixTime: number): string {
     {hasEval ? (
       <>
         <span> | </span>
-        <a href={`/item/${story.hn_id}`} style="color: #d56500;">hrcb</a>
+        <a href={`/item/${story.hn_id}`} style="color: var(--color-orange);">hrcb</a>
         {story.schema_version && (
-          <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;"
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;"
                 title={`Schema version ${story.schema_version}`}>
             v{story.schema_version}
           </span>
         )}
         {story.hcb_theme_tag && (
-          <span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1; font-size: var(--font-xs); margin-left: 4px;"
+          <span class="badge" style="background: rgba(43,144,216,0.15); color: var(--color-violet); font-size: var(--font-xs); margin-left: 4px;"
                 title={`Theme: ${story.hcb_theme_tag}`}>
             {story.hcb_theme_tag}
           </span>
@@ -173,7 +173,7 @@ function timeAgo(unixTime: number): string {
         {otherModels.length > 0 && otherModels.map(m => (
           <a href={`/item/${story.hn_id}?model=${m.eval_model}`}
              class="badge"
-             style={`background: ${isLiteMode(m.prompt_mode) ? 'rgba(213,101,0,0.15)' : 'rgba(52,211,153,0.15)'}; color: ${isLiteMode(m.prompt_mode) ? '#d56500' : '#34d399'}; font-size: var(--font-xs); margin-left: 3px; text-decoration: none;`}
+             style={`background: ${isLiteMode(m.prompt_mode) ? 'rgba(213,101,0,0.15)' : 'rgba(52,211,153,0.15)'}; color: ${isLiteMode(m.prompt_mode) ? 'var(--color-orange)' : 'var(--color-positive-medium)'}; font-size: var(--font-xs); margin-left: 3px; text-decoration: none;`}
              title={`Also evaluated by ${m.eval_model}${isLiteMode(m.prompt_mode) ? ' (lite — editorial only)' : ''}`}>
             {modelShortName(m.eval_model)}{isLiteMode(m.prompt_mode) && <span class="lite-icon" style="margin-left: 2px; vertical-align: middle;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}
           </a>
@@ -181,19 +181,19 @@ function timeAgo(unixTime: number): string {
         {(story.consensus_model_count ?? 0) >= 2 && story.consensus_score != null && (
           <span
             class="badge"
-            style="background: rgba(43,144,216,0.10); color: #8faaab; font-size: var(--font-xs); margin-left: 3px;"
+            style="background: rgba(43,144,216,0.10); color: var(--fg-emphasis); font-size: var(--font-xs); margin-left: 3px;"
             title={`Consensus across ${story.consensus_model_count} models: ${story.consensus_score > 0 ? '+' : ''}${story.consensus_score.toFixed(3)}${story.consensus_spread != null ? ` (spread ±${(story.consensus_spread / 2).toFixed(3)})` : ''}`}
           >×{story.consensus_model_count}</span>
         )}
       </>
     ) : story.eval_status === 'evaluating' ? (
-      <span> | <span style="color: #60a5fa; font-size: var(--font-sm);">evaluating</span></span>
+      <span> | <span style="color: var(--channel-editorial); font-size: var(--font-sm);">evaluating</span></span>
     ) : story.eval_status === 'pending' ? (
-      <span> | <span style="color: #eab308; font-size: var(--font-sm);">queued</span></span>
+      <span> | <span style="color: var(--color-warning); font-size: var(--font-sm);">queued</span></span>
     ) : story.eval_status === 'failed' ? (
-      <span> | <a href={`/item/${story.hn_id}`} style="color: #dc2626; font-size: var(--font-sm);">failed</a></span>
+      <span> | <a href={`/item/${story.hn_id}`} style="color: var(--color-negative); font-size: var(--font-sm);">failed</a></span>
     ) : story.eval_status === 'skipped' ? (
-      <span> | <span style="color: #5b7279; font-size: var(--font-sm);">skipped</span></span>
+      <span> | <span style="color: var(--fg-secondary); font-size: var(--font-sm);">skipped</span></span>
     ) : null}
   </td>
 </tr>

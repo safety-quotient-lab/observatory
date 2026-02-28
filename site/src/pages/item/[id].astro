@@ -87,8 +87,8 @@ if (isDone && scores.length > 0) {
   aggregates = computeAggregates(scores, channelWeights);
 }
 
-const classColor = storyData.hcb_classification ? classificationColor(storyData.hcb_classification) : '#5b7279';
-const classText = storyData.hcb_classification ? classificationTextColor(storyData.hcb_classification) : '#98a8a8';
+const classColor = storyData.hcb_classification ? classificationColor(storyData.hcb_classification) : 'var(--fg-secondary)';
+const classText = storyData.hcb_classification ? classificationTextColor(storyData.hcb_classification) : 'var(--fg-primary)';
 
 // Fair Witness: fetch from rater_witness table
 const fwEvalModel = storyData.eval_model || raterEvals.find(re => re.prompt_mode === 'full')?.eval_model || null;
@@ -411,9 +411,9 @@ const distinctAuditModels = [...new Set(
 const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low', ND: 'No Data'};
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
-  eval_failure: '#dc2626', eval_retry: '#f97316', eval_skip: '#6b7280',
-  eval_success: '#16a34a', rate_limit: '#eab308', fetch_error: '#dc2626',
-  parse_error: '#dc2626', trigger: '#60a5fa', r2_error: '#f97316',
+  eval_failure: 'var(--color-negative)', eval_retry: 'var(--color-orange)', eval_skip: 'var(--color-muted)',
+  eval_success: 'var(--color-positive)', rate_limit: 'var(--color-warning)', fetch_error: 'var(--color-negative)',
+  parse_error: 'var(--color-negative)', trigger: 'var(--channel-editorial)', r2_error: 'var(--color-orange)',
 };
 
 function timeAgo(unixTime: number): string {
@@ -446,15 +446,15 @@ function timeAgo(unixTime: number): string {
   {/* Model tab bar (shown when multiple models have evaluated) */}
   {(isDone || isLiteOnlyEval) && hasMultipleModels && (
     <div style="padding: 6px 0; margin-bottom: 4px; display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
-      <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 4px;">Model:</span>
+      <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-right: 4px;">Model:</span>
       {raterEvals.map(re => {
         const isActive = modelParam ? modelParam === re.eval_model : re.eval_model === storyData.eval_model;
         const isDefault = re.eval_model === storyData.eval_model;
         return (
           <a href={isDefault ? `/item/${hnId}` : `/item/${hnId}?model=${re.eval_model}`}
-             style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #0d4655; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #0d4655;'}`}>
+             style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: var(--bg-surface); color: var(--fg-primary); border: 1px solid var(--color-border);' : 'background: var(--bg-highlight); color: var(--fg-secondary); border: 1px solid var(--bg-surface);'}`}>
             {modelDisplayName(re.eval_model)}
-            {isLiteMode(re.prompt_mode) && <span style="color: #d56500; margin-left: 3px;" title="Lite evaluation — editorial only, no per-section scores">lite</span>}
+            {isLiteMode(re.prompt_mode) && <span style="color: var(--color-orange); margin-left: 3px;" title="Lite evaluation — editorial only, no per-section scores">lite</span>}
             <span style={`margin-left: 4px; color: ${scoreToColor(re.hcb_editorial_mean ?? re.hcb_weighted_mean)};`}>
               {formatScore(re.hcb_editorial_mean ?? re.hcb_weighted_mean)}
             </span>
@@ -462,7 +462,7 @@ function timeAgo(unixTime: number): string {
         );
       })}
       <a href={`/item/${hnId}?view=compare`}
-         style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${viewParam === 'compare' ? 'background: #0d4655; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #0d4655;'}`}>
+         style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${viewParam === 'compare' ? 'background: var(--bg-surface); color: var(--fg-primary); border: 1px solid var(--color-border);' : 'background: var(--bg-highlight); color: var(--fg-secondary); border: 1px solid var(--bg-surface);'}`}>
         Compare
       </a>
     </div>
@@ -479,7 +479,7 @@ function timeAgo(unixTime: number): string {
       <table cellpadding="0" cellspacing="0" width="100%">
         <tr class="athing">
           <td valign="top" style="padding: 5px var(--space-lg) 0 0; text-align: center; width: 44px;">
-            <span style="color: #dc2626; font-size: var(--font-lg);">&#10007;</span>
+            <span style="color: var(--color-negative); font-size: var(--font-lg);">&#10007;</span>
           </td>
           <td>
             <span class="titleline" style="font-size: var(--font-md);">
@@ -512,27 +512,27 @@ function timeAgo(unixTime: number): string {
 
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
         <tr>
-          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Evaluation Failed</div>
-            <div style="color: #dc2626; font-size: var(--font-base); padding: 8px 0; line-height: 1.5;">
+          <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Evaluation Failed</div>
+            <div style="color: var(--color-negative); font-size: var(--font-base); padding: 8px 0; line-height: 1.5;">
               {storyData.eval_error || 'Unknown error'}
             </div>
             <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-top: 8px;">
               {storyData.domain && (
                 <tr>
-                  <td style="color: #5b7279; width: 100px;">Domain</td>
-                  <td><a href={`/domain/${storyData.domain}`} style="color: #98a8a8;">{storyData.domain}</a></td>
+                  <td style="color: var(--fg-secondary); width: 100px;">Domain</td>
+                  <td><a href={`/domain/${storyData.domain}`} style="color: var(--fg-primary);">{storyData.domain}</a></td>
                 </tr>
               )}
               {storyData.content_type && (
                 <tr>
-                  <td style="color: #5b7279;">Content Type</td>
-                  <td style="color: #5b7279;">{CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}</td>
+                  <td style="color: var(--fg-secondary);">Content Type</td>
+                  <td style="color: var(--fg-secondary);">{CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}</td>
                 </tr>
               )}
               <tr>
-                <td style="color: #5b7279;">Created</td>
-                <td style="color: #5b7279;">{storyData.created_at}</td>
+                <td style="color: var(--fg-secondary);">Created</td>
+                <td style="color: var(--fg-secondary);">{storyData.created_at}</td>
               </tr>
             </table>
             <div style="margin-top: 12px;">
@@ -540,7 +540,7 @@ function timeAgo(unixTime: number): string {
                 class="trigger-btn"
                 data-hn-id={storyData.hn_id}
                 title="Retry evaluation"
-                style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 4px 12px; font-size: var(--font-sm); color: #dc2626; border-radius: 4px;"
+                style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 4px 12px; font-size: var(--font-sm); color: var(--color-negative); border-radius: 4px;"
               >
                 &#9654; Retry Evaluation
               </button>
@@ -552,10 +552,10 @@ function timeAgo(unixTime: number): string {
       {dcpElements && (
         <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
           <tr>
-            <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-              <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+              <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
                 Cached Domain Context Profile
-                <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">from previous evaluation</span>
+                <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">from previous evaluation</span>
               </div>
               <DcpTable elements={dcpElements} />
             </td>
@@ -593,11 +593,11 @@ function timeAgo(unixTime: number): string {
                 S:{formatScore(storyData.hcb_structural_mean)}
               </span>
             ) : isDone ? (
-              <span style="color: #5b7279; margin-left: 4px;" title="Structural: no data">S:ND</span>
+              <span style="color: var(--fg-secondary); margin-left: 4px;" title="Structural: no data">S:ND</span>
             ) : null})
           </span>
         )}
-        {storyData.archive_url && <a href={storyData.archive_url} style="color: var(--color-muted, #5b7279); font-size: var(--font-xs); margin-left: 8px;" target="_blank" rel="noopener">archived</a>}
+        {storyData.archive_url && <a href={storyData.archive_url} style="color: var(--color-muted, var(--fg-secondary)); font-size: var(--font-xs); margin-left: 8px;" target="_blank" rel="noopener">archived</a>}
       </td>
     </tr>
     <tr>
@@ -620,24 +620,24 @@ function timeAgo(unixTime: number): string {
         {storyData.consensus_model_count != null && storyData.consensus_model_count >= 2 && storyData.consensus_spread != null && storyData.consensus_spread > 0.3 && (
           <span
             class="badge"
-            style="background: rgba(217,119,6,0.15); color: #d97706; font-size: var(--font-xs); margin-left: 4px;"
+            style="background: rgba(217,119,6,0.15); color: var(--color-warning); font-size: var(--font-xs); margin-left: 4px;"
             title={`Cross-model spread: ${storyData.consensus_spread.toFixed(2)} across ${storyData.consensus_model_count} models`}
           >
             Contested
           </span>
         )}
-        <span style="color: #5b7279; margin-left: 4px;">
+        <span style="color: var(--fg-secondary); margin-left: 4px;">
           <span title={`Content type: ${CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}`} style="cursor: help;">
             {CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}
           </span>
           {storyData.schema_version && <span>· v{storyData.schema_version}</span>}
           {storyData.evaluated_at && <span>· {storyData.evaluated_at.split('T')[0]}</span>}
-          {storyData.archive_used && <span style="color: #a855f7;">· from archive</span>}
+          {storyData.archive_used && <span style="color: var(--color-inference);">· from archive</span>}
         </span>
         {hasFairWitness && (
           <button
             id="fw-toggle"
-            style="margin-left: 8px; background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); cursor: pointer; padding: 2px 8px; font-size: var(--font-xs); color: #a855f7; border-radius: 4px;"
+            style="margin-left: 8px; background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); cursor: pointer; padding: 2px 8px; font-size: var(--font-xs); color: var(--color-inference); border-radius: 4px;"
             title="Toggle Fair Witness mode: show only observable facts vs interpretive inferences"
             aria-label="Toggle Fair Witness (evidence breakdown) mode: show only observable facts vs interpretive inferences"
           >
@@ -654,22 +654,22 @@ function timeAgo(unixTime: number): string {
   {(executiveSummary || themeTag || sentimentTag) && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
           <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-            <span style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Summary</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Summary</span>
             {themeTag && (
-              <span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1; font-size: var(--font-xs);">
+              <span class="badge" style="background: rgba(43,144,216,0.15); color: var(--color-violet); font-size: var(--font-xs);">
                 {themeTag}
               </span>
             )}
             {sentimentTag && (
-              <span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee; font-size: var(--font-xs);">
+              <span class="badge" style="background: rgba(34,211,238,0.15); color: var(--color-sentiment); font-size: var(--font-xs);">
                 {sentimentTag}
               </span>
             )}
           </div>
           {executiveSummary && (
-            <div style="color: #98a8a8; font-size: var(--font-sm); line-height: 1.6;">
+            <div style="color: var(--fg-primary); font-size: var(--font-sm); line-height: 1.6;">
               {executiveSummary}
             </div>
           )}
@@ -681,14 +681,14 @@ function timeAgo(unixTime: number): string {
   {/* Heatmap */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Article Heatmap</div>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Article Heatmap</div>
         <HeatMap scores={scores} compact={false} showLabels={true} />
-        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: var(--font-xs); color: #5b7279;">
-          <span><span style="display: inline-block; width: 8px; height: 8px; background: #dc2626; border-radius: 2px;"></span> Negative</span>
-          <span><span style="display: inline-block; width: 8px; height: 8px; background: #eab308; border-radius: 2px;"></span> Neutral</span>
-          <span><span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 2px;"></span> Positive</span>
-          <span title="Insufficient evidence to score"><span style="display: inline-block; width: 8px; height: 8px; background: #6b7280; border-radius: 2px;"></span> No Data</span>
+        <div style="display: flex; gap: 12px; margin-top: 8px; font-size: var(--font-xs); color: var(--fg-secondary);">
+          <span><span style="display: inline-block; width: 8px; height: 8px; background: var(--color-negative); border-radius: 2px;"></span> Negative</span>
+          <span><span style="display: inline-block; width: 8px; height: 8px; background: var(--color-warning); border-radius: 2px;"></span> Neutral</span>
+          <span><span style="display: inline-block; width: 8px; height: 8px; background: var(--color-positive); border-radius: 2px;"></span> Positive</span>
+          <span title="Insufficient evidence to score"><span style="display: inline-block; width: 8px; height: 8px; background: var(--color-muted); border-radius: 2px;"></span> No Data</span>
         </div>
       </td>
     </tr>
@@ -697,57 +697,57 @@ function timeAgo(unixTime: number): string {
   {/* Stats + Radar */}
   <div class="two-col" style="padding: 5px 0; gap: 10px;">
     <div>
-      <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             <tr>
-              <td style="color: #5b7279;" title="Average editorial channel score across all UDHR sections">Editorial Mean</td>
+              <td style="color: var(--fg-secondary);" title="Average editorial channel score across all UDHR sections">Editorial Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(storyData.hcb_editorial_mean)}`}>{storyData.hcb_editorial_mean !== null && storyData.hcb_editorial_mean !== undefined ? formatScore(storyData.hcb_editorial_mean) : 'ND'}</td>
-              <td style="color: #5b7279;" title="Average structural channel score across all UDHR sections">Structural Mean</td>
-              <td class="score-font" style={`color: ${storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? scoreToColor(storyData.hcb_structural_mean) : '#5b7279'}`}>{storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? formatScore(storyData.hcb_structural_mean) : 'ND'}</td>
+              <td style="color: var(--fg-secondary);" title="Average structural channel score across all UDHR sections">Structural Mean</td>
+              <td class="score-font" style={`color: ${storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? scoreToColor(storyData.hcb_structural_mean) : 'var(--fg-secondary)'}`}>{storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? formatScore(storyData.hcb_structural_mean) : 'ND'}</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;" title="Evidence-weighted average of combined E+S+DCP final scores">Weighted Mean</td>
+              <td style="color: var(--fg-secondary);" title="Evidence-weighted average of combined E+S+DCP final scores">Weighted Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(aggregates.weighted_mean)}`}>{formatScore(aggregates.weighted_mean)}</td>
-              <td style="color: #5b7279;">Unweighted Mean</td>
+              <td style="color: var(--fg-secondary);">Unweighted Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(aggregates.unweighted_mean)}`}>{formatScore(aggregates.unweighted_mean)}</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;">Max</td>
-              <td class="score-font" style={`color: ${scoreToColor(aggregates.max.value)}`}>{formatScore(aggregates.max.value)} <span style="color: #5b7279;">{aggregates.max.section}</span></td>
-              <td style="color: #5b7279;">Min</td>
-              <td class="score-font" style={`color: ${scoreToColor(aggregates.min.value)}`}>{formatScore(aggregates.min.value)} <span style="color: #5b7279;">{aggregates.min.section}</span></td>
+              <td style="color: var(--fg-secondary);">Max</td>
+              <td class="score-font" style={`color: ${scoreToColor(aggregates.max.value)}`}>{formatScore(aggregates.max.value)} <span style="color: var(--fg-secondary);">{aggregates.max.section}</span></td>
+              <td style="color: var(--fg-secondary);">Min</td>
+              <td class="score-font" style={`color: ${scoreToColor(aggregates.min.value)}`}>{formatScore(aggregates.min.value)} <span style="color: var(--fg-secondary);">{aggregates.min.section}</span></td>
             </tr>
             <tr>
-              <td style="color: #5b7279;">Signal</td>
-              <td class="score-font" style="color: #98a8a8;">{aggregates.signal_sections}</td>
-              <td style="color: #5b7279;" title="Articles with insufficient evidence to score">No Data</td>
-              <td class="score-font" style="color: #5b7279;">{aggregates.nd_count}</td>
+              <td style="color: var(--fg-secondary);">Signal</td>
+              <td class="score-font" style="color: var(--fg-primary);">{aggregates.signal_sections}</td>
+              <td style="color: var(--fg-secondary);" title="Articles with insufficient evidence to score">No Data</td>
+              <td class="score-font" style="color: var(--fg-secondary);">{aggregates.nd_count}</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;">Volatility</td>
-              <td class="score-font" style="color: #98a8a8;" colspan="3">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
+              <td style="color: var(--fg-secondary);">Volatility</td>
+              <td class="score-font" style="color: var(--fg-primary);" colspan="3">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;">Negative</td>
-              <td class="score-font" style="color: #ef4444;">{aggregates.negative_count}</td>
-              <td style="color: #5b7279;">Channels</td>
+              <td style="color: var(--fg-secondary);">Negative</td>
+              <td class="score-font" style="color: var(--color-negative);">{aggregates.negative_count}</td>
+              <td style="color: var(--fg-secondary);">Channels</td>
               <td class="score-font">
-                <span style="color: #60a5fa;" title="What the content says">E: {channelWeights.editorial}</span>
-                <span style="color: #22d3ee; margin-left: 6px;" title="What the site does">S: {channelWeights.structural}</span>
+                <span style="color: var(--channel-editorial);" title="What the content says">E: {channelWeights.editorial}</span>
+                <span style="color: var(--color-sentiment); margin-left: 6px;" title="What the site does">S: {channelWeights.structural}</span>
               </td>
             </tr>
             <tr>
-              <td style="color: #5b7279;"><abbr title="Structural-Editorial Tension Level: how much a site's actions (S channel) diverge from what its content says (E channel)">SETL</abbr> <a href="/about#setl" style="color: #5b7279; text-decoration: none; font-size: var(--font-xs);" title="About SETL">ℹ</a></td>
+              <td style="color: var(--fg-secondary);"><abbr title="Structural-Editorial Tension Level: how much a site's actions (S channel) diverge from what its content says (E channel)">SETL</abbr> <a href="/about#setl" style="color: var(--fg-secondary); text-decoration: none; font-size: var(--font-xs);" title="About SETL">ℹ</a></td>
               <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
-              <td style="color: #5b7279; font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
+              <td style="color: var(--fg-secondary); font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
             </tr>
             {hasFairWitness && (
               <tr>
-                <td style="color: #5b7279;"><abbr title="Fair Witness ratio: share of evidence items that are directly observable facts vs. inferences">FW Ratio</abbr> <a href="/about#fair-witness" style="color: #5b7279; text-decoration: none; font-size: var(--font-xs);" title="About Fair Witness">ℹ</a></td>
+                <td style="color: var(--fg-secondary);"><abbr title="Fair Witness ratio: share of evidence items that are directly observable facts vs. inferences">FW Ratio</abbr> <a href="/about#fair-witness" style="color: var(--fg-secondary); text-decoration: none; font-size: var(--font-xs);" title="About Fair Witness">ℹ</a></td>
                 <td class="score-font" style={`color: ${fwRatioColor(fwRatio)};`}>{formatFwRatio(fwRatio)}</td>
-                <td style="color: #5b7279; font-size: var(--font-xs);" title="Observable facts / Inferences" colspan="2">
-                  <span style="color: #22c55e;">{fwObservableCount} facts</span> · <span style="color: #a855f7;">{fwInferenceCount} inferences</span>
+                <td style="color: var(--fg-secondary); font-size: var(--font-xs);" title="Observable facts / Inferences" colspan="2">
+                  <span style="color: var(--color-positive-vivid);">{fwObservableCount} facts</span> · <span style="color: var(--color-inference);">{fwInferenceCount} inferences</span>
                 </td>
               </tr>
             )}
@@ -755,18 +755,18 @@ function timeAgo(unixTime: number): string {
           {/* Confidence + Evidence merged visualization */}
           <div style="margin-top: 8px;">
             <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 3px;">
-              <span style="color: #5b7279; font-size: var(--font-xs);">Evidence</span>
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs);">Evidence</span>
               <span class="score-font" style={`color: ${confidenceToColor(confidence)}; font-size: var(--font-xs);`} title={`${aggregates.signal_sections}/${aggregates.signal_sections + aggregates.nd_count} articles scored`}>{formatConfidence(confidence)}</span>
-              <span style="color: #5b7279; font-size: var(--font-xs);">coverage</span>
-              <a href="/about#confidence" style="color: #5b7279; text-decoration: none; font-size: var(--font-xs);" title="About Confidence">ℹ</a>
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs);">coverage</span>
+              <a href="/about#confidence" style="color: var(--fg-secondary); text-decoration: none; font-size: var(--font-xs);" title="About Confidence">ℹ</a>
             </div>
-            <div style="display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: #0d4655; gap: 1px;">
+            <div style="display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: var(--bg-surface); gap: 1px;">
               {_evH > 0 && <div style={`width: ${_evH}%; background: ${evidenceColor('H')}; flex-shrink: 0;`} title={`High evidence: ${storyData.hcb_evidence_h} sections`} />}
               {_evM > 0 && <div style={`width: ${_evM}%; background: ${evidenceColor('M')}; flex-shrink: 0;`} title={`Medium evidence: ${storyData.hcb_evidence_m} sections`} />}
               {_evL > 0 && <div style={`width: ${_evL}%; background: ${evidenceColor('L')}; flex-shrink: 0;`} title={`Low evidence: ${storyData.hcb_evidence_l} sections`} />}
               {_evND > 0 && <div style={`width: ${_evND}%; background: ${evidenceColor(null)}; flex-shrink: 0;`} title={`No data: ${storyData.hcb_nd_count} sections`} />}
             </div>
-            <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 2px; font-family: monospace;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 2px; font-family: monospace;">
               {(storyData.hcb_evidence_h ?? 0) > 0 && <span style={`color: ${evidenceColor('H')};`}>{storyData.hcb_evidence_h}H </span>}
               {(storyData.hcb_evidence_m ?? 0) > 0 && <span style={`color: ${evidenceColor('M')};`}>{storyData.hcb_evidence_m}M </span>}
               {(storyData.hcb_evidence_l ?? 0) > 0 && <span style={`color: ${evidenceColor('L')};`}>{storyData.hcb_evidence_l}L </span>}
@@ -776,8 +776,8 @@ function timeAgo(unixTime: number): string {
         </div>
     </div>
     <div>
-      <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Theme Radar</div>
         <RadarChart scores={scores} size={300} />
       </div>
     </div>
@@ -787,18 +787,18 @@ function timeAgo(unixTime: number): string {
   {comments.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             HN Discussion
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               {comments.filter(c => c.depth === 0).length} top-level · {comments.filter(c => c.depth > 0).length} replies
             </span>
           </div>
           {comments.map((c) => (
-            <div style={`border-top: 1px solid #0d4655; padding: 8px 0; margin-left: ${c.depth * 20}px;`}>
-              <div style="font-size: var(--font-xs); color: #5b7279; margin-bottom: 4px;">
+            <div style={`border-top: 1px solid var(--bg-surface); padding: 8px 0; margin-left: ${c.depth * 20}px;`}>
+              <div style="font-size: var(--font-xs); color: var(--fg-secondary); margin-bottom: 4px;">
                 <a href={`/user/${c.author}`}
-                   style="color: #5b7279;">{c.author}</a>
+                   style="color: var(--fg-secondary);">{c.author}</a>
                 {c.time && (
                   <span style="margin-left: 6px;">
                     {new Date(c.time * 1000).toISOString().slice(0, 16).replace('T', ' ')} UTC
@@ -806,9 +806,9 @@ function timeAgo(unixTime: number): string {
                 )}
                 <a href={`https://news.ycombinator.com/item?id=${c.comment_id}`}
                    target="_blank" rel="noopener"
-                   style="color: #5b7279; margin-left: 6px;">link</a>
+                   style="color: var(--fg-secondary); margin-left: 6px;">link</a>
               </div>
-              <div style="color: #8faaab; font-size: var(--font-sm); line-height: 1.5;" set:html={sanitizeHtml(c.text)} />
+              <div style="color: var(--fg-emphasis); font-size: var(--font-sm); line-height: 1.5;" set:html={sanitizeHtml(c.text)} />
             </div>
           ))}
         </td>
@@ -819,10 +819,10 @@ function timeAgo(unixTime: number): string {
   {/* Editorial Channel */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #a78bfa;">
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; border-top: 3px solid var(--channel-structural);">
         <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
-          <div style="color: #a78bfa; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Editorial Channel</div>
-          <div style="color: #5b7279; font-size: var(--font-xs);">What the content says</div>
+          <div style="color: var(--channel-structural); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Editorial Channel</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs);">What the content says</div>
         </div>
         {editorialRanked.map((score, i) => (
           <ArticleDetail score={score} index={i} channel="editorial" />
@@ -834,14 +834,14 @@ function timeAgo(unixTime: number): string {
   {/* Structural Channel */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #22d3ee;">
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; border-top: 3px solid var(--color-sentiment);">
         <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
-          <div style="color: #22d3ee; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Structural Channel</div>
-          <div style="color: #5b7279; font-size: var(--font-xs);">What the site does</div>
+          <div style="color: var(--color-sentiment); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Structural Channel</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs);">What the site does</div>
         </div>
         {dcpElements && (
-          <div style="margin-bottom: 12px; padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;">
-            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;"><a href="/about#dcp" style="color: #5b7279; text-decoration: none;" title="Domain-level modifiers inherited from site policies (privacy, ToS, accessibility, ownership)">Domain Context Profile</a></div>
+          <div style="margin-bottom: 12px; padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;"><a href="/about#dcp" style="color: var(--fg-secondary); text-decoration: none;" title="Domain-level modifiers inherited from site policies (privacy, ToS, accessibility, ownership)">Domain Context Profile</a></div>
             <DcpTable elements={dcpElements} />
           </div>
         )}
@@ -855,35 +855,35 @@ function timeAgo(unixTime: number): string {
   {/* Supplementary Signals */}
   {hasSignals && (
     <div style="padding: 5px 0 20px 0;">
-      <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #f59e0b;">
-        <div style="color: #f59e0b; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 4px;">Supplementary Signals</div>
-        <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 12px;">How this content communicates, beyond directional lean. <a href="/about#supplementary" style="color: #259d94; text-decoration: none;">Learn more</a></div>
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; border-top: 3px solid var(--color-amber);">
+        <div style="color: var(--color-amber); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 4px;">Supplementary Signals</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 12px;">How this content communicates, beyond directional lean. <a href="/about#supplementary" style="color: var(--channel-hrcb); text-decoration: none;">Learn more</a></div>
 
         <div class="insight-grid">
           {/* Epistemic Quality — primary */}
           {(eqData || eqScore !== null) && (
           <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Epistemic Quality</span>
-                    <a href="/about#eq" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Source credibility, evidence reasoning, uncertainty handling">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Epistemic Quality</span>
+                    <a href="/about#eq" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="Source credibility, evidence reasoning, uncertainty handling">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">How well-sourced and evidence-based is this content?</div>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">How well-sourced and evidence-based is this content?</div>
                   {eqData ? (
                     <>
                       <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                        <span class="score-font" style={`color: ${eqData.eq_score >= 0.7 ? '#16a34a' : eqData.eq_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{eqData.eq_score.toFixed(2)}</span>
-                        <span class="badge" style={`background: ${eqData.claim_density === 'low' ? 'rgba(22,163,106,0.15)' : eqData.claim_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${eqData.claim_density === 'low' ? '#16a34a' : eqData.claim_density === 'medium' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{eqData.claim_density} claims</span>
+                        <span class="score-font" style={`color: ${eqData.eq_score >= 0.7 ? 'var(--color-positive)' : eqData.eq_score >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-md);`}>{eqData.eq_score.toFixed(2)}</span>
+                        <span class="badge" style={`background: ${eqData.claim_density === 'low' ? 'rgba(22,163,106,0.15)' : eqData.claim_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${eqData.claim_density === 'low' ? 'var(--color-positive)' : eqData.claim_density === 'medium' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{eqData.claim_density} claims</span>
                       </div>
                       <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                        <tr><td style="color: #5b7279; width: 55%;">Sources</td><td><div style={`height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.source_quality * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right; width: 30px;">{eqData.source_quality.toFixed(1)}</td></tr>
-                        <tr><td style="color: #5b7279;">Evidence</td><td><div style={`height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.evidence_reasoning * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right;">{eqData.evidence_reasoning.toFixed(1)}</td></tr>
-                        <tr><td style="color: #5b7279;">Uncertainty</td><td><div style={`height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.uncertainty_handling * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right;">{eqData.uncertainty_handling.toFixed(1)}</td></tr>
-                        <tr><td style="color: #5b7279;">Purpose</td><td><div style={`height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.purpose_transparency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right;">{eqData.purpose_transparency.toFixed(1)}</td></tr>
+                        <tr><td style="color: var(--fg-secondary); width: 55%;">Sources</td><td><div style={`height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.source_quality * 100}%; height: 100%; background: var(--channel-editorial);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right; width: 30px;">{eqData.source_quality.toFixed(1)}</td></tr>
+                        <tr><td style="color: var(--fg-secondary);">Evidence</td><td><div style={`height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.evidence_reasoning * 100}%; height: 100%; background: var(--channel-editorial);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right;">{eqData.evidence_reasoning.toFixed(1)}</td></tr>
+                        <tr><td style="color: var(--fg-secondary);">Uncertainty</td><td><div style={`height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.uncertainty_handling * 100}%; height: 100%; background: var(--channel-editorial);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right;">{eqData.uncertainty_handling.toFixed(1)}</td></tr>
+                        <tr><td style="color: var(--fg-secondary);">Purpose</td><td><div style={`height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.purpose_transparency * 100}%; height: 100%; background: var(--channel-editorial);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right;">{eqData.purpose_transparency.toFixed(1)}</td></tr>
                       </table>
                     </>
                   ) : eqScore !== null ? (
-                    <span class="score-font" style={`color: ${eqScore >= 0.7 ? '#16a34a' : eqScore >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{eqScore.toFixed(2)}</span>
+                    <span class="score-font" style={`color: ${eqScore >= 0.7 ? 'var(--color-positive)' : eqScore >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-md);`}>{eqScore.toFixed(2)}</span>
                   ) : null}
                 </div>
           </div>
@@ -891,22 +891,22 @@ function timeAgo(unixTime: number): string {
 
           {/* Propaganda Flags — primary */}
           <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Propaganda Flags</span>
-                    <a href="/about#pt" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="18 propaganda techniques from PTC-18 taxonomy">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Propaganda Flags</span>
+                    <a href="/about#pt" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="18 propaganda techniques from PTC-18 taxonomy">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">{ptFlagCount === 0 ? 'No manipulative rhetoric detected' : `${ptFlagCount} manipulative rhetoric technique${ptFlagCount !== 1 ? 's' : ''} found`}</div>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">{ptFlagCount === 0 ? 'No manipulative rhetoric detected' : `${ptFlagCount} manipulative rhetoric technique${ptFlagCount !== 1 ? 's' : ''} found`}</div>
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                    <span class="badge" style={`background: ${ptFlagCount === 0 ? 'rgba(22,163,106,0.15)' : ptFlagCount <= 2 ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${ptFlagCount === 0 ? '#16a34a' : ptFlagCount <= 2 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm);`}>{ptFlagCount}</span>
-                    <span style="color: #5b7279; font-size: var(--font-xs);">techniques detected</span>
+                    <span class="badge" style={`background: ${ptFlagCount === 0 ? 'rgba(22,163,106,0.15)' : ptFlagCount <= 2 ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${ptFlagCount === 0 ? 'var(--color-positive)' : ptFlagCount <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-sm);`}>{ptFlagCount}</span>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs);">techniques detected</span>
                   </div>
                   {ptFlags && ptFlags.length > 0 && (
                     <div style="font-size: var(--font-xs);">
                       {ptFlags.map((f: any) => (
-                        <div style="padding: 3px 0; border-top: 1px solid #0d4655;">
-                          <span class="badge" style={`background: ${f.severity === 'high' ? 'rgba(220,38,38,0.15)' : f.severity === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(107,114,128,0.15)'}; color: ${f.severity === 'high' ? '#dc2626' : f.severity === 'medium' ? '#eab308' : '#6b7280'}; font-size: var(--font-xs);`}>{f.technique.replace(/_/g, ' ')}</span>
-                          <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 2px; font-style: italic;">{f.evidence}</div>
+                        <div style="padding: 3px 0; border-top: 1px solid var(--bg-surface);">
+                          <span class="badge" style={`background: ${f.severity === 'high' ? 'rgba(220,38,38,0.15)' : f.severity === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(107,114,128,0.15)'}; color: ${f.severity === 'high' ? 'var(--color-negative)' : f.severity === 'medium' ? 'var(--color-warning)' : 'var(--color-muted)'}; font-size: var(--font-xs);`}>{f.technique.replace(/_/g, ' ')}</span>
+                          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 2px; font-style: italic;">{f.evidence}</div>
                         </div>
                       ))}
                     </div>
@@ -917,19 +917,19 @@ function timeAgo(unixTime: number): string {
           {/* Emotional Tone — primary */}
           {etData && (
           <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Emotional Tone</span>
-                    <a href="/about#et" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Valence, arousal, dominance (Russell's Circumplex Model)">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Emotional Tone</span>
+                    <a href="/about#et" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="Valence, arousal, dominance (Russell's Circumplex Model)">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Emotional character: positive/negative, intensity, authority</div>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">Emotional character: positive/negative, intensity, authority</div>
                   <div style="margin-bottom: 6px;">
-                    <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7; font-size: var(--font-sm);">{etData.primary_tone}</span>
+                    <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference); font-size: var(--font-sm);">{etData.primary_tone}</span>
                   </div>
                   <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                    <tr><td style="color: #5b7279; width: 55%;">Valence</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden; position: relative;"><div style={`position: absolute; left: 50%; width: ${Math.abs(etData.valence) * 50}%; height: 100%; background: ${etData.valence >= 0 ? '#16a34a' : '#dc2626'}; ${etData.valence >= 0 ? '' : 'transform: translateX(-100%);'}`}></div></div></td><td style="color: #5b7279; text-align: right; width: 35px;">{etData.valence > 0 ? '+' : ''}{etData.valence.toFixed(1)}</td></tr>
-                    <tr><td style="color: #5b7279;">Arousal</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.arousal * 100}%; height: 100%; background: #f59e0b;`}></div></div></td><td style="color: #5b7279; text-align: right;">{etData.arousal.toFixed(1)}</td></tr>
-                    <tr><td style="color: #5b7279;">Dominance</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.dominance * 100}%; height: 100%; background: #22d3ee;`}></div></div></td><td style="color: #5b7279; text-align: right;">{etData.dominance.toFixed(1)}</td></tr>
+                    <tr><td style="color: var(--fg-secondary); width: 55%;">Valence</td><td><div style="height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden; position: relative;"><div style={`position: absolute; left: 50%; width: ${Math.abs(etData.valence) * 50}%; height: 100%; background: ${etData.valence >= 0 ? 'var(--color-positive)' : 'var(--color-negative)'}; ${etData.valence >= 0 ? '' : 'transform: translateX(-100%);'}`}></div></div></td><td style="color: var(--fg-secondary); text-align: right; width: 35px;">{etData.valence > 0 ? '+' : ''}{etData.valence.toFixed(1)}</td></tr>
+                    <tr><td style="color: var(--fg-secondary);">Arousal</td><td><div style="height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.arousal * 100}%; height: 100%; background: var(--color-amber);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right;">{etData.arousal.toFixed(1)}</td></tr>
+                    <tr><td style="color: var(--fg-secondary);">Dominance</td><td><div style="height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.dominance * 100}%; height: 100%; background: var(--color-sentiment);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right;">{etData.dominance.toFixed(1)}</td></tr>
                   </table>
                 </div>
           </div>
@@ -938,22 +938,22 @@ function timeAgo(unixTime: number): string {
           {/* Transparency & Disclosure — primary */}
           {tdData && (
           <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Transparency</span>
-                    <a href="/about#td" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Author identification, conflict and funding disclosure">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Transparency</span>
+                    <a href="/about#td" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="Author identification, conflict and funding disclosure">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Does the content identify its author and disclose interests?</div>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">Does the content identify its author and disclose interests?</div>
                   <div style="margin-bottom: 6px;">
-                    <span class="score-font" style={`color: ${tdData.td_score >= 0.7 ? '#16a34a' : tdData.td_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{tdData.td_score.toFixed(2)}</span>
+                    <span class="score-font" style={`color: ${tdData.td_score >= 0.7 ? 'var(--color-positive)' : tdData.td_score >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-md);`}>{tdData.td_score.toFixed(2)}</span>
                   </div>
                   <div style="font-size: var(--font-xs); display: flex; flex-wrap: wrap; gap: 4px;">
-                    <span style={`color: ${tdData.author_identified ? '#16a34a' : '#dc2626'};`}>{tdData.author_identified ? '\u2713' : '\u2717'} Author</span>
+                    <span style={`color: ${tdData.author_identified ? 'var(--color-positive)' : 'var(--color-negative)'};`}>{tdData.author_identified ? '\u2713' : '\u2717'} Author</span>
                     {tdData.conflicts_disclosed !== null && (
-                      <span style={`color: ${tdData.conflicts_disclosed ? '#16a34a' : '#dc2626'};`}>{tdData.conflicts_disclosed ? '\u2713' : '\u2717'} Conflicts</span>
+                      <span style={`color: ${tdData.conflicts_disclosed ? 'var(--color-positive)' : 'var(--color-negative)'};`}>{tdData.conflicts_disclosed ? '\u2713' : '\u2717'} Conflicts</span>
                     )}
                     {tdData.funding_disclosed !== null && (
-                      <span style={`color: ${tdData.funding_disclosed ? '#16a34a' : '#dc2626'};`}>{tdData.funding_disclosed ? '\u2713' : '\u2717'} Funding</span>
+                      <span style={`color: ${tdData.funding_disclosed ? 'var(--color-positive)' : 'var(--color-negative)'};`}>{tdData.funding_disclosed ? '\u2713' : '\u2717'} Funding</span>
                     )}
                   </div>
                 </div>
@@ -964,24 +964,24 @@ function timeAgo(unixTime: number): string {
         {/* Secondary signals — collapsed */}
         {(soData || srData || tfData || gsData || clData) && (
           <details class="collapsible-section" style="margin-top: 10px;">
-            <summary style="color: #5b7279; font-size: var(--font-xs); cursor: pointer;">More signals: context, framing &amp; audience</summary>
+            <summary style="color: var(--fg-secondary); font-size: var(--font-xs); cursor: pointer;">More signals: context, framing &amp; audience</summary>
             <div class="insight-grid" style="margin-top: 8px;">
 
               {/* Solution Orientation */}
               {soData && (
               <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Solution Orientation</span>
-                    <a href="/about#so" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Problem-only vs solution-oriented framing">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Solution Orientation</span>
+                    <a href="/about#so" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="Problem-only vs solution-oriented framing">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Does this content offer solutions or only describe problems?</div>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">Does this content offer solutions or only describe problems?</div>
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                    <span class="score-font" style={`color: ${soData.so_score >= 0.7 ? '#16a34a' : soData.so_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{soData.so_score.toFixed(2)}</span>
-                    <span class="badge" style={`background: ${soData.framing === 'solution_oriented' ? 'rgba(22,163,106,0.15)' : soData.framing === 'mixed' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${soData.framing === 'solution_oriented' ? '#16a34a' : soData.framing === 'mixed' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{soData.framing.replace(/_/g, ' ')}</span>
+                    <span class="score-font" style={`color: ${soData.so_score >= 0.7 ? 'var(--color-positive)' : soData.so_score >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-md);`}>{soData.so_score.toFixed(2)}</span>
+                    <span class="badge" style={`background: ${soData.framing === 'solution_oriented' ? 'rgba(22,163,106,0.15)' : soData.framing === 'mixed' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${soData.framing === 'solution_oriented' ? 'var(--color-positive)' : soData.framing === 'mixed' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{soData.framing.replace(/_/g, ' ')}</span>
                   </div>
                   <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                    <tr><td style="color: #5b7279;">Reader Agency</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${soData.reader_agency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right; width: 30px;">{soData.reader_agency.toFixed(1)}</td></tr>
+                    <tr><td style="color: var(--fg-secondary);">Reader Agency</td><td><div style="height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;"><div style={`width: ${soData.reader_agency * 100}%; height: 100%; background: var(--channel-editorial);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right; width: 30px;">{soData.reader_agency.toFixed(1)}</td></tr>
                   </table>
                 </div>
               </div>
@@ -990,29 +990,29 @@ function timeAgo(unixTime: number): string {
               {/* Stakeholder Representation */}
               {srData && (
               <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Stakeholder Voice</span>
-                    <a href="/about#sr" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Who speaks vs who is spoken about">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Stakeholder Voice</span>
+                    <a href="/about#sr" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="Who speaks vs who is spoken about">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Whose perspectives are represented in this content?</div>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">Whose perspectives are represented in this content?</div>
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                    <span class="score-font" style={`color: ${srData.sr_score >= 0.7 ? '#16a34a' : srData.sr_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{srData.sr_score.toFixed(2)}</span>
-                    <span style="color: #5b7279; font-size: var(--font-xs);">{srData.perspective_count} perspective{srData.perspective_count !== 1 ? 's' : ''}</span>
+                    <span class="score-font" style={`color: ${srData.sr_score >= 0.7 ? 'var(--color-positive)' : srData.sr_score >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-md);`}>{srData.sr_score.toFixed(2)}</span>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs);">{srData.perspective_count} perspective{srData.perspective_count !== 1 ? 's' : ''}</span>
                   </div>
                   {srData.who_speaks && srData.who_speaks.length > 0 && (
                     <div style="font-size: var(--font-xs); margin-bottom: 3px;">
-                      <span style="color: #5b7279;">Speaks: </span>
+                      <span style="color: var(--fg-secondary);">Speaks: </span>
                       {srData.who_speaks.map((s: string) => (
-                        <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
+                        <span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive); font-size: var(--font-xs); margin-right: 2px;">{s}</span>
                       ))}
                     </div>
                   )}
                   {srData.who_is_spoken_about && srData.who_is_spoken_about.length > 0 && (
                     <div style="font-size: var(--font-xs);">
-                      <span style="color: #5b7279;">About: </span>
+                      <span style="color: var(--fg-secondary);">About: </span>
                       {srData.who_is_spoken_about.map((s: string) => (
-                        <span class="badge" style="background: rgba(107,114,128,0.15); color: #6b7280; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
+                        <span class="badge" style="background: rgba(107,114,128,0.15); color: var(--color-muted); font-size: var(--font-xs); margin-right: 2px;">{s}</span>
                       ))}
                     </div>
                   )}
@@ -1023,15 +1023,15 @@ function timeAgo(unixTime: number): string {
               {/* Temporal Framing */}
               {tfData && (
               <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Temporal Framing</span>
-                    <a href="/about#tf" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Past, present, or future focus">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Temporal Framing</span>
+                    <a href="/about#tf" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="Past, present, or future focus">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Is this content looking backward, at the present, or forward?</div>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">Is this content looking backward, at the present, or forward?</div>
                   <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                    <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs);">{tfData.primary_focus}</span>
-                    <span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279; font-size: var(--font-xs);">{tfData.time_horizon.replace(/_/g, ' ')}</span>
+                    <span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial); font-size: var(--font-xs);">{tfData.primary_focus}</span>
+                    <span class="badge" style="background: rgba(107,114,128,0.15); color: var(--fg-secondary); font-size: var(--font-xs);">{tfData.time_horizon.replace(/_/g, ' ')}</span>
                   </div>
                 </div>
               </div>
@@ -1040,15 +1040,15 @@ function timeAgo(unixTime: number): string {
               {/* Geographic Scope */}
               {gsData && (
               <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Geographic Scope</span>
-                    <a href="/about#gs" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Local, national, regional, or global scope">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Geographic Scope</span>
+                    <a href="/about#gs" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="Local, national, regional, or global scope">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">What geographic area does this content cover?</div>
-                  <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs); margin-bottom: 4px;">{gsData.scope}</span>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">What geographic area does this content cover?</div>
+                  <span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial); font-size: var(--font-xs); margin-bottom: 4px;">{gsData.scope}</span>
                   {gsData.regions_mentioned && gsData.regions_mentioned.length > 0 && (
-                    <div style="font-size: var(--font-xs); color: #5b7279; margin-top: 4px;">
+                    <div style="font-size: var(--font-xs); color: var(--fg-secondary); margin-top: 4px;">
                       {gsData.regions_mentioned.join(', ')}
                     </div>
                   )}
@@ -1059,16 +1059,16 @@ function timeAgo(unixTime: number): string {
               {/* Complexity Level */}
               {clData && (
               <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                <div style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; height: 100%;">
                   <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Complexity</span>
-                    <a href="/about#cl" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Reading level, jargon density, assumed knowledge">&#8505;</a>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Complexity</span>
+                    <a href="/about#cl" style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none;" title="Reading level, jargon density, assumed knowledge">&#8505;</a>
                   </div>
-                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">How accessible is this content to a general audience?</div>
+                  <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">How accessible is this content to a general audience?</div>
                   <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                    <span class="badge" style={`background: ${clData.reading_level === 'accessible' ? 'rgba(22,163,106,0.15)' : clData.reading_level === 'moderate' ? 'rgba(96,165,250,0.15)' : clData.reading_level === 'technical' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.reading_level === 'accessible' ? '#16a34a' : clData.reading_level === 'moderate' ? '#60a5fa' : clData.reading_level === 'technical' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.reading_level}</span>
-                    <span class="badge" style={`background: ${clData.jargon_density === 'low' ? 'rgba(22,163,106,0.15)' : clData.jargon_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.jargon_density === 'low' ? '#16a34a' : clData.jargon_density === 'medium' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.jargon_density} jargon</span>
-                    <span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279; font-size: var(--font-xs);">{clData.assumed_knowledge.replace(/_/g, ' ')}</span>
+                    <span class="badge" style={`background: ${clData.reading_level === 'accessible' ? 'rgba(22,163,106,0.15)' : clData.reading_level === 'moderate' ? 'rgba(96,165,250,0.15)' : clData.reading_level === 'technical' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.reading_level === 'accessible' ? 'var(--color-positive)' : clData.reading_level === 'moderate' ? 'var(--channel-editorial)' : clData.reading_level === 'technical' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{clData.reading_level}</span>
+                    <span class="badge" style={`background: ${clData.jargon_density === 'low' ? 'rgba(22,163,106,0.15)' : clData.jargon_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.jargon_density === 'low' ? 'var(--color-positive)' : clData.jargon_density === 'medium' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{clData.jargon_density} jargon</span>
+                    <span class="badge" style="background: rgba(107,114,128,0.15); color: var(--fg-secondary); font-size: var(--font-xs);">{clData.assumed_knowledge.replace(/_/g, ' ')}</span>
                   </div>
                 </div>
               </div>
@@ -1128,8 +1128,8 @@ function timeAgo(unixTime: number): string {
                 </span>
               </>
             )}
-            <span style="color: #d56500; font-size: var(--font-xs); margin-left: 6px;" title="Lite evaluation — editorial channel only, no per-section breakdown">~lite</span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">{liteEval.schema_version ? `v${liteEval.schema_version}` : ''}</span>
+            <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 6px;" title="Lite evaluation — editorial channel only, no per-section breakdown">~lite</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">{liteEval.schema_version ? `v${liteEval.schema_version}` : ''}</span>
           </td>
         </tr>
       </table>
@@ -1139,49 +1139,49 @@ function timeAgo(unixTime: number): string {
       {/* Lite eval summary card */}
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
         <tr>
-          <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <span style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Summary</span>
-              <span style="color: #d56500; font-size: var(--font-xs); border: 1px solid rgba(213,101,0,0.4); padding: 1px 5px; border-radius: 3px;" title="Lite evaluation — editorial channel only, no per-section heatmap">~lite</span>
+              <span style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Summary</span>
+              <span style="color: var(--color-orange); font-size: var(--font-xs); border: 1px solid rgba(213,101,0,0.4); padding: 1px 5px; border-radius: 3px;" title="Lite evaluation — editorial channel only, no per-section heatmap">~lite</span>
               {liteEval.hcb_theme_tag && (
-                <span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1; font-size: var(--font-xs);">
+                <span class="badge" style="background: rgba(43,144,216,0.15); color: var(--color-violet); font-size: var(--font-xs);">
                   {liteEval.hcb_theme_tag}
                 </span>
               )}
               {liteEval.hcb_sentiment_tag && (
-                <span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee; font-size: var(--font-xs);">
+                <span class="badge" style="background: rgba(34,211,238,0.15); color: var(--color-sentiment); font-size: var(--font-xs);">
                   {liteEval.hcb_sentiment_tag}
                 </span>
               )}
             </div>
             {liteEval.hcb_executive_summary && (
-              <div style="color: #98a8a8; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 10px;">
+              <div style="color: var(--fg-primary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 10px;">
                 {liteEval.hcb_executive_summary}
               </div>
             )}
             {(liteEval.eq_score !== null || liteEval.so_score !== null || liteEval.td_score !== null) && (
-              <div style="display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid #0d4655; padding-top: 8px; margin-top: 4px;">
+              <div style="display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--bg-surface); padding-top: 8px; margin-top: 4px;">
                 {liteEval.eq_score !== null && (
                   <div>
-                    <abbr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Epistemic Quality: source credibility, evidence reasoning, and uncertainty handling">EQ</abbr>
-                    <span class="score-font" style={`color: ${liteEval.eq_score >= 0.7 ? '#16a34a' : liteEval.eq_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.eq_score.toFixed(2)}</span>
+                    <abbr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Epistemic Quality: source credibility, evidence reasoning, and uncertainty handling">EQ</abbr>
+                    <span class="score-font" style={`color: ${liteEval.eq_score >= 0.7 ? 'var(--color-positive)' : liteEval.eq_score >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.eq_score.toFixed(2)}</span>
                   </div>
                 )}
                 {liteEval.so_score !== null && (
                   <div>
-                    <abbr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Solution Orientation: degree to which content frames problems constructively and offers reader agency">SO</abbr>
-                    <span class="score-font" style={`color: ${liteEval.so_score >= 0.6 ? '#16a34a' : '#5b7279'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.so_score.toFixed(2)}</span>
+                    <abbr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Solution Orientation: degree to which content frames problems constructively and offers reader agency">SO</abbr>
+                    <span class="score-font" style={`color: ${liteEval.so_score >= 0.6 ? 'var(--color-positive)' : 'var(--fg-secondary)'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.so_score.toFixed(2)}</span>
                   </div>
                 )}
                 {liteEval.td_score !== null && (
                   <div>
-                    <abbr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Transparency & Disclosure: author identification and conflict-of-interest disclosure">TD</abbr>
-                    <span class="score-font" style={`color: ${liteEval.td_score >= 0.7 ? '#16a34a' : liteEval.td_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.td_score.toFixed(2)}</span>
+                    <abbr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Transparency & Disclosure: author identification and conflict-of-interest disclosure">TD</abbr>
+                    <span class="score-font" style={`color: ${liteEval.td_score >= 0.7 ? 'var(--color-positive)' : liteEval.td_score >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.td_score.toFixed(2)}</span>
                   </div>
                 )}
               </div>
             )}
-            <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 10px;">
+            <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 10px;">
               Lite evaluation by {liteEval.eval_model} · editorial channel only · no per-section breakdown available
             </div>
           </td>
@@ -1195,9 +1195,9 @@ function timeAgo(unixTime: number): string {
         <tr class="athing">
           <td valign="top" style="padding: 5px var(--space-lg) 0 0; text-align: center; width: 44px;">
             {storyData.eval_status === 'evaluating' ? (
-              <span class="eval-spinner" style="display: inline-block; color: #60a5fa; font-size: var(--font-lg);">&#9696;</span>
+              <span class="eval-spinner" style="display: inline-block; color: var(--channel-editorial); font-size: var(--font-lg);">&#9696;</span>
             ) : (
-              <span style="color: #eab308; font-size: var(--font-lg);">&#9679;</span>
+              <span style="color: var(--color-warning); font-size: var(--font-lg);">&#9679;</span>
             )}
           </td>
           <td>
@@ -1231,16 +1231,16 @@ function timeAgo(unixTime: number): string {
 
       <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0;">
         <tr>
-          <td style="padding: 15px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; text-align: center;">
-            <div style={`color: ${storyData.eval_status === 'evaluating' ? '#60a5fa' : '#eab308'}; font-size: var(--font-md); margin-bottom: 6px;`}>
+          <td style="padding: 15px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; text-align: center;">
+            <div style={`color: ${storyData.eval_status === 'evaluating' ? 'var(--channel-editorial)' : 'var(--color-warning)'}; font-size: var(--font-md); margin-bottom: 6px;`}>
               {storyData.eval_status === 'evaluating' ? 'Evaluating...' : 'Pending Evaluation'}
             </div>
-            <div style="color: #5b7279; font-size: var(--font-sm);">
+            <div style="color: var(--fg-secondary); font-size: var(--font-sm);">
               {storyData.eval_status === 'evaluating'
                 ? 'This story is currently being evaluated against the UDHR. Results will appear shortly.'
                 : 'This story is queued for evaluation. It will be processed in an upcoming batch.'}
             </div>
-            <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 8px;">
+            <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 8px;">
               Queued: {storyData.created_at}
             </div>
           </td>
@@ -1253,8 +1253,8 @@ function timeAgo(unixTime: number): string {
   {showSparkline && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 0 0;">
       <tr>
-        <td style="padding: 8px 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+        <td style="padding: 8px 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
             Longitudinal
             {storyTimeline.length > 0 && <span style="text-transform: none; letter-spacing: 0; margin-left: 6px;">{storyTimeline.length} HN snapshots</span>}
             {evalHistory.length > 0 && <span style="text-transform: none; letter-spacing: 0; margin-left: 6px;">· {evalHistory.length} evals</span>}
@@ -1262,22 +1262,22 @@ function timeAgo(unixTime: number): string {
           <div style="overflow-x: auto;">
             <svg width={SPARK_W} height={SPARK_H} style="display: block; overflow: visible;">
               {/* HRCB band labels */}
-              <text x="2" y={hrcbY0 + 2} fill="#5b7279" font-size="8" dominant-baseline="hanging">+1</text>
-              <text x="2" y={(hrcbY0 + hrcbY1) / 2} fill="#5b7279" font-size="8" dominant-baseline="middle">0</text>
-              <text x="2" y={hrcbY1 - 1} fill="#5b7279" font-size="8" dominant-baseline="auto">−1</text>
+              <text x="2" y={hrcbY0 + 2} fill="var(--fg-secondary)" font-size="8" dominant-baseline="hanging">+1</text>
+              <text x="2" y={(hrcbY0 + hrcbY1) / 2} fill="var(--fg-secondary)" font-size="8" dominant-baseline="middle">0</text>
+              <text x="2" y={hrcbY1 - 1} fill="var(--fg-secondary)" font-size="8" dominant-baseline="auto">−1</text>
               {/* HRCB zero line */}
-              <line x1={SPARK_PAD_X + 14} y1={(hrcbY0 + hrcbY1) / 2} x2={SPARK_W - SPARK_PAD_X} y2={(hrcbY0 + hrcbY1) / 2} stroke="#1a5568" stroke-width="0.5" stroke-dasharray="2,3" />
+              <line x1={SPARK_PAD_X + 14} y1={(hrcbY0 + hrcbY1) / 2} x2={SPARK_W - SPARK_PAD_X} y2={(hrcbY0 + hrcbY1) / 2} stroke="var(--color-border)" stroke-width="0.5" stroke-dasharray="2,3" />
               {/* Divider */}
-              <line x1={SPARK_PAD_X} y1={SPARK_HRCB_H + SPARK_PAD_Y / 2} x2={SPARK_W} y2={SPARK_HRCB_H + SPARK_PAD_Y / 2} stroke="#1a5568" stroke-width="0.5" />
+              <line x1={SPARK_PAD_X} y1={SPARK_HRCB_H + SPARK_PAD_Y / 2} x2={SPARK_W} y2={SPARK_HRCB_H + SPARK_PAD_Y / 2} stroke="var(--color-border)" stroke-width="0.5" />
               {/* HN score label */}
-              <text x="2" y={hnY0 + 2} fill="#5b7279" font-size="8" dominant-baseline="hanging">HN</text>
+              <text x="2" y={hnY0 + 2} fill="var(--fg-secondary)" font-size="8" dominant-baseline="hanging">HN</text>
               {/* HN score area */}
-              {hnPath && <path d={hnPath} fill="#3b82f620" stroke="#3b82f6" stroke-width="1" />}
+              {hnPath && <path d={hnPath} fill="#3b82f620" stroke="var(--color-blue)" stroke-width="1" />}
               {/* HRCB eval dots */}
               {hrcbDots.map((dot, i) => (
                 <circle key={i} cx={dot.x} cy={dot.y} r="3"
                   fill={scoreToColor(dot.score)}
-                  stroke="#093946" stroke-width="1"
+                  stroke="var(--bg-highlight)" stroke-width="1"
                   title={`${dot.model}: ${formatScore(dot.score)}`} />
               ))}
             </svg>
@@ -1291,30 +1291,30 @@ function timeAgo(unixTime: number): string {
   {auditTrail.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
           <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
-            <span style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">
               Audit Trail
             </span>
-            <span id="trail-count" style="color: #5b7279; font-size: var(--font-xs);">{auditTrail.length} entries</span>
+            <span id="trail-count" style="color: var(--fg-secondary); font-size: var(--font-xs);">{auditTrail.length} entries</span>
             {/* Type filter chips */}
             <span style="display: flex; gap: 4px; margin-left: 4px; flex-wrap: wrap;">
-              <button class="trail-filter" data-filter="all" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid #1a5568; background: #0d4655; color: #98a8a8; cursor: pointer;">all</button>
-              <button class="trail-filter" data-filter="eval" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid #1a5568; background: none; color: #5b7279; cursor: pointer;">eval</button>
-              <button class="trail-filter" data-filter="pipeline" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid #1a5568; background: none; color: #5b7279; cursor: pointer;">pipeline</button>
+              <button class="trail-filter" data-filter="all" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid var(--color-border); background: var(--bg-surface); color: var(--fg-primary); cursor: pointer;">all</button>
+              <button class="trail-filter" data-filter="eval" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid var(--color-border); background: none; color: var(--fg-secondary); cursor: pointer;">eval</button>
+              <button class="trail-filter" data-filter="pipeline" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid var(--color-border); background: none; color: var(--fg-secondary); cursor: pointer;">pipeline</button>
               {auditTrail.some(e => e.trailCategory === 'content_drift') && (
-                <button class="trail-filter" data-filter="content_drift" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid #1a5568; background: none; color: #5b7279; cursor: pointer;">drift</button>
+                <button class="trail-filter" data-filter="content_drift" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid var(--color-border); background: none; color: var(--fg-secondary); cursor: pointer;">drift</button>
               )}
             </span>
             {/* Model filter */}
             {distinctAuditModels.length > 1 && (
-              <select id="trail-model-filter" style="font-size: var(--font-xs); background: #0d4655; color: #5b7279; border: 1px solid #1a5568; border-radius: 4px; padding: 1px 4px; cursor: pointer;">
+              <select id="trail-model-filter" style="font-size: var(--font-xs); background: var(--bg-surface); color: var(--fg-secondary); border: 1px solid var(--color-border); border-radius: 4px; padding: 1px 4px; cursor: pointer;">
                 <option value="">all models</option>
                 {distinctAuditModels.map(m => <option value={m}>{m}</option>)}
               </select>
             )}
             {/* Sort toggle */}
-            <button id="trail-sort-toggle" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 4px; border: 1px solid #1a5568; background: none; color: #5b7279; cursor: pointer; margin-left: auto;">
+            <button id="trail-sort-toggle" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 4px; border: 1px solid var(--color-border); background: none; color: var(--fg-secondary); cursor: pointer; margin-left: auto;">
               newest first
             </button>
           </div>
@@ -1327,19 +1327,19 @@ function timeAgo(unixTime: number): string {
                   : null;
                 const scoreStr = entry.hcb_weighted_mean != null ? formatScore(entry.hcb_weighted_mean) : '?';
                 const driftStr = drift != null ? (drift > 0 ? `+${drift.toFixed(2)}` : drift.toFixed(2)) : '';
-                const driftColor = drift != null ? (drift > 0 ? '#16a34a' : drift < 0 ? '#dc2626' : '#5b7279') : '';
+                const driftColor = drift != null ? (drift > 0 ? 'var(--color-positive)' : drift < 0 ? 'var(--color-negative)' : 'var(--fg-secondary)') : '';
                 return (
-                  <tr style="border-top: 1px solid #0d4655;" data-category="eval" data-model={entry.eval_model || ''} data-ts={entry.timestamp}>
-                    <td style="color: #5b7279; white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
+                  <tr style="border-top: 1px solid var(--bg-surface);" data-category="eval" data-model={entry.eval_model || ''} data-ts={entry.timestamp}>
+                    <td style="color: var(--fg-secondary); white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
                     <td style="width: 90px;">
-                      <span class="badge" style="background: #16a34a20; color: #16a34a; font-size: var(--font-xs);">
+                      <span class="badge" style="background: var(--color-positive)20; color: var(--color-positive); font-size: var(--font-xs);">
                         eval
                       </span>
                     </td>
-                    <td style="color: #98a8a8;">
+                    <td style="color: var(--fg-primary);">
                       Evaluated by <strong>{entry.eval_model}</strong>: {scoreStr}
                       {entry.hcb_classification ? ` (${entry.hcb_classification})` : ''}
-                      {entry.total_tokens ? <span style="color: #5b7279; margin-left: 6px;">{entry.total_tokens.toLocaleString()} tokens</span> : null}
+                      {entry.total_tokens ? <span style="color: var(--fg-secondary); margin-left: 6px;">{entry.total_tokens.toLocaleString()} tokens</span> : null}
                       {driftStr ? <span style={`margin-left: 6px; color: ${driftColor}; font-weight: bold;`}>{driftStr}</span> : null}
                     </td>
                     <td style="width: 60px;"></td>
@@ -1347,11 +1347,11 @@ function timeAgo(unixTime: number): string {
                 );
               }
               // Event entry
-              const sevColor = entry.severity === 'error' ? '#dc2626' : entry.severity === 'warn' ? '#eab308' : '#5b7279';
-              const typeColor = EVENT_TYPE_COLORS[entry.event_type || ''] || '#5b7279';
+              const sevColor = entry.severity === 'error' ? 'var(--color-negative)' : entry.severity === 'warn' ? 'var(--color-warning)' : 'var(--fg-secondary)';
+              const typeColor = EVENT_TYPE_COLORS[entry.event_type || ''] || 'var(--fg-secondary)';
               return (
-                <tr style="border-top: 1px solid #0d4655;" data-category={entry.trailCategory} data-model="" data-ts={entry.timestamp}>
-                  <td style="color: #5b7279; white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
+                <tr style="border-top: 1px solid var(--bg-surface);" data-category={entry.trailCategory} data-model="" data-ts={entry.timestamp}>
+                  <td style="color: var(--fg-secondary); white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
                   <td style="width: 90px;">
                     <span class="badge" style={`background: ${typeColor}20; color: ${typeColor}; font-size: var(--font-xs);`}>
                       {entry.event_type}
@@ -1360,17 +1360,17 @@ function timeAgo(unixTime: number): string {
                   <td style={`color: ${sevColor};`}>{entry.message}</td>
                   <td style="width: 60px; text-align: center; white-space: nowrap;">
                     {entry.investigated === 1
-                      ? <span style="color: #3b82f6;" title="Investigated">INV</span>
+                      ? <span style="color: var(--color-blue);" title="Investigated">INV</span>
                       : entry.investigated === 0
-                        ? <span style="color: #5b7279;" title="Not investigated">--</span>
-                        : <span style="color: #0d4655;" title="Not triaged">-</span>
+                        ? <span style="color: var(--fg-secondary);" title="Not investigated">--</span>
+                        : <span style="color: var(--bg-surface);" title="Not triaged">-</span>
                     }
                     {' '}
                     {entry.resolved === 1
-                      ? <span style="color: #22c55e;" title="Resolved">RES</span>
+                      ? <span style="color: var(--color-positive-vivid);" title="Resolved">RES</span>
                       : entry.resolved === 0
-                        ? <span style="color: #5b7279;" title="Not resolved">--</span>
-                        : <span style="color: #0d4655;" title="Not triaged">-</span>
+                        ? <span style="color: var(--fg-secondary);" title="Not resolved">--</span>
+                        : <span style="color: var(--bg-surface);" title="Not triaged">-</span>
                     }
                   </td>
                 </tr>
@@ -1430,7 +1430,7 @@ function timeAgo(unixTime: number): string {
                       btn.textContent = d.message.slice(0, 30) + '...';
                     } else if (evType === 'done') {
                       btn.textContent = 'Done: ' + (d.score !== undefined ? d.score.toFixed(2) : '?');
-                      btn.style.color = '#16a34a';
+                      btn.style.color = 'var(--color-positive)';
                       btn.style.borderColor = 'rgba(22,163,106,0.3)';
                       btn.style.background = 'rgba(22,163,106,0.15)';
                       setTimeout(function() { location.reload(); }, 1500);
@@ -1524,10 +1524,10 @@ function timeAgo(unixTime: number): string {
         activeFilter = this.getAttribute('data-filter') || 'all';
         filterBtns.forEach(function(b) {
           b.style.background = 'none';
-          b.style.color = '#5b7279';
+          b.style.color = 'var(--fg-secondary)';
         });
-        this.style.background = '#0d4655';
-        this.style.color = '#98a8a8';
+        this.style.background = 'var(--bg-surface)';
+        this.style.color = 'var(--fg-primary)';
         applyFilters();
       });
     });

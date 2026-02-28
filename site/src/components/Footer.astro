@@ -11,11 +11,11 @@ const { lastEvaluatedAt } = Astro.props;
 ---
 
 <div id="donate-nudge" style="display:none; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; background:rgba(213,101,0,0.08); border:1px solid rgba(213,101,0,0.2); border-radius:6px; margin-bottom:8px; flex-wrap:wrap;">
-  <span style="color:#98a8a8; font-size:9pt;">
+  <span style="color:var(--fg-primary); font-size:9pt;">
     HN HRCB runs on API credits and donations — no ads.
-    <a href="#" id="nudge-donate" style="color:#d56500; text-decoration:underline;">Support the project →</a>
+    <a href="#" id="nudge-donate" style="color:var(--color-orange); text-decoration:underline;">Support the project →</a>
   </span>
-  <button id="nudge-dismiss" style="background:none; border:none; cursor:pointer; color:#5b7279; font-size:11pt; padding:2px 4px; line-height:1;" title="Dismiss">✕</button>
+  <button id="nudge-dismiss" style="background:none; border:none; cursor:pointer; color:var(--fg-secondary); font-size:11pt; padding:2px 4px; line-height:1;" title="Dismiss">✕</button>
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
@@ -23,7 +23,7 @@ const { lastEvaluatedAt } = Astro.props;
     <td style="padding: 10px 0;">
       <table style="margin: 0 auto;">
         <tr>
-          <td style="text-align: center; padding-top: 10px; border-top: 2px solid #d56500;">
+          <td style="text-align: center; padding-top: 10px; border-top: 2px solid var(--color-orange);">
             <span class="subtext">
               <a href="/about">About HRCB</a> |
               <a href="/article/19">By Right</a> |
@@ -31,10 +31,10 @@ const { lastEvaluatedAt } = Astro.props;
               <a href="https://news.ycombinator.com/newsfaq.html">HN FAQ</a> |
               <a href="https://github.com/kashifshah/unudhr">Source</a> |
               <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights">UDHR</a> |
-              <a href="/support" style="color:#d56500;">Donate</a> |
+              <a href="/support" style="color:var(--color-orange);">Donate</a> |
               <a href="/feed.xml">RSS</a>
             </span>
-            <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 6px;">
+            <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 6px;">
               <span title="Build version">build {buildHash}</span>{buildTime ? <span title="Deployed"> · deployed {buildTime} UTC</span> : ''}{lastEvaluatedAt ? <span title="Last evaluation completed"> · evaluated {lastEvaluatedAt} UTC</span> : ''}
             </div>
           </td>

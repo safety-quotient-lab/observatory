@@ -43,13 +43,10 @@ rounds. 30/43 items already fixed; remaining items below.
   - Full plan: `.claude/plans/archive/ux-audit-2026-02-28.md`
   - Deferred (2): NAV-07 (back-to-top), NAV-08 (Phase 2 FTS)
 
-- [ ] **Semantic color system — per-file migration**
-  - Foundation done *(2026-02-28)*: 30+ CSS vars, 9 badge classes, 6 text classes, paywall→red, unused vars removed
-  - Full plan: `.claude/plans/semantic-colors-2026-02-28.md`
-  - ~1,489 inline `color: #hex` across 32 files → `var(--color-*)`. 97% mechanical, 2.5% manual review.
-  - 7 new CSS vars needed (Phase 0). Two substitutions (`#5b7279` + `#98a8a8`) cover 77% of all instances.
-  - 4 batches: tiny (9 files) → medium (9) → mid (6) → heavy (8 files, top 10)
-  - **Assigned to a separate agent** — do not interleave with feature work
+- [x] **Semantic color system — per-file migration** *(done 2026-02-28)*
+  - 8 new CSS vars added (Phase 0), ~1,489 hex→var() across 32 files in 4 parallel batches
+  - 0 remaining `color: #hex` in CSS declarations; ~62 hex in JS/canvas contexts (correct)
+  - Full plan: `.claude/plans/archive/semantic-colors-2026-02-28.md`
 
 ### Round 4 — Analytics *(done 2026-02-28)*
 

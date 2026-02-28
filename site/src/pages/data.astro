@@ -15,49 +15,49 @@ const siteUrl = Astro.site?.origin ?? 'https://hn-hrcb.pages.dev';
       <td>
         <h1 style="font-size: var(--font-md); margin-bottom: 10px;">Dataset &amp; Exports</h1>
 
-        <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 20px;">
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 20px;">
           The HN HRCB evaluation dataset — story scores, domain profiles, and rater evaluations — will be available for bulk download here. Dataset exports and bulk snapshots are in progress.
         </p>
 
         {/* API access (available now) */}
-        <p style="color: #98a8a8; font-size: var(--font-base); font-weight: bold; margin: 20px 0 8px 0;">API Access (available now)</p>
+        <p style="color: var(--fg-primary); font-size: var(--font-base); font-weight: bold; margin: 20px 0 8px 0;">API Access (available now)</p>
 
-        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 20px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
-          <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+        <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 20px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px;" width="100%">
+          <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="padding: 4px 8px;">Endpoint</td>
             <td style="padding: 4px 8px;">Description</td>
           </tr>
-          <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font"><a href="/api/v1/stories" style="color: #d56500;">/api/v1/stories</a></td><td style="color: #5b7279; padding: 2px 8px;">Paginated evaluated story feed with HRCB scores</td></tr>
-          <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">/api/v1/story/{'{id}'}</td><td style="color: #5b7279; padding: 2px 8px;">Single story with per-model rater evaluations</td></tr>
-          <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font"><a href="/api/v1/domains" style="color: #d56500;">/api/v1/domains</a></td><td style="color: #5b7279; padding: 2px 8px;">Domain signal aggregates (HRCB, EQ, SO, TD, valence, arousal)</td></tr>
-          <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">/api/v1/domain/{'{domain}'}</td><td style="color: #5b7279; padding: 2px 8px;">Domain profile with recent evaluated stories</td></tr>
-          <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">/api/v1/domain/{'{domain}'}/history</td><td style="color: #5b7279; padding: 2px 8px;">Daily HRCB profile snapshots (?days=30, max 365)</td></tr>
-          <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font"><a href="/api/v0/topstories.json" style="color: #d56500;">/api/v0/topstories.json</a></td><td style="color: #5b7279; padding: 2px 8px;">HN-compatible: top 500 story IDs by HN score</td></tr>
-          <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font"><a href="/api/v0/beststories.json" style="color: #d56500;">/api/v0/beststories.json</a></td><td style="color: #5b7279; padding: 2px 8px;">HN-compatible: top 500 story IDs by HRCB score</td></tr>
-          <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">/api/v0/item/{'{id}'}.json</td><td style="color: #5b7279; padding: 2px 8px;">HN-compatible item + <span class="score-font">hcb</span> extension object</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font"><a href="/api/v1/stories" style="color: var(--color-orange);">/api/v1/stories</a></td><td style="color: var(--fg-secondary); padding: 2px 8px;">Paginated evaluated story feed with HRCB scores</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">/api/v1/story/{'{id}'}</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Single story with per-model rater evaluations</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font"><a href="/api/v1/domains" style="color: var(--color-orange);">/api/v1/domains</a></td><td style="color: var(--fg-secondary); padding: 2px 8px;">Domain signal aggregates (HRCB, EQ, SO, TD, valence, arousal)</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">/api/v1/domain/{'{domain}'}</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Domain profile with recent evaluated stories</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">/api/v1/domain/{'{domain}'}/history</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Daily HRCB profile snapshots (?days=30, max 365)</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font"><a href="/api/v0/topstories.json" style="color: var(--color-orange);">/api/v0/topstories.json</a></td><td style="color: var(--fg-secondary); padding: 2px 8px;">HN-compatible: top 500 story IDs by HN score</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font"><a href="/api/v0/beststories.json" style="color: var(--color-orange);">/api/v0/beststories.json</a></td><td style="color: var(--fg-secondary); padding: 2px 8px;">HN-compatible: top 500 story IDs by HRCB score</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">/api/v0/item/{'{id}'}.json</td><td style="color: var(--fg-secondary); padding: 2px 8px;">HN-compatible item + <span class="score-font">hcb</span> extension object</td></tr>
         </table>
 
-        <p style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 20px;">
+        <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 20px;">
           All endpoints are public, CORS-enabled, and rate-limited to 200 requests/hour per IP.
-          <a href="/about#technical" style="color: #5b7279;">Methodology reference →</a>
+          <a href="/about#technical" style="color: var(--fg-secondary);">Methodology reference →</a>
         </p>
 
         {/* Bulk exports (coming soon) */}
-        <p style="color: #98a8a8; font-size: var(--font-base); font-weight: bold; margin: 20px 0 8px 0;">Bulk Exports <span style="color: #1a5568; font-size: var(--font-xs); font-weight: normal;">(coming soon)</span></p>
+        <p style="color: var(--fg-primary); font-size: var(--font-base); font-weight: bold; margin: 20px 0 8px 0;">Bulk Exports <span style="color: var(--color-border); font-size: var(--font-xs); font-weight: normal;">(coming soon)</span></p>
 
         <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 15px; background: #0a3040; border: 1px solid #0f3d50; border-radius: 4px; opacity: 0.7;" width="100%">
-          <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+          <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="padding: 4px 8px;">File</td>
             <td style="padding: 4px 8px;">Format</td>
             <td style="padding: 4px 8px;">Contents</td>
           </tr>
-          <tr><td style="color: #3a6272; padding: 2px 8px;" class="score-font">/api/v1/export/stories.csv</td><td style="color: #3a6272; padding: 2px 8px;">CSV</td><td style="color: #3a6272; padding: 2px 8px;">All evaluated stories with full signal data</td></tr>
-          <tr><td style="color: #3a6272; padding: 2px 8px;" class="score-font">/api/v1/export/stories.jsonl</td><td style="color: #3a6272; padding: 2px 8px;">JSONL</td><td style="color: #3a6272; padding: 2px 8px;">Same as CSV, newline-delimited JSON</td></tr>
-          <tr><td style="color: #3a6272; padding: 2px 8px;" class="score-font">/api/v1/export/domains.csv</td><td style="color: #3a6272; padding: 2px 8px;">CSV</td><td style="color: #3a6272; padding: 2px 8px;">All domain signal profiles</td></tr>
-          <tr><td style="color: #3a6272; padding: 2px 8px;" class="score-font">/api/v1/export/rater-evals.jsonl</td><td style="color: #3a6272; padding: 2px 8px;">JSONL</td><td style="color: #3a6272; padding: 2px 8px;">Per-model evaluation records (ML research)</td></tr>
+          <tr><td style="color: var(--color-disabled); padding: 2px 8px;" class="score-font">/api/v1/export/stories.csv</td><td style="color: var(--color-disabled); padding: 2px 8px;">CSV</td><td style="color: var(--color-disabled); padding: 2px 8px;">All evaluated stories with full signal data</td></tr>
+          <tr><td style="color: var(--color-disabled); padding: 2px 8px;" class="score-font">/api/v1/export/stories.jsonl</td><td style="color: var(--color-disabled); padding: 2px 8px;">JSONL</td><td style="color: var(--color-disabled); padding: 2px 8px;">Same as CSV, newline-delimited JSON</td></tr>
+          <tr><td style="color: var(--color-disabled); padding: 2px 8px;" class="score-font">/api/v1/export/domains.csv</td><td style="color: var(--color-disabled); padding: 2px 8px;">CSV</td><td style="color: var(--color-disabled); padding: 2px 8px;">All domain signal profiles</td></tr>
+          <tr><td style="color: var(--color-disabled); padding: 2px 8px;" class="score-font">/api/v1/export/rater-evals.jsonl</td><td style="color: var(--color-disabled); padding: 2px 8px;">JSONL</td><td style="color: var(--color-disabled); padding: 2px 8px;">Per-model evaluation records (ML research)</td></tr>
         </table>
 
-        <p style="color: #3a6272; font-size: var(--font-xs);">
+        <p style="color: var(--color-disabled); font-size: var(--font-xs);">
           License and citation information will be published here when bulk exports are available.
         </p>
       </td>

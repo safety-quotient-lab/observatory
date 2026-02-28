@@ -42,14 +42,14 @@ const jsonLd = {
 
         {/* ═══ TIER 1 — Always visible ═══ */}
 
-        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 15px;">
-          HN HRCB is a mirror of <a href="https://news.ycombinator.com" style="color: #d56500;">Hacker News</a> that
+        <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 15px;">
+          HN HRCB is a mirror of <a href="https://news.ycombinator.com" style="color: var(--color-orange);">Hacker News</a> that
           evaluates every story's linked content against the 30 articles and preamble of the UN Universal Declaration
           of Human Rights. Each evaluation produces a Human Rights Compatibility Bias (HRCB) score showing how the
           content's editorial and structural signals align with fundamental human rights provisions.
         </p>
 
-        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 15px;">
+        <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 15px;">
           A cron worker crawls HN stories every 5 minutes across 6 lists (top, new, best, ask, show, job),
           tracking all stories but only auto-evaluating those in the top 7 pages (210 stories) of the
           front page plus the top 30 from the best, ask, and show feeds. Stories outside this range are tracked but skipped unless manually triggered.
@@ -57,13 +57,13 @@ const jsonLd = {
           before dispatch. Evaluable content is cleaned and sent via a Cloudflare Queue. A separate consumer worker
           evaluates each URL against the UDHR methodology (v3.7) using Claude, with DCP caching per domain
           and content snapshots stored in R2. Results are displayed alongside standard HN metadata.
-          The evaluator operates as a <b style="color: #d56500;">Fair Witness</b> <span style="color: #5b7279;">(evidence breakdown)</span> — reporting only what is
+          The evaluator operates as a <b style="color: var(--color-orange);">Fair Witness</b> <span style="color: var(--fg-secondary);">(evidence breakdown)</span> — reporting only what is
           directly observable, with no inference beyond the evidence.
         </p>
 
         <h2 id="classification" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Core Construct: HRCB</h2>
 
-        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
+        <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
           <b>Human Rights Compatibility Bias (HRCB)</b> measures the directional lean
           of web content relative to the provisions of the UDHR.
           A positive score indicates content that aligns with UDHR provisions; a negative score indicates
@@ -71,9 +71,9 @@ const jsonLd = {
         </p>
 
         <div class="table-wrap">
-        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #093946; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
-          <tr style="color: #5b7279;">
-            <td class="score-font" style="color: #dc2626;">-1.0</td>
+        <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px;" width="100%">
+          <tr style="color: var(--fg-secondary);">
+            <td class="score-font" style="color: var(--color-negative);">-1.0</td>
             <td>&larr;</td>
             <td>Strong negative</td>
             <td>|</td>
@@ -81,7 +81,7 @@ const jsonLd = {
             <td>|</td>
             <td>Strong positive</td>
             <td>&rarr;</td>
-            <td class="score-font" style="color: #16a34a;">+1.0</td>
+            <td class="score-font" style="color: var(--color-positive);">+1.0</td>
           </tr>
         </table>
         </div>
@@ -92,14 +92,14 @@ const jsonLd = {
           <h2 id="classification" style="font-size: var(--font-base); margin: 12px 0 6px 0;">Classification Labels</h2>
 
           <div class="table-wrap">
-          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px; background: #093946; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
-            <tr><td style="color: #16a34a; padding: 2px 8px; width: 160px;">Strong positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.60 to +1.00</td></tr>
-            <tr><td style="color: #4ade80; padding: 2px 8px;">Positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.30 to +0.59</td></tr>
-            <tr><td style="color: #86efac; padding: 2px 8px;">Leaning positive</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">+0.10 to +0.29</td></tr>
-            <tr><td style="color: #5b7279; padding: 2px 8px;">Neutral</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.09 to +0.09</td></tr>
-            <tr><td style="color: #fca5a5; padding: 2px 8px;">Leaning negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.10 to -0.29</td></tr>
-            <tr><td style="color: #f87171; padding: 2px 8px;">Negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.30 to -0.59</td></tr>
-            <tr><td style="color: #dc2626; padding: 2px 8px;">Strong negative</td><td style="color: #5b7279; padding: 2px 8px;" class="score-font">-0.60 to -1.00</td></tr>
+          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px;" width="100%">
+            <tr><td style="color: var(--color-positive); padding: 2px 8px; width: 160px;">Strong positive</td><td style="color: var(--fg-secondary); padding: 2px 8px;" class="score-font">+0.60 to +1.00</td></tr>
+            <tr><td style="color: var(--color-positive-light); padding: 2px 8px;">Positive</td><td style="color: var(--fg-secondary); padding: 2px 8px;" class="score-font">+0.30 to +0.59</td></tr>
+            <tr><td style="color: var(--color-positive-faint); padding: 2px 8px;">Leaning positive</td><td style="color: var(--fg-secondary); padding: 2px 8px;" class="score-font">+0.10 to +0.29</td></tr>
+            <tr><td style="color: var(--fg-secondary); padding: 2px 8px;">Neutral</td><td style="color: var(--fg-secondary); padding: 2px 8px;" class="score-font">-0.09 to +0.09</td></tr>
+            <tr><td style="color: var(--color-negative-faint); padding: 2px 8px;">Leaning negative</td><td style="color: var(--fg-secondary); padding: 2px 8px;" class="score-font">-0.10 to -0.29</td></tr>
+            <tr><td style="color: var(--color-negative-light); padding: 2px 8px;">Negative</td><td style="color: var(--fg-secondary); padding: 2px 8px;" class="score-font">-0.30 to -0.59</td></tr>
+            <tr><td style="color: var(--color-negative); padding: 2px 8px;">Strong negative</td><td style="color: var(--fg-secondary); padding: 2px 8px;" class="score-font">-0.60 to -1.00</td></tr>
           </table>
           </div>
 
@@ -107,48 +107,48 @@ const jsonLd = {
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 12px;">
             <tr>
-              <td><span class="badge" style="background: rgba(43,144,216,0.15); color: #7d80d1;">Theme Tag</span></td>
-              <td style="color: #5b7279; padding-left: 6px;">Dominant human rights theme (e.g., "Privacy &amp; Surveillance", "Free Expression")</td>
+              <td><span class="badge" style="background: rgba(43,144,216,0.15); color: var(--color-violet);">Theme Tag</span></td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Dominant human rights theme (e.g., "Privacy &amp; Surveillance", "Free Expression")</td>
             </tr>
             <tr>
-              <td><span class="badge" style="background: rgba(34,211,238,0.15); color: #22d3ee;">Sentiment</span></td>
-              <td style="color: #5b7279; padding-left: 6px;">Overall disposition: Champions, Advocates, Acknowledges, Neutral, Neglects, Undermines, Hostile</td>
+              <td><span class="badge" style="background: rgba(34,211,238,0.15); color: var(--color-sentiment);">Sentiment</span></td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Overall disposition: Champions, Advocates, Acknowledges, Neutral, Neglects, Undermines, Hostile</td>
             </tr>
             <tr>
-              <td><span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279;">Summary</span></td>
-              <td style="color: #5b7279; padding-left: 6px;">2-3 sentence narrative summary in Fair Witness style</td>
+              <td><span class="badge" style="background: rgba(107,114,128,0.15); color: var(--fg-secondary);">Summary</span></td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">2-3 sentence narrative summary in Fair Witness style</td>
             </tr>
           </table>
 
           <h2 id="sentiment" style="font-size: var(--font-base); margin: 12px 0 6px 0;">Sentiment Labels</h2>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 6px;">
-            <tr><td><span class="badge" style="background: #16a34a22; color: #16a34a;">Champions</span></td><td style="color: #5b7279; padding-left: 6px;">Strongest positive alignment — content actively defends and promotes UDHR provisions</td></tr>
-            <tr><td><span class="badge" style="background: #4ade8022; color: #4ade80;">Advocates</span></td><td style="color: #5b7279; padding-left: 6px;">Actively promotes rights-aligned positions with clear editorial support</td></tr>
-            <tr><td><span class="badge" style="background: #86efac22; color: #86efac;">Acknowledges</span></td><td style="color: #5b7279; padding-left: 6px;">Recognizes rights issues without strong advocacy or opposition</td></tr>
-            <tr><td><span class="badge" style="background: #5b727922; color: #5b7279;">Neutral</span></td><td style="color: #5b7279; padding-left: 6px;">Balanced or no clear directional lean on human rights</td></tr>
-            <tr><td><span class="badge" style="background: #fca5a522; color: #fca5a5;">Neglects</span></td><td style="color: #5b7279; padding-left: 6px;">Overlooks or minimizes rights concerns that are relevant to the topic</td></tr>
-            <tr><td><span class="badge" style="background: #f8717122; color: #f87171;">Undermines</span></td><td style="color: #5b7279; padding-left: 6px;">Actively works against rights provisions through content or framing</td></tr>
-            <tr><td><span class="badge" style="background: #dc262622; color: #dc2626;">Hostile</span></td><td style="color: #5b7279; padding-left: 6px;">Strongest negative alignment — content attacks or denies fundamental rights</td></tr>
+            <tr><td><span class="badge" style="background: var(--color-positive)22; color: var(--color-positive);">Champions</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">Strongest positive alignment — content actively defends and promotes UDHR provisions</td></tr>
+            <tr><td><span class="badge" style="background: var(--color-positive-light)22; color: var(--color-positive-light);">Advocates</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">Actively promotes rights-aligned positions with clear editorial support</td></tr>
+            <tr><td><span class="badge" style="background: var(--color-positive-faint)22; color: var(--color-positive-faint);">Acknowledges</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">Recognizes rights issues without strong advocacy or opposition</td></tr>
+            <tr><td><span class="badge" style="background: var(--fg-secondary)22; color: var(--fg-secondary);">Neutral</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">Balanced or no clear directional lean on human rights</td></tr>
+            <tr><td><span class="badge" style="background: var(--color-negative-faint)22; color: var(--color-negative-faint);">Neglects</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">Overlooks or minimizes rights concerns that are relevant to the topic</td></tr>
+            <tr><td><span class="badge" style="background: var(--color-negative-light)22; color: var(--color-negative-light);">Undermines</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">Actively works against rights provisions through content or framing</td></tr>
+            <tr><td><span class="badge" style="background: var(--color-negative)22; color: var(--color-negative);">Hostile</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">Strongest negative alignment — content attacks or denies fundamental rights</td></tr>
           </table>
         </details>
 
         <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">No Data vs 0.0</h2>
 
         <div class="two-col" style="font-size: var(--font-base); margin-bottom: 15px;">
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-            <b style="color: #5b7279;">No Data</b><br>
-            <span style="color: #5b7279;">No relevant content for this UDHR article. The topic is simply absent.</span>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 8px;">
+            <b style="color: var(--fg-secondary);">No Data</b><br>
+            <span style="color: var(--fg-secondary);">No relevant content for this UDHR article. The topic is simply absent.</span>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-            <b style="color: #98a8a8;">0.0 (Neutral)</b><br>
-            <span style="color: #5b7279;">Relevant content exists but has balanced signals, netting to zero.</span>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 8px;">
+            <b style="color: var(--fg-primary);">0.0 (Neutral)</b><br>
+            <span style="color: var(--fg-secondary);">Relevant content exists but has balanced signals, netting to zero.</span>
           </div>
         </div>
 
         <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">The Universal Declaration of Human Rights</h2>
 
-        <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 15px;">
+        <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 15px;">
           Adopted by the United Nations General Assembly on 10 December 1948 (Resolution 217 A),
           the UDHR is a milestone document in the history of human rights. It has been translated
           into over 500 languages. The Declaration consists of a Preamble and 30 Articles covering civil, political,
@@ -161,20 +161,20 @@ const jsonLd = {
         <details open class="collapsible-section" style="margin-top: 20px;">
           <summary>Methodology</summary>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 10px 0 8px 0;">Signal Channels</p>
+          <p style="font-size: var(--font-base); color: var(--fg-primary); font-weight: bold; margin: 10px 0 8px 0;">Signal Channels</p>
 
           <div class="two-col" style="font-size: var(--font-base); margin-bottom: 15px;">
-            <div style="background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #60a5fa;">Editorial</b><br>
-              <span style="color: #5b7279;">What the content <b style="color: #98a8a8;">says</b>. Analyzes text, arguments, framing, and sourcing.</span>
+            <div style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; padding: 8px;">
+              <b style="color: var(--channel-editorial);">Editorial</b><br>
+              <span style="color: var(--fg-secondary);">What the content <b style="color: var(--fg-primary);">says</b>. Analyzes text, arguments, framing, and sourcing.</span>
             </div>
-            <div style="background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #22d3ee;">Structural</b><br>
-              <span style="color: #5b7279;">What the site <b style="color: #98a8a8;">does</b>. Examines privacy, accessibility, tracking, access models.</span>
+            <div style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; padding: 8px;">
+              <b style="color: var(--color-sentiment);">Structural</b><br>
+              <span style="color: var(--fg-secondary);">What the site <b style="color: var(--fg-primary);">does</b>. Examines privacy, accessibility, tracking, access models.</span>
             </div>
           </div>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
             Channels are weighted by content type (e.g., Editorial=0.6, Structural=0.4).
             Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.
           </p>
@@ -182,91 +182,91 @@ const jsonLd = {
           <h2 id="content-types" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Content Type Weights</h2>
 
           <div class="table-wrap">
-          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 15px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
-            <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 15px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px;" width="100%">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td style="padding: 4px 8px;">Code</td>
               <td style="padding: 4px 8px;">Type</td>
               <td style="padding: 4px 8px; text-align: center;">E</td>
               <td style="padding: 4px 8px; text-align: center;">S</td>
             </tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">ED</td><td style="color: #98a8a8; padding: 2px 8px;">Editorial / News</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.65</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.35</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">PO</td><td style="color: #98a8a8; padding: 2px 8px;">Policy / Legal</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.70</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.30</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">LP</td><td style="color: #98a8a8; padding: 2px 8px;">Landing Page / Marketing</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.40</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.60</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">CM</td><td style="color: #98a8a8; padding: 2px 8px;">Community / Forum</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.55</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.45</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">DC</td><td style="color: #98a8a8; padding: 2px 8px;">Documentation / Reference</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.50</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.50</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">AC</td><td style="color: #98a8a8; padding: 2px 8px;">Academic / Research</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.75</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.25</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">HR</td><td style="color: #98a8a8; padding: 2px 8px;">Human Rights Focused</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.60</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.40</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">PR</td><td style="color: #98a8a8; padding: 2px 8px;">Product / Service</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.40</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.60</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">PB</td><td style="color: #98a8a8; padding: 2px 8px;">Personal Blog</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.70</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.30</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">SO</td><td style="color: #98a8a8; padding: 2px 8px;">Social Media</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.50</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.50</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">OT</td><td style="color: #98a8a8; padding: 2px 8px;">Other</td><td style="color: #60a5fa; padding: 2px 8px; text-align: center;" class="score-font">0.55</td><td style="color: #22d3ee; padding: 2px 8px; text-align: center;" class="score-font">0.45</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">ED</td><td style="color: var(--fg-primary); padding: 2px 8px;">Editorial / News</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.65</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.35</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">PO</td><td style="color: var(--fg-primary); padding: 2px 8px;">Policy / Legal</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.70</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.30</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">LP</td><td style="color: var(--fg-primary); padding: 2px 8px;">Landing Page / Marketing</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.40</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.60</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">CM</td><td style="color: var(--fg-primary); padding: 2px 8px;">Community / Forum</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.55</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.45</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">DC</td><td style="color: var(--fg-primary); padding: 2px 8px;">Documentation / Reference</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.50</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.50</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">AC</td><td style="color: var(--fg-primary); padding: 2px 8px;">Academic / Research</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.75</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.25</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">HR</td><td style="color: var(--fg-primary); padding: 2px 8px;">Human Rights Focused</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.60</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.40</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">PR</td><td style="color: var(--fg-primary); padding: 2px 8px;">Product / Service</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.40</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.60</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">PB</td><td style="color: var(--fg-primary); padding: 2px 8px;">Personal Blog</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.70</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.30</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">SO</td><td style="color: var(--fg-primary); padding: 2px 8px;">Social Media</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.50</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.50</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">OT</td><td style="color: var(--fg-primary); padding: 2px 8px;">Other</td><td style="color: var(--channel-editorial); padding: 2px 8px; text-align: center;" class="score-font">0.55</td><td style="color: var(--color-sentiment); padding: 2px 8px; text-align: center;" class="score-font">0.45</td></tr>
           </table>
           </div>
 
           <h3 id="content-type-consensus" style="font-size: var(--font-sm); margin: 15px 0 8px 0;">Content Type Consensus Vote</h3>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
             Content type classification directly determines the E:S weight split, so misclassification can meaningfully distort the final HRCB score.
             For example, an editorial article (ED: E=0.65, S=0.35) misclassified as a landing page (LP: E=0.40, S=0.60) shifts 25 percentage points of weight from the editorial channel to the structural channel.
           </p>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
-            When multiple models evaluate the same story, the system uses a <b style="color: #98a8a8;">majority vote</b> to determine the consensus content type rather than trusting any single model's classification.
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
+            When multiple models evaluate the same story, the system uses a <b style="color: var(--fg-primary);">majority vote</b> to determine the consensus content type rather than trusting any single model's classification.
             Each full-mode rater contributes one vote; lite-mode raters do not vote (they don't classify content type). The plurality type becomes the consensus content type used for weight assignment.
           </p>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
-            Validation metrics tracked on the <a href="/status/models" style="color: #2b90d8;">models dashboard</a>:
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
+            Validation metrics tracked on the <a href="/status/models" style="color: var(--color-blue);">models dashboard</a>:
           </p>
-          <ul style="color: #5b7279; font-size: var(--font-sm); line-height: 1.6; padding-left: 20px; margin-bottom: 12px;">
-            <li><b style="color: #98a8a8;">Suspect rate</b> — structural-heavy types (PO, LP, PR, AC) where the structural channel has no data, suggesting misclassification</li>
-            <li><b style="color: #98a8a8;">Cross-model disagreement</b> — stories where raters assigned different content types, indicating ambiguous content</li>
+          <ul style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; padding-left: 20px; margin-bottom: 12px;">
+            <li><b style="color: var(--fg-primary);">Suspect rate</b> — structural-heavy types (PO, LP, PR, AC) where the structural channel has no data, suggesting misclassification</li>
+            <li><b style="color: var(--fg-primary);">Cross-model disagreement</b> — stories where raters assigned different content types, indicating ambiguous content</li>
           </ul>
 
           <h2 id="pipeline" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Per-Provision Pipeline</h2>
 
-          <div style="background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 12px; margin-bottom: 12px; overflow-x: auto;">
-            <span style="color: #98a8a8;" class="score-font">Content</span>
-            <span style="color: #5b7279;"> &rarr; </span>
-            <span style="color: #60a5fa;" class="score-font">E</span>
-            <span style="color: #5b7279;"> + </span>
-            <span style="color: #22d3ee;" class="score-font">S</span>
-            <span style="color: #5b7279;"> &rarr; </span>
-            <span style="color: #f59e0b;" class="score-font">Weights</span>
-            <span style="color: #5b7279;"> &rarr; </span>
-            <span style="color: #98a8a8;" class="score-font">Combined</span>
-            <span style="color: #5b7279;"> &rarr; </span>
-            <span style="color: #a855f7;" class="score-font">DCP</span>
-            <span style="color: #5b7279;"> &rarr; </span>
-            <span style="color: #4ade80;" class="score-font">Final</span>
-            <span style="color: #5b7279;"> &rarr; </span>
-            <span style="color: #d56500;" class="score-font">HRCB aggregate</span>
+          <div style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; padding: 12px; margin-bottom: 12px; overflow-x: auto;">
+            <span style="color: var(--fg-primary);" class="score-font">Content</span>
+            <span style="color: var(--fg-secondary);"> &rarr; </span>
+            <span style="color: var(--channel-editorial);" class="score-font">E</span>
+            <span style="color: var(--fg-secondary);"> + </span>
+            <span style="color: var(--color-sentiment);" class="score-font">S</span>
+            <span style="color: var(--fg-secondary);"> &rarr; </span>
+            <span style="color: var(--color-amber);" class="score-font">Weights</span>
+            <span style="color: var(--fg-secondary);"> &rarr; </span>
+            <span style="color: var(--fg-primary);" class="score-font">Combined</span>
+            <span style="color: var(--fg-secondary);"> &rarr; </span>
+            <span style="color: var(--color-inference);" class="score-font">DCP</span>
+            <span style="color: var(--fg-secondary);"> &rarr; </span>
+            <span style="color: var(--color-positive-light);" class="score-font">Final</span>
+            <span style="color: var(--fg-secondary);"> &rarr; </span>
+            <span style="color: var(--color-orange);" class="score-font">HRCB aggregate</span>
           </div>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 12px;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 12px;">
             Each of 31 UDHR provisions (Preamble + Articles 1-30) is scored independently on both channels. Per-provision fields:
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 15px;" width="100%">
-            <tr><td style="color: #d56500; padding: 2px 8px; width: 90px;" class="score-font">editorial</td><td style="color: #5b7279; padding: 2px 8px;">Editorial channel score for this provision</td><td style="color: #98a8a8; padding: 2px 8px; width: 100px; text-align: right;" class="score-font">[-1, +1]</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">structural</td><td style="color: #5b7279; padding: 2px 8px;">Structural channel score for this provision</td><td style="color: #98a8a8; padding: 2px 8px; text-align: right;" class="score-font">[-1, +1]</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">combined</td><td style="color: #5b7279; padding: 2px 8px;">Content-type-weighted blend of E + S</td><td style="color: #98a8a8; padding: 2px 8px; text-align: right;" class="score-font">[-1, +1]</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">final</td><td style="color: #5b7279; padding: 2px 8px;">After DCP modifier (&plusmn;0.30 max per article)</td><td style="color: #98a8a8; padding: 2px 8px; text-align: right;" class="score-font">[-1, +1]</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">evidence</td><td style="color: #5b7279; padding: 2px 8px;">Evidence strength for this provision</td><td style="color: #98a8a8; padding: 2px 8px; text-align: right;" class="score-font">H / M / L / ND</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">directionality</td><td style="color: #5b7279; padding: 2px 8px;">How the content engages with this right</td><td style="color: #98a8a8; padding: 2px 8px; text-align: right;" class="score-font">A / P / F / C</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px; width: 90px;" class="score-font">editorial</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Editorial channel score for this provision</td><td style="color: var(--fg-primary); padding: 2px 8px; width: 100px; text-align: right;" class="score-font">[-1, +1]</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">structural</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Structural channel score for this provision</td><td style="color: var(--fg-primary); padding: 2px 8px; text-align: right;" class="score-font">[-1, +1]</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">combined</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Content-type-weighted blend of E + S</td><td style="color: var(--fg-primary); padding: 2px 8px; text-align: right;" class="score-font">[-1, +1]</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">final</td><td style="color: var(--fg-secondary); padding: 2px 8px;">After DCP modifier (&plusmn;0.30 max per article)</td><td style="color: var(--fg-primary); padding: 2px 8px; text-align: right;" class="score-font">[-1, +1]</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">evidence</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Evidence strength for this provision</td><td style="color: var(--fg-primary); padding: 2px 8px; text-align: right;" class="score-font">H / M / L / ND</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">directionality</td><td style="color: var(--fg-secondary); padding: 2px 8px;">How the content engages with this right</td><td style="color: var(--fg-primary); padding: 2px 8px; text-align: right;" class="score-font">A / P / F / C</td></tr>
           </table>
 
           <h2 id="setl" style="font-size: var(--font-base); margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</h2>
 
-          <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
             SETL measures the divergence between editorial and structural signals for each article.
             It captures whether a site's words and infrastructure tell different stories.
           </p>
 
           <div class="table-wrap">
-          <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
-            <tr style="color: #5b7279;">
-              <td class="score-font" style="color: #dc2626;">-1.0</td>
+          <table cellpadding="4" cellspacing="0" style="font-size: var(--font-base); margin: 10px 0; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px;" width="100%">
+            <tr style="color: var(--fg-secondary);">
+              <td class="score-font" style="color: var(--color-negative);">-1.0</td>
               <td>&larr;</td>
               <td>S-dominant</td>
               <td>|</td>
@@ -274,43 +274,43 @@ const jsonLd = {
               <td>|</td>
               <td>E-dominant</td>
               <td>&rarr;</td>
-              <td class="score-font" style="color: #16a34a;">+1.0</td>
+              <td class="score-font" style="color: var(--color-positive);">+1.0</td>
             </tr>
           </table>
           </div>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
             Formula: <span class="score-font">sign(E-S) &times; &radic;(|E-S| &times; max(|E|, |S|))</span>.
             A high absolute SETL means the site's content and infrastructure are misaligned on human rights.
           </p>
 
           <h2 id="fair-witness" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Fair Witness Evidence Layer</h2>
 
-          <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
             Inspired by Heinlein's Fair Witnesses from <i>Stranger in a Strange Land</i>,
             every evaluation separates its evidence into two categories:
           </p>
 
           <div class="two-col" style="font-size: var(--font-base); margin-bottom: 10px;">
-            <div style="background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #22c55e;">Observable Facts</b><br>
-              <span style="color: #5b7279;">Directly verifiable statements grounded in page content. Any reader could confirm these by visiting the page.</span>
+            <div style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; padding: 8px;">
+              <b style="color: var(--color-positive-vivid);">Observable Facts</b><br>
+              <span style="color: var(--fg-secondary);">Directly verifiable statements grounded in page content. Any reader could confirm these by visiting the page.</span>
             </div>
-            <div style="background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; padding: 8px;">
-              <b style="color: #a855f7;">Inferences</b><br>
-              <span style="color: #5b7279;">Interpretive conclusions drawn from the observable evidence. These explain <i>why</i> the evidence maps to the score.</span>
+            <div style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; padding: 8px;">
+              <b style="color: var(--color-inference);">Inferences</b><br>
+              <span style="color: var(--fg-secondary);">Interpretive conclusions drawn from the observable evidence. These explain <i>why</i> the evidence maps to the score.</span>
             </div>
           </div>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">
-            The <b style="color: #98a8a8;">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">
+            The <b style="color: var(--fg-primary);">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts
             to total evidence items. A high ratio means the evaluation is well-grounded in verifiable observations;
-            a low ratio means more interpretive weight. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7; font-size: var(--font-xs);">Fair Witness</span>
+            a low ratio means more interpretive weight. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference); font-size: var(--font-xs);">Fair Witness</span>
             on any item page to switch between the standard view and a stripped-down view showing only the evidence breakdown.
           </p>
 
-          <p style="font-size: var(--font-sm); color: #98a8a8; font-weight: bold; margin: 12px 0 6px 0;">FW Ratio</p>
-          <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
+          <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 12px 0 6px 0;">FW Ratio</p>
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
             <span class="score-font">FW Ratio = observable_facts / (observable_facts + inferences)</span><br>
             Scale [0, 1]. Higher = evaluation more grounded in verifiable observations; lower = more interpretive weight.
           </p>
@@ -319,25 +319,25 @@ const jsonLd = {
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 10px;">
             <tr>
-              <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">High</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Direct, explicit content with strong sourcing (max score 1.0)</td>
+              <td><span class="badge" style="background: rgba(34,197,94,0.2); color: var(--color-positive-vivid);">High</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Direct, explicit content with strong sourcing (max score 1.0)</td>
             </tr>
             <tr>
-              <td><span class="badge" style="background: rgba(234,179,8,0.2); color: #eab308;">Medium</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Clear signal but may be secondary (max score 0.7)</td>
+              <td><span class="badge" style="background: rgba(234,179,8,0.2); color: var(--color-warning);">Medium</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Clear signal but may be secondary (max score 0.7)</td>
             </tr>
             <tr>
-              <td><span class="badge" style="background: rgba(107,114,128,0.2); color: #6b7280;">Low</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Tangential, indirect, or weakly sourced (max score 0.4)</td>
+              <td><span class="badge" style="background: rgba(107,114,128,0.2); color: var(--color-muted);">Low</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Tangential, indirect, or weakly sourced (max score 0.4)</td>
             </tr>
             <tr>
-              <td><span class="badge" style="background: rgba(91,114,121,0.1); color: #5b7279;">ND</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Topic absent from content — not counted in aggregate (score 0.0)</td>
+              <td><span class="badge" style="background: rgba(91,114,121,0.1); color: var(--fg-secondary);">ND</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Topic absent from content — not counted in aggregate (score 0.0)</td>
             </tr>
           </table>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 15px;">
-            <b style="color: #98a8a8;">Confidence</b> is an evidence-weighted aggregate across all 31 provisions:
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
+            <b style="color: var(--fg-primary);">Confidence</b> is an evidence-weighted aggregate across all 31 provisions:
             H=1.0, M=0.6, L=0.2, ND=0.0. Higher confidence means more provisions had strong evidence.
           </p>
 
@@ -345,53 +345,53 @@ const jsonLd = {
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
             <tr>
-              <td><span class="badge" style="background: rgba(129,140,248,0.2); color: #7d80d1;">Advocacy</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Explicitly argues for or against a right</td>
+              <td><span class="badge" style="background: rgba(129,140,248,0.2); color: var(--color-violet);">Advocacy</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Explicitly argues for or against a right</td>
             </tr>
             <tr>
-              <td><span class="badge" style="background: rgba(34,211,238,0.2); color: #22d3ee;">Practice</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Site infrastructure reflects a rights stance</td>
+              <td><span class="badge" style="background: rgba(34,211,238,0.2); color: var(--color-sentiment);">Practice</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Site infrastructure reflects a rights stance</td>
             </tr>
             <tr>
-              <td><span class="badge" style="background: rgba(167,139,250,0.2); color: #a78bfa;">Framing</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Presents issues in a rights-aligned or rights-opposed frame</td>
+              <td><span class="badge" style="background: rgba(167,139,250,0.2); color: var(--channel-structural);">Framing</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Presents issues in a rights-aligned or rights-opposed frame</td>
             </tr>
             <tr>
-              <td><span class="badge" style="background: rgba(251,146,60,0.2); color: #fb923c;">Coverage</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Factual content relevant to human rights topics</td>
+              <td><span class="badge" style="background: rgba(251,146,60,0.2); color: var(--color-amber-light);">Coverage</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Factual content relevant to human rights topics</td>
             </tr>
           </table>
 
           <h2 id="volatility" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Volatility</h2>
 
-          <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
             Standard deviation of per-provision combined scores. Measures how uniformly content aligns across different rights.
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
-            <tr><td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">Low</span></td><td style="color: #5b7279; padding-left: 6px;">&lt; 0.10 — Consistent alignment across provisions</td></tr>
-            <tr><td><span class="badge" style="background: rgba(234,179,8,0.2); color: #eab308;">Medium</span></td><td style="color: #5b7279; padding-left: 6px;">0.10 - 0.25 — Mixed signals across provisions</td></tr>
-            <tr><td><span class="badge" style="background: rgba(220,38,38,0.2); color: #dc2626;">High</span></td><td style="color: #5b7279; padding-left: 6px;">&gt; 0.25 — Aligns on some rights but conflicts on others</td></tr>
+            <tr><td><span class="badge" style="background: rgba(34,197,94,0.2); color: var(--color-positive-vivid);">Low</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">&lt; 0.10 — Consistent alignment across provisions</td></tr>
+            <tr><td><span class="badge" style="background: rgba(234,179,8,0.2); color: var(--color-warning);">Medium</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">0.10 - 0.25 — Mixed signals across provisions</td></tr>
+            <tr><td><span class="badge" style="background: rgba(220,38,38,0.2); color: var(--color-negative);">High</span></td><td style="color: var(--fg-secondary); padding-left: 6px;">&gt; 0.25 — Aligns on some rights but conflicts on others</td></tr>
           </table>
 
           <h2 id="consensus" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Consensus (Multi-Model)</h2>
 
-          <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
             When multiple models evaluate the same story, a consensus score is computed as a weighted mean
             across rater evaluations (full evaluations = 1.0 weight, lite = 0.5 weight).
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
-            <tr><td style="color: #d56500; padding: 2px 8px; width: 90px;" class="score-font">Score</td><td style="color: #5b7279; padding: 2px 8px;">Weighted mean across all rater evals [-1, +1]</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">Spread</td><td style="color: #5b7279; padding: 2px 8px;">Max minus min score across raters — measures disagreement</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">Count</td><td style="color: #5b7279; padding: 2px 8px;">Number of models that contributed evaluations</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px; width: 90px;" class="score-font">Score</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Weighted mean across all rater evals [-1, +1]</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">Spread</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Max minus min score across raters — measures disagreement</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">Count</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Number of models that contributed evaluations</td></tr>
           </table>
 
           <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">How Evaluations Work</h2>
 
-          <ol style="color: #5b7279; line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
+          <ol style="color: var(--fg-secondary); line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
             <li>A URL from HN's top 7 pages (plus top best/ask/show) is fetched as the unit of analysis (other stories can be manually triggered)</li>
-            <li>The page's content type is classified (Editorial, Community, HR, etc.); when multiple models evaluate the same story, a <a href="#content-type-consensus" style="color: #2b90d8;">majority vote</a> determines the consensus type</li>
+            <li>The page's content type is classified (Editorial, Community, HR, etc.); when multiple models evaluate the same story, a <a href="#content-type-consensus" style="color: var(--color-blue);">majority vote</a> determines the consensus type</li>
             <li>Channel weights are assigned based on the consensus content type</li>
             <li>A Domain Context Profile (DCP) is constructed from 8 domain-level elements</li>
             <li>Each of 31 UDHR provisions is scored for editorial and structural signals</li>
@@ -404,29 +404,29 @@ const jsonLd = {
 
           <h2 id="eval-modes" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Evaluation Modes</h2>
 
-          <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
             Two evaluation modes serve different cost/quality trade-offs. Stories with only a lite evaluation
-            show <span style="color: #d56500; font-family: var(--font-mono);">~lite</span> in the feed.
+            show <span style="color: var(--color-orange); font-family: var(--font-mono);">~lite</span> in the feed.
           </p>
 
           <div class="table-wrap">
-          <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-bottom: 10px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;">
-            <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;"><td style="padding: 4px 8px;"></td><td style="padding: 4px 8px;">Full</td><td style="padding: 4px 8px; color: #d56500;">~lite</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px; white-space: nowrap;" class="score-font">Channels</td><td style="color: #5b7279; padding: 4px 8px;">Editorial + Structural</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">Editorial only</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Provisions</td><td style="color: #5b7279; padding: 4px 8px;">31 per-provision scores</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">Single aggregate score</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">DCP</td><td style="color: #5b7279; padding: 4px 8px;">Yes (8 domain elements)</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">No</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Fair Witness</td><td style="color: #5b7279; padding: 4px 8px;">Yes (facts + inferences)</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">No</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Supplementary</td><td style="color: #5b7279; padding: 4px 8px;">All 9 signals</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">5 (EQ, SO, TD, valence, arousal) + tone</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">SETL</td><td style="color: #5b7279; padding: 4px 8px;">Yes</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">No (single channel)</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Confidence</td><td style="color: #5b7279; padding: 4px 8px;">Evidence-weighted</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">N/A</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Output tokens</td><td style="color: #5b7279; padding: 4px 8px;">~4-5K</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">~200-400</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Schema</td><td style="color: #5b7279; padding: 4px 8px;">3.7</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">lite-1.4</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Models</td><td style="color: #5b7279; padding: 4px 8px;">Claude Haiku 4.5, DeepSeek V3, Llama 3.3 70B</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td></tr>
-            <tr><td style="color: #98a8a8; padding: 4px 8px;" class="score-font">Feed label</td><td style="color: #5b7279; padding: 4px 8px;">HRCB</td><td style="color: #5b7279; padding: 4px 8px; border-left: 1px solid #1a5568;">~lite</td></tr>
+          <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-bottom: 10px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px;">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;"><td style="padding: 4px 8px;"></td><td style="padding: 4px 8px;">Full</td><td style="padding: 4px 8px; color: var(--color-orange);">~lite</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px; white-space: nowrap;" class="score-font">Channels</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Editorial + Structural</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Editorial only</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Provisions</td><td style="color: var(--fg-secondary); padding: 4px 8px;">31 per-provision scores</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Single aggregate score</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">DCP</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Yes (8 domain elements)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">No</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Fair Witness</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Yes (facts + inferences)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">No</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Supplementary</td><td style="color: var(--fg-secondary); padding: 4px 8px;">All 9 signals</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">5 (EQ, SO, TD, valence, arousal) + tone</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">SETL</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Yes</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">No (single channel)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Confidence</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Evidence-weighted</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">N/A</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Output tokens</td><td style="color: var(--fg-secondary); padding: 4px 8px;">~4-5K</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">~200-400</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Schema</td><td style="color: var(--fg-secondary); padding: 4px 8px;">3.7</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">lite-1.4</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Claude Haiku 4.5, DeepSeek V3, Llama 3.3 70B</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Feed label</td><td style="color: var(--fg-secondary); padding: 4px 8px;">HRCB</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">~lite</td></tr>
           </table>
           </div>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 0;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 0;">
             Lite item pages display an editorial summary card instead of the full heatmap.
             Lite scores are editorial-only and not directly comparable to full weighted means.
           </p>
@@ -437,90 +437,90 @@ const jsonLd = {
         <details class="collapsible-section">
           <summary>Supplementary Signals & Factions</summary>
 
-          <p id="supplementary" style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 10px 0 8px 0;">Supplementary Signals</p>
+          <p id="supplementary" style="font-size: var(--font-base); color: var(--fg-primary); font-weight: bold; margin: 10px 0 8px 0;">Supplementary Signals</p>
 
-          <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
             Nine supplementary signals capture <i>how</i> content communicates, orthogonal to HRCB which measures
             <i>directional lean</i>. These are grounded in established psychometric and information quality frameworks.
-            See the <a href="/signals" style="color: #259d94;">live signal dashboard</a> for global averages and distributions.
+            See the <a href="/signals" style="color: var(--channel-hrcb);">live signal dashboard</a> for global averages and distributions.
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;" width="100%">
             <tr>
-              <td id="eq"><span class="badge" style="background: rgba(245,158,11,0.15); color: #f59e0b;">EQ</span></td>
-              <td style="color: #98a8a8; padding-left: 6px; width: 140px;">Epistemic Quality</td>
-              <td style="color: #5b7279; padding-left: 6px;">Source quality, evidence reasoning, uncertainty handling, purpose transparency. Based on the CRAAP Test framework from library science.</td>
+              <td id="eq"><span class="badge" style="background: rgba(245,158,11,0.15); color: var(--color-amber);">EQ</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px; width: 140px;">Epistemic Quality</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Source quality, evidence reasoning, uncertainty handling, purpose transparency. Based on the CRAAP Test framework from library science.</td>
             </tr>
             <tr>
-              <td id="pt"><span class="badge" style="background: rgba(220,38,38,0.15); color: #dc2626;">PT</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Propaganda Flags</td>
-              <td style="color: #5b7279; padding-left: 6px;">Detects 18 propaganda techniques (loaded language, strawman, whataboutism, etc.). Based on Da San Martino et al. (2019) PTC-18 corpus.</td>
+              <td id="pt"><span class="badge" style="background: rgba(220,38,38,0.15); color: var(--color-negative);">PT</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Propaganda Flags</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Detects 18 propaganda techniques (loaded language, strawman, whataboutism, etc.). Based on Da San Martino et al. (2019) PTC-18 corpus.</td>
             </tr>
             <tr>
-              <td id="so"><span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">SO</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Solution Orientation</td>
-              <td style="color: #5b7279; padding-left: 6px;">Problem-only vs solution-oriented framing, reader agency score.</td>
+              <td id="so"><span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive);">SO</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Solution Orientation</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Problem-only vs solution-oriented framing, reader agency score.</td>
             </tr>
             <tr>
-              <td id="et"><span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7;">ET</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Emotional Tone</td>
-              <td style="color: #5b7279; padding-left: 6px;">Primary tone label + valence/arousal/dominance dimensions. Based on Russell's Circumplex Model of Affect.</td>
+              <td id="et"><span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference);">ET</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Emotional Tone</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Primary tone label + valence/arousal/dominance dimensions. Based on Russell's Circumplex Model of Affect.</td>
             </tr>
             <tr>
-              <td id="sr"><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">SR</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Stakeholder Voice</td>
-              <td style="color: #5b7279; padding-left: 6px;">Who speaks vs who is spoken about, perspective count, voice balance. Power-axis taxonomy aligned with UDHR rights-holder/duty-bearer framework.</td>
+              <td id="sr"><span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">SR</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Stakeholder Voice</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Who speaks vs who is spoken about, perspective count, voice balance. Power-axis taxonomy aligned with UDHR rights-holder/duty-bearer framework.</td>
             </tr>
             <tr>
-              <td id="tf"><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">TF</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Temporal Framing</td>
-              <td style="color: #5b7279; padding-left: 6px;">Retrospective, present, or prospective focus; time horizon from immediate to long-term.</td>
+              <td id="tf"><span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">TF</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Temporal Framing</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Retrospective, present, or prospective focus; time horizon from immediate to long-term.</td>
             </tr>
             <tr>
-              <td id="gs"><span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa;">GS</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Geographic Scope</td>
-              <td style="color: #5b7279; padding-left: 6px;">Local, national, regional, or global scope with specific regions mentioned.</td>
+              <td id="gs"><span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">GS</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Geographic Scope</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Local, national, regional, or global scope with specific regions mentioned.</td>
             </tr>
             <tr>
-              <td id="cl"><span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308;">CL</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Complexity Level</td>
-              <td style="color: #5b7279; padding-left: 6px;">Reading level, jargon density, and assumed knowledge requirements.</td>
+              <td id="cl"><span class="badge" style="background: rgba(234,179,8,0.15); color: var(--color-warning);">CL</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Complexity Level</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Reading level, jargon density, and assumed knowledge requirements.</td>
             </tr>
             <tr>
-              <td id="td"><span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a;">TD</span></td>
-              <td style="color: #98a8a8; padding-left: 6px;">Transparency</td>
-              <td style="color: #5b7279; padding-left: 6px;">Author identified, conflicts disclosed, funding disclosed.</td>
+              <td id="td"><span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive);">TD</span></td>
+              <td style="color: var(--fg-primary); padding-left: 6px;">Transparency</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Author identified, conflicts disclosed, funding disclosed.</td>
             </tr>
           </table>
 
           <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">Domain Signal Profiles (Factions)</h2>
 
-          <p style="font-size: var(--font-base); color: #5b7279; margin-bottom: 10px;">
-            The <a href="/factions" style="color: #60a5fa;">Factions page</a> clusters domains by <em>editorial character</em>
+          <p style="font-size: var(--font-base); color: var(--fg-secondary); margin-bottom: 10px;">
+            The <a href="/factions" style="color: var(--channel-editorial);">Factions page</a> clusters domains by <em>editorial character</em>
             &mdash; how they cover topics, not just what they score. Instead of using the 31-dimension UDHR fingerprint,
             it clusters on 8 normalized supplementary signal dimensions:
           </p>
 
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
             <tr>
-              <td style="color: #60a5fa;">EQ</td><td style="color: #5b7279;">Epistemic Quality</td>
-              <td style="color: #a78bfa;">SR</td><td style="color: #5b7279;">Stakeholder Representation</td>
+              <td style="color: var(--channel-editorial);">EQ</td><td style="color: var(--fg-secondary);">Epistemic Quality</td>
+              <td style="color: var(--channel-structural);">SR</td><td style="color: var(--fg-secondary);">Stakeholder Representation</td>
             </tr>
             <tr>
-              <td style="color: #4ade80;">SO</td><td style="color: #5b7279;">Solution Orientation</td>
-              <td style="color: #34d399;">TD</td><td style="color: #5b7279;">Transparency & Disclosure</td>
+              <td style="color: var(--color-positive-light);">SO</td><td style="color: var(--fg-secondary);">Solution Orientation</td>
+              <td style="color: var(--color-positive-medium);">TD</td><td style="color: var(--fg-secondary);">Transparency & Disclosure</td>
             </tr>
             <tr>
-              <td style="color: #f87171;">PT</td><td style="color: #5b7279;">Propaganda (inverted)</td>
-              <td style="color: #fb923c;">AR</td><td style="color: #5b7279;">Arousal</td>
+              <td style="color: var(--color-negative-light);">PT</td><td style="color: var(--fg-secondary);">Propaganda (inverted)</td>
+              <td style="color: var(--color-amber-light);">AR</td><td style="color: var(--fg-secondary);">Arousal</td>
             </tr>
             <tr>
-              <td style="color: #fbbf24;">VA</td><td style="color: #5b7279;">Valence</td>
-              <td style="color: #22d3ee;">FW</td><td style="color: #5b7279;">Fair Witness ratio</td>
+              <td style="color: var(--color-warning-light);">VA</td><td style="color: var(--fg-secondary);">Valence</td>
+              <td style="color: var(--color-sentiment);">FW</td><td style="color: var(--fg-secondary);">Fair Witness ratio</td>
             </tr>
           </table>
 
-          <p style="font-size: var(--font-base); color: #5b7279; margin-bottom: 10px;">
+          <p style="font-size: var(--font-base); color: var(--fg-secondary); margin-bottom: 10px;">
             Each dimension is z-normalized (zero mean, unit variance) across all domains with 3+ evaluations.
             Cosine similarity on the resulting 8D vectors measures editorial character similarity. Domains are
             clustered using agglomerative hierarchical clustering with average linkage at golden ratio thresholds:
@@ -528,24 +528,24 @@ const jsonLd = {
 
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); margin-bottom: 10px;">
             <tr>
-              <td style="color: #a78bfa; font-family: var(--font-mono);">Faction</td>
-              <td style="color: #5b7279;">sim &ge; 1/&#x3C6; (0.618) &mdash; core editorial alignment</td>
+              <td style="color: var(--channel-structural); font-family: var(--font-mono);">Faction</td>
+              <td style="color: var(--fg-secondary);">sim &ge; 1/&#x3C6; (0.618) &mdash; core editorial alignment</td>
             </tr>
             <tr>
-              <td style="color: #34d399; font-family: var(--font-mono);">Alliance</td>
-              <td style="color: #5b7279;">sim &ge; 1/&#x3C6;&sup2; (0.382) &mdash; sympathetic but distinct</td>
+              <td style="color: var(--color-positive-medium); font-family: var(--font-mono);">Alliance</td>
+              <td style="color: var(--fg-secondary);">sim &ge; 1/&#x3C6;&sup2; (0.382) &mdash; sympathetic but distinct</td>
             </tr>
             <tr>
-              <td style="color: #fbbf24; font-family: var(--font-mono);">Acquaintance</td>
-              <td style="color: #5b7279;">sim &ge; 1/&#x3C6;&sup3; (0.236) &mdash; occasional overlap</td>
+              <td style="color: var(--color-warning-light); font-family: var(--font-mono);">Acquaintance</td>
+              <td style="color: var(--fg-secondary);">sim &ge; 1/&#x3C6;&sup3; (0.236) &mdash; occasional overlap</td>
             </tr>
             <tr>
-              <td style="color: #5b7279; font-family: var(--font-mono);">Neutral</td>
-              <td style="color: #5b7279;">sim &ge; 0 &mdash; no meaningful relationship</td>
+              <td style="color: var(--fg-secondary); font-family: var(--font-mono);">Neutral</td>
+              <td style="color: var(--fg-secondary);">sim &ge; 0 &mdash; no meaningful relationship</td>
             </tr>
             <tr>
-              <td style="color: #f87171; font-family: var(--font-mono);">Rival</td>
-              <td style="color: #5b7279;">sim &lt; 0 &mdash; oppositional editorial profiles</td>
+              <td style="color: var(--color-negative-light); font-family: var(--font-mono);">Rival</td>
+              <td style="color: var(--fg-secondary);">sim &lt; 0 &mdash; oppositional editorial profiles</td>
             </tr>
           </table>
         </details>
@@ -553,67 +553,124 @@ const jsonLd = {
         <details class="collapsible-section">
           <summary id="dcp">Domain Context Profile (DCP)</summary>
 
-          <p style="color: #98a8a8; line-height: 1.6; margin-bottom: 10px; margin-top: 10px;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px; margin-top: 10px;">
             Eight domain-level elements provide context modifiers:
           </p>
 
           <table cellpadding="3" cellspacing="2" style="font-size: var(--font-sm); margin-bottom: 0;">
             <tr>
               {['Privacy', 'ToS', 'Accessibility', 'Mission'].map((el) => (
-                <td style="background: #0d4655; border: 1px solid #1a5568; border-radius: 3px; padding: 4px 8px; color: #98a8a8; text-align: center;">{el}</td>
+                <td style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 3px; padding: 4px 8px; color: var(--fg-primary); text-align: center;">{el}</td>
               ))}
             </tr>
             <tr>
               {['Editorial Code', 'Ownership', 'Access Model', 'Ad/Tracking'].map((el) => (
-                <td style="background: #0d4655; border: 1px solid #1a5568; border-radius: 3px; padding: 4px 8px; color: #98a8a8; text-align: center;">{el}</td>
+                <td style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 3px; padding: 4px 8px; color: var(--fg-primary); text-align: center;">{el}</td>
               ))}
             </tr>
           </table>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); margin: 10px 0;">
-            Each element shifts per-article scores by up to <b style="color: #98a8a8;">&plusmn;0.30</b>.
-            DCP profiles cached 7 days in KV, persisted to D1. Only used in <b style="color: #98a8a8;">full</b> evaluations (not lite).
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin: 10px 0;">
+            Each element shifts per-article scores by up to <b style="color: var(--fg-primary);">&plusmn;0.30</b>.
+            DCP profiles cached 7 days in KV, persisted to D1. Only used in <b style="color: var(--fg-primary);">full</b> evaluations (not lite).
           </p>
         </details>
 
         <details class="collapsible-section">
           <summary id="content-gate">Content Gate</summary>
 
-          <p style="color: #98a8a8; line-height: 1.6; margin: 10px 0;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin: 10px 0;">
             A pre-evaluation content classifier that identifies non-evaluable pages before they enter the evaluation queue. Pure regex — no LLM calls.
           </p>
 
           <div class="table-wrap">
-          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 10px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;" width="100%">
-            <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;"><td style="padding: 4px 8px;">Category</td><td style="padding: 4px 8px;">Description</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">paywall</td><td style="color: #5b7279; padding: 2px 8px;">Subscription wall blocks content access</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">bot_protection</td><td style="color: #5b7279; padding: 2px 8px;">Cloudflare/Akamai challenge pages</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">captcha</td><td style="color: #5b7279; padding: 2px 8px;">CAPTCHA or verification required</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">login_wall</td><td style="color: #5b7279; padding: 2px 8px;">Authentication wall</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">cookie_wall</td><td style="color: #5b7279; padding: 2px 8px;">Cookie consent blocks content</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">geo_restriction</td><td style="color: #5b7279; padding: 2px 8px;">Region-restricted content</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">age_gate</td><td style="color: #5b7279; padding: 2px 8px;">Age verification required</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">app_gate</td><td style="color: #5b7279; padding: 2px 8px;">Content only available in mobile app</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">rate_limited</td><td style="color: #5b7279; padding: 2px 8px;">Rate limit or throttle page</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">error_page</td><td style="color: #5b7279; padding: 2px 8px;">404, 500, or other error pages</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">redirect_or_js_required</td><td style="color: #5b7279; padding: 2px 8px;">Redirect chains, dead ends, or JavaScript-only SPAs</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">binary_content</td><td style="color: #5b7279; padding: 2px 8px;">PDF, binary, or non-text content type (detected via Content-Type header)</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">js_rendered</td><td style="color: #5b7279; padding: 2px 8px;">URL fetched successfully but returned no readable text (JS-rendered SPA)</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">no_content</td><td style="color: #5b7279; padding: 2px 8px;">Story has no URL and no self-text (cannot evaluate)</td></tr>
-            <tr><td style="color: #d56500; padding: 2px 8px;" class="score-font">hn_removed</td><td style="color: #5b7279; padding: 2px 8px;">Story flagged, deleted, or removed from HN after submission</td></tr>
+          <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 10px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px;" width="100%">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;"><td style="padding: 4px 8px;">Category</td><td style="padding: 4px 8px;">Description</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">paywall</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Subscription wall blocks content access</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">bot_protection</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Cloudflare/Akamai challenge pages</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">captcha</td><td style="color: var(--fg-secondary); padding: 2px 8px;">CAPTCHA or verification required</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">login_wall</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Authentication wall</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">cookie_wall</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Cookie consent blocks content</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">geo_restriction</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Region-restricted content</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">age_gate</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Age verification required</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">app_gate</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Content only available in mobile app</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">rate_limited</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Rate limit or throttle page</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">error_page</td><td style="color: var(--fg-secondary); padding: 2px 8px;">404, 500, or other error pages</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">redirect_or_js_required</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Redirect chains, dead ends, or JavaScript-only SPAs</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">binary_content</td><td style="color: var(--fg-secondary); padding: 2px 8px;">PDF, binary, or non-text content type (detected via Content-Type header)</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">js_rendered</td><td style="color: var(--fg-secondary); padding: 2px 8px;">URL fetched successfully but returned no readable text (JS-rendered SPA)</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">no_content</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Story has no URL and no self-text (cannot evaluate)</td></tr>
+            <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">hn_removed</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Story flagged, deleted, or removed from HN after submission</td></tr>
           </table>
           </div>
 
-          <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 0;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 0;">
             Runs at two points: cron pre-fetch (primary gate) and consumer (safety net for KV cache misses).
             Writes <span class="score-font">gate_category</span> and <span class="score-font">gate_confidence</span> to the stories table.
           </p>
         </details>
 
         <details class="collapsible-section">
+          <summary id="feeds">Feeds & Integration</summary>
+
+          <p style="font-size: var(--font-base); color: var(--fg-primary); font-weight: bold; margin: 10px 0 8px 0;">RSS Feeds (Atom)</p>
+          <p style="color: var(--fg-secondary); margin-bottom: 10px;">
+            Subscribe to HRCB-evaluated stories via <a href="/feed.xml" style="color: var(--color-orange);">/feed.xml</a>.
+            Filter by stance, UDHR provision, or domain — combine freely.
+          </p>
+
+          <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; margin-bottom: 12px;" width="100%">
+            <tr style="border-bottom: 1px solid var(--color-border);">
+              <td style="color: var(--fg-emphasis); font-weight: bold;">Filter</td>
+              <td style="color: var(--fg-emphasis); font-weight: bold;">URL</td>
+              <td style="color: var(--fg-emphasis); font-weight: bold;">Description</td>
+            </tr>
+            {[
+              { filter: '(none)', url: '/feed.xml', desc: 'All evaluated stories' },
+              { filter: '?filter=negative', url: '/feed.xml?filter=negative', desc: 'Rights-negative stories only' },
+              { filter: '?filter=positive', url: '/feed.xml?filter=positive', desc: 'Rights-positive stories only' },
+              { filter: '?article=12', url: '/feed.xml?article=12', desc: 'Stories affecting UDHR Article 12 (privacy)' },
+              { filter: '?article=19', url: '/feed.xml?article=19', desc: 'Stories affecting UDHR Article 19 (expression)' },
+              { filter: '?domain=...', url: '/feed.xml?domain=nytimes.com', desc: 'Stories from a specific domain' },
+            ].map(({ filter, url, desc }) => (
+              <tr style="border-bottom: 1px solid var(--color-border);">
+                <td style="color: var(--fg-primary);"><code style="font-size: var(--font-xs);">{filter}</code></td>
+                <td><a href={url} style="color: var(--color-orange); font-size: var(--font-xs);">{url}</a></td>
+                <td style="color: var(--fg-secondary);">{desc}</td>
+              </tr>
+            ))}
+          </table>
+
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
+            Filters combine: <code style="font-size: var(--font-xs);">/feed.xml?article=12&amp;filter=negative</code> = negative stories affecting privacy.
+            <br/>
+            <a href="/feed/opml.xml" style="color: var(--color-orange);">Download OPML</a> to import all 31 UDHR provision feeds into your reader at once.
+          </p>
+
+          <p style="font-size: var(--font-base); color: var(--fg-primary); font-weight: bold; margin: 15px 0 8px 0;">Embeddable Score Badges</p>
+          <p style="color: var(--fg-secondary); margin-bottom: 10px;">
+            Embed a domain's HRCB score anywhere — GitHub READMEs, blog footers, documentation.
+          </p>
+
+          <div style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px; margin-bottom: 12px;">
+            <p style="color: var(--fg-emphasis); font-size: var(--font-sm); margin: 0 0 6px 0;">Markdown:</p>
+            <code style="color: var(--color-orange); font-size: var(--font-xs); word-break: break-all;">
+              ![HRCB](https://hn-hrcb.pages.dev/api/v1/badge/example.com.svg)
+            </code>
+            <p style="color: var(--fg-emphasis); font-size: var(--font-sm); margin: 10px 0 6px 0;">HTML:</p>
+            <code style="color: var(--color-orange); font-size: var(--font-xs); word-break: break-all;">
+              &lt;img src="https://hn-hrcb.pages.dev/api/v1/badge/example.com.svg" alt="HRCB Score"&gt;
+            </code>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+              Badge colors match the HRCB score scale (red → amber → green). Cached for 1 hour.
+            </p>
+          </div>
+        </details>
+
+        <details class="collapsible-section">
           <summary>Version History & Technical Details</summary>
 
-          <p style="font-size: var(--font-base); color: #98a8a8; font-weight: bold; margin: 10px 0 8px 0;">Version History</p>
+          <p style="font-size: var(--font-base); color: var(--fg-primary); font-weight: bold; margin: 10px 0 8px 0;">Version History</p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
             {[
@@ -628,37 +685,37 @@ const jsonLd = {
             ].map(({ v, desc }) => (
               <tr>
                 <td>
-                  <span class="badge" style={v === 'v3.7' ? 'background: rgba(255,102,0,0.2); color: #d56500;' : 'background: #0d4655; color: #5b7279;'}>
+                  <span class="badge" style={v === 'v3.7' ? 'background: rgba(255,102,0,0.2); color: var(--color-orange);' : 'background: var(--bg-surface); color: var(--fg-secondary);'}>
                     {v}
                   </span>
                 </td>
-                <td style="color: #5b7279; padding-left: 6px;">{desc}</td>
+                <td style="color: var(--fg-secondary); padding-left: 6px;">{desc}</td>
               </tr>
             ))}
           </table>
 
           <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">Technical Details</h2>
 
-          <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; margin-bottom: 0;" width="100%">
+          <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; margin-bottom: 0;" width="100%">
             <tr>
-              <td style="color: #5b7279;" class="score-font">Schema</td><td style="color: #98a8a8;" class="score-font">3.7</td>
-              <td style="color: #5b7279;" class="score-font">Framework</td><td style="color: #98a8a8;" class="score-font">Astro + CF Pages</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Schema</td><td style="color: var(--fg-primary);" class="score-font">3.7</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Framework</td><td style="color: var(--fg-primary);" class="score-font">Astro + CF Pages</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;" class="score-font">Evaluator (full)</td><td style="color: #98a8a8;" class="score-font">Claude Haiku 4.5</td>
-              <td style="color: #5b7279;" class="score-font">Database</td><td style="color: #98a8a8;" class="score-font">Cloudflare D1</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Evaluator (full)</td><td style="color: var(--fg-primary);" class="score-font">Claude Haiku 4.5</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Database</td><td style="color: var(--fg-primary);" class="score-font">Cloudflare D1</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;" class="score-font">Evaluator (~lite)</td><td style="color: #d56500;" class="score-font">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td>
-              <td style="color: #5b7279;" class="score-font">Snapshots</td><td style="color: #98a8a8;" class="score-font">R2 (content audit trail)</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Evaluator (~lite)</td><td style="color: var(--color-orange);" class="score-font">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Snapshots</td><td style="color: var(--fg-primary);" class="score-font">R2 (content audit trail)</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;" class="score-font">Cron</td><td style="color: #98a8a8;" class="score-font">Every 5 min (6 HN lists, top 7 pages)</td>
-              <td style="color: #5b7279;" class="score-font">Cache</td><td style="color: #98a8a8;" class="score-font">KV (content + DCP)</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Cron</td><td style="color: var(--fg-primary);" class="score-font">Every 5 min (6 HN lists, top 7 pages)</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Cache</td><td style="color: var(--fg-primary);" class="score-font">KV (content + DCP)</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;" class="score-font">Queue</td><td style="color: #98a8a8;" class="score-font">CF Queues (fan-out)</td>
-              <td style="color: #5b7279;" class="score-font">Lite schema</td><td style="color: #d56500;" class="score-font">lite-1.4 (editorial only, integer 0-100)</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Queue</td><td style="color: var(--fg-primary);" class="score-font">CF Queues (fan-out)</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Lite schema</td><td style="color: var(--color-orange);" class="score-font">lite-1.4 (editorial only, integer 0-100)</td>
             </tr>
           </table>
         </details>

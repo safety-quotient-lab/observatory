@@ -64,27 +64,27 @@ const showDivergence = divergence !== null && divergence > 0.15;
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">{username}</span>
+            <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">{username}</span>
             {karma != null && (
-              <span class="badge" style="background: rgba(255,102,0,0.15); color: #d56500; font-size: var(--font-xs);">
+              <span class="badge" style="background: rgba(255,102,0,0.15); color: var(--color-orange); font-size: var(--font-xs);">
                 {karma.toLocaleString()} karma
               </span>
             )}
             {aggAccountAgeDays !== null && (
-              <span style="color: #5b7279; font-size: var(--font-sm);">
+              <span style="color: var(--fg-secondary); font-size: var(--font-sm);">
                 {aggAccountAgeDays >= 365
                   ? `${Math.floor(aggAccountAgeDays / 365)}y ${Math.floor((aggAccountAgeDays % 365) / 30)}m`
                   : `${aggAccountAgeDays}d`} on HN
               </span>
             )}
-            <a href={`https://news.ycombinator.com/user?id=${username}`} target="_blank" rel="noopener" style="color: #d56500; font-size: var(--font-sm);">HN profile &rarr;</a>
+            <a href={`https://news.ycombinator.com/user?id=${username}`} target="_blank" rel="noopener" style="color: var(--color-orange); font-size: var(--font-sm);">HN profile &rarr;</a>
             {pendingIds.length > 0 && (
               <button
                 id="eval-all-btn"
                 data-ids={JSON.stringify(pendingIds)}
-                style="background: rgba(234,179,8,0.15); border: 1px solid rgba(234,179,8,0.3); cursor: pointer; padding: 3px 10px; font-size: var(--font-sm); color: #eab308; border-radius: 4px;"
+                style="background: rgba(234,179,8,0.15); border: 1px solid rgba(234,179,8,0.3); cursor: pointer; padding: 3px 10px; font-size: var(--font-sm); color: var(--color-warning); border-radius: 4px;"
                 title={`Evaluate ${pendingIds.length} pending stories sequentially`}
               >
                 &#9654; Evaluate All ({pendingIds.length})
@@ -94,7 +94,7 @@ const showDivergence = divergence !== null && divergence > 0.15;
 
           {/* About text */}
           {hnUser?.about && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; color: #5b7279; font-size: var(--font-sm); line-height: 1.5;" set:html={sanitizeHtml(hnUser.about)} />
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bg-surface); color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.5;" set:html={sanitizeHtml(hnUser.about)} />
           )}
         </div>
       </td>
@@ -104,34 +104,34 @@ const showDivergence = divergence !== null && divergence > 0.15;
   {/* --- Coverage section --- */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Coverage</div>
-        <div style="font-size: var(--font-sm); color: #98a8a8;">
-          We've seen <strong class="score-font" style="color: #60a5fa;">{storiesInDb}</strong> of
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Coverage</div>
+        <div style="font-size: var(--font-sm); color: var(--fg-primary);">
+          We've seen <strong class="score-font" style="color: var(--channel-editorial);">{storiesInDb}</strong> of
           {submittedCount != null
-            ? <span> ~<strong class="score-font" style="color: #5b7279;">{submittedCount.toLocaleString()}</strong> submissions</span>
-            : <span style="color: #5b7279;"> an unknown number of submissions</span>
+            ? <span> ~<strong class="score-font" style="color: var(--fg-secondary);">{submittedCount.toLocaleString()}</strong> submissions</span>
+            : <span style="color: var(--fg-secondary);"> an unknown number of submissions</span>
           }
         </div>
         <div style="margin-top: 6px; display: flex; gap: 16px; font-size: var(--font-xs);">
           <span>
-            <span style="color: #5b7279;">Full eval: </span>
-            <span class="score-font" style="color: #98a8a8;">{fullEvaluated}</span>
+            <span style="color: var(--fg-secondary);">Full eval: </span>
+            <span class="score-font" style="color: var(--fg-primary);">{fullEvaluated}</span>
           </span>
           <span>
-            <span style="color: #5b7279;">Lite-only: </span>
-            <span class="score-font" style="color: #5b7279;">{liteEvaluated}</span>
+            <span style="color: var(--fg-secondary);">Lite-only: </span>
+            <span class="score-font" style="color: var(--fg-secondary);">{liteEvaluated}</span>
           </span>
           <span>
-            <span style="color: #5b7279;">Unevaluated: </span>
-            <span class="score-font" style="color: #5b7279;">{Math.max(0, storiesInDb - fullEvaluated - liteEvaluated)}</span>
+            <span style="color: var(--fg-secondary);">Unevaluated: </span>
+            <span class="score-font" style="color: var(--fg-secondary);">{Math.max(0, storiesInDb - fullEvaluated - liteEvaluated)}</span>
           </span>
         </div>
         {/* Coverage bar */}
         {storiesInDb > 0 && (
-          <div style="margin-top: 6px; background: #0d4655; border-radius: 3px; height: 5px; overflow: hidden; max-width: 400px;">
-            <div style={`width: ${Math.min(100, fullEvaluated / storiesInDb * 100)}%; height: 100%; background: #60a5fa; border-radius: 3px; float: left;`}></div>
-            <div style={`width: ${Math.min(100, liteEvaluated / storiesInDb * 100)}%; height: 100%; background: #1a5568; float: left;`}></div>
+          <div style="margin-top: 6px; background: var(--bg-surface); border-radius: 3px; height: 5px; overflow: hidden; max-width: 400px;">
+            <div style={`width: ${Math.min(100, fullEvaluated / storiesInDb * 100)}%; height: 100%; background: var(--channel-editorial); border-radius: 3px; float: left;`}></div>
+            <div style={`width: ${Math.min(100, liteEvaluated / storiesInDb * 100)}%; height: 100%; background: var(--color-border); float: left;`}></div>
           </div>
         )}
       </td>
@@ -142,20 +142,20 @@ const showDivergence = divergence !== null && divergence > 0.15;
   {fullEvaluated > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             Deep Read
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               section-level analysis · {fullEvaluated} full evaluation{fullEvaluated !== 1 ? 's' : ''}
             </span>
           </div>
           <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
             <tr>
-              <td style="color: #5b7279; width: 100px;">HRCB</td>
+              <td style="color: var(--fg-secondary); width: 100px;">HRCB</td>
               <td class="score-font" style={`color: ${scoreToColor(avgScore)}; font-weight: bold; font-size: var(--font-base);`}>
                 {formatScore(avgScore)}
                 {agg?.avg_hrcb != null && (
-                  <span style="color: #5b7279; font-size: var(--font-xs); font-weight: normal; margin-left: 6px;">
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs); font-weight: normal; margin-left: 6px;">
                     range {agg.hrcb_range?.toFixed(2) ?? '—'}
                     {agg.positive_pct != null && ` · +${agg.positive_pct}% / ${agg.neutral_pct}% / ${agg.negative_pct}%−`}
                   </span>
@@ -164,18 +164,18 @@ const showDivergence = divergence !== null && divergence > 0.15;
             </tr>
             {detail.avgEditorial !== null && (
               <tr>
-                <td style="color: #5b7279;">E-full / S</td>
+                <td style="color: var(--fg-secondary);">E-full / S</td>
                 <td class="score-font">
                   <span style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</span>
-                  <span style="color: #5b7279;"> / </span>
+                  <span style="color: var(--fg-secondary);"> / </span>
                   <span style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</span>
-                  <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 6px;">SETL {formatSetl(userSetl)}</span>
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 6px;">SETL {formatSetl(userSetl)}</span>
                 </td>
               </tr>
             )}
             {(agg?.avg_eq != null || agg?.avg_so != null || agg?.avg_td != null) && (
               <tr>
-                <td style="color: #5b7279;">Signals</td>
+                <td style="color: var(--fg-secondary);">Signals</td>
                 <td class="score-font" style="font-size: var(--font-xs);">
                   {agg.avg_eq != null && <span style={`color: ${scoreToColor(agg.avg_eq)};`}>EQ {agg.avg_eq.toFixed(2)}</span>}
                   {agg.avg_so != null && <span style={`color: ${scoreToColor(agg.avg_so)}; margin-left: 8px;`}>SO {agg.avg_so.toFixed(2)}</span>}
@@ -187,17 +187,17 @@ const showDivergence = divergence !== null && divergence > 0.15;
 
           {/* Top/bottom stories */}
           {detail.topStory && detail.bottomStory && detail.topStory.hn_id !== detail.bottomStory.hn_id && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; font-size: var(--font-sm);">
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bg-surface); font-size: var(--font-sm);">
               <div style="display: flex; gap: 16px; flex-wrap: wrap;">
                 <span>
-                  <span style="color: #5b7279;">best:</span>
+                  <span style="color: var(--fg-secondary);">best:</span>
                   <span class="score-font" style={`color: ${scoreToColor(detail.topStory.hcb_editorial_mean ?? detail.topStory.hcb_weighted_mean)};`}>{formatScore(detail.topStory.hcb_editorial_mean ?? detail.topStory.hcb_weighted_mean)}</span>
-                  <a href={`/item/${detail.topStory.hn_id}`} style="color: #5b7279; margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
+                  <a href={`/item/${detail.topStory.hn_id}`} style="color: var(--fg-secondary); margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
                 </span>
                 <span>
-                  <span style="color: #5b7279;">worst:</span>
+                  <span style="color: var(--fg-secondary);">worst:</span>
                   <span class="score-font" style={`color: ${scoreToColor(detail.bottomStory.hcb_editorial_mean ?? detail.bottomStory.hcb_weighted_mean)};`}>{formatScore(detail.bottomStory.hcb_editorial_mean ?? detail.bottomStory.hcb_weighted_mean)}</span>
-                  <a href={`/item/${detail.bottomStory.hn_id}`} style="color: #5b7279; margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
+                  <a href={`/item/${detail.bottomStory.hn_id}`} style="color: var(--fg-secondary); margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
                 </span>
               </div>
             </div>
@@ -205,8 +205,8 @@ const showDivergence = divergence !== null && divergence > 0.15;
 
           {/* UDHR Fingerprint */}
           {fingerprint.some((s: number | null) => s !== null) && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655;">
-              <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bg-surface);">
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
               <svg width="186" height="14" viewBox="0 0 186 14" style="vertical-align: middle;">
                 {fingerprint.map((score: number | null, i: number) => (
                   <rect x={i * 6} y="0" width="5" height="14" rx="1"
@@ -226,17 +226,17 @@ const showDivergence = divergence !== null && divergence > 0.15;
   {liteEvaluated > 0 && eLite !== null && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #0d4655; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--bg-surface); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
             Quick Scan
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               holistic editorial estimate · {liteEvaluated} lite evaluation{liteEvaluated !== 1 ? 's' : ''}
             </span>
           </div>
           <div style="font-size: var(--font-sm);">
-            <span style="color: #5b7279;">Editorial [E]: </span>
+            <span style="color: var(--fg-secondary);">Editorial [E]: </span>
             <span class="score-font" style={`color: ${scoreToColor(eLite)}; font-weight: bold;`}>{formatScore(eLite)}</span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 8px;">
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 8px;">
               Llama · truncated content · holistic (not section-level)
             </span>
           </div>
@@ -250,15 +250,15 @@ const showDivergence = divergence !== null && divergence > 0.15;
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
       <tr>
         <td style="padding: 10px; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.3); border-radius: 6px;">
-          <div style="font-size: var(--font-sm); color: #a78bfa;">
+          <div style="font-size: var(--font-sm); color: var(--channel-structural);">
             Lens divergence detected
-            <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-xs);">
+            <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-xs);">
               Quick scan (<span class="score-font">{formatScore(eLite)}</span>)
               vs full evaluation (<span class="score-font">{formatScore(eFull)}</span>)
               · Δ <span class="score-font">{divergence?.toFixed(2)}</span>
             </span>
           </div>
-          <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 4px;">
             The holistic Llama estimate and section-level Claude evaluation disagree by more than 0.15.
             The full evaluation is more reliable for individual story analysis.
           </div>
@@ -271,39 +271,39 @@ const showDivergence = divergence !== null && divergence > 0.15;
   {setlHistory.length > 1 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             SETL History
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               structural-editorial tension over time · {setlHistory.length} days
             </span>
           </div>
           <div style="display: flex; gap: 8px; font-size: var(--font-xs); margin-bottom: 4px;">
-            <span style="color: #a78bfa;">Editorial</span>
-            <span style="color: #22d3ee;">Structural</span>
-            <span style="color: #fbbf24;">SETL</span>
+            <span style="color: var(--channel-structural);">Editorial</span>
+            <span style="color: var(--color-sentiment);">Structural</span>
+            <span style="color: var(--color-warning-light);">SETL</span>
           </div>
           <svg width="100%" viewBox={`0 0 ${Math.max(setlHistory.length * 20, 200)} 80`} style="max-height: 100px;">
             {/* Zero line */}
-            <line x1="0" y1="40" x2={setlHistory.length * 20} y2="40" stroke="#1a5568" stroke-width="0.5" />
+            <line x1="0" y1="40" x2={setlHistory.length * 20} y2="40" stroke="var(--color-border)" stroke-width="0.5" />
             {/* Editorial line */}
             <polyline
               fill="none"
-              stroke="#a78bfa"
+              stroke="var(--channel-structural)"
               stroke-width="1.5"
               points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_editorial * 35}`).join(' ')}
             />
             {/* Structural line */}
             <polyline
               fill="none"
-              stroke="#22d3ee"
+              stroke="var(--color-sentiment)"
               stroke-width="1.5"
               points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_structural * 35}`).join(' ')}
             />
             {/* SETL line */}
             <polyline
               fill="none"
-              stroke="#fbbf24"
+              stroke="var(--color-warning-light)"
               stroke-width="2"
               points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_setl * 35}`).join(' ')}
             />
@@ -315,7 +315,7 @@ const showDivergence = divergence !== null && divergence > 0.15;
 
   {/* Story list header */}
   {total > 0 && (
-    <div style="padding: 4px 0; font-size: var(--font-sm); color: #5b7279;">
+    <div style="padding: 4px 0; font-size: var(--font-sm); color: var(--fg-secondary);">
       {total} stories {page > 1 ? `· page ${page}` : ''}
     </div>
   )}
@@ -332,7 +332,7 @@ const showDivergence = divergence !== null && divergence > 0.15;
   {displayStories.length === 0 && (
     <table width="100%">
       <tr>
-        <td style="padding: 40px 20px; text-align: center; color: #5b7279;">
+        <td style="padding: 40px 20px; text-align: center; color: var(--fg-secondary);">
           No stories from this user.
         </td>
       </tr>
@@ -343,7 +343,7 @@ const showDivergence = divergence !== null && divergence > 0.15;
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={`/user/${username}?p=${page + 1}`} class="morelink" style="color: #5b7279; font-size: var(--font-base);">
+          <a href={`/user/${username}?p=${page + 1}`} class="morelink" style="color: var(--fg-secondary); font-size: var(--font-base);">
             More
           </a>
         </td>
@@ -352,17 +352,17 @@ const showDivergence = divergence !== null && divergence > 0.15;
   )}
 
   {/* Batch eval progress bar */}
-  <div id="eval-all-progress" style="display: none; padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; margin-bottom: 10px; position: sticky; bottom: 8px; z-index: 10;">
+  <div id="eval-all-progress" style="display: none; padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; margin-bottom: 10px; position: sticky; bottom: 8px; z-index: 10;">
     <div style="display: flex; align-items: center; gap: 10px; font-size: var(--font-sm);">
-      <span class="eval-spinner" style="color: #60a5fa; display: inline-block;">&#9881;</span>
-      <span id="eval-all-status" style="color: #5b7279;">Starting...</span>
-      <span id="eval-all-counter" class="score-font" style="color: #5b7279; margin-left: auto;"></span>
-      <button id="eval-all-stop" style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 2px 8px; font-size: var(--font-xs); color: #dc2626; border-radius: 4px;">Stop</button>
+      <span class="eval-spinner" style="color: var(--channel-editorial); display: inline-block;">&#9881;</span>
+      <span id="eval-all-status" style="color: var(--fg-secondary);">Starting...</span>
+      <span id="eval-all-counter" class="score-font" style="color: var(--fg-secondary); margin-left: auto;"></span>
+      <button id="eval-all-stop" style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 2px 8px; font-size: var(--font-xs); color: var(--color-negative); border-radius: 4px;">Stop</button>
     </div>
-    <div style="margin-top: 6px; background: #1a5568; border-radius: 3px; height: 4px; overflow: hidden;">
-      <div id="eval-all-bar" style="height: 100%; background: #eab308; width: 0%; transition: width 0.3s;"></div>
+    <div style="margin-top: 6px; background: var(--color-border); border-radius: 3px; height: 4px; overflow: hidden;">
+      <div id="eval-all-bar" style="height: 100%; background: var(--color-warning); width: 0%; transition: width 0.3s;"></div>
     </div>
-    <div id="eval-all-log" style="margin-top: 6px; max-height: 120px; overflow-y: auto; font-size: var(--font-xs); color: #5b7279;"></div>
+    <div id="eval-all-log" style="margin-top: 6px; max-height: 120px; overflow-y: auto; font-size: var(--font-xs); color: var(--fg-secondary);"></div>
   </div>
 
   <script is:inline>

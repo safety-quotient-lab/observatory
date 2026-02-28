@@ -40,11 +40,11 @@ const scatterData = JSON.stringify((velocityHrcb ?? []).map(v => ({
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Velocity Tracking</span>
-        <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-sm);">
+        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Velocity Tracking</span>
+        <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-sm);">
           {highVelocity.length} stories with snapshot data
         </span>
-        <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px; line-height: 1.5;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 4px; line-height: 1.5;">
           How fast stories accumulate points (pts/hr from story snapshots).
           High velocity with negative HRCB may indicate viral but rights-adverse content.
           Low velocity with positive HRCB may indicate quality content that rises slowly.
@@ -57,17 +57,17 @@ const scatterData = JSON.stringify((velocityHrcb ?? []).map(v => ({
   {velocityHrcb.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             Velocity vs HRCB
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               does high-velocity content lean differently? · {velocityHrcb.length} stories
             </span>
           </div>
-          <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 4px;">
             X: points/hour · Y: HRCB score · hover for details
           </div>
-          <canvas id="vel-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: #002d38; border-radius: 4px;" aria-label="Story velocity scatter plot"></canvas>
+          <canvas id="vel-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: var(--bg-primary); border-radius: 4px;" aria-label="Story velocity scatter plot"></canvas>
         </td>
       </tr>
     </table>
@@ -76,42 +76,42 @@ const scatterData = JSON.stringify((velocityHrcb ?? []).map(v => ({
   {/* High velocity stories table */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
           Fastest Rising (24h)
-          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
             {highVelocity.length} stories with velocity data
           </span>
         </div>
         {highVelocity.length > 0 ? (
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-            <tr style="color: #5b7279;">
+            <tr style="color: var(--fg-secondary);">
               <td>pts/hr</td><td>Title</td><td style="text-align: right;">HRCB</td><td style="text-align: right;">Points</td><td>Age</td>
             </tr>
             {highVelocity.map(s => (
-              <tr style="border-top: 1px solid #0d4655;">
-                <td style="color: #d56500; white-space: nowrap;" class="score-font">
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="color: var(--color-orange); white-space: nowrap;" class="score-font">
                   {s.velocity !== null ? s.velocity.toFixed(1) : '—'}
                 </td>
                 <td>
                   <a href={s.url || `https://news.ycombinator.com/item?id=${s.hn_id}`}
-                     target="_blank" rel="noopener" style="color: #98a8a8;">
+                     target="_blank" rel="noopener" style="color: var(--fg-primary);">
                     {s.title.slice(0, 80)}{s.title.length > 80 ? '...' : ''}
                   </a>
-                  {s.domain && <span style="color: #5b7279; margin-left: 4px; font-size: var(--font-xs);">({s.domain})</span>}
+                  {s.domain && <span style="color: var(--fg-secondary); margin-left: 4px; font-size: var(--font-xs);">({s.domain})</span>}
                   {' '}
-                  <a href={`/item/${s.hn_id}`} style="color: #d56500; font-size: var(--font-xs);">hrcb</a>
+                  <a href={`/item/${s.hn_id}`} style="color: var(--color-orange); font-size: var(--font-xs);">hrcb</a>
                 </td>
-                <td style={`text-align: right; color: ${(s.hcb_editorial_mean ?? s.hcb_weighted_mean) !== null ? scoreToColor(s.hcb_editorial_mean ?? s.hcb_weighted_mean) : '#5b7279'};`} class="score-font">
+                <td style={`text-align: right; color: ${(s.hcb_editorial_mean ?? s.hcb_weighted_mean) !== null ? scoreToColor(s.hcb_editorial_mean ?? s.hcb_weighted_mean) : 'var(--fg-secondary)'};`} class="score-font">
                   {formatScore(s.hcb_editorial_mean ?? s.hcb_weighted_mean)}
                 </td>
-                <td style="text-align: right; color: #8faaab;" class="score-font">{s.hn_score ?? '—'}</td>
-                <td style="color: #5b7279; white-space: nowrap;">{timeAgo(s.hn_time)}</td>
+                <td style="text-align: right; color: var(--fg-emphasis);" class="score-font">{s.hn_score ?? '—'}</td>
+                <td style="color: var(--fg-secondary); white-space: nowrap;">{timeAgo(s.hn_time)}</td>
               </tr>
             ))}
           </table>
         ) : (
-          <div style="color: #5b7279; padding: 20px; text-align: center;">
+          <div style="color: var(--fg-secondary); padding: 20px; text-align: center;">
             No velocity data yet. Snapshots accumulate every 5 minutes for top stories.
           </div>
         )}

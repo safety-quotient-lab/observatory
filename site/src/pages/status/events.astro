@@ -47,19 +47,19 @@ const [
 
 // Event type color map
 const EVENT_TYPE_COLORS: Record<string, string> = {
-  eval_failure: '#dc2626', eval_retry: '#f97316', eval_skip: '#6b7280',
-  eval_success: '#16a34a', rate_limit: '#eab308', self_throttle: '#7d80d1',
-  credit_exhausted: '#ef4444', fetch_error: '#dc2626',
-  parse_error: '#dc2626', cron_run: '#60a5fa', cron_error: '#f97316',
-  crawl_error: '#f97316', r2_error: '#f97316', dlq: '#dc2626', dlq_replay: '#34d399',
-  calibration: '#8b5cf6', trigger: '#a78bfa',
-  rater_validation_warn: '#f97316', rater_validation_fail: '#dc2626',
-  rater_auto_disable: '#ef4444', rater_auto_enable: '#34d399',
-  setl_spike: '#f59e0b', coverage_crawl: '#06b6d4',
-  auto_calibration: '#8b5cf6', auto_retry: '#6366f1',
-  dlq_auto_replay: '#a855f7', dcp_stale: '#f97316',
-  r2_cleanup: '#64748b', story_flagged: '#ef4444',
-  model_divergence: '#ec4899',
+  eval_failure: 'var(--color-negative)', eval_retry: 'var(--color-orange)', eval_skip: 'var(--color-muted)',
+  eval_success: 'var(--color-positive)', rate_limit: 'var(--color-warning)', self_throttle: 'var(--color-violet)',
+  credit_exhausted: 'var(--color-negative)', fetch_error: 'var(--color-negative)',
+  parse_error: 'var(--color-negative)', cron_run: 'var(--channel-editorial)', cron_error: 'var(--color-orange)',
+  crawl_error: 'var(--color-orange)', r2_error: 'var(--color-orange)', dlq: 'var(--color-negative)', dlq_replay: 'var(--color-positive-medium)',
+  calibration: 'var(--color-purple)', trigger: 'var(--channel-structural)',
+  rater_validation_warn: 'var(--color-orange)', rater_validation_fail: 'var(--color-negative)',
+  rater_auto_disable: 'var(--color-negative)', rater_auto_enable: 'var(--color-positive-medium)',
+  setl_spike: 'var(--color-amber)', coverage_crawl: 'var(--color-cyan)',
+  auto_calibration: 'var(--color-purple)', auto_retry: '#6366f1',
+  dlq_auto_replay: 'var(--color-inference)', dcp_stale: 'var(--color-orange)',
+  r2_cleanup: '#64748b', story_flagged: 'var(--color-negative)',
+  model_divergence: 'var(--color-pink)',
 };
 ---
 
@@ -69,8 +69,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Events</span>
-        <span style="color: #5b7279; margin-left: var(--space-lg);">Pipeline activity log, diagnostics, and operational metrics.</span>
+        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Events</span>
+        <span style="color: var(--fg-secondary); margin-left: var(--space-lg);">Pipeline activity log, diagnostics, and operational metrics.</span>
       </td>
     </tr>
   </table>
@@ -79,10 +79,10 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   {(eventStats.total > 0 || recentPipelineEvents.length > 0) && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Pipeline Events
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               {eventStats.last_24h} last 24h · {eventStats.last_7d} last 7d
             </span>
           </div>
@@ -91,7 +91,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
           {Object.keys(eventStats.by_type).length > 0 && (
             <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
               {Object.entries(eventStats.by_type).sort((a, b) => b[1] - a[1]).map(([type, count]) => {
-                const color = EVENT_TYPE_COLORS[type] || '#5b7279';
+                const color = EVENT_TYPE_COLORS[type] || 'var(--fg-secondary)';
                 return (
                   <span class="badge" style={`background: ${color}20; color: ${color}; font-size: var(--font-xs);`}>
                     {type}: {count}
@@ -104,14 +104,14 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
           {/* Recent events table */}
           {recentPipelineEvents.length > 0 && (
             <div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Recent Events</div>
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 4px;">Recent Events</div>
               <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
                 {recentPipelineEvents.map((ev) => {
-                  const sevColor = ev.severity === 'error' ? '#dc2626' : ev.severity === 'warn' ? '#eab308' : '#5b7279';
-                  const typeColor = EVENT_TYPE_COLORS[ev.event_type] || '#5b7279';
+                  const sevColor = ev.severity === 'error' ? 'var(--color-negative)' : ev.severity === 'warn' ? 'var(--color-warning)' : 'var(--fg-secondary)';
+                  const typeColor = EVENT_TYPE_COLORS[ev.event_type] || 'var(--fg-secondary)';
                   return (
-                    <tr style="border-top: 1px solid #0d4655;">
-                      <td style="color: #5b7279; white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
+                    <tr style="border-top: 1px solid var(--bg-surface);">
+                      <td style="color: var(--fg-secondary); white-space: nowrap; width: 140px;">{ev.created_at.slice(0, 16)}</td>
                       <td style="width: 90px;">
                         <span class="badge" style={`background: ${typeColor}20; color: ${typeColor}; font-size: var(--font-xs);`}>
                           {ev.event_type}
@@ -126,17 +126,17 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
                       </td>
                       <td style="width: 60px; text-align: center; white-space: nowrap;">
                         {ev.investigated === 1
-                          ? <span style="color: #3b82f6;" title="Investigated">INV</span>
+                          ? <span style="color: var(--color-blue);" title="Investigated">INV</span>
                           : ev.investigated === 0
-                            ? <span style="color: #5b7279;" title="Not investigated">--</span>
-                            : <span style="color: #0d4655;" title="Not triaged">-</span>
+                            ? <span style="color: var(--fg-secondary);" title="Not investigated">--</span>
+                            : <span style="color: var(--bg-surface);" title="Not triaged">-</span>
                         }
                         {' '}
                         {ev.resolved === 1
-                          ? <span style="color: #22c55e;" title="Resolved">RES</span>
+                          ? <span style="color: var(--color-positive-vivid);" title="Resolved">RES</span>
                           : ev.resolved === 0
-                            ? <span style="color: #5b7279;" title="Not resolved">--</span>
-                            : <span style="color: #0d4655;" title="Not triaged">-</span>
+                            ? <span style="color: var(--fg-secondary);" title="Not resolved">--</span>
+                            : <span style="color: var(--bg-surface);" title="Not triaged">-</span>
                         }
                       </td>
                     </tr>
@@ -154,20 +154,20 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   {failed.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Recent Failures
-            <span style="text-transform: none; letter-spacing: 0; color: #dc2626; margin-left: 6px;">{failed.length}</span>
+            <span style="text-transform: none; letter-spacing: 0; color: var(--color-negative); margin-left: 6px;">{failed.length}</span>
           </div>
           <div class="table-wrap">
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
             {failed.map((s) => (
-              <tr style="border-top: 1px solid #0d4655;">
-                <td style="color: #98a8a8;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="color: var(--fg-primary);">
                   {s.title}
-                  {s.domain && <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
+                  {s.domain && <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 3px;">({s.domain})</span>}
                 </td>
-                <td style="color: #dc2626; font-size: var(--font-xs); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <td style="color: var(--color-negative); font-size: var(--font-xs); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   {s.eval_error?.slice(0, 80) || 'Unknown error'}
                 </td>
               </tr>
@@ -183,37 +183,37 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   {queue.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Evaluation Queue
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               {queue.length} stories waiting
             </span>
           </div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-            <tr style="color: #5b7279; font-size: var(--font-xs);">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs);">
               <td width="24">#</td>
               <td width="70">Status</td>
               <td>Story</td>
               <td width="140">Domain</td>
             </tr>
             {queue.map((s, i) => (
-              <tr style="border-top: 1px solid #0d4655;">
-                <td style="color: #5b7279;" class="score-font">{i + 1}</td>
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="color: var(--fg-secondary);" class="score-font">{i + 1}</td>
                 <td>
                   {s.eval_status === 'evaluating' ? (
-                    <span class="badge" style="background: rgba(96,165,250,0.2); color: #60a5fa; font-size: var(--font-xs);">evaluating</span>
+                    <span class="badge" style="background: rgba(96,165,250,0.2); color: var(--channel-editorial); font-size: var(--font-xs);">evaluating</span>
                   ) : (
-                    <span class="badge" style="background: rgba(234,179,8,0.15); color: #eab308; font-size: var(--font-xs);">pending</span>
+                    <span class="badge" style="background: rgba(234,179,8,0.15); color: var(--color-warning); font-size: var(--font-xs);">pending</span>
                   )}
                 </td>
                 <td>
                   <a href={s.url || `https://news.ycombinator.com/item?id=${s.hn_id}`}
-                     target="_blank" rel="noopener" style="color: #98a8a8;">
+                     target="_blank" rel="noopener" style="color: var(--fg-primary);">
                     {s.title}
                   </a>
                 </td>
-                <td style="color: #5b7279; font-size: var(--font-xs);">{s.domain || 'self'}</td>
+                <td style="color: var(--fg-secondary); font-size: var(--font-xs);">{s.domain || 'self'}</td>
               </tr>
             ))}
           </table>
@@ -227,24 +227,24 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
     <summary>
       Dead Letter Queue
       {dlqStats.pending > 0 && (
-        <span style="text-transform: none; letter-spacing: 0; color: #dc2626; margin-left: 6px;">{dlqStats.pending} pending</span>
+        <span style="text-transform: none; letter-spacing: 0; color: var(--color-negative); margin-left: 6px;">{dlqStats.pending} pending</span>
       )}
     </summary>
     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: #0d4655; border: 1px solid ${dlqStats.pending > 0 ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
-        <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">
+      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${dlqStats.pending > 0 ? 'var(--color-negative)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+        <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">
           Status
-          {dlqTrend?.backlog_growing && <span style="color: #dc2626; margin-left: 4px;" title="Backlog growing over last 7 days">↑</span>}
-          {dlqTrend && !dlqTrend.backlog_growing && dlqStats.pending > 0 && <span style="color: #16a34a; margin-left: 4px;" title="Backlog stable or shrinking">→</span>}
+          {dlqTrend?.backlog_growing && <span style="color: var(--color-negative); margin-left: 4px;" title="Backlog growing over last 7 days">↑</span>}
+          {dlqTrend && !dlqTrend.backlog_growing && dlqStats.pending > 0 && <span style="color: var(--color-positive); margin-left: 4px;" title="Backlog stable or shrinking">→</span>}
         </div>
         {dlqStats.total === 0 ? (
-          <div style="color: #5b7279; font-size: var(--font-xs);">Empty</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs);">Empty</div>
         ) : (
           <div style="font-size: var(--font-xs);">
-            <span style={`color: ${dlqStats.pending > 0 ? '#dc2626' : '#16a34a'}; font-weight: bold;`}>{dlqStats.pending}</span>
-            <span style="color: #5b7279;"> pending</span>
-            {dlqStats.replayed > 0 && <span style="color: #5b7279;"> · {dlqStats.replayed} replayed</span>}
-            {dlqStats.discarded > 0 && <span style="color: #1a5568;"> · {dlqStats.discarded} discarded</span>}
+            <span style={`color: ${dlqStats.pending > 0 ? 'var(--color-negative)' : 'var(--color-positive)'}; font-weight: bold;`}>{dlqStats.pending}</span>
+            <span style="color: var(--fg-secondary);"> pending</span>
+            {dlqStats.replayed > 0 && <span style="color: var(--fg-secondary);"> · {dlqStats.replayed} replayed</span>}
+            {dlqStats.discarded > 0 && <span style="color: var(--color-border);"> · {dlqStats.discarded} discarded</span>}
           </div>
         )}
         {dlqTrend && dlqTrend.days.length > 0 && (
@@ -253,7 +253,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
               const maxNew = Math.max(...dlqTrend!.days.map(x => x.new_count), 1);
               const h = Math.max(2, Math.round((d.new_count / maxNew) * 16));
               return (
-                <div style={`width: 6px; height: ${h}px; background: ${d.new_count > 0 ? '#dc262680' : '#0d4655'}; border-radius: 1px;`} title={`${d.day}: ${d.new_count} new`}></div>
+                <div style={`width: 6px; height: ${h}px; background: ${d.new_count > 0 ? 'var(--color-negative)80' : 'var(--bg-surface)'}; border-radius: 1px;`} title={`${d.day}: ${d.new_count} new`}></div>
               );
             })}
           </div>
@@ -261,8 +261,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
         {dlqMessages.length > 0 && (
           <div style="margin-top: 4px; font-size: 9px;">
             {dlqMessages.slice(0, 5).map((m) => (
-              <div style="color: #5b7279; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;" title={`hn_id=${m.hn_id}: ${m.title}`}>
-                <a href={`/item/${m.hn_id}`} style="color: #dc2626;">{m.hn_id}</a> {m.title.slice(0, 40)}...
+              <div style="color: var(--fg-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px;" title={`hn_id=${m.hn_id}: ${m.title}`}>
+                <a href={`/item/${m.hn_id}`} style="color: var(--color-negative);">{m.hn_id}</a> {m.title.slice(0, 40)}...
               </div>
             ))}
           </div>
@@ -276,7 +276,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
     <details open class="collapsible-section">
       <summary>
         API & Rate Limits
-        <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
           {eventStats.error_count_7d > 0 ? `${eventStats.error_count_7d} errors 7d` : 'no errors'}
         </span>
       </summary>
@@ -284,7 +284,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
       {/* Error sparkline (last 7 days) */}
       {dailyErrors.length > 0 && (
         <div style="margin-bottom: 10px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">Errors/warnings (7d)</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 4px;">Errors/warnings (7d)</div>
           <div style="display: flex; align-items: flex-end; gap: 2px; height: 24px;">
             {dailyErrors.map((d) => {
               const maxCount = Math.max(...dailyErrors.map(x => x.count), 1);
@@ -292,7 +292,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
               return (
                 <div
                   title={`${d.day}: ${d.count}`}
-                  style={`width: ${Math.floor(100 / Math.max(dailyErrors.length, 1))}%; height: ${h}px; background: ${d.count > 5 ? '#dc2626' : d.count > 0 ? '#eab308' : '#0d4655'}; border-radius: 1px;`}
+                  style={`width: ${Math.floor(100 / Math.max(dailyErrors.length, 1))}%; height: ${h}px; background: ${d.count > 5 ? 'var(--color-negative)' : d.count > 0 ? 'var(--color-warning)' : 'var(--bg-surface)'}; border-radius: 1px;`}
                 ></div>
               );
             })}
@@ -301,52 +301,52 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
       )}
 
       {/* API Headroom */}
-      <div style="margin-bottom: 10px; padding: 8px; background: #0d4655; border: 1px solid #0d4655; border-radius: 4px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 6px;">
+      <div style="margin-bottom: 10px; padding: 8px; background: var(--bg-surface); border: 1px solid var(--bg-surface); border-radius: 4px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 6px;">
           API Headroom
-          <span style="text-transform: none; color: #1a5568; margin-left: 6px;">
+          <span style="text-transform: none; color: var(--color-border); margin-left: 6px;">
             {rateLimitSnapshot.model} · {rateLimitSnapshot.created_at.slice(0, 16)}
           </span>
         </div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: var(--font-xs);">
           {/* Requests */}
           <div style="flex: 1; min-width: 100px;">
-            <div style="color: #5b7279; margin-bottom: 2px;">Requests</div>
+            <div style="color: var(--fg-secondary); margin-bottom: 2px;">Requests</div>
             <div style="display: flex; align-items: center; gap: 4px;">
-              <div style="flex: 1; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+              <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
                 {rateLimitSnapshot.requests_remaining != null && rateLimitSnapshot.requests_limit != null && rateLimitSnapshot.requests_limit > 0 && (
-                  <div style={`width: ${Math.round((rateLimitSnapshot.requests_remaining / rateLimitSnapshot.requests_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
+                  <div style={`width: ${Math.round((rateLimitSnapshot.requests_remaining / rateLimitSnapshot.requests_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? 'var(--color-negative)' : rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.3 ? 'var(--color-warning)' : 'var(--color-positive)'}; border-radius: 3px;`}></div>
                 )}
               </div>
-              <span style={`color: ${rateLimitSnapshot.requests_remaining != null && rateLimitSnapshot.requests_limit != null && rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? '#dc2626' : '#5b7279'};`}>
+              <span style={`color: ${rateLimitSnapshot.requests_remaining != null && rateLimitSnapshot.requests_limit != null && rateLimitSnapshot.requests_remaining < rateLimitSnapshot.requests_limit * 0.1 ? 'var(--color-negative)' : 'var(--fg-secondary)'};`}>
                 {rateLimitSnapshot.requests_remaining ?? '?'}/{rateLimitSnapshot.requests_limit ?? '?'}
               </span>
             </div>
           </div>
           {/* Input tokens */}
           <div style="flex: 1; min-width: 100px;">
-            <div style="color: #5b7279; margin-bottom: 2px;">Input Tokens</div>
+            <div style="color: var(--fg-secondary); margin-bottom: 2px;">Input Tokens</div>
             <div style="display: flex; align-items: center; gap: 4px;">
-              <div style="flex: 1; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+              <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
                 {rateLimitSnapshot.input_tokens_remaining != null && rateLimitSnapshot.input_tokens_limit != null && rateLimitSnapshot.input_tokens_limit > 0 && (
-                  <div style={`width: ${Math.round((rateLimitSnapshot.input_tokens_remaining / rateLimitSnapshot.input_tokens_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
+                  <div style={`width: ${Math.round((rateLimitSnapshot.input_tokens_remaining / rateLimitSnapshot.input_tokens_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? 'var(--color-negative)' : rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.3 ? 'var(--color-warning)' : 'var(--color-positive)'}; border-radius: 3px;`}></div>
                 )}
               </div>
-              <span style={`color: ${rateLimitSnapshot.input_tokens_remaining != null && rateLimitSnapshot.input_tokens_limit != null && rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? '#dc2626' : '#5b7279'}; white-space: nowrap;`}>
+              <span style={`color: ${rateLimitSnapshot.input_tokens_remaining != null && rateLimitSnapshot.input_tokens_limit != null && rateLimitSnapshot.input_tokens_remaining < rateLimitSnapshot.input_tokens_limit * 0.1 ? 'var(--color-negative)' : 'var(--fg-secondary)'}; white-space: nowrap;`}>
                 {rateLimitSnapshot.input_tokens_remaining != null ? (rateLimitSnapshot.input_tokens_remaining > 999999 ? `${(rateLimitSnapshot.input_tokens_remaining / 1000000).toFixed(1)}M` : rateLimitSnapshot.input_tokens_remaining > 999 ? `${(rateLimitSnapshot.input_tokens_remaining / 1000).toFixed(0)}k` : rateLimitSnapshot.input_tokens_remaining) : '?'}
               </span>
             </div>
           </div>
           {/* Output tokens */}
           <div style="flex: 1; min-width: 100px;">
-            <div style="color: #5b7279; margin-bottom: 2px;">Output Tokens</div>
+            <div style="color: var(--fg-secondary); margin-bottom: 2px;">Output Tokens</div>
             <div style="display: flex; align-items: center; gap: 4px;">
-              <div style="flex: 1; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+              <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
                 {rateLimitSnapshot.output_tokens_remaining != null && rateLimitSnapshot.output_tokens_limit != null && rateLimitSnapshot.output_tokens_limit > 0 && (
-                  <div style={`width: ${Math.round((rateLimitSnapshot.output_tokens_remaining / rateLimitSnapshot.output_tokens_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? '#dc2626' : rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.3 ? '#eab308' : '#16a34a'}; border-radius: 3px;`}></div>
+                  <div style={`width: ${Math.round((rateLimitSnapshot.output_tokens_remaining / rateLimitSnapshot.output_tokens_limit) * 100)}%; height: 100%; background: ${rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? 'var(--color-negative)' : rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.3 ? 'var(--color-warning)' : 'var(--color-positive)'}; border-radius: 3px;`}></div>
                 )}
               </div>
-              <span style={`color: ${rateLimitSnapshot.output_tokens_remaining != null && rateLimitSnapshot.output_tokens_limit != null && rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? '#dc2626' : '#5b7279'}; white-space: nowrap;`}>
+              <span style={`color: ${rateLimitSnapshot.output_tokens_remaining != null && rateLimitSnapshot.output_tokens_limit != null && rateLimitSnapshot.output_tokens_remaining < rateLimitSnapshot.output_tokens_limit * 0.1 ? 'var(--color-negative)' : 'var(--fg-secondary)'}; white-space: nowrap;`}>
                 {rateLimitSnapshot.output_tokens_remaining != null ? (rateLimitSnapshot.output_tokens_remaining > 999999 ? `${(rateLimitSnapshot.output_tokens_remaining / 1000000).toFixed(1)}M` : rateLimitSnapshot.output_tokens_remaining > 999 ? `${(rateLimitSnapshot.output_tokens_remaining / 1000).toFixed(0)}k` : rateLimitSnapshot.output_tokens_remaining) : '?'}
               </span>
             </div>
@@ -354,11 +354,11 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
         </div>
         <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs);">
           {rateLimitSnapshot.cache_hit_rate != null && (
-            <span style="color: #5b7279;">
-              Cache: <span style={`color: ${rateLimitSnapshot.cache_hit_rate > 0.5 ? '#16a34a' : rateLimitSnapshot.cache_hit_rate > 0.2 ? '#eab308' : '#5b7279'};`}>{(rateLimitSnapshot.cache_hit_rate * 100).toFixed(0)}%</span>
+            <span style="color: var(--fg-secondary);">
+              Cache: <span style={`color: ${rateLimitSnapshot.cache_hit_rate > 0.5 ? 'var(--color-positive)' : rateLimitSnapshot.cache_hit_rate > 0.2 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>{(rateLimitSnapshot.cache_hit_rate * 100).toFixed(0)}%</span>
             </span>
           )}
-          <span style={`color: ${rateLimitSnapshot.consecutive_429s === 0 ? '#16a34a' : rateLimitSnapshot.consecutive_429s <= 2 ? '#eab308' : '#dc2626'};`}>
+          <span style={`color: ${rateLimitSnapshot.consecutive_429s === 0 ? 'var(--color-positive)' : rateLimitSnapshot.consecutive_429s <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'};`}>
             429s: {rateLimitSnapshot.consecutive_429s}{rateLimitSnapshot.consecutive_429s >= 3 ? ' (circuit open)' : ''}
           </span>
         </div>
@@ -372,7 +372,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
       <summary>Cycle Performance</summary>
       <div class="table-wrap">
       <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-        <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase;">
+        <tr style="color: var(--color-border); font-size: 9px; text-transform: uppercase;">
           <td width="130">Cycle Start</td>
           <td width="50" align="center">Crawl</td>
           <td width="40" align="center" title="Stories found by cron">Found</td>
@@ -388,17 +388,17 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
           const cycleMins = cycleDuration !== null ? Math.floor(cycleDuration / 60) : null;
           const cycleSecs = cycleDuration !== null ? cycleDuration % 60 : null;
           return (
-            <tr style="border-top: 1px solid #0d4655;">
-              <td style="color: #5b7279; white-space: nowrap;">{c.cycle_start.slice(0, 16)}</td>
-              <td align="center" style="color: #5b7279; white-space: nowrap;">
+            <tr style="border-top: 1px solid var(--bg-surface);">
+              <td style="color: var(--fg-secondary); white-space: nowrap;">{c.cycle_start.slice(0, 16)}</td>
+              <td align="center" style="color: var(--fg-secondary); white-space: nowrap;">
                 {c.duration_ms !== null ? `${(c.duration_ms / 1000).toFixed(1)}s` : '---'}
               </td>
-              <td align="center" style="color: #5b7279;">{c.stories_found ?? '---'}</td>
-              <td align="center" style={`color: ${(c.stories_new ?? 0) > 0 ? '#16a34a' : '#5b7279'};`}>{c.stories_new ?? '---'}</td>
-              <td align="center" style={`color: ${c.evals_completed > 0 ? '#60a5fa' : '#5b7279'}; font-weight: ${c.evals_completed > 0 ? 'bold' : 'normal'};`}>{c.evals_completed}</td>
-              <td align="center" style={`color: ${c.evals_failed > 0 ? '#dc2626' : '#5b7279'};`}>{c.evals_failed || '---'}</td>
-              <td style="color: #5b7279;">
-                {cycleMins !== null ? `${cycleMins}m ${cycleSecs}s` : <span style="color: #0d4655;">current</span>}
+              <td align="center" style="color: var(--fg-secondary);">{c.stories_found ?? '---'}</td>
+              <td align="center" style={`color: ${(c.stories_new ?? 0) > 0 ? 'var(--color-positive)' : 'var(--fg-secondary)'};`}>{c.stories_new ?? '---'}</td>
+              <td align="center" style={`color: ${c.evals_completed > 0 ? 'var(--channel-editorial)' : 'var(--fg-secondary)'}; font-weight: ${c.evals_completed > 0 ? 'bold' : 'normal'};`}>{c.evals_completed}</td>
+              <td align="center" style={`color: ${c.evals_failed > 0 ? 'var(--color-negative)' : 'var(--fg-secondary)'};`}>{c.evals_failed || '---'}</td>
+              <td style="color: var(--fg-secondary);">
+                {cycleMins !== null ? `${cycleMins}m ${cycleSecs}s` : <span style="color: var(--bg-surface);">current</span>}
               </td>
             </tr>
           );
@@ -417,10 +417,10 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
         const avgCycleMins = Math.floor(avgCycle / 60);
         const avgCycleSecs = Math.round(avgCycle % 60);
         return (
-          <div style="margin-top: 6px; font-size: var(--font-xs); color: #5b7279;">
-            Avg: <span style="color: #60a5fa;">{avgEvals.toFixed(1)}</span> evals/cycle
-            <span style="color: #0d4655;"> · </span>
-            <span style="color: #5b7279;">{avgCycleMins}m {avgCycleSecs}s</span> cycle time
+          <div style="margin-top: 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+            Avg: <span style="color: var(--channel-editorial);">{avgEvals.toFixed(1)}</span> evals/cycle
+            <span style="color: var(--bg-surface);"> · </span>
+            <span style="color: var(--fg-secondary);">{avgCycleMins}m {avgCycleSecs}s</span> cycle time
           </div>
         );
       })()}
@@ -432,22 +432,22 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
     <details class="collapsible-section">
       <summary>
         Throttle Impact
-        <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
           {Math.round(throttleImpact.reduce((s, r) => s + r.total_delay_sec, 0) / 60)}m wasted 7d
         </span>
       </summary>
       <div class="table-wrap">
       <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-        <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+        <tr style="color: var(--color-border); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
           <td style="padding: 2px 6px;">Model</td>
           <td style="padding: 2px 6px; text-align: right; width: 60px;">Events</td>
           <td style="padding: 2px 6px; text-align: right; width: 80px;">Wasted (7d)</td>
         </tr>
         {throttleImpact.map(row => (
-          <tr style="border-top: 1px solid #0d4655;">
-            <td style="padding: 3px 6px; color: #98a8a8;">{row.model}</td>
-            <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{row.event_count}</td>
-            <td style={`padding: 3px 6px; text-align: right; color: ${row.total_delay_sec > 600 ? '#eab308' : '#5b7279'};`}>
+          <tr style="border-top: 1px solid var(--bg-surface);">
+            <td style="padding: 3px 6px; color: var(--fg-primary);">{row.model}</td>
+            <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{row.event_count}</td>
+            <td style={`padding: 3px 6px; text-align: right; color: ${row.total_delay_sec > 600 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>
               {row.total_delay_sec >= 60
                 ? `${Math.round(row.total_delay_sec / 60)}m ${Math.round(row.total_delay_sec % 60)}s`
                 : `${Math.round(row.total_delay_sec)}s`}
@@ -465,7 +465,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
       <summary>Eval Latency</summary>
       <div class="table-wrap">
       <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-        <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+        <tr style="color: var(--color-border); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
           <td style="padding: 2px 6px;">Model</td>
           <td style="padding: 2px 6px; text-align: right; width: 60px;" title="Median latency (story crawled → eval done)">P50</td>
           <td style="padding: 2px 6px; text-align: right; width: 60px;">P95</td>
@@ -475,12 +475,12 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
         {latencyStats.map(row => {
           const fmt = (s: number | null) => s == null ? '—' : s < 3600 ? `${Math.round(s / 60)}m` : `${(s / 3600).toFixed(1)}h`;
           return (
-            <tr style="border-top: 1px solid #0d4655;">
-              <td style="padding: 3px 6px; color: #98a8a8;">{row.eval_model}</td>
-              <td style={`padding: 3px 6px; text-align: right; color: ${row.p50_sec != null && row.p50_sec > 3600 ? '#eab308' : '#5b7279'};`}>{fmt(row.p50_sec)}</td>
-              <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{fmt(row.p95_sec)}</td>
-              <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{fmt(row.p99_sec)}</td>
-              <td style="padding: 3px 6px; text-align: right; color: #1a5568;">{row.sample_count}</td>
+            <tr style="border-top: 1px solid var(--bg-surface);">
+              <td style="padding: 3px 6px; color: var(--fg-primary);">{row.eval_model}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${row.p50_sec != null && row.p50_sec > 3600 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>{fmt(row.p50_sec)}</td>
+              <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{fmt(row.p95_sec)}</td>
+              <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{fmt(row.p99_sec)}</td>
+              <td style="padding: 3px 6px; text-align: right; color: var(--color-border);">{row.sample_count}</td>
             </tr>
           );
         })}

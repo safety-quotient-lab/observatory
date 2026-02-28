@@ -50,19 +50,19 @@ const evPcts = evTotal > 0
       l: (deepStats!.evidence_l / evTotal) * 100, nd: (deepStats!.evidence_nd / evTotal) * 100 }
   : { h: 0, m: 0, l: 0, nd: 0 };
 const evidenceRows = deepStats && evTotal > 0 ? [
-  { key: 'h',  label: 'High',   count: deepStats.evidence_h,  pct: evPcts.h,  color: '#16a34a' },
-  { key: 'm',  label: 'Medium', count: deepStats.evidence_m,  pct: evPcts.m,  color: '#eab308' },
-  { key: 'l',  label: 'Low',    count: deepStats.evidence_l,  pct: evPcts.l,  color: '#d56500' },
-  { key: 'nd', label: 'ND',     count: deepStats.evidence_nd, pct: evPcts.nd, color: '#1a5568' },
+  { key: 'h',  label: 'High',   count: deepStats.evidence_h,  pct: evPcts.h,  color: 'var(--color-positive)' },
+  { key: 'm',  label: 'Medium', count: deepStats.evidence_m,  pct: evPcts.m,  color: 'var(--color-warning)' },
+  { key: 'l',  label: 'Low',    count: deepStats.evidence_l,  pct: evPcts.l,  color: 'var(--color-orange)' },
+  { key: 'nd', label: 'ND',     count: deepStats.evidence_nd, pct: evPcts.nd, color: 'var(--color-border)' },
 ] : [];
 const dirMax = directionality.length > 0 ? Math.max(...directionality.map(d => d.cnt)) : 1;
 const DIRMETA: { [k: string]: { label: string; desc: string; color: string } } = {
-  A: { label: 'Affirming',  desc: 'Content affirms the right',           color: '#16a34a' },
-  P: { label: 'Pressuring', desc: 'Content pressures toward the right',  color: '#eab308' },
-  F: { label: 'Framing',    desc: 'Frames narrative around the right',   color: '#3b82f6' },
-  C: { label: 'Contesting', desc: 'Content contests or undermines',      color: '#dc2626' },
+  A: { label: 'Affirming',  desc: 'Content affirms the right',           color: 'var(--color-positive)' },
+  P: { label: 'Pressuring', desc: 'Content pressures toward the right',  color: 'var(--color-warning)' },
+  F: { label: 'Framing',    desc: 'Frames narrative around the right',   color: 'var(--color-blue)' },
+  C: { label: 'Contesting', desc: 'Content contests or undermines',      color: 'var(--color-negative)' },
   D: { label: 'Deflecting', desc: 'Deflects attention from the right',   color: '#9333ea' },
-  N: { label: 'Neutral',    desc: 'Neutral or factual reference',        color: '#5b7279' },
+  N: { label: 'Neutral',    desc: 'Neutral or factual reference',        color: 'var(--fg-secondary)' },
 };
 
 const prevNum = articleNum > 0 ? articleNum - 1 : null;
@@ -99,14 +99,14 @@ const jsonLd = udhrSection ? {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">{section}</span>
-        <span style="color: #5b7279; margin-left: 8px;">{articleTitle}</span>
+        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">{section}</span>
+        <span style="color: var(--fg-secondary); margin-left: 8px;">{articleTitle}</span>
       </td>
     </tr>
     <tr>
       <td class="subtext" style="padding: 4px 0 8px 0;">
         Stories ranked by their score on this UDHR provision.
-        {page > 1 && <span style="color: #5b7279;"> · page {page}</span>}
+        {page > 1 && <span style="color: var(--fg-secondary);"> · page {page}</span>}
         {prevNum !== null && (
           <>
             <span> | </span>
@@ -127,14 +127,14 @@ const jsonLd = udhrSection ? {
   {udhrSection && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
             UDHR Text
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               {udhrSection.group}
             </span>
           </div>
-          <div style="color: #8faaab; font-size: var(--font-base); line-height: 1.6; white-space: pre-line;">{udhrSection.text}</div>
+          <div style="color: var(--fg-emphasis); font-size: var(--font-base); line-height: 1.6; white-space: pre-line;">{udhrSection.text}</div>
         </td>
       </tr>
     </table>
@@ -144,9 +144,9 @@ const jsonLd = udhrSection ? {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 0 0 10px 0;">
     <tr>
       <td>
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
           All Articles
-          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
             {coverage.filter(c => c.signal_count > 0).length}/{ALL_SECTIONS.length} with scores
           </span>
         </div>
@@ -158,11 +158,11 @@ const jsonLd = udhrSection ? {
             const hasScores = cov && cov.signal_count > 0;
             let style: string;
             if (isActive) {
-              style = 'background: rgba(255,102,0,0.2); color: #d56500; border: 1px solid rgba(255,102,0,0.4);';
+              style = 'background: rgba(255,102,0,0.2); color: var(--color-orange); border: 1px solid rgba(255,102,0,0.4);';
             } else if (hasScores) {
               style = `background: ${scoreToColor(cov.avg_final)}20; color: ${scoreToColor(cov.avg_final)}; border: 1px solid ${scoreToColor(cov.avg_final)}40;`;
             } else {
-              style = 'background: #0d4655; color: #1a5568; border: 1px solid #0d4655;';
+              style = 'background: var(--bg-surface); color: var(--color-border); border: 1px solid var(--bg-surface);';
             }
             return (
               <a
@@ -183,7 +183,7 @@ const jsonLd = udhrSection ? {
   {displayRankings.length > 0 ? (
     <table id="article-table" cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
       <thead>
-        <tr style="color: #5b7279; font-size: var(--font-sm); cursor: pointer; user-select: none;">
+        <tr style="color: var(--fg-secondary); font-size: var(--font-sm); cursor: pointer; user-select: none;">
           <td data-col="rank" data-type="num" width="30"># ▼</td>
           <td data-col="hrcb" data-type="num" width="60" align="center">HRCB</td>
           <td data-col="pts" data-type="num" width="34" align="center" title="HN Points">Pts</td>
@@ -202,17 +202,17 @@ const jsonLd = udhrSection ? {
           const rowSetl = computeSetl(row.structural, row.editorial);
           const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
           return (
-          <tr style="border-top: 1px solid #1a5568;">
-            <td style="color: #5b7279;" class="score-font" data-val={offset + i + 1}>{offset + i + 1}.</td>
+          <tr style="border-top: 1px solid var(--color-border);">
+            <td style="color: var(--fg-secondary);" class="score-font" data-val={offset + i + 1}>{offset + i + 1}.</td>
             <td align="center" data-val={row.final ?? -999}>
               <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
                 {formatScore(row.final)}
               </span>
             </td>
-            <td align="center" style="color: #5b7279; font-size: var(--font-sm);" data-val={row.hn_score ?? -999}>
+            <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.hn_score ?? -999}>
               {row.hn_score ?? ''}
             </td>
-            <td align="center" style="color: #5b7279; font-size: var(--font-sm);" data-val={row.hn_comments ?? -999}>
+            <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.hn_comments ?? -999}>
               {row.hn_comments ?? ''}
             </td>
             <td align="center" class="score-font" style={`color: ${confidenceToColor(rowConf)}; font-size: var(--font-sm);`} data-val={rowConf ?? -999}>
@@ -221,7 +221,7 @@ const jsonLd = udhrSection ? {
             <td data-val={row.title}>
               <a href={`/item/${row.hn_id}`}>{row.title}</a>
               {row.domain && (
-                <span style="color: #5b7279; font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
+                <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
               )}
             </td>
             <td align="center" class="score-font" style={`color: ${scoreToColor(row.editorial)}; font-size: var(--font-sm);`} data-val={row.editorial ?? -999}>
@@ -233,7 +233,7 @@ const jsonLd = udhrSection ? {
             <td align="center" class="score-font" style={`color: ${setlToColor(rowSetl)}; font-size: var(--font-sm);`} data-val={rowSetl ?? -999}>
               {formatSetl(rowSetl)}
             </td>
-            <td align="center" style="color: #5b7279; font-size: var(--font-sm);" data-val={row.evidence === 'H' ? 3 : row.evidence === 'M' ? 2 : row.evidence === 'L' ? 1 : 0}>
+            <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.evidence === 'H' ? 3 : row.evidence === 'M' ? 2 : row.evidence === 'L' ? 1 : 0}>
               {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
             </td>
             <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_editorial_mean ?? row.hcb_weighted_mean)}; font-size: var(--font-sm);`} data-val={(row.hcb_editorial_mean ?? row.hcb_weighted_mean) ?? -999}>
@@ -253,18 +253,18 @@ const jsonLd = udhrSection ? {
     return (
     <table cellpadding="0" cellspacing="0" width="100%">
       <tr>
-        <td style="padding: 15px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <td style="padding: 15px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
           <div style="text-align: center; margin-bottom: 12px;">
-            <span style="color: #5b7279; font-size: var(--font-lg);">&#9675;</span>
-            <div style="color: #5b7279; margin-top: 6px;">No stories have scored on <strong style="color: #98a8a8;">{section}</strong> yet.</div>
-            <div style="font-size: var(--font-sm); color: #5b7279; margin-top: 4px;">
+            <span style="color: var(--fg-secondary); font-size: var(--font-lg);">&#9675;</span>
+            <div style="color: var(--fg-secondary); margin-top: 6px;">No stories have scored on <strong style="color: var(--fg-primary);">{section}</strong> yet.</div>
+            <div style="font-size: var(--font-sm); color: var(--fg-secondary); margin-top: 4px;">
               When stories are evaluated, those with signal on this provision will be ranked here.
             </div>
           </div>
 
           {nearbyWithScores.length > 0 && (
-            <div style="border-top: 1px solid #0d4655; padding-top: 10px;">
-              <div style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 6px;">Nearby articles with rankings:</div>
+            <div style="border-top: 1px solid var(--bg-surface); padding-top: 10px;">
+              <div style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 6px;">Nearby articles with rankings:</div>
               <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
                 {nearbyWithScores.map(c => (
                   <tr>
@@ -274,14 +274,14 @@ const jsonLd = udhrSection ? {
                       </a>
                     </td>
                     <td>
-                      <a href={`/article/${c.sort_order}`} style="color: #5b7279;">
+                      <a href={`/article/${c.sort_order}`} style="color: var(--fg-secondary);">
                         {ARTICLE_TITLES[c.section]}
                       </a>
                     </td>
                     <td style="width: 50px; text-align: right;" class="score-font">
                       <span style={`color: ${scoreToColor(c.avg_final)};`}>{formatScore(c.avg_final)}</span>
                     </td>
-                    <td style="width: 60px; text-align: right; color: #5b7279; font-size: var(--font-xs);">
+                    <td style="width: 60px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);">
                       {c.signal_count} stories
                     </td>
                   </tr>
@@ -299,7 +299,7 @@ const jsonLd = udhrSection ? {
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={`/article/${articleNum}?p=${page + 1}`} class="morelink" style="color: #5b7279; font-size: var(--font-base);">
+          <a href={`/article/${articleNum}?p=${page + 1}`} class="morelink" style="color: var(--fg-secondary); font-size: var(--font-base);">
             More
           </a>
         </td>
@@ -312,33 +312,33 @@ const jsonLd = udhrSection ? {
     <details open class="collapsible-section" style="margin-top: 10px;">
       <summary>
         Deep Dive
-        <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
           {deepStats.count.toLocaleString()} stories · all-time section stats
         </span>
       </summary>
 
       {/* Score stat cards */}
       <div class="stat-cards" style="margin-bottom: 10px; gap: 6px;">
-        <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
-          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Stories</div>
-          <div class="score-font" style="font-size: var(--font-md); color: #98a8a8;">{deepStats.count.toLocaleString()}</div>
+        <div style="background: var(--bg-surface); padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+          <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Stories</div>
+          <div class="score-font" style="font-size: var(--font-md); color: var(--fg-primary);">{deepStats.count.toLocaleString()}</div>
         </div>
-        <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
-          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Avg</div>
+        <div style="background: var(--bg-surface); padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+          <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Avg</div>
           <div class="score-font" style={`font-size: var(--font-md); color: ${scoreToColor(deepStats.avg_final)};`}>{formatScore(deepStats.avg_final)}</div>
         </div>
         {stddev != null && (
-          <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
-            <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Stddev</div>
-            <div class="score-font" style="font-size: var(--font-md); color: #5b7279;">{stddev.toFixed(3)}</div>
+          <div style="background: var(--bg-surface); padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+            <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Stddev</div>
+            <div class="score-font" style="font-size: var(--font-md); color: var(--fg-secondary);">{stddev.toFixed(3)}</div>
           </div>
         )}
-        <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
-          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Best</div>
+        <div style="background: var(--bg-surface); padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+          <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Best</div>
           <div class="score-font" style={`font-size: var(--font-md); color: ${scoreToColor(deepStats.max_final)};`}>{formatScore(deepStats.max_final)}</div>
         </div>
-        <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
-          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Worst</div>
+        <div style="background: var(--bg-surface); padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+          <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Worst</div>
           <div class="score-font" style={`font-size: var(--font-md); color: ${scoreToColor(deepStats.min_final)};`}>{formatScore(deepStats.min_final)}</div>
         </div>
       </div>
@@ -348,28 +348,28 @@ const jsonLd = udhrSection ? {
         <div class="two-col" style="gap: 8px; margin-bottom: 10px;">
           {top3.length > 0 && (
             <div>
-              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Strongest alignment</div>
+              <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Strongest alignment</div>
               {top3.map(r => (
-                <div style={`background: #0d4655; border-radius: 4px; padding: 6px 10px; margin-bottom: 4px; border-left: 3px solid ${scoreToColor(r.final)};`}>
+                <div style={`background: var(--bg-surface); border-radius: 4px; padding: 6px 10px; margin-bottom: 4px; border-left: 3px solid ${scoreToColor(r.final)};`}>
                   <div class="score-font" style={`color: ${scoreToColor(r.final)}; font-size: var(--font-sm); font-weight: bold;`}>{formatScore(r.final)}</div>
                   <div style="font-size: var(--font-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
-                    <a href={`/item/${r.hn_id}`} style="color: #98a8a8;">{r.title}</a>
+                    <a href={`/item/${r.hn_id}`} style="color: var(--fg-primary);">{r.title}</a>
                   </div>
-                  {r.domain && <div style="color: #5b7279; font-size: 9px;">{r.domain}</div>}
+                  {r.domain && <div style="color: var(--fg-secondary); font-size: 9px;">{r.domain}</div>}
                 </div>
               ))}
             </div>
           )}
           {bottom3.length > 0 && (
             <div>
-              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Weakest alignment</div>
+              <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Weakest alignment</div>
               {bottom3.map(r => (
-                <div style={`background: #0d4655; border-radius: 4px; padding: 6px 10px; margin-bottom: 4px; border-left: 3px solid ${scoreToColor(r.final)};`}>
+                <div style={`background: var(--bg-surface); border-radius: 4px; padding: 6px 10px; margin-bottom: 4px; border-left: 3px solid ${scoreToColor(r.final)};`}>
                   <div class="score-font" style={`color: ${scoreToColor(r.final)}; font-size: var(--font-sm); font-weight: bold;`}>{formatScore(r.final)}</div>
                   <div style="font-size: var(--font-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
-                    <a href={`/item/${r.hn_id}`} style="color: #98a8a8;">{r.title}</a>
+                    <a href={`/item/${r.hn_id}`} style="color: var(--fg-primary);">{r.title}</a>
                   </div>
-                  {r.domain && <div style="color: #5b7279; font-size: 9px;">{r.domain}</div>}
+                  {r.domain && <div style="color: var(--fg-secondary); font-size: 9px;">{r.domain}</div>}
                 </div>
               ))}
             </div>
@@ -380,7 +380,7 @@ const jsonLd = udhrSection ? {
       {/* Evidence breakdown */}
       {evidenceRows.length > 0 && (
         <div style="margin-bottom: 10px;">
-          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Evidence strength</div>
+          <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Evidence strength</div>
           <div style="display: flex; flex-direction: column; gap: 4px;">
             {evidenceRows.filter(ev => ev.count > 0).map(ev => (
               <div style="display: flex; align-items: center; gap: 6px; font-size: var(--font-xs);">
@@ -388,7 +388,7 @@ const jsonLd = udhrSection ? {
                 <div style="flex: 1; height: 8px; background: #082e38; border-radius: 3px; overflow: hidden;">
                   <div style={`width: ${ev.pct.toFixed(1)}%; height: 100%; background: ${ev.color}; border-radius: 3px;`}></div>
                 </div>
-                <span style="color: #5b7279; width: 58px; text-align: right; flex-shrink: 0; font-family: monospace; font-size: 9px;">{ev.count} ({ev.pct.toFixed(0)}%)</span>
+                <span style="color: var(--fg-secondary); width: 58px; text-align: right; flex-shrink: 0; font-family: monospace; font-size: 9px;">{ev.count} ({ev.pct.toFixed(0)}%)</span>
               </div>
             ))}
           </div>
@@ -398,10 +398,10 @@ const jsonLd = udhrSection ? {
       {/* Directionality markers */}
       {directionality.length > 0 && (
         <div style="margin-bottom: 10px;">
-          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Directionality markers</div>
+          <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Directionality markers</div>
           <div style="display: flex; flex-direction: column; gap: 4px;">
             {directionality.map(d => {
-              const meta = DIRMETA[d.marker] ?? { label: d.marker, desc: '', color: '#5b7279' };
+              const meta = DIRMETA[d.marker] ?? { label: d.marker, desc: '', color: 'var(--fg-secondary)' };
               const pct = dirMax > 0 ? (d.cnt / dirMax) * 100 : 0;
               return (
                 <div style="display: flex; align-items: center; gap: 6px; font-size: var(--font-xs);" title={meta.desc}>
@@ -409,7 +409,7 @@ const jsonLd = udhrSection ? {
                   <div style="flex: 1; height: 8px; background: #082e38; border-radius: 3px; overflow: hidden;">
                     <div style={`width: ${pct.toFixed(1)}%; height: 100%; background: ${meta.color}; border-radius: 3px; opacity: 0.75;`}></div>
                   </div>
-                  <span style="color: #5b7279; width: 30px; text-align: right; flex-shrink: 0; font-family: monospace; font-size: 9px;">{d.cnt}</span>
+                  <span style="color: var(--fg-secondary); width: 30px; text-align: right; flex-shrink: 0; font-family: monospace; font-size: 9px;">{d.cnt}</span>
                 </div>
               );
             })}
@@ -420,12 +420,12 @@ const jsonLd = udhrSection ? {
       {/* Theme tags */}
       {themes.length > 0 && (
         <div>
-          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Top themes</div>
+          <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Top themes</div>
           <div style="display: flex; flex-wrap: wrap; gap: 4px;">
             {themes.map(t => (
-              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #0d4655; border-radius: 10px; font-size: 9px; color: #98a8a8; border: 1px solid #1a5568;">
+              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: var(--bg-surface); border-radius: 10px; font-size: 9px; color: var(--fg-primary); border: 1px solid var(--color-border);">
                 {t.theme}
-                <span style="color: #1a5568;">{t.cnt}</span>
+                <span style="color: var(--color-border);">{t.cnt}</span>
               </span>
             ))}
           </div>

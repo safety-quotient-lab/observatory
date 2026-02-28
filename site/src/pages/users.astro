@@ -50,7 +50,7 @@ const karmaPearsonR = karmaCorr?.pearson_r ?? null;
 const karmaRLabel = karmaPearsonR != null
   ? `r = ${karmaPearsonR > 0 ? '+' : ''}${karmaPearsonR.toFixed(3)} (${Math.abs(karmaPearsonR) < 0.1 ? 'negligible' : Math.abs(karmaPearsonR) < 0.3 ? 'weak' : Math.abs(karmaPearsonR) < 0.5 ? 'moderate' : 'strong'})`
   : '';
-const karmaRColor = karmaPearsonR != null && Math.abs(karmaPearsonR) > 0.3 ? '#d56500' : '#5b7279';
+const karmaRColor = karmaPearsonR != null && Math.abs(karmaPearsonR) > 0.3 ? 'var(--color-orange)' : 'var(--fg-secondary)';
 const karmaScatterJson = JSON.stringify((karmaCorr?.points ?? []).map(p => ({
   u: p.username, k: p.karma, h: p.avg_hrcb, n: p.story_count,
 })));
@@ -80,7 +80,7 @@ const sortLabels: SortLabels = {
 
 function thStyle(col: string): string {
   const active = safeSort === col;
-  return `cursor: pointer; ${active ? 'color: #d56500; font-weight: bold;' : 'color: #5b7279;'}`;
+  return `cursor: pointer; ${active ? 'color: var(--color-orange); font-weight: bold;' : 'color: var(--fg-secondary);'}`;
 }
 ---
 
@@ -89,28 +89,28 @@ function thStyle(col: string): string {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">User Profiles</span>
-        <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-base);">
+        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">User Profiles</span>
+        <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-base);">
           {totalUsers} users, {totalStories} stories
         </span>
         <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
-          <span style="color: #5b7279;">sort:</span>
+          <span style="color: var(--fg-secondary);">sort:</span>
           {Object.entries(sortLabels).map(([key, label], i) => (
             <>
-              {i > 0 && <span style="color: #1a5568;"> | </span>}
+              {i > 0 && <span style="color: var(--color-border);"> | </span>}
               {safeSort === key
-                ? <span style="color: #d56500; font-weight: bold;">{label}</span>
+                ? <span style="color: var(--color-orange); font-weight: bold;">{label}</span>
                 : <a href={sortUrl(key)}>{label}</a>
               }
             </>
           ))}
           <br />
-          <span style="color: #5b7279;">min stories:</span>
+          <span style="color: var(--fg-secondary);">min stories:</span>
           {[2, 3, 5, 10].map((m, i) => (
             <>
-              {i > 0 && <span style="color: #1a5568;"> | </span>}
+              {i > 0 && <span style="color: var(--color-border);"> | </span>}
               {minStories === m
-                ? <span style="color: #d56500; font-weight: bold;">{m}</span>
+                ? <span style="color: var(--color-orange); font-weight: bold;">{m}</span>
                 : <a href={minUrl(m)}>{m}</a>
               }
             </>
@@ -121,62 +121,62 @@ function thStyle(col: string): string {
   </table>
 
   {/* --- Insight cards --- */}
-  <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; margin-bottom: 10px;">
+  <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; margin-bottom: 10px;">
     <div class="insight-grid">
       {/* Top submitters */}
       <div style="padding: 4px 8px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Top Submitters</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Top Submitters</div>
         {topSubmitters.map(u => (
           <div style="margin-bottom: 3px;">
-            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
-            <span class="score-font" style="color: #60a5fa; font-size: var(--font-sm); margin-left: 4px;">{u.stories}</span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">stories</span>
+            <a href={`/user/${u.username}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{u.username}</a>
+            <span class="score-font" style="color: var(--channel-editorial); font-size: var(--font-sm); margin-left: 4px;">{u.stories}</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">stories</span>
           </div>
         ))}
       </div>
       {/* Most HR-Positive */}
       <div style="padding: 4px 8px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
         {topHrcb.map(u => (
           <div style="margin-bottom: 3px;">
-            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
+            <a href={`/user/${u.username}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{u.username}</a>
             <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.full_evaluated})</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">({u.full_evaluated})</span>
           </div>
         ))}
       </div>
       {/* Most HR-Negative */}
       <div style="padding: 4px 8px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
         {bottomHrcb.map(u => (
           <div style="margin-bottom: 3px;">
-            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
+            <a href={`/user/${u.username}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{u.username}</a>
             <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.full_evaluated})</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">({u.full_evaluated})</span>
           </div>
         ))}
       </div>
       {/* Most Diverse (domains) */}
       <div style="padding: 4px 8px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
         {mostDiverse.map(u => (
           <div style="margin-bottom: 3px;">
-            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
-            <span class="score-font" style="color: #a78bfa; font-size: var(--font-sm); margin-left: 4px;">{u.unique_domains}</span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">domains</span>
+            <a href={`/user/${u.username}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{u.username}</a>
+            <span class="score-font" style="color: var(--channel-structural); font-size: var(--font-sm); margin-left: 4px;">{u.unique_domains}</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">domains</span>
           </div>
         ))}
       </div>
       {/* Most Controversial */}
       <div style="padding: 4px 8px;">
-        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
         {mostControversial.map(u => (
           <div style="margin-bottom: 3px;">
-            <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
-            <span class="score-font" style="color: #e2b340; font-size: var(--font-sm); margin-left: 4px;">
+            <a href={`/user/${u.username}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{u.username}</a>
+            <span class="score-font" style="color: var(--color-hn-score); font-size: var(--font-sm); margin-left: 4px;">
               {u.hrcb_range !== null ? u.hrcb_range.toFixed(2) : '—'}
             </span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">range</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">range</span>
           </div>
         ))}
       </div>
@@ -186,21 +186,21 @@ function thStyle(col: string): string {
   {/* --- Posting patterns --- */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
         <table cellpadding="0" cellspacing="0" width="100%">
           <tr>
             {/* Hourly pattern */}
             <td style="vertical-align: top; width: 65%; padding: 4px 8px;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
                 Hourly Posting Pattern (UTC)
-                {peakHour && <span style="color: #5b7279; text-transform: none; letter-spacing: normal; margin-left: 8px;">
+                {peakHour && <span style="color: var(--fg-secondary); text-transform: none; letter-spacing: normal; margin-left: 8px;">
                   peak engagement: {peakHour.hour}:00 ({peakHour.avg_hn_score} avg pts)
                 </span>}
               </div>
               <div style="display: flex; align-items: flex-end; gap: 2px; height: 50px;">
                 {hourly.map(h => {
                   const pct = (h.stories / maxHourlyStories) * 100;
-                  const hrcbColor = h.avg_hrcb !== null ? scoreToColor(h.avg_hrcb) : '#1a5568';
+                  const hrcbColor = h.avg_hrcb !== null ? scoreToColor(h.avg_hrcb) : 'var(--color-border)';
                   return (
                     <div style={`flex: 1; display: flex; flex-direction: column; align-items: center;`} title={`${h.hour}:00 UTC — ${h.stories} stories, avg ${h.avg_hn_score} pts, avg ${h.avg_comments} cmt${h.avg_hrcb !== null ? `, HRCB ${formatScore(h.avg_hrcb)}` : ''}`}>
                       <div style={`width: 100%; height: ${pct}%; min-height: 2px; background: ${hrcbColor}; border-radius: 1px 1px 0 0; opacity: 0.8;`}></div>
@@ -210,27 +210,27 @@ function thStyle(col: string): string {
               </div>
               <div style="display: flex; gap: 2px; margin-top: 2px;">
                 {hourly.map(h => (
-                  <div style="flex: 1; text-align: center; font-size: 7px; color: #5b7279;" class="score-font">
+                  <div style="flex: 1; text-align: center; font-size: 7px; color: var(--fg-secondary);" class="score-font">
                     {h.hour % 3 === 0 ? h.hour : ''}
                   </div>
                 ))}
               </div>
             </td>
             {/* Day of week pattern */}
-            <td style="vertical-align: top; width: 35%; padding: 4px 8px; border-left: 1px solid #0d4655;">
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            <td style="vertical-align: top; width: 35%; padding: 4px 8px; border-left: 1px solid var(--bg-surface);">
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
                 Day of Week
               </div>
               {daily.map(d => {
                 const pct = (d.stories / maxDailyStories) * 100;
-                const hrcbColor = d.avg_hrcb !== null ? scoreToColor(d.avg_hrcb) : '#1a5568';
+                const hrcbColor = d.avg_hrcb !== null ? scoreToColor(d.avg_hrcb) : 'var(--color-border)';
                 return (
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;" title={`${d.day_name}: ${d.stories} stories, avg ${d.avg_hn_score} pts, avg ${d.avg_comments} cmt${d.avg_hrcb !== null ? `, HRCB ${formatScore(d.avg_hrcb)}` : ''}`}>
-                    <span style="color: #5b7279; font-size: var(--font-xs); width: 28px;" class="score-font">{d.day_name.slice(0, 3)}</span>
-                    <div style="flex: 1; height: 8px; background: #0d4655; border-radius: 2px; overflow: hidden;">
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 28px;" class="score-font">{d.day_name.slice(0, 3)}</span>
+                    <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;">
                       <div style={`width: ${pct}%; height: 100%; background: ${hrcbColor}; border-radius: 2px; opacity: 0.8;`}></div>
                     </div>
-                    <span style="color: #5b7279; font-size: var(--font-xs); width: 30px; text-align: right;" class="score-font">{d.stories}</span>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 30px; text-align: right;" class="score-font">{d.stories}</span>
                   </div>
                 );
               })}
@@ -244,20 +244,20 @@ function thStyle(col: string): string {
   {/* --- Karma vs HRCB correlation scatter --- */}
   <table cellpadding="0" cellspacing="0" width="100%" style={`margin-bottom: 10px;${karmaUserCount < 5 ? ' display: none;' : ''}`}>
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
           Karma vs HRCB
-          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
             does HN reputation predict human rights alignment? · {karmaUserCount} users
           </span>
-          <span style={`margin-left: 8px; padding: 1px 6px; border-radius: 3px; font-size: var(--font-xs); text-transform: none; letter-spacing: 0; background: #0d4655; color: ${karmaRColor};`}>
+          <span style={`margin-left: 8px; padding: 1px 6px; border-radius: 3px; font-size: var(--font-xs); text-transform: none; letter-spacing: 0; background: var(--bg-surface); color: ${karmaRColor};`}>
             {karmaRLabel}
           </span>
         </div>
-        <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 4px;">
           X: karma (log scale) · Y: avg HRCB · hover for details
         </div>
-        <canvas id="karma-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: #002d38; border-radius: 4px;" aria-label="User karma vs HRCB scatter plot"></canvas>
+        <canvas id="karma-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: var(--bg-primary); border-radius: 4px;" aria-label="User karma vs HRCB scatter plot"></canvas>
       </td>
     </tr>
   </table>
@@ -265,12 +265,12 @@ function thStyle(col: string): string {
   {/* --- Main user table --- */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; overflow-x: auto;">
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; overflow-x: auto;">
         <div style="overflow-x: auto;">
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm); min-width: 1050px;">
             <tr style="font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
-              <td width="20" style="color: #5b7279;">#</td>
-              <td style="color: #5b7279;">User</td>
+              <td width="20" style="color: var(--fg-secondary);">#</td>
+              <td style="color: var(--fg-secondary);">User</td>
               <td width="55" align="center" title="Stories seen in our crawl">
                 <a href={sortUrl('stories')} style={thStyle('stories')}>Stories</a>
               </td>
@@ -280,7 +280,7 @@ function thStyle(col: string): string {
               <td width="55" align="center" title="Unique domains submitted">
                 <a href={sortUrl('domains')} style={thStyle('domains')}>Domains</a>
               </td>
-              <td width="80" align="center" style="color: #5b7279;" title="Most frequently submitted domain">Top Domain</td>
+              <td width="80" align="center" style="color: var(--fg-secondary);" title="Most frequently submitted domain">Top Domain</td>
               <td width="65" align="center" title="Average HN score per story">
                 <a href={sortUrl('avg_score')} style={thStyle('avg_score')}>Avg Pts</a>
               </td>
@@ -289,14 +289,14 @@ function thStyle(col: string): string {
               </td>
               <td width="130" align="center" title="Full editorial (Claude, section-aggregate) / Structural. [E] = lite-only estimate.">
                 <a href={sortUrl('editorial_full')} style={thStyle('editorial_full')}>E-full</a>
-                <span style="color: #1a5568;">/</span>
+                <span style="color: var(--color-border);">/</span>
                 <a href={sortUrl('structural')} style={thStyle('structural')}>S</a>
               </td>
               <td width="130" align="center" title="Percentage positive / neutral / negative HRCB">
                 <a href={sortUrl('positive')} style={thStyle('positive')}>+</a>
-                <span style="color: #1a5568;">/</span>
-                <span style="color: #5b7279;">0</span>
-                <span style="color: #1a5568;">/</span>
+                <span style="color: var(--color-border);">/</span>
+                <span style="color: var(--fg-secondary);">0</span>
+                <span style="color: var(--color-border);">/</span>
                 <a href={sortUrl('negative')} style={thStyle('negative')}>-</a>
               </td>
               <td width="50" align="center" title="Epistemic Quality score (full evals)">
@@ -311,69 +311,69 @@ function thStyle(col: string): string {
               const sBarW = 50;
               const ePct = u.avg_editorial_full !== null ? Math.abs(u.avg_editorial_full) * 50 : 0;
               const sPct = u.avg_structural !== null ? Math.abs(u.avg_structural) * 50 : 0;
-              const eColor = u.avg_editorial_full !== null ? scoreToColor(u.avg_editorial_full) : '#0d4655';
-              const sColor = u.avg_structural !== null ? scoreToColor(u.avg_structural) : '#0d4655';
+              const eColor = u.avg_editorial_full !== null ? scoreToColor(u.avg_editorial_full) : 'var(--bg-surface)';
+              const sColor = u.avg_structural !== null ? scoreToColor(u.avg_structural) : 'var(--bg-surface)';
               const isLiteOnly = u.full_evaluated === 0 && u.lite_evaluated > 0;
               return (
-                <tr style="border-top: 1px solid #0d4655;">
-                  <td style="color: #5b7279;" class="score-font">{i + 1}</td>
+                <tr style="border-top: 1px solid var(--bg-surface);">
+                  <td style="color: var(--fg-secondary);" class="score-font">{i + 1}</td>
                   <td>
-                    <a href={`/user/${u.username}`} style="color: #98a8a8;">{u.username}</a>
+                    <a href={`/user/${u.username}`} style="color: var(--fg-primary);">{u.username}</a>
                   </td>
-                  <td align="center" class="score-font" style="color: #5b7279;">{u.stories}</td>
-                  <td align="center" class="score-font" style="color: #5b7279;">
-                    {u.karma != null ? u.karma.toLocaleString() : <span style="color: #1a5568;">—</span>}
+                  <td align="center" class="score-font" style="color: var(--fg-secondary);">{u.stories}</td>
+                  <td align="center" class="score-font" style="color: var(--fg-secondary);">
+                    {u.karma != null ? u.karma.toLocaleString() : <span style="color: var(--color-border);">—</span>}
                   </td>
-                  <td align="center" class="score-font" style="color: #5b7279;">{u.unique_domains}</td>
+                  <td align="center" class="score-font" style="color: var(--fg-secondary);">{u.unique_domains}</td>
                   <td align="center" style="font-size: var(--font-xs);">
                     {u.top_domain
-                      ? <a href={`/domain/${u.top_domain}`} style="color: #5b7279;">{u.top_domain.length > 15 ? u.top_domain.slice(0, 14) + '...' : u.top_domain}</a>
-                      : <span style="color: #5b7279;">—</span>
+                      ? <a href={`/domain/${u.top_domain}`} style="color: var(--fg-secondary);">{u.top_domain.length > 15 ? u.top_domain.slice(0, 14) + '...' : u.top_domain}</a>
+                      : <span style="color: var(--fg-secondary);">—</span>
                     }
                   </td>
-                  <td align="center" class="score-font" style="color: #5b7279;">{u.avg_hn_score}</td>
+                  <td align="center" class="score-font" style="color: var(--fg-secondary);">{u.avg_hn_score}</td>
                   <td align="center" class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-weight: bold;`}>
                     {u.avg_hrcb !== null
                       ? formatScore(u.avg_hrcb)
                       : u.avg_editorial_lite !== null
-                        ? <span style="color: #5b7279; font-size: var(--font-xs);">[E] {formatScore(u.avg_editorial_lite)}</span>
-                        : <span style="color: #1a5568;">—</span>
+                        ? <span style="color: var(--fg-secondary); font-size: var(--font-xs);">[E] {formatScore(u.avg_editorial_lite)}</span>
+                        : <span style="color: var(--color-border);">—</span>
                     }
                   </td>
                   <td align="center">
                     {u.avg_editorial_full !== null && u.avg_structural !== null ? (
                       <div style="display: inline-flex; gap: 4px; align-items: center;" title={`E-full: ${formatScore(u.avg_editorial_full)} | S: ${formatScore(u.avg_structural)}`}>
-                        <span style="color: #5b7279; font-size: 8px;">E</span>
-                        <div style={`width: ${eBarW}px; height: 6px; background: #0d4655; border-radius: 2px; position: relative; overflow: hidden;`}>
+                        <span style="color: var(--fg-secondary); font-size: 8px;">E</span>
+                        <div style={`width: ${eBarW}px; height: 6px; background: var(--bg-surface); border-radius: 2px; position: relative; overflow: hidden;`}>
                           <div style={`position: absolute; ${(u.avg_editorial_full || 0) >= 0 ? 'left: 50%' : `left: ${50 - ePct}%`}; width: ${ePct}%; height: 100%; background: ${eColor}; border-radius: 1px;`}></div>
-                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #0d4655;"></div>
+                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--bg-surface);"></div>
                         </div>
-                        <span style="color: #5b7279; font-size: 8px;">S</span>
-                        <div style={`width: ${sBarW}px; height: 6px; background: #0d4655; border-radius: 2px; position: relative; overflow: hidden;`}>
+                        <span style="color: var(--fg-secondary); font-size: 8px;">S</span>
+                        <div style={`width: ${sBarW}px; height: 6px; background: var(--bg-surface); border-radius: 2px; position: relative; overflow: hidden;`}>
                           <div style={`position: absolute; ${(u.avg_structural || 0) >= 0 ? 'left: 50%' : `left: ${50 - sPct}%`}; width: ${sPct}%; height: 100%; background: ${sColor}; border-radius: 1px;`}></div>
-                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #0d4655;"></div>
+                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--bg-surface);"></div>
                         </div>
                       </div>
-                    ) : <span style="color: #1a5568;">—</span>}
+                    ) : <span style="color: var(--color-border);">—</span>}
                   </td>
                   <td align="center">
                     {u.positive_pct !== null ? (
                       <div style="display: inline-flex; gap: 0; width: 100px; height: 8px; border-radius: 2px; overflow: hidden;" title={`+${u.positive_pct}% / ${u.neutral_pct}% / ${u.negative_pct}%`}>
-                        <div style={`width: ${u.positive_pct}%; background: #22c55e;`}></div>
-                        <div style={`width: ${u.neutral_pct || 0}%; background: #5b7279;`}></div>
-                        <div style={`width: ${u.negative_pct || 0}%; background: #ef4444;`}></div>
+                        <div style={`width: ${u.positive_pct}%; background: var(--color-positive-vivid);`}></div>
+                        <div style={`width: ${u.neutral_pct || 0}%; background: var(--fg-secondary);`}></div>
+                        <div style={`width: ${u.negative_pct || 0}%; background: var(--color-negative);`}></div>
                       </div>
-                    ) : <span style="color: #1a5568;">—</span>}
+                    ) : <span style="color: var(--color-border);">—</span>}
                   </td>
-                  <td align="center" class="score-font" style={`color: ${u.avg_eq !== null && u.avg_eq > 0.5 ? '#a78bfa' : '#5b7279'};`}>
+                  <td align="center" class="score-font" style={`color: ${u.avg_eq !== null && u.avg_eq > 0.5 ? 'var(--channel-structural)' : 'var(--fg-secondary)'};`}>
                     {u.avg_eq !== null ? u.avg_eq.toFixed(2) : '—'}
                   </td>
-                  <td align="center" class="score-font" style="color: #5b7279;">
+                  <td align="center" class="score-font" style="color: var(--fg-secondary);">
                     {u.full_evaluated > 0
-                      ? <span>{u.full_evaluated}{isLiteOnly ? '' : (u.lite_evaluated > 0 ? <span style="color: #1a5568;">+{u.lite_evaluated}L</span> : '')}</span>
+                      ? <span>{u.full_evaluated}{isLiteOnly ? '' : (u.lite_evaluated > 0 ? <span style="color: var(--color-border);">+{u.lite_evaluated}L</span> : '')}</span>
                       : u.lite_evaluated > 0
-                        ? <span style="color: #5b7279; font-size: var(--font-xs);">{u.lite_evaluated}<span style="color: #1a5568;">L</span></span>
-                        : <span style="color: #1a5568;">—</span>
+                        ? <span style="color: var(--fg-secondary); font-size: var(--font-xs);">{u.lite_evaluated}<span style="color: var(--color-border);">L</span></span>
+                        : <span style="color: var(--color-border);">—</span>
                     }
                   </td>
                 </tr>

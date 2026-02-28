@@ -36,10 +36,10 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
 ---
 
 <div style="margin-bottom: 15px;">
-  <div style="color: #8faaab; font-size: var(--font-sm); margin-bottom: 8px;">
+  <div style="color: var(--fg-emphasis); font-size: var(--font-sm); margin-bottom: 8px;">
     Model Comparison
     {agreementPct !== null && (
-      <span style={`margin-left: 8px; color: ${agreementPct >= 80 ? '#34d399' : agreementPct >= 60 ? '#eab308' : '#dc2626'};`}>
+      <span style={`margin-left: 8px; color: ${agreementPct >= 80 ? 'var(--color-positive-medium)' : agreementPct >= 60 ? 'var(--color-warning)' : 'var(--color-negative)'};`}>
         {agreementPct}% sign agreement
       </span>
     )}
@@ -47,7 +47,7 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
 
   {/* Overall score comparison */}
   <table cellpadding="0" cellspacing="0" style="width: 100%; margin-bottom: 10px;">
-    <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+    <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
       <td style="padding: 4px 8px;">Model</td>
       <td style="padding: 4px 8px;">Editorial</td>
       <td style="padding: 4px 8px;">Structural</td>
@@ -58,24 +58,24 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
     </tr>
     {evals.map(ev => (
       <tr style="border-top: 1px solid #222;">
-        <td style="padding: 4px 8px; color: #98a8a8; font-size: var(--font-sm);">
+        <td style="padding: 4px 8px; color: var(--fg-primary); font-size: var(--font-sm);">
           {modelDisplayName(ev.eval_model)}
-          {isLiteMode((ev as any).prompt_mode ?? null) && <span style="margin-left: 4px; color: #d56500; font-size: var(--font-xs); opacity: 0.8;" title="Lite evaluation — editorial only, no per-section scores">lite</span>}
+          {isLiteMode((ev as any).prompt_mode ?? null) && <span style="margin-left: 4px; color: var(--color-orange); font-size: var(--font-xs); opacity: 0.8;" title="Lite evaluation — editorial only, no per-section scores">lite</span>}
         </td>
         <td style={`padding: 4px 8px; color: ${scoreToColor(ev.hcb_editorial_mean ?? ev.hcb_weighted_mean)}; font-weight: bold;`}>
           {formatScore(ev.hcb_editorial_mean ?? ev.hcb_weighted_mean)}
         </td>
-        <td style={`padding: 4px 8px; color: ${ev.hcb_structural_mean !== null && ev.hcb_structural_mean !== undefined ? scoreToColor(ev.hcb_structural_mean) : '#5b7279'};`}>
+        <td style={`padding: 4px 8px; color: ${ev.hcb_structural_mean !== null && ev.hcb_structural_mean !== undefined ? scoreToColor(ev.hcb_structural_mean) : 'var(--fg-secondary)'};`}>
           {ev.hcb_structural_mean !== null && ev.hcb_structural_mean !== undefined ? formatScore(ev.hcb_structural_mean) : 'ND'}
         </td>
-        <td style="padding: 4px 8px; color: #8faaab; font-size: var(--font-sm);">{ev.hcb_classification || '—'}</td>
-        <td style="padding: 4px 8px; color: #8faaab; font-size: var(--font-sm);">
+        <td style="padding: 4px 8px; color: var(--fg-emphasis); font-size: var(--font-sm);">{ev.hcb_classification || '—'}</td>
+        <td style="padding: 4px 8px; color: var(--fg-emphasis); font-size: var(--font-sm);">
           {ev.hcb_confidence !== null ? ev.hcb_confidence.toFixed(2) : '—'}
         </td>
-        <td style="padding: 4px 8px; color: #8faaab; font-size: var(--font-sm);">
+        <td style="padding: 4px 8px; color: var(--fg-emphasis); font-size: var(--font-sm);">
           {ev.hcb_setl !== null ? ev.hcb_setl.toFixed(2) : '—'}
         </td>
-        <td style="padding: 4px 8px; color: #7d80d1; font-size: var(--font-xs);">{ev.hcb_theme_tag || '—'}</td>
+        <td style="padding: 4px 8px; color: var(--color-violet); font-size: var(--font-xs);">{ev.hcb_theme_tag || '—'}</td>
       </tr>
     ))}
   </table>
@@ -83,12 +83,12 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
   {/* Per-section delta table */}
   <div style="max-height: 400px; overflow-y: auto;">
     <table cellpadding="0" cellspacing="0" style="width: 100%;">
-      <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #093946;">
+      <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: var(--bg-highlight);">
         <td style="padding: 3px 6px;">Section</td>
         {models.map(m => (
           <td style="padding: 3px 6px; text-align: center;">
             {modelDisplayName(m)}
-            {isLiteMode(evals.find(e => e.eval_model === m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+            {isLiteMode(evals.find(e => e.eval_model === m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
           </td>
         ))}
         {models.length === 2 && <td style="padding: 3px 6px; text-align: center;">Delta</td>}
@@ -103,14 +103,14 @@ const agreementPct = compareCount > 0 ? Math.round((agreeCount / compareCount) *
           ? finals[0]! - finals[1]!
           : null;
         const deltaColor = delta !== null
-          ? Math.abs(delta) < 0.1 ? '#5b7279' : Math.abs(delta) < 0.3 ? '#eab308' : '#dc2626'
-          : '#5b7279';
+          ? Math.abs(delta) < 0.1 ? 'var(--fg-secondary)' : Math.abs(delta) < 0.3 ? 'var(--color-warning)' : 'var(--color-negative)'
+          : 'var(--fg-secondary)';
 
         return (
-          <tr style="border-top: 1px solid #0d4655;">
-            <td style="padding: 2px 6px; color: #8faaab; font-size: var(--font-xs);">{section}</td>
+          <tr style="border-top: 1px solid var(--bg-surface);">
+            <td style="padding: 2px 6px; color: var(--fg-emphasis); font-size: var(--font-xs);">{section}</td>
             {finals.map(f => (
-              <td style={`padding: 2px 6px; text-align: center; color: ${f !== null ? scoreToColor(f) : '#5b7279'}; font-size: var(--font-sm);`}>
+              <td style={`padding: 2px 6px; text-align: center; color: ${f !== null ? scoreToColor(f) : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>
                 {f !== null ? f.toFixed(2) : 'ND'}
               </td>
             ))}

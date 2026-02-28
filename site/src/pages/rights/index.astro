@@ -14,19 +14,19 @@ const subPages = [
     title: 'Observatory',
     href: '/rights/observatory',
     description: 'Deep-dive research dashboard. UDHR heatmap, propaganda landscape, stakeholder voices, and evidence transparency.',
-    accent: '#34d399',
+    accent: 'var(--color-positive-medium)',
   },
   {
     title: 'Articles',
     href: '/rights/articles',
     description: 'Browse all 31 UDHR provisions with scoring trends and coverage statistics.',
-    accent: '#60a5fa',
+    accent: 'var(--channel-editorial)',
   },
   {
     title: 'Network',
     href: '/rights/network',
     description: 'Rights correlation network. Which UDHR provisions move together?',
-    accent: '#a78bfa',
+    accent: 'var(--channel-structural)',
   },
 ];
 ---
@@ -36,8 +36,8 @@ const subPages = [
   <div style="padding: 8px 0 16px 0;">
     <!-- Header -->
     <div style="margin-bottom: 16px;">
-      <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Rights</span>
-      <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-sm);">
+      <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Rights</span>
+      <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-sm);">
         Human rights analysis across {evalCount.toLocaleString()} evaluated stories
       </span>
     </div>
@@ -46,12 +46,12 @@ const subPages = [
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
       {subPages.map(page => (
         <a href={page.href} style="text-decoration: none; display: block;">
-          <div class="hub-card" style={`background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; border-left: 3px solid ${page.accent}; transition: border-color 0.15s;`}>
+          <div class="hub-card" style={`background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; height: 100%; border-left: 3px solid ${page.accent}; transition: border-color 0.15s;`}>
             <div style={`color: ${page.accent}; font-size: var(--font-md); font-weight: bold;`}>{page.title}</div>
-            <div style="color: #5b7279; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
               {page.description}
             </div>
-            <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 6px;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 6px;">
               {page.href} &rarr;
             </div>
           </div>

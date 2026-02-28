@@ -85,14 +85,14 @@ function computeSourceMetrics(profs: DomainSignalProfile[]): SourceMetrics {
   // Signal Leaders (8 dimensions)
   type SignalKey = 'avg_eq' | 'avg_so' | 'avg_sr' | 'avg_td' | 'avg_pt_count' | 'avg_valence' | 'avg_arousal' | 'avg_fw_ratio';
   const signalDims: { key: SignalKey; label: string; fullName: string; color: string; note: string }[] = [
-    { key: 'avg_eq', label: 'EQ', fullName: 'Epistemic Quality', color: '#f59e0b', note: '' },
-    { key: 'avg_so', label: 'SO', fullName: 'Solution Orientation', color: '#16a34a', note: '' },
-    { key: 'avg_sr', label: 'SR', fullName: 'Stakeholder Voice', color: '#60a5fa', note: '' },
-    { key: 'avg_td', label: 'TD', fullName: 'Transparency', color: '#16a34a', note: '' },
-    { key: 'avg_pt_count', label: 'PT', fullName: 'Propaganda Flags', color: '#dc2626', note: 'inv' },
-    { key: 'avg_valence', label: 'VA', fullName: 'Valence', color: '#a855f7', note: '' },
+    { key: 'avg_eq', label: 'EQ', fullName: 'Epistemic Quality', color: 'var(--color-amber)', note: '' },
+    { key: 'avg_so', label: 'SO', fullName: 'Solution Orientation', color: 'var(--color-positive)', note: '' },
+    { key: 'avg_sr', label: 'SR', fullName: 'Stakeholder Voice', color: 'var(--channel-editorial)', note: '' },
+    { key: 'avg_td', label: 'TD', fullName: 'Transparency', color: 'var(--color-positive)', note: '' },
+    { key: 'avg_pt_count', label: 'PT', fullName: 'Propaganda Flags', color: 'var(--color-negative)', note: 'inv' },
+    { key: 'avg_valence', label: 'VA', fullName: 'Valence', color: 'var(--color-inference)', note: '' },
     { key: 'avg_arousal', label: 'AR', fullName: 'Arousal', color: '#818cf8', note: '' },
-    { key: 'avg_fw_ratio', label: 'FW', fullName: 'Fair Witness Ratio', color: '#22c55e', note: '' },
+    { key: 'avg_fw_ratio', label: 'FW', fullName: 'Fair Witness Ratio', color: 'var(--color-positive-vivid)', note: '' },
   ];
 
   const leaders: SignalLeader[] = [];
@@ -177,19 +177,19 @@ const sections: SectionCard[] = [
     title: 'Domains',
     href: '/domains',
     description: 'Browse all domains by HRCB score, coverage, SETL, and confidence. Sorted directory with classification filters.',
-    accent: '#60a5fa',
+    accent: 'var(--channel-editorial)',
   },
   {
     title: 'Users',
     href: '/users',
     description: 'User submission patterns, behavioral analysis, and human rights alignment profiles.',
-    accent: '#a78bfa',
+    accent: 'var(--channel-structural)',
   },
   {
     title: 'Factions',
     href: '/factions',
     description: 'Editorial character clustering. Which domains think alike? Archetype analysis and affinity mapping.',
-    accent: '#f59e0b',
+    accent: 'var(--color-amber)',
   },
 ];
 
@@ -233,19 +233,19 @@ const jsonLd = {
     <tr>
       <td>
         <h1 style="font-size: var(--font-md); margin-bottom: 4px;">Source Intelligence</h1>
-        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 20px;">
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 20px;">
           Who publishes what — editorial character across {domainCount} profiled sources.
         </p>
 
         {/* ═══ SECTION 1 — Source Universe ═══ */}
 
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-          <span style="background: rgba(213,101,0,0.15); color: #d56500; border-radius: 3px; padding: 2px 7px; font-size: var(--font-xs); font-weight: bold; white-space: nowrap;">{domainCount} sources</span>
-          <span style="color: #98a8a8; font-size: var(--font-sm);">
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+          <span style="background: rgba(213,101,0,0.15); color: var(--color-orange); border-radius: 3px; padding: 2px 7px; font-size: var(--font-xs); font-weight: bold; white-space: nowrap;">{domainCount} sources</span>
+          <span style="color: var(--fg-primary); font-size: var(--font-sm);">
             <b>Source Intelligence</b> — {domainCount} domains with 3+ evaluated stories across {storyCount.toLocaleString()} total stories.
-            {globalGate.gate_pct > 0 && <span style="color: #5b7279;"> {globalGate.gate_pct}% gated.</span>}
+            {globalGate.gate_pct > 0 && <span style="color: var(--fg-secondary);"> {globalGate.gate_pct}% gated.</span>}
           </span>
-          <a href="/about#dcp" style="color: #259d94; font-size: var(--font-xs); white-space: nowrap;">How sources are profiled &rarr;</a>
+          <a href="/about#dcp" style="color: var(--channel-hrcb); font-size: var(--font-xs); white-space: nowrap;">How sources are profiled &rarr;</a>
         </div>
 
         {/* ═══ SECTION 2 — Source Metrics ═══ */}
@@ -253,33 +253,33 @@ const jsonLd = {
         <h2 style="font-size: var(--font-base); margin: 0 0 8px 0;">Source Metrics</h2>
 
         <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
             <a href="/about#classification" style="text-decoration: none; font-weight: bold;" class="score-font">
               <span style={`color: ${hrcbSpreadColor};`}>HRCB Spread</span>
             </a><br>
             <span style={`color: ${hrcbSpreadColor}; font-size: var(--font-md);`} class="score-font">{hrcbSpreadDisplay}</span><br>
-            <span style="color: #5b7279; font-size: var(--font-xs);">Min..Max domain HRCB</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs);">Min..Max domain HRCB</span>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
             <a href="/about#setl" style="text-decoration: none; font-weight: bold;">
               <span style={`color: ${setlColor};`}>Avg SETL</span>
             </a><br>
             <span style={`color: ${setlColor}; font-size: var(--font-md);`} class="score-font">{setlDisplay}</span><br>
-            <span style="color: #5b7279; font-size: var(--font-xs);">Channel divergence</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs);">Channel divergence</span>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
             <a href="/about#fair-witness" style="text-decoration: none; font-weight: bold;">
               <span style={`color: ${fwColor};`}>Fair Witness</span>
             </a><br>
             <span style={`color: ${fwColor}; font-size: var(--font-md);`} class="score-font">{fwDisplay}</span><br>
-            <span style="color: #5b7279; font-size: var(--font-xs);">Observable fact ratio</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs);">Observable fact ratio</span>
           </div>
-          <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
             <a href="/about#evidence" style="text-decoration: none; font-weight: bold;">
               <span style={`color: ${confColor};`}>Avg Confidence</span>
             </a><br>
             <span style={`color: ${confColor}; font-size: var(--font-md);`} class="score-font">{confDisplay}</span><br>
-            <span style="color: #5b7279; font-size: var(--font-xs);">Evidence strength</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs);">Evidence strength</span>
           </div>
         </div>
 
@@ -288,27 +288,27 @@ const jsonLd = {
         {leaders.length > 0 && (
           <div>
             <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Signal Leaders</h2>
-            <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">Top and bottom domains per editorial signal dimension</p>
+            <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">Top and bottom domains per editorial signal dimension</p>
 
             <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
               {leaders.map((l) => {
                 const topLabel = l.note === 'inv' ? 'Most flags' : 'Highest';
                 const bottomLabel = l.note === 'inv' ? 'Fewest flags' : 'Lowest';
                 return (
-                  <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
                     <span class="badge" style={`background: ${l.color}22; color: ${l.color};`}>{l.label}</span>
-                    <b style="color: #98a8a8; margin-left: 4px;">{l.fullName}</b>
-                    <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">avg {fmtSig(l.mean, l.note)}</span>
+                    <b style="color: var(--fg-primary); margin-left: 4px;">{l.fullName}</b>
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">avg {fmtSig(l.mean, l.note)}</span>
                     <div style="margin-top: 6px; font-size: var(--font-sm);">
                       <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
-                        <span style="color: #5b7279; font-size: var(--font-xs); width: 72px;">{topLabel}</span>
+                        <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 72px;">{topLabel}</span>
                         <a href={`/domain/${l.topDomain}`} style={`color: ${l.color}; text-decoration: none;`}>{l.topDomain}</a>
-                        <span style="color: #98a8a8; margin-left: auto; padding-left: 6px;" class="score-font">{fmtSig(l.topVal, l.note)}</span>
+                        <span style="color: var(--fg-primary); margin-left: auto; padding-left: 6px;" class="score-font">{fmtSig(l.topVal, l.note)}</span>
                       </div>
                       <div style="display: flex; justify-content: space-between; align-items: baseline;">
-                        <span style="color: #5b7279; font-size: var(--font-xs); width: 72px;">{bottomLabel}</span>
-                        <a href={`/domain/${l.bottomDomain}`} style="color: #5b7279; text-decoration: none;">{l.bottomDomain}</a>
-                        <span style="color: #5b7279; margin-left: auto; padding-left: 6px;" class="score-font">{fmtSig(l.bottomVal, l.note)}</span>
+                        <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 72px;">{bottomLabel}</span>
+                        <a href={`/domain/${l.bottomDomain}`} style="color: var(--fg-secondary); text-decoration: none;">{l.bottomDomain}</a>
+                        <span style="color: var(--fg-secondary); margin-left: auto; padding-left: 6px;" class="score-font">{fmtSig(l.bottomVal, l.note)}</span>
                       </div>
                     </div>
                   </div>
@@ -323,25 +323,25 @@ const jsonLd = {
         {(toneEntries.length > 0 || scopeEntries.length > 0 || levelEntries.length > 0 || sentimentEntries.length > 0) && (
           <div>
             <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Editorial Character</h2>
-            <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">How sources distribute across tone, scope, and reading level</p>
+            <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">How sources distribute across tone, scope, and reading level</p>
 
             <div class="insight-grid" style="margin-bottom: 20px;">
 
               {toneEntries.length > 0 && (
-                <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-                  <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Tone</p>
+                <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Tone</p>
                   <table cellpadding="0" cellspacing="0" width="100%">
                     {toneEntries.map(([label, count]) => {
                       const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
                       return (
                         <tr>
-                          <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
                           <td style="padding: 2px 8px;">
-                            <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                              <div style={`width: ${pct}%; height: 100%; background: #a855f7; border-radius: 3px;`}></div>
+                            <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: var(--color-inference); border-radius: 3px;`}></div>
                             </div>
                           </td>
-                          <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                          <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
                         </tr>
                       );
                     })}
@@ -350,20 +350,20 @@ const jsonLd = {
               )}
 
               {scopeEntries.length > 0 && (
-                <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-                  <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
+                <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
                   <table cellpadding="0" cellspacing="0" width="100%">
                     {scopeEntries.map(([label, count]) => {
                       const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
                       return (
                         <tr>
-                          <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
                           <td style="padding: 2px 8px;">
-                            <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                              <div style={`width: ${pct}%; height: 100%; background: #22d3ee; border-radius: 3px;`}></div>
+                            <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
                             </div>
                           </td>
-                          <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                          <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
                         </tr>
                       );
                     })}
@@ -372,20 +372,20 @@ const jsonLd = {
               )}
 
               {levelEntries.length > 0 && (
-                <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-                  <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Reading Level</p>
+                <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Reading Level</p>
                   <table cellpadding="0" cellspacing="0" width="100%">
                     {levelEntries.map(([label, count]) => {
                       const pct = maxLevel > 0 ? Math.round((count / maxLevel) * 100) : 0;
                       return (
                         <tr>
-                          <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
                           <td style="padding: 2px 8px;">
-                            <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                              <div style={`width: ${pct}%; height: 100%; background: #eab308; border-radius: 3px;`}></div>
+                            <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: var(--color-hn-score); border-radius: 3px;`}></div>
                             </div>
                           </td>
-                          <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                          <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
                         </tr>
                       );
                     })}
@@ -394,20 +394,20 @@ const jsonLd = {
               )}
 
               {sentimentEntries.length > 0 && (
-                <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
-                  <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Sentiment</p>
+                <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Sentiment</p>
                   <table cellpadding="0" cellspacing="0" width="100%">
                     {sentimentEntries.map(([label, count]) => {
                       const pct = maxSentiment > 0 ? Math.round((count / maxSentiment) * 100) : 0;
                       return (
                         <tr>
-                          <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
                           <td style="padding: 2px 8px;">
-                            <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
-                              <div style={`width: ${pct}%; height: 100%; background: #16a34a; border-radius: 3px;`}></div>
+                            <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: var(--color-positive); border-radius: 3px;`}></div>
                             </div>
                           </td>
-                          <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                          <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
                         </tr>
                       );
                     })}
@@ -422,9 +422,9 @@ const jsonLd = {
         {/* ═══ SECTION 5 — Source HRCB Distribution ═══ */}
 
         <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Source HRCB Distribution</h2>
-        <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">How domains distribute across HRCB classification bands</p>
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">How domains distribute across HRCB classification bands</p>
 
-        <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px; margin-bottom: 20px;">
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px; margin-bottom: 20px;">
           <table cellpadding="0" cellspacing="0" width="100%">
             {bands.map((b) => {
               const pct = maxBand > 0 ? Math.round((b.count / maxBand) * 100) : 0;
@@ -432,11 +432,11 @@ const jsonLd = {
                 <tr>
                   <td style={`padding: 2px 0; color: ${b.color}; font-size: var(--font-xs); width: 80px;`}>{b.label}</td>
                   <td style="padding: 2px 8px;">
-                    <div style="height: 10px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                    <div style="height: 10px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
                       <div style={`width: ${pct}%; height: 100%; background: ${b.color}; opacity: 0.65; border-radius: 3px;`}></div>
                     </div>
                   </td>
-                  <td style="width: 36px; text-align: right; color: #98a8a8; font-size: var(--font-xs);" class="score-font">{b.count}</td>
+                  <td style="width: 36px; text-align: right; color: var(--fg-primary); font-size: var(--font-xs);" class="score-font">{b.count}</td>
                 </tr>
               );
             })}
@@ -450,12 +450,12 @@ const jsonLd = {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
           {sections.map(card => (
             <a href={card.href} style="text-decoration: none; display: block;">
-              <div class="hub-card" style={`background: #093946; border: 1px solid #1a5568; border-radius: 6px; padding: 14px; height: 100%; border-left: 3px solid ${card.accent}; transition: border-color 0.15s;`}>
+              <div class="hub-card" style={`background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; height: 100%; border-left: 3px solid ${card.accent}; transition: border-color 0.15s;`}>
                 <div style={`color: ${card.accent}; font-size: var(--font-md); font-weight: bold;`}>{card.title}</div>
-                <div style="color: #5b7279; font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
+                <div style="color: var(--fg-secondary); font-size: var(--font-sm); margin-top: 4px; line-height: 1.5;">
                   {card.description}
                 </div>
-                <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 6px;">
+                <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 6px;">
                   {card.href} &rarr;
                 </div>
               </div>

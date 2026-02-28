@@ -143,31 +143,31 @@ const jsonLd = {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Domains</span>
-        <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-base);">
+        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Domains</span>
+        <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-base);">
           {safeClassify !== 'all' ? `(${safeClassify})` : ''}{page > 1 ? ` · page ${page}` : ''}
         </span>
         <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
-          <span style="color: #5b7279;">sort:</span>
+          <span style="color: var(--fg-secondary);">sort:</span>
           {(['count', 'score', 'setl', 'conf'] as const).map((opt, i) => {
             const labels = { count: 'stories', score: 'hrcb', setl: 'setl', conf: 'confidence' } as any;
             return (
               <>
-                {i > 0 && <span style="color: #1a5568;"> | </span>}
+                {i > 0 && <span style="color: var(--color-border);"> | </span>}
                 {safeSort === opt
-                  ? <span style="color: #d56500; font-weight: bold;">{labels[opt]}</span>
+                  ? <span style="color: var(--color-orange); font-weight: bold;">{labels[opt]}</span>
                   : <a href={buildDomainUrl({ sort: opt })}>{labels[opt]}</a>
                 }
               </>
             );
           })}
           <br />
-          <span style="color: #5b7279;">show:</span>
+          <span style="color: var(--fg-secondary);">show:</span>
           {(['all', 'positive', 'negative', 'neutral', 'contested'] as const).map((opt, i) => (
             <>
-              {i > 0 && <span style="color: #1a5568;"> | </span>}
+              {i > 0 && <span style="color: var(--color-border);"> | </span>}
               {safeClassify === opt
-                ? <span style="color: #d56500; font-weight: bold;">{opt}</span>
+                ? <span style="color: var(--color-orange); font-weight: bold;">{opt}</span>
                 : <a href={buildDomainUrl({ class: opt })}>{opt}</a>
               }
             </>
@@ -179,74 +179,74 @@ const jsonLd = {
 
   {/* Domain insight cards (page 1 only) */}
   {isFirstPage && hrcbDomains.length > 0 && (
-    <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; margin-bottom: 10px;">
+    <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; margin-bottom: 10px;">
       <div class="insight-grid">
         <div style="padding: 4px 8px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
           {topHrcb.map(d => (
             <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
+              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
               <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
             </div>
           ))}
         </div>
         <div style="padding: 4px 8px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
           {bottomHrcb.map(d => (
             <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
+              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
               <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
             </div>
           ))}
         </div>
         <div style="padding: 4px 8px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
           {controversial.map(d => (
             <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
-              <span class="score-font" style="color: #e2b340; font-size: var(--font-sm); margin-left: 4px;">{d.hrcb_range !== null ? d.hrcb_range.toFixed(2) : '--'}</span>
+              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+              <span class="score-font" style="color: var(--color-hn-score); font-size: var(--font-sm); margin-left: 4px;">{d.hrcb_range !== null ? d.hrcb_range.toFixed(2) : '--'}</span>
             </div>
           ))}
         </div>
         <div style="padding: 4px 8px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Engaging</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Engaging</div>
           {highEngagement.map(d => (
             <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
-              <span class="score-font" style="color: #60a5fa; font-size: var(--font-sm); margin-left: 4px;">{d.comment_per_point !== null ? d.comment_per_point.toFixed(2) : '--'}</span>
-              <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">c/pt</span>
+              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+              <span class="score-font" style="color: var(--channel-editorial); font-size: var(--font-sm); margin-left: 4px;">{d.comment_per_point !== null ? d.comment_per_point.toFixed(2) : '--'}</span>
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">c/pt</span>
             </div>
           ))}
         </div>
         <div style="padding: 4px 8px;">
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
           {diverse.map(d => (
             <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
-              <span class="score-font" style="color: #a78bfa; font-size: var(--font-sm); margin-left: 4px;">{d.unique_submitters}</span>
-              <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">users</span>
+              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+              <span class="score-font" style="color: var(--channel-structural); font-size: var(--font-sm); margin-left: 4px;">{d.unique_submitters}</span>
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">users</span>
             </div>
           ))}
         </div>
         {topKarma.length > 0 && (
           <div style="padding: 4px 8px;">
-            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Highest Karma</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Highest Karma</div>
             {topKarma.map(d => (
               <div style="margin-bottom: 3px;">
-                <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
-                <span class="score-font" style="color: #22d3ee; font-size: var(--font-sm); margin-left: 4px;">{Math.round(d.avg_karma).toLocaleString()}</span>
-                <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">avg</span>
+                <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+                <span class="score-font" style="color: var(--color-sentiment); font-size: var(--font-sm); margin-left: 4px;">{Math.round(d.avg_karma).toLocaleString()}</span>
+                <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">avg</span>
               </div>
             ))}
           </div>
         )}
         {gatekeptDomains.length > 0 && (
           <div style="padding: 4px 8px;">
-            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Gatekept</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Gatekept</div>
             {gatekeptDomains.map(d => (
               <div style="margin-bottom: 3px;">
-                <a href={`/domain/${d.domain}`} style="color: #98a8a8; font-size: var(--font-sm);">{d.domain}</a>
-                <span class="score-font" style="color: #d56500; font-size: var(--font-sm); margin-left: 4px;">{d.gate_pct}%</span>
+                <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+                <span class="score-font" style="color: var(--color-orange); font-size: var(--font-sm); margin-left: 4px;">{d.gate_pct}%</span>
               </div>
             ))}
           </div>
@@ -259,22 +259,22 @@ const jsonLd = {
   {isFirstPage && scatterDomains.length >= 5 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             Domain Karma vs HRCB
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               avg poster karma vs avg HRCB per domain · {scatterDomains.length} domains
             </span>
             {domainPearsonR !== null && (
-              <span style={`margin-left: 8px; background: #002d38; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: ${Math.abs(domainPearsonR) > 0.3 ? '#22d3ee' : '#5b7279'};`}>
+              <span style={`margin-left: 8px; background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: ${Math.abs(domainPearsonR) > 0.3 ? 'var(--color-sentiment)' : 'var(--fg-secondary)'};`}>
                 r = {domainPearsonR > 0 ? '+' : ''}{domainPearsonR.toFixed(3)}
               </span>
             )}
           </div>
-          <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 4px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 4px;">
             X: log&#8321;&#8320;(avg karma) · Y: avg HRCB · size: story count · hover for details
           </div>
-          <canvas id="domain-karma-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: #002d38; border-radius: 4px;" aria-label="Domain karma vs HRCB scatter plot"></canvas>
+          <canvas id="domain-karma-scatter" width="800" height="400" style="width: 100%; max-width: 800px; height: auto; aspect-ratio: 2/1; background: var(--bg-primary); border-radius: 4px;" aria-label="Domain karma vs HRCB scatter plot"></canvas>
         </td>
       </tr>
     </table>
@@ -283,10 +283,10 @@ const jsonLd = {
   <div class="table-wrap">
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
         {domains.length > 0 ? (
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base); min-width: 480px;">
-            <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td width="24">#</td>
               <td>Domain</td>
               <td width="70" align="center">Stories</td>
@@ -299,41 +299,41 @@ const jsonLd = {
             </tr>
             {domains.map((d, i) => {
               const pct = d.count > 0 ? Math.round((d.evaluated / d.count) * 100) : 0;
-              const coverageColor = pct === 100 ? '#4ade80' : pct >= 50 ? '#eab308' : '#5b7279';
+              const coverageColor = pct === 100 ? 'var(--color-positive-light)' : pct >= 50 ? 'var(--color-warning)' : 'var(--fg-secondary)';
               return (
-              <tr style="border-top: 1px solid #0d4655;">
-                <td style="color: #5b7279;" class="score-font">{offset + i + 1}</td>
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="color: var(--fg-secondary);" class="score-font">{offset + i + 1}</td>
                 <td>
-                  <a href={`/domain/${d.domain}`} style="color: #98a8a8;">{d.domain}</a>
+                  <a href={`/domain/${d.domain}`} style="color: var(--fg-primary);">{d.domain}</a>
                 </td>
-                <td align="center" class="score-font" style="color: #5b7279;">{d.count}</td>
+                <td align="center" class="score-font" style="color: var(--fg-secondary);">{d.count}</td>
                 <td align="center" class="score-font" style={`color: ${coverageColor};`}>
-                  {d.evaluated}/{d.count} <span style="color: #5b7279;">({pct}%)</span>
+                  {d.evaluated}/{d.count} <span style="color: var(--fg-secondary);">({pct}%)</span>
                 </td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
-                  {d.avg_score !== null ? formatScore(d.avg_score) : <span style="color: #5b7279;">—</span>}
+                  {d.avg_score !== null ? formatScore(d.avg_score) : <span style="color: var(--fg-secondary);">—</span>}
                 </td>
-                <td align="center" class="score-font" style={`color: ${d.avg_editorial !== null ? scoreToColor(d.avg_editorial) : '#5b7279'};`}>
-                  {d.avg_editorial !== null ? formatScore(d.avg_editorial) : <span style="color: #5b7279;">—</span>}
+                <td align="center" class="score-font" style={`color: ${d.avg_editorial !== null ? scoreToColor(d.avg_editorial) : 'var(--fg-secondary)'};`}>
+                  {d.avg_editorial !== null ? formatScore(d.avg_editorial) : <span style="color: var(--fg-secondary);">—</span>}
                 </td>
-                <td align="center" class="score-font" style={`color: ${d.avg_structural !== null ? scoreToColor(d.avg_structural) : '#5b7279'};`}>
-                  {d.avg_structural !== null ? formatScore(d.avg_structural) : <span style="color: #5b7279;">—</span>}
+                <td align="center" class="score-font" style={`color: ${d.avg_structural !== null ? scoreToColor(d.avg_structural) : 'var(--fg-secondary)'};`}>
+                  {d.avg_structural !== null ? formatScore(d.avg_structural) : <span style="color: var(--fg-secondary);">—</span>}
                 </td>
                 <td align="center" class="score-font" style={`color: ${confidenceToColor(d.avg_conf)};`}>
-                  {d.avg_conf !== null ? formatConfidence(d.avg_conf) : <span style="color: #5b7279;">—</span>}
+                  {d.avg_conf !== null ? formatConfidence(d.avg_conf) : <span style="color: var(--fg-secondary);">—</span>}
                 </td>
                 <td align="center" class="score-font" style={`color: ${setlToColor(d.avg_setl)};`}>
-                  {d.avg_setl !== null ? formatSetl(d.avg_setl) : <span style="color: #5b7279;">—</span>}
+                  {d.avg_setl !== null ? formatSetl(d.avg_setl) : <span style="color: var(--fg-secondary);">—</span>}
                 </td>
               </tr>
               );
             })}
           </table>
         ) : (
-          <div style="color: #5b7279; font-size: var(--font-sm); padding: 10px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); padding: 10px;">
             {safeClassify !== 'all' ? `No ${safeClassify} domains found.` : 'No domain data yet.'}
             {safeClassify !== 'all' && (
-              <a href="/domains" style="color: #d56500; margin-left: 6px;">show all</a>
+              <a href="/domains" style="color: var(--color-orange); margin-left: 6px;">show all</a>
             )}
           </div>
         )}
@@ -348,12 +348,12 @@ const jsonLd = {
       <tr>
         <td style="text-align: center; padding: 8px;">
           {page > 1 && (
-            <a href={buildDomainUrl({ p: String(page - 1) })} style="color: #d56500; margin-right: 16px;">
+            <a href={buildDomainUrl({ p: String(page - 1) })} style="color: var(--color-orange); margin-right: 16px;">
               prev
             </a>
           )}
           {hasMore && (
-            <a href={buildDomainUrl({ p: String(page + 1) })} style="color: #d56500;">
+            <a href={buildDomainUrl({ p: String(page + 1) })} style="color: var(--color-orange);">
               More
             </a>
           )}

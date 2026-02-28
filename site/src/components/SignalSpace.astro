@@ -146,22 +146,22 @@ const clientData = JSON.stringify({
 });
 ---
 
-<div style="padding: 12px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; margin: 4px 0;">
+<div style="padding: 12px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; margin: 4px 0;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
     <div>
-      <span style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Signal Space</span>
-      <span style="color: #5b7279; margin-left: 6px; font-size: var(--font-xs);">
+      <span style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Signal Space</span>
+      <span style="color: var(--fg-secondary); margin-left: 6px; font-size: var(--font-xs);">
         PCA projection of 8D editorial character &mdash; each point is a domain
       </span>
     </div>
     <div style="display: flex; gap: 4px;">
-      <button id="ss-btn-2d" aria-label="Switch to 2D scatter view" style="padding: 3px 10px; background: #1a5568; border: 1px solid #60a5fa; border-radius: 3px; color: #60a5fa; font-size: var(--font-xs); cursor: pointer; font-family: monospace;">2D</button>
-      <button id="ss-btn-3d" aria-label="Switch to 3D orbit view" style="padding: 3px 10px; background: #002d38; border: 1px solid #0d4655; border-radius: 3px; color: #5b7279; font-size: var(--font-xs); cursor: pointer; font-family: monospace;">3D</button>
+      <button id="ss-btn-2d" aria-label="Switch to 2D scatter view" style="padding: 3px 10px; background: var(--color-border); border: 1px solid var(--channel-editorial); border-radius: 3px; color: var(--channel-editorial); font-size: var(--font-xs); cursor: pointer; font-family: monospace;">2D</button>
+      <button id="ss-btn-3d" aria-label="Switch to 3D orbit view" style="padding: 3px 10px; background: var(--bg-primary); border: 1px solid var(--bg-surface); border-radius: 3px; color: var(--fg-secondary); font-size: var(--font-xs); cursor: pointer; font-family: monospace;">3D</button>
     </div>
   </div>
 
   {!hasData ? (
-    <div style="color: #5b7279; font-size: var(--font-xs); padding: 20px; text-align: center;">
+    <div style="color: var(--fg-secondary); font-size: var(--font-xs); padding: 20px; text-align: center;">
       Not enough data for signal space visualization (need 5+ evaluated domains).
     </div>
   ) : (
@@ -169,12 +169,12 @@ const clientData = JSON.stringify({
       {/* 2D view */}
       <div id="ss-2d-wrap" style="display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;">
         <div style="flex: 1; min-width: 0; overflow: hidden;">
-          <svg id="ss-svg" viewBox="0 0 560 340" width="100%" style="display: block; max-width: 560px; background: #002d38; border-radius: 4px; cursor: crosshair;" role="img" aria-label="Signal space 2D cluster map — hover points for domain details">
-            <text x="280" y="175" fill="#1a5568" font-size="11" text-anchor="middle" font-family="monospace">rendering…</text>
+          <svg id="ss-svg" viewBox="0 0 560 340" width="100%" style="display: block; max-width: 560px; background: var(--bg-primary); border-radius: 4px; cursor: crosshair;" role="img" aria-label="Signal space 2D cluster map — hover points for domain details">
+            <text x="280" y="175" fill="var(--color-border)" font-size="11" text-anchor="middle" font-family="monospace">rendering…</text>
           </svg>
         </div>
-        <div id="ss-detail-2d" class="ss-detail-panel" style="background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: #5b7279; min-height: 160px;">
-          <div style="color: #1a5568; font-size: 9px;">hover a point for details</div>
+        <div id="ss-detail-2d" class="ss-detail-panel" style="background: var(--bg-primary); border: 1px solid var(--bg-surface); border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: var(--fg-secondary); min-height: 160px;">
+          <div style="color: var(--color-border); font-size: 9px;">hover a point for details</div>
         </div>
       </div>
 
@@ -182,16 +182,16 @@ const clientData = JSON.stringify({
       <div id="ss-3d-wrap" style="display: none; flex-direction: column; gap: 6px;">
         <div style="display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;">
           <div style="flex: 1; min-width: 0; position: relative;">
-            <canvas id="ss-3d-canvas" style="display: block; width: 100%; max-width: 560px; height: 340px; border-radius: 4px; background: #002d38;" aria-label="Signal space 3D cluster visualization"></canvas>
-            <div id="ss-3d-loading" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #5b7279; font-size: var(--font-xs); background: #002d38; border-radius: 4px;">
+            <canvas id="ss-3d-canvas" style="display: block; width: 100%; max-width: 560px; height: 340px; border-radius: 4px; background: var(--bg-primary);" aria-label="Signal space 3D cluster visualization"></canvas>
+            <div id="ss-3d-loading" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--fg-secondary); font-size: var(--font-xs); background: var(--bg-primary); border-radius: 4px;">
               Loading 3D engine&hellip;
             </div>
           </div>
-          <div id="ss-detail-3d" class="ss-detail-panel" style="background: #002d38; border: 1px solid #0d4655; border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: #5b7279; min-height: 160px;">
-            <div style="color: #1a5568; font-size: 9px;">click a sphere for details</div>
+          <div id="ss-detail-3d" class="ss-detail-panel" style="background: var(--bg-primary); border: 1px solid var(--bg-surface); border-radius: 4px; padding: 8px; font-size: var(--font-xs); color: var(--fg-secondary); min-height: 160px;">
+            <div style="color: var(--color-border); font-size: 9px;">click a sphere for details</div>
           </div>
         </div>
-        <div style="color: #1a5568; font-size: var(--font-xs);">Drag to orbit &middot; Scroll to zoom &middot; Click sphere for details &middot; auto-rotating</div>
+        <div style="color: var(--color-border); font-size: var(--font-xs);">Drag to orbit &middot; Scroll to zoom &middot; Click sphere for details &middot; auto-rotating</div>
       </div>
 
       {/* Legend + axis info */}
@@ -204,17 +204,17 @@ const clientData = JSON.stringify({
         ))}
         {projected.some(p => !p.clusterName) && (
           <span style="display: inline-flex; align-items: center; gap: 3px;">
-            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #5b7279;"></span>
-            <span style="color: #5b7279;">Unaligned</span>
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-secondary);"></span>
+            <span style="color: var(--fg-secondary);">Unaligned</span>
           </span>
         )}
-        <span style="color: #1a5568; margin-left: 8px;">size = story count &middot; color = HRCB score</span>
+        <span style="color: var(--color-border); margin-left: 8px;">size = story count &middot; color = HRCB score</span>
       </div>
-      <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 4px;">
-        PC1: <span style="color: #5b7279;">{pcLabels[0]}</span> &middot;
-        PC2: <span style="color: #5b7279;">{pcLabels[1]}</span>
-        <span id="ss-pc3-label"> &middot; PC3: <span style="color: #5b7279;">{pcLabels[2]}</span></span>
-        <span style="color: #1a5568;"> (principal components of 8D editorial space)</span>
+      <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 4px;">
+        PC1: <span style="color: var(--fg-secondary);">{pcLabels[0]}</span> &middot;
+        PC2: <span style="color: var(--fg-secondary);">{pcLabels[1]}</span>
+        <span id="ss-pc3-label"> &middot; PC3: <span style="color: var(--fg-secondary);">{pcLabels[2]}</span></span>
+        <span style="color: var(--color-border);"> (principal components of 8D editorial space)</span>
       </div>
     </>
   )}
@@ -278,14 +278,14 @@ const clientData = JSON.stringify({
   function renderDetail(el, pt) {
     if (!pt) {
       const hint = el.id === 'ss-detail-2d' ? 'hover a point' : 'click a sphere';
-      el.innerHTML = `<div style="color:#1a5568;font-size:9px;">${hint} for details</div>`;
+      el.innerHTML = `<div style="color:var(--color-border);font-size:9px;">${hint} for details</div>`;
       return;
     }
     const scoreColor = pt.cc || hcbColor(pt.sc);
     const scoreStr = pt.sc !== null ? (pt.sc >= 0 ? '+' : '') + pt.sc.toFixed(3) : 'n/a';
     const barW = pt.sc !== null ? Math.round(Math.abs(pt.sc) * 100) : 0;
     const scoreBar = pt.sc !== null
-      ? `<div style="background:#0d4655;border-radius:2px;height:4px;margin:2px 0;"><div style="background:${hcbColor(pt.sc)};height:4px;border-radius:2px;width:${barW}%;"></div></div>`
+      ? `<div style="background:var(--bg-surface);border-radius:2px;height:4px;margin:2px 0;"><div style="background:${hcbColor(pt.sc)};height:4px;border-radius:2px;width:${barW}%;"></div></div>`
       : '';
     const dimNames = ['EQ','SO','SR','TD','PT','AR','VA','FW'];
     const signals = pt.zv
@@ -293,20 +293,20 @@ const clientData = JSON.stringify({
         + dimNames.map((k, i) => {
           const v = pt.zv[i];
           const w = v !== undefined ? Math.min(100, Math.round((v + 3) / 6 * 100)) : 0;
-          return `<div><span style="color:#5b7279;">${k}</span><div style="background:#0d4655;border-radius:1px;height:2px;margin-top:1px;"><div style="background:#5b7279;height:2px;border-radius:1px;width:${w}%;"></div></div></div>`;
+          return `<div><span style="color:var(--fg-secondary);">${k}</span><div style="background:var(--bg-surface);border-radius:1px;height:2px;margin-top:1px;"><div style="background:var(--fg-secondary);height:2px;border-radius:1px;width:${w}%;"></div></div></div>`;
         }).join('') + `</div>`
       : '';
     const nbrs = nearest(pt, 3);
     const nearHtml = nbrs.length
-      ? `<div style="color:#5b7279;font-size:9px;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;">Nearest</div>`
-        + nbrs.map(nb => `<div title="${esc(nb.d)}" style="color:#5b7279;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">→ <a href="/domain/${esc(nb.d)}" style="color:#8faaab;text-decoration:none;">${esc(nb.d)}</a></div>`).join('')
+      ? `<div style="color:var(--fg-secondary);font-size:9px;text-transform:uppercase;letter-spacing:.05em;margin-top:6px;">Nearest</div>`
+        + nbrs.map(nb => `<div title="${esc(nb.d)}" style="color:var(--fg-secondary);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">→ <a href="/domain/${esc(nb.d)}" style="color:var(--fg-emphasis);text-decoration:none;">${esc(nb.d)}</a></div>`).join('')
       : '';
     el.innerHTML = `
-      <a href="/domain/${esc(pt.d)}" style="color:#98a8a8;font-weight:bold;text-decoration:none;font-size:10px;word-break:break-all;">${esc(pt.d)}</a>
+      <a href="/domain/${esc(pt.d)}" style="color:var(--fg-primary);font-weight:bold;text-decoration:none;font-size:10px;word-break:break-all;">${esc(pt.d)}</a>
       <div style="color:${hcbColor(pt.sc)};font-size:11px;font-weight:bold;margin-top:3px;">HRCB ${scoreStr}</div>
       ${scoreBar}
-      ${pt.cn ? `<div style="color:${pt.cc};font-size:9px;margin-top:3px;">${esc(pt.cn)}</div>` : `<div style="color:#5b7279;font-size:9px;margin-top:3px;">Unaligned</div>`}
-      <div style="color:#5b7279;font-size:9px;">${pt.n} ${pt.n === 1 ? 'story' : 'stories'}</div>
+      ${pt.cn ? `<div style="color:${pt.cc};font-size:9px;margin-top:3px;">${esc(pt.cn)}</div>` : `<div style="color:var(--fg-secondary);font-size:9px;margin-top:3px;">Unaligned</div>`}
+      <div style="color:var(--fg-secondary);font-size:9px;">${pt.n} ${pt.n === 1 ? 'story' : 'stories'}</div>
       ${signals}${nearHtml}`;
   }
 
@@ -323,11 +323,11 @@ const clientData = JSON.stringify({
     wrap2d.style.display = is2d ? 'flex' : 'none';
     wrap3d.style.display = is2d ? 'none' : 'flex';
     btn2d.style.cssText = is2d
-      ? 'padding:3px 10px;background:#1a5568;border:1px solid #60a5fa;border-radius:3px;color:#60a5fa;font-size:var(--font-xs);cursor:pointer;font-family:monospace;'
-      : 'padding:3px 10px;background:#002d38;border:1px solid #0d4655;border-radius:3px;color:#5b7279;font-size:var(--font-xs);cursor:pointer;font-family:monospace;';
+      ? 'padding:3px 10px;background:var(--color-border);border:1px solid var(--channel-editorial);border-radius:3px;color:var(--channel-editorial);font-size:var(--font-xs);cursor:pointer;font-family:monospace;'
+      : 'padding:3px 10px;background:var(--bg-primary);border:1px solid var(--bg-surface);border-radius:3px;color:var(--fg-secondary);font-size:var(--font-xs);cursor:pointer;font-family:monospace;';
     btn3d.style.cssText = is2d
-      ? 'padding:3px 10px;background:#002d38;border:1px solid #0d4655;border-radius:3px;color:#5b7279;font-size:var(--font-xs);cursor:pointer;font-family:monospace;'
-      : 'padding:3px 10px;background:#1a5568;border:1px solid #60a5fa;border-radius:3px;color:#60a5fa;font-size:var(--font-xs);cursor:pointer;font-family:monospace;';
+      ? 'padding:3px 10px;background:var(--bg-primary);border:1px solid var(--bg-surface);border-radius:3px;color:var(--fg-secondary);font-size:var(--font-xs);cursor:pointer;font-family:monospace;'
+      : 'padding:3px 10px;background:var(--color-border);border:1px solid var(--channel-editorial);border-radius:3px;color:var(--channel-editorial);font-size:var(--font-xs);cursor:pointer;font-family:monospace;';
     if (pc3label) pc3label.style.display = is2d ? 'none' : '';
   }
 

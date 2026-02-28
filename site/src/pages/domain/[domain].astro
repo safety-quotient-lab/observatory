@@ -86,79 +86,79 @@ if (dcpJson) {
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">{domain}</span>
-            <a href={`https://${domain}`} target="_blank" rel="noopener" style="color: #d56500; font-size: var(--font-sm);">visit &rarr;</a>
+            <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">{domain}</span>
+            <a href={`https://${domain}`} target="_blank" rel="noopener" style="color: var(--color-orange); font-size: var(--font-sm);">visit &rarr;</a>
           </div>
 
           {/* Stats row */}
           <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-top: 8px;">
             <tr>
-              <td style="color: #5b7279; width: 85px;">Stories</td>
-              <td class="score-font" style="color: #5b7279;">{total} <span style="color: #5b7279;">({detail.evaluatedCount} evaluated)</span></td>
-              <td style="color: #5b7279; width: 85px;">Avg HRCB</td>
+              <td style="color: var(--fg-secondary); width: 85px;">Stories</td>
+              <td class="score-font" style="color: var(--fg-secondary);">{total} <span style="color: var(--fg-secondary);">({detail.evaluatedCount} evaluated)</span></td>
+              <td style="color: var(--fg-secondary); width: 85px;">Avg HRCB</td>
               <td class="score-font" style={`color: ${scoreToColor(avgScore)};`}>{formatScore(avgScore)}</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;">Avg SETL</td>
+              <td style="color: var(--fg-secondary);">Avg SETL</td>
               <td class="score-font" style={`color: ${setlToColor(domainSetl)};`}>{formatSetl(domainSetl)}</td>
-              <td style="color: #5b7279;">Avg Conf</td>
+              <td style="color: var(--fg-secondary);">Avg Conf</td>
               <td class="score-font" style={`color: ${confidenceToColor(detail.avgConf)};`}>{formatConfidence(detail.avgConf)}</td>
             </tr>
             {detail.avgEditorial !== null && (
               <tr>
-                <td style="color: #5b7279;">Avg Editorial</td>
+                <td style="color: var(--fg-secondary);">Avg Editorial</td>
                 <td class="score-font" style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</td>
-                <td style="color: #5b7279;">Avg Structural</td>
+                <td style="color: var(--fg-secondary);">Avg Structural</td>
                 <td class="score-font" style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</td>
               </tr>
             )}
             {avgPosterKarma !== null && (
               <tr>
-                <td style="color: #5b7279;">Poster Karma</td>
-                <td class="score-font" style="color: #22d3ee;">{Math.round(avgPosterKarma).toLocaleString()} <span style="color: #5b7279; font-size: var(--font-xs);">avg</span></td>
-                <td style="color: #5b7279;">Submitters</td>
-                <td class="score-font" style="color: #5b7279;">{karmaRow?.user_count ?? 0}</td>
+                <td style="color: var(--fg-secondary);">Poster Karma</td>
+                <td class="score-font" style="color: var(--color-sentiment);">{Math.round(avgPosterKarma).toLocaleString()} <span style="color: var(--fg-secondary); font-size: var(--font-xs);">avg</span></td>
+                <td style="color: var(--fg-secondary);">Submitters</td>
+                <td class="score-font" style="color: var(--fg-secondary);">{karmaRow?.user_count ?? 0}</td>
               </tr>
             )}
           </table>
 
           {/* Supplementary signals + trend */}
           {(signals.avgEq !== null || signals.topTone || signals.topSentiment) && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655;">
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bg-surface);">
               <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
                 {signals.avgEq !== null && (
                   <tr>
-                    <td style="color: #5b7279; width: 85px;">Epistemic</td>
-                    <td class="score-font" style={`color: ${signals.avgEq >= 0.6 ? '#16a34a' : signals.avgEq >= 0.4 ? '#eab308' : '#dc2626'};`}>
+                    <td style="color: var(--fg-secondary); width: 85px;">Epistemic</td>
+                    <td class="score-font" style={`color: ${signals.avgEq >= 0.6 ? 'var(--color-positive)' : signals.avgEq >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'};`}>
                       {signals.avgEq.toFixed(2)}
                     </td>
-                    <td style="color: #5b7279; width: 85px;">Transparency</td>
-                    <td class="score-font" style={`color: ${signals.avgTd !== null ? (signals.avgTd >= 0.6 ? '#16a34a' : signals.avgTd >= 0.3 ? '#eab308' : '#dc2626') : '#5b7279'};`}>
+                    <td style="color: var(--fg-secondary); width: 85px;">Transparency</td>
+                    <td class="score-font" style={`color: ${signals.avgTd !== null ? (signals.avgTd >= 0.6 ? 'var(--color-positive)' : signals.avgTd >= 0.3 ? 'var(--color-warning)' : 'var(--color-negative)') : 'var(--fg-secondary)'};`}>
                       {signals.avgTd !== null ? signals.avgTd.toFixed(2) : 'ND'}
                     </td>
                   </tr>
                 )}
                 {(signals.avgSo !== null || signals.avgSr !== null) && (
                   <tr>
-                    <td style="color: #5b7279;">Solutions</td>
-                    <td class="score-font" style="color: #5b7279;">{signals.avgSo !== null ? signals.avgSo.toFixed(2) : 'ND'}</td>
-                    <td style="color: #5b7279;">Stakeholder</td>
-                    <td class="score-font" style="color: #5b7279;">{signals.avgSr !== null ? signals.avgSr.toFixed(2) : 'ND'}</td>
+                    <td style="color: var(--fg-secondary);">Solutions</td>
+                    <td class="score-font" style="color: var(--fg-secondary);">{signals.avgSo !== null ? signals.avgSo.toFixed(2) : 'ND'}</td>
+                    <td style="color: var(--fg-secondary);">Stakeholder</td>
+                    <td class="score-font" style="color: var(--fg-secondary);">{signals.avgSr !== null ? signals.avgSr.toFixed(2) : 'ND'}</td>
                   </tr>
                 )}
                 <tr>
                   {signals.topTone && (
                     <Fragment>
-                      <td style="color: #5b7279;">Tone</td>
-                      <td style="color: #5b7279;">{signals.topTone}</td>
+                      <td style="color: var(--fg-secondary);">Tone</td>
+                      <td style="color: var(--fg-secondary);">{signals.topTone}</td>
                     </Fragment>
                   )}
                   {signals.topSentiment && (
                     <Fragment>
-                      <td style="color: #5b7279;">Sentiment</td>
-                      <td style={`color: ${signals.topSentiment === 'Champions' || signals.topSentiment === 'Advocates' ? '#16a34a' : signals.topSentiment === 'Hostile' || signals.topSentiment === 'Undermines' ? '#dc2626' : '#5b7279'};`}>
+                      <td style="color: var(--fg-secondary);">Sentiment</td>
+                      <td style={`color: ${signals.topSentiment === 'Champions' || signals.topSentiment === 'Advocates' ? 'var(--color-positive)' : signals.topSentiment === 'Hostile' || signals.topSentiment === 'Undermines' ? 'var(--color-negative)' : 'var(--fg-secondary)'};`}>
                         {signals.topSentiment}
                       </td>
                     </Fragment>
@@ -167,15 +167,15 @@ if (dcpJson) {
               </table>
               {/* Trend indicator */}
               {signals.recentAvgScore !== null && signals.olderAvgScore !== null && (
-                <div style="font-size: var(--font-xs); color: #5b7279; margin-top: 4px;">
+                <div style="font-size: var(--font-xs); color: var(--fg-secondary); margin-top: 4px;">
                   {(() => {
                     const delta = signals.recentAvgScore! - signals.olderAvgScore!;
                     const arrow = delta > 0.05 ? '\u2191' : delta < -0.05 ? '\u2193' : '\u2192';
-                    const color = delta > 0.05 ? '#16a34a' : delta < -0.05 ? '#dc2626' : '#5b7279';
+                    const color = delta > 0.05 ? 'var(--color-positive)' : delta < -0.05 ? 'var(--color-negative)' : 'var(--fg-secondary)';
                     return (
                       <span>
                         7d trend: <span style={`color: ${color}; font-weight: bold;`}>{arrow} {delta > 0 ? '+' : ''}{delta.toFixed(2)}</span>
-                        <span style="color: #1a5568;"> (7d: {signals.recentAvgScore!.toFixed(2)} vs 8-30d: {signals.olderAvgScore!.toFixed(2)})</span>
+                        <span style="color: var(--color-border);"> (7d: {signals.recentAvgScore!.toFixed(2)} vs 8-30d: {signals.olderAvgScore!.toFixed(2)})</span>
                       </span>
                     );
                   })()}
@@ -185,12 +185,12 @@ if (dcpJson) {
               {(signals.topScope || signals.avgPtCount !== null) && (
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
                   {signals.topScope && (
-                    <span style="font-size: var(--font-xs); background: #0d4655; border: 1px solid #1a5568; border-radius: 3px; padding: 1px 6px; color: #5b7279;">
+                    <span style="font-size: var(--font-xs); background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 6px; color: var(--fg-secondary);">
                       {signals.topScope}
                     </span>
                   )}
                   {signals.avgPtCount !== null && signals.avgPtCount > 0 && (
-                    <span style={`font-size: var(--font-xs); background: #0d4655; border: 1px solid ${signals.avgPtCount > 2 ? '#dc2626' : '#1a5568'}; border-radius: 3px; padding: 1px 6px; color: ${signals.avgPtCount > 2 ? '#dc2626' : '#5b7279'};`}>
+                    <span style={`font-size: var(--font-xs); background: var(--bg-surface); border: 1px solid ${signals.avgPtCount > 2 ? 'var(--color-negative)' : 'var(--color-border)'}; border-radius: 3px; padding: 1px 6px; color: ${signals.avgPtCount > 2 ? 'var(--color-negative)' : 'var(--fg-secondary)'};`}>
                       {signals.avgPtCount.toFixed(1)} propaganda flags/story
                     </span>
                   )}
@@ -201,8 +201,8 @@ if (dcpJson) {
 
           {/* Fingerprint */}
           {fp && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655;">
-              <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bg-surface);">
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
               <svg width="186" height="14" viewBox="0 0 186 14" style="vertical-align: middle;">
                 {fp.map((score, i) => (
                   <rect x={i * 6} y="0" width="5" height="14" rx="1"
@@ -216,17 +216,17 @@ if (dcpJson) {
 
           {/* Top/bottom stories */}
           {detail.topStory && detail.bottomStory && detail.topStory.hn_id !== detail.bottomStory.hn_id && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; font-size: var(--font-sm);">
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bg-surface); font-size: var(--font-sm);">
               <div style="display: flex; gap: 16px; flex-wrap: wrap;">
                 <span>
-                  <span style="color: #5b7279;">best:</span>
+                  <span style="color: var(--fg-secondary);">best:</span>
                   <span class="score-font" style={`color: ${scoreToColor(detail.topStory.hcb_editorial_mean ?? detail.topStory.hcb_weighted_mean)};`}>{formatScore(detail.topStory.hcb_editorial_mean ?? detail.topStory.hcb_weighted_mean)}</span>
-                  <a href={`/item/${detail.topStory.hn_id}`} style="color: #5b7279; margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
+                  <a href={`/item/${detail.topStory.hn_id}`} style="color: var(--fg-secondary); margin-left: 4px;">{detail.topStory.title.slice(0, 50)}{detail.topStory.title.length > 50 ? '...' : ''}</a>
                 </span>
                 <span>
-                  <span style="color: #5b7279;">worst:</span>
+                  <span style="color: var(--fg-secondary);">worst:</span>
                   <span class="score-font" style={`color: ${scoreToColor(detail.bottomStory.hcb_editorial_mean ?? detail.bottomStory.hcb_weighted_mean)};`}>{formatScore(detail.bottomStory.hcb_editorial_mean ?? detail.bottomStory.hcb_weighted_mean)}</span>
-                  <a href={`/item/${detail.bottomStory.hn_id}`} style="color: #5b7279; margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
+                  <a href={`/item/${detail.bottomStory.hn_id}`} style="color: var(--fg-secondary); margin-left: 4px;">{detail.bottomStory.title.slice(0, 50)}{detail.bottomStory.title.length > 50 ? '...' : ''}</a>
                 </span>
               </div>
             </div>
@@ -240,10 +240,10 @@ if (dcpJson) {
   {dcpElements && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             Domain Context Profile
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">cached from evaluation</span>
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">cached from evaluation</span>
           </div>
           <DcpTable elements={dcpElements} />
         </td>
@@ -255,10 +255,10 @@ if (dcpJson) {
   {gateStats.gated > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             Access Barriers
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               {gateStats.gated} of {gateStats.total} stories blocked ({gateStats.gate_pct}%)
             </span>
           </div>
@@ -268,12 +268,12 @@ if (dcpJson) {
               const color = gateToColor(b.gate_category);
               return (
                 <tr>
-                  <td style="width: 160px; color: #98a8a8;">{b.gate_category.replace(/_/g, ' ')}</td>
+                  <td style="width: 160px; color: var(--fg-primary);">{b.gate_category.replace(/_/g, ' ')}</td>
                   <td>
                     <div style="display: flex; align-items: center; gap: 8px;">
                       <div style={`height: 8px; border-radius: 2px; background: ${color}; width: ${Math.max(pct, 3)}%;`}></div>
                       <span class="score-font" style={`color: ${color};`}>{b.cnt}</span>
-                      <span style="color: #5b7279; font-size: var(--font-xs);">({pct}%)</span>
+                      <span style="color: var(--fg-secondary); font-size: var(--font-xs);">({pct}%)</span>
                     </div>
                   </td>
                 </tr>
@@ -287,7 +287,7 @@ if (dcpJson) {
             const claimsOpen = /\b(open|free|no.?paywall|unrestricted)\b/i.test(String(accessNote));
             const hasPaywall = gateStats.breakdown.some(b => b.gate_category === 'paywall');
             return claimsOpen && hasPaywall ? (
-              <div style="margin-top: 8px; padding: 6px 10px; background: #eab30815; border: 1px solid #eab30840; border-radius: 4px; font-size: var(--font-xs); color: #eab308;">
+              <div style="margin-top: 8px; padding: 6px 10px; background: #eab30815; border: 1px solid #eab30840; border-radius: 4px; font-size: var(--font-xs); color: var(--color-warning);">
                 DCP access_model claims open/free access, but {gateStats.breakdown.find(b => b.gate_category === 'paywall')?.cnt} stories hit a paywall gate
               </div>
             ) : null;
@@ -301,39 +301,39 @@ if (dcpJson) {
   {setlHistory.length > 1 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
             SETL History
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
               structural-editorial tension over time · {setlHistory.length} days
             </span>
           </div>
           <div style="display: flex; gap: 8px; font-size: var(--font-xs); margin-bottom: 4px;">
-            <span style="color: #a78bfa;">Editorial</span>
-            <span style="color: #22d3ee;">Structural</span>
-            <span style="color: #fbbf24;">SETL</span>
+            <span style="color: var(--channel-structural);">Editorial</span>
+            <span style="color: var(--color-sentiment);">Structural</span>
+            <span style="color: var(--color-warning-light);">SETL</span>
           </div>
           <svg width="100%" viewBox={`0 0 ${Math.max(setlHistory.length * 20, 200)} 80`} style="max-height: 100px;">
             {/* Zero line */}
-            <line x1="0" y1="40" x2={setlHistory.length * 20} y2="40" stroke="#1a5568" stroke-width="0.5" />
+            <line x1="0" y1="40" x2={setlHistory.length * 20} y2="40" stroke="var(--color-border)" stroke-width="0.5" />
             {/* Editorial line */}
             <polyline
               fill="none"
-              stroke="#a78bfa"
+              stroke="var(--channel-structural)"
               stroke-width="1.5"
               points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_editorial * 35}`).join(' ')}
             />
             {/* Structural line */}
             <polyline
               fill="none"
-              stroke="#22d3ee"
+              stroke="var(--color-sentiment)"
               stroke-width="1.5"
               points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_structural * 35}`).join(' ')}
             />
             {/* SETL line */}
             <polyline
               fill="none"
-              stroke="#fbbf24"
+              stroke="var(--color-warning-light)"
               stroke-width="2"
               points={setlHistory.map((p, i) => `${i * 20 + 10},${40 - p.avg_setl * 35}`).join(' ')}
             />
@@ -345,7 +345,7 @@ if (dcpJson) {
 
   {/* Story list header */}
   {total > 0 && (
-    <div style="padding: 4px 0; font-size: var(--font-sm); color: #5b7279;">
+    <div style="padding: 4px 0; font-size: var(--font-sm); color: var(--fg-secondary);">
       {total} stories {page > 1 ? `· page ${page}` : ''}
     </div>
   )}
@@ -362,7 +362,7 @@ if (dcpJson) {
   {displayStories.length === 0 && (
     <table width="100%">
       <tr>
-        <td style="padding: 40px 20px; text-align: center; color: #5b7279;">
+        <td style="padding: 40px 20px; text-align: center; color: var(--fg-secondary);">
           No stories from this domain.
         </td>
       </tr>
@@ -373,7 +373,7 @@ if (dcpJson) {
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
       <tr>
         <td style="padding-left: 40px;">
-          <a href={`/domain/${domain}?p=${page + 1}`} class="morelink" style="color: #5b7279; font-size: var(--font-base);">
+          <a href={`/domain/${domain}?p=${page + 1}`} class="morelink" style="color: var(--fg-secondary); font-size: var(--font-base);">
             More
           </a>
         </td>

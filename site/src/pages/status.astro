@@ -49,12 +49,12 @@ function relativeTime(ts: string | null | undefined): string {
   return `${Math.floor(s / 86400)}d ago`;
 }
 function workerDot(ts: string | null | undefined): { color: string; title: string } {
-  if (!ts) return { color: '#1a5568', title: 'never active' };
+  if (!ts) return { color: 'var(--color-border)', title: 'never active' };
   const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-  if (s < 600) return { color: '#16a34a', title: 'active (<10m)' };
-  if (s < 3600) return { color: '#eab308', title: 'idle (<1h)' };
-  if (s < 86400) return { color: '#5b7279', title: 'sleeping (<24h)' };
-  return { color: '#1a5568', title: 'inactive (>24h)' };
+  if (s < 600) return { color: 'var(--color-positive)', title: 'active (<10m)' };
+  if (s < 3600) return { color: 'var(--color-warning)', title: 'idle (<1h)' };
+  if (s < 86400) return { color: 'var(--fg-secondary)', title: 'sleeping (<24h)' };
+  return { color: 'var(--color-border)', title: 'inactive (>24h)' };
 }
 
 // Map eval_provider values to display names
@@ -94,9 +94,9 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Status</span>
-        <span style="color: #5b7279; margin-left: var(--space-lg);">Pipeline health at a glance.</span>
-        <span id="live-indicator" style="margin-left: var(--space-lg); font-size: var(--font-xs); color: #5b7279;">connecting...</span>
+        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Status</span>
+        <span style="color: var(--fg-secondary); margin-left: var(--space-lg);">Pipeline health at a glance.</span>
+        <span id="live-indicator" style="margin-left: var(--space-lg); font-size: var(--font-xs); color: var(--fg-secondary);">connecting...</span>
       </td>
     </tr>
   </table>
@@ -104,53 +104,53 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
   {/* Coverage Spectrum */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Coverage</div>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Coverage</div>
 
         {/* Coverage spectrum bar (excludes skipped) */}
-        <div style="width: 100%; height: 8px; background: #0d4655; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 10px;">
-          {pctCovMulti > 0 && <div style={`width: ${pctCovMulti}%; background: #259d94;`} title={`Multi-model: ${status.coverageMultiModel}`}></div>}
-          {pctCovFull > 0 && <div style={`width: ${pctCovFull}%; background: #16a34a;`} title={`Full: ${status.coverageFull - status.coverageMultiModel}`}></div>}
-          {pctCovLite > 0 && <div style={`width: ${pctCovLite}%; background: #d56500;`} title={`Lite: ${status.coverageLite}`}></div>}
-          {pctCovNone > 0 && <div style={`width: ${pctCovNone}%; background: #0d4655;`}></div>}
+        <div style="width: 100%; height: 8px; background: var(--bg-surface); border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 10px;">
+          {pctCovMulti > 0 && <div style={`width: ${pctCovMulti}%; background: var(--channel-hrcb);`} title={`Multi-model: ${status.coverageMultiModel}`}></div>}
+          {pctCovFull > 0 && <div style={`width: ${pctCovFull}%; background: var(--color-positive);`} title={`Full: ${status.coverageFull - status.coverageMultiModel}`}></div>}
+          {pctCovLite > 0 && <div style={`width: ${pctCovLite}%; background: var(--color-orange);`} title={`Lite: ${status.coverageLite}`}></div>}
+          {pctCovNone > 0 && <div style={`width: ${pctCovNone}%; background: var(--bg-surface);`}></div>}
         </div>
 
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-base);">
           <tr>
             <td style="text-align: center; width: 25%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #259d94; font-weight: bold;">{status.coverageMultiModel}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Multi-Model</div>
+              <div class="score-font" style="font-size: var(--font-lg); color: var(--channel-hrcb); font-weight: bold;">{status.coverageMultiModel}</div>
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">Multi-Model</div>
             </td>
             <td style="text-align: center; width: 25%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #16a34a; font-weight: bold;">{status.coverageFull}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Full</div>
+              <div class="score-font" style="font-size: var(--font-lg); color: var(--color-positive); font-weight: bold;">{status.coverageFull}</div>
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">Full</div>
             </td>
             <td style="text-align: center; width: 25%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #d56500; font-weight: bold;">{status.coverageLite}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Lite</div>
+              <div class="score-font" style="font-size: var(--font-lg); color: var(--color-orange); font-weight: bold;">{status.coverageLite}</div>
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">Lite</div>
             </td>
             <td style="text-align: center; width: 25%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #5b7279; font-weight: bold;">{evaluable > 0 ? evaluable - status.coverageFull - status.coverageLite : 0}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">No Coverage</div>
+              <div class="score-font" style="font-size: var(--font-lg); color: var(--fg-secondary); font-weight: bold;">{evaluable > 0 ? evaluable - status.coverageFull - status.coverageLite : 0}</div>
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">No Coverage</div>
             </td>
           </tr>
         </table>
 
         {/* Pipeline status row */}
-        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--font-sm); color: #5b7279;">
-          <span><span class="score-font" style="color: #16a34a;">{status.done}</span> done</span>
-          <span><span class="score-font" style="color: #eab308;">{status.pending}</span> pending</span>
-          {status.evaluating > 0 && <span><span class="score-font" style="color: #60a5fa;">{status.evaluating}</span> evaluating</span>}
-          {status.failed > 0 && <span><span class="score-font" style="color: #dc2626;">{status.failed}</span> failed</span>}
-          <span><span class="score-font" style="color: #5b7279;">{status.skipped}</span> skipped</span>
-          <span style="color: #1a5568;">|</span>
-          <span><span class="score-font" style="color: #98a8a8;">{status.total}</span> total</span>
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bg-surface); display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--font-sm); color: var(--fg-secondary);">
+          <span><span class="score-font" style="color: var(--color-positive);">{status.done}</span> done</span>
+          <span><span class="score-font" style="color: var(--color-warning);">{status.pending}</span> pending</span>
+          {status.evaluating > 0 && <span><span class="score-font" style="color: var(--channel-editorial);">{status.evaluating}</span> evaluating</span>}
+          {status.failed > 0 && <span><span class="score-font" style="color: var(--color-negative);">{status.failed}</span> failed</span>}
+          <span><span class="score-font" style="color: var(--fg-secondary);">{status.skipped}</span> skipped</span>
+          <span style="color: var(--color-border);">|</span>
+          <span><span class="score-font" style="color: var(--fg-primary);">{status.total}</span> total</span>
         </div>
 
         {/* Clearance estimate — aggregate rate across all queues */}
         {velocity.daysToClearing !== null && status.pending > 0 && (
-          <div style="margin-top: 6px; font-size: var(--font-sm); color: #5b7279;">
-            est. <span class="score-font" style="color: #eab308;">{velocity.daysToClearing < 1 ? '<1' : Math.ceil(velocity.daysToClearing)}</span> {velocity.daysToClearing < 1.5 ? 'day' : 'days'} to clear backlog
+          <div style="margin-top: 6px; font-size: var(--font-sm); color: var(--fg-secondary);">
+            est. <span class="score-font" style="color: var(--color-warning);">{velocity.daysToClearing < 1 ? '<1' : Math.ceil(velocity.daysToClearing)}</span> {velocity.daysToClearing < 1.5 ? 'day' : 'days'} to clear backlog
           </div>
         )}
       </td>
@@ -160,11 +160,11 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
   {/* Workers Health */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Workers</div>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Workers</div>
         <div class="table-wrap">
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-          <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+          <tr style="color: var(--color-border); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="padding: 2px 6px;"></td>
             <td style="padding: 2px 6px;">Worker</td>
             <td style="padding: 2px 6px;">Role</td>
@@ -179,16 +179,16 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
             const lastActive = cronRuns[0]?.created_at ?? null;
             const dot = workerDot(lastActive);
             return (
-              <tr style="border-top: 1px solid #0d4655;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
                 <td style="padding: 4px 6px; text-align: center;">
                   <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
                 </td>
-                <td style="padding: 4px 6px; color: #98a8a8; font-weight: bold;">hn-hrcb-cron</td>
-                <td style="padding: 4px 6px; color: #5b7279;">crawl HN · dispatch to queues</td>
-                <td style="padding: 4px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(lastActive)}</td>
-                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
-                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
-                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
+                <td style="padding: 4px 6px; color: var(--fg-primary); font-weight: bold;">hn-hrcb-cron</td>
+                <td style="padding: 4px 6px; color: var(--fg-secondary);">crawl HN · dispatch to queues</td>
+                <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary); white-space: nowrap;">{relativeTime(lastActive)}</td>
+                <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary);">—</td>
+                <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary);">—</td>
+                <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary);">—</td>
               </tr>
             );
           })()}
@@ -198,16 +198,16 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
             const meta = PROVIDER_META[ps.eval_provider] ?? { name: ps.eval_provider, role: 'evaluate' };
             const dot = workerDot(ps.last_eval);
             return (
-              <tr style="border-top: 1px solid #0d4655;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
                 <td style="padding: 4px 6px; text-align: center;">
                   <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
                 </td>
-                <td style="padding: 4px 6px; color: #98a8a8; font-weight: bold;">{meta.name}</td>
-                <td style="padding: 4px 6px; color: #5b7279;">{meta.role}</td>
-                <td style="padding: 4px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(ps.last_eval)}</td>
-                <td style={`padding: 4px 6px; text-align: right; color: ${ps.evals_24h > 0 ? '#60a5fa' : '#5b7279'};`}>{ps.evals_24h > 0 ? ps.evals_24h : '—'}</td>
-                <td style={`padding: 4px 6px; text-align: right; color: ${ps.evals_7d > 0 ? '#5b7279' : '#1a5568'};`}>{ps.evals_7d > 0 ? ps.evals_7d : '—'}</td>
-                <td style={`padding: 4px 6px; text-align: right; color: ${ps.failed_24h > 0 ? '#dc2626' : '#5b7279'};`}>{ps.failed_24h > 0 ? ps.failed_24h : '—'}</td>
+                <td style="padding: 4px 6px; color: var(--fg-primary); font-weight: bold;">{meta.name}</td>
+                <td style="padding: 4px 6px; color: var(--fg-secondary);">{meta.role}</td>
+                <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary); white-space: nowrap;">{relativeTime(ps.last_eval)}</td>
+                <td style={`padding: 4px 6px; text-align: right; color: ${ps.evals_24h > 0 ? 'var(--channel-editorial)' : 'var(--fg-secondary)'};`}>{ps.evals_24h > 0 ? ps.evals_24h : '—'}</td>
+                <td style={`padding: 4px 6px; text-align: right; color: ${ps.evals_7d > 0 ? 'var(--fg-secondary)' : 'var(--color-border)'};`}>{ps.evals_7d > 0 ? ps.evals_7d : '—'}</td>
+                <td style={`padding: 4px 6px; text-align: right; color: ${ps.failed_24h > 0 ? 'var(--color-negative)' : 'var(--fg-secondary)'};`}>{ps.failed_24h > 0 ? ps.failed_24h : '—'}</td>
               </tr>
             );
           })}
@@ -217,16 +217,16 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
             const lastActive = lastDlqRow?.created_at ?? null;
             const dot = workerDot(lastActive);
             return (
-              <tr style="border-top: 1px solid #0d4655;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
                 <td style="padding: 4px 6px; text-align: center;">
                   <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
                 </td>
-                <td style="padding: 4px 6px; color: #98a8a8; font-weight: bold;">hn-hrcb-dlq</td>
-                <td style="padding: 4px 6px; color: #5b7279;">dead letter handler</td>
-                <td style="padding: 4px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(lastActive)}</td>
-                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
-                <td style="padding: 4px 6px; text-align: right; color: #5b7279;">—</td>
-                <td style={`padding: 4px 6px; text-align: right; color: ${dlqStats.pending > 0 ? '#dc2626' : '#5b7279'};`}>
+                <td style="padding: 4px 6px; color: var(--fg-primary); font-weight: bold;">hn-hrcb-dlq</td>
+                <td style="padding: 4px 6px; color: var(--fg-secondary);">dead letter handler</td>
+                <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary); white-space: nowrap;">{relativeTime(lastActive)}</td>
+                <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary);">—</td>
+                <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary);">—</td>
+                <td style={`padding: 4px 6px; text-align: right; color: ${dlqStats.pending > 0 ? 'var(--color-negative)' : 'var(--fg-secondary)'};`}>
                   {dlqStats.pending > 0 ? `${dlqStats.pending}p` : '—'}
                 </td>
               </tr>
@@ -241,14 +241,14 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
   {/* Queue Breakdown */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
           Queues
-          <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px; font-size: var(--font-xs);">{QUEUE_CONFIG.length} queues + hrcb-eval-dlq</span>
+          <span style="text-transform: none; letter-spacing: 0; color: var(--color-border); margin-left: 6px; font-size: var(--font-xs);">{QUEUE_CONFIG.length} queues + hrcb-eval-dlq</span>
         </div>
         <div class="table-wrap">
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-          <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+          <tr style="color: var(--color-border); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="padding: 2px 6px;"></td>
             <td style="padding: 2px 6px;">Queue</td>
             <td style="padding: 2px 6px;">Model</td>
@@ -264,27 +264,27 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
             const dot = workerDot(stat?.last_eval ?? null);
             const isEnabled = MODEL_REGISTRY.find(r => r.id === qc.model)?.enabled ?? false;
             return (
-              <tr style={`border-top: 1px solid #0d4655; ${!isEnabled ? 'opacity: 0.5;' : ''}`}>
+              <tr style={`border-top: 1px solid var(--bg-surface); ${!isEnabled ? 'opacity: 0.5;' : ''}`}>
                 <td style="padding: 3px 6px; text-align: center;">
                   <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
                 </td>
-                <td style="padding: 3px 6px; color: #5b7279; font-family: monospace; white-space: nowrap;" title={qc.queue}>
+                <td style="padding: 3px 6px; color: var(--fg-secondary); font-family: monospace; white-space: nowrap;" title={qc.queue}>
                   {qc.queue.replace('hrcb-eval-', '')}
                 </td>
-                <td style="padding: 3px 6px; color: #98a8a8; white-space: nowrap;">
+                <td style="padding: 3px 6px; color: var(--fg-primary); white-space: nowrap;">
                   {modelDisplayName(qc.model)}
-                  {isLiteMode(getModelDef(qc.model)?.prompt_mode ?? null) && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
-                  {!isEnabled && <span style="color: #1a5568; margin-left: 4px; font-size: 8px;">off</span>}
+                  {isLiteMode(getModelDef(qc.model)?.prompt_mode ?? null) && <span style="color: var(--color-orange); margin-left: 3px; font-size: 8px;">~lite</span>}
+                  {!isEnabled && <span style="color: var(--color-border); margin-left: 4px; font-size: 8px;">off</span>}
                 </td>
-                <td style="padding: 3px 6px; color: #5b7279; font-size: 9px;">{qc.consumer}</td>
-                <td style="padding: 3px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(stat?.last_eval ?? null)}</td>
-                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.in_flight ?? 0) > 0 ? '#eab308' : '#1a5568'};`}>
+                <td style="padding: 3px 6px; color: var(--fg-secondary); font-size: 9px;">{qc.consumer}</td>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary); white-space: nowrap;">{relativeTime(stat?.last_eval ?? null)}</td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.in_flight ?? 0) > 0 ? 'var(--color-warning)' : 'var(--color-border)'};`}>
                   {(stat?.in_flight ?? 0) > 0 ? stat!.in_flight : '—'}
                 </td>
-                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.evals_24h ?? 0) > 0 ? '#60a5fa' : '#1a5568'};`}>
+                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.evals_24h ?? 0) > 0 ? 'var(--channel-editorial)' : 'var(--color-border)'};`}>
                   {(stat?.evals_24h ?? 0) > 0 ? stat!.evals_24h : '—'}
                 </td>
-                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.evals_7d ?? 0) > 0 ? '#5b7279' : '#1a5568'};`}>
+                <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.evals_7d ?? 0) > 0 ? 'var(--fg-secondary)' : 'var(--color-border)'};`}>
                   {(stat?.evals_7d ?? 0) > 0 ? (stat!.evals_7d / 7).toFixed(1) : '—'}
                 </td>
               </tr>
@@ -296,19 +296,19 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
             const lastDlqEvent = recentPipelineEvents.find(e => e.event_type === 'dlq' || e.event_type === 'dlq_replay');
             const dot = workerDot(lastDlqEvent?.created_at ?? null);
             return (
-              <tr style="border-top: 1px solid #0d4655;">
+              <tr style="border-top: 1px solid var(--bg-surface);">
                 <td style="padding: 3px 6px; text-align: center;">
-                  <span style={`color: ${dlqStats.pending > 0 ? '#dc2626' : dot.color}; font-size: 8px;`} title={dlqStats.pending > 0 ? `${dlqStats.pending} pending` : dot.title}>●</span>
+                  <span style={`color: ${dlqStats.pending > 0 ? 'var(--color-negative)' : dot.color}; font-size: 8px;`} title={dlqStats.pending > 0 ? `${dlqStats.pending} pending` : dot.title}>●</span>
                 </td>
-                <td style="padding: 3px 6px; color: #5b7279; font-family: monospace;">eval-dlq</td>
-                <td style="padding: 3px 6px; color: #5b7279; font-size: 9px;">dead letters</td>
-                <td style="padding: 3px 6px; color: #5b7279; font-size: 9px;">hn-hrcb-dlq</td>
-                <td style="padding: 3px 6px; text-align: right; color: #5b7279; white-space: nowrap;">{relativeTime(lastDlqEvent?.created_at ?? null)}</td>
-                <td style={`padding: 3px 6px; text-align: right; color: ${dlqStats.pending > 0 ? '#dc2626' : '#1a5568'};`}>
+                <td style="padding: 3px 6px; color: var(--fg-secondary); font-family: monospace;">eval-dlq</td>
+                <td style="padding: 3px 6px; color: var(--fg-secondary); font-size: 9px;">dead letters</td>
+                <td style="padding: 3px 6px; color: var(--fg-secondary); font-size: 9px;">hn-hrcb-dlq</td>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary); white-space: nowrap;">{relativeTime(lastDlqEvent?.created_at ?? null)}</td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${dlqStats.pending > 0 ? 'var(--color-negative)' : 'var(--color-border)'};`}>
                   {dlqStats.pending > 0 ? `${dlqStats.pending}` : '—'}
                 </td>
-                <td style="padding: 3px 6px; text-align: right; color: #1a5568;">—</td>
-                <td style="padding: 3px 6px; text-align: right; color: #5b7279;">
+                <td style="padding: 3px 6px; text-align: right; color: var(--color-border);">—</td>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">
                   {dlqStats.total > 0 ? dlqStats.total : '—'}
                 </td>
               </tr>
@@ -324,27 +324,27 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
   {velDays.length > 1 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Eval Velocity
-            <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px; font-size: var(--font-xs);">evals/day · last 60 days</span>
+            <span style="text-transform: none; letter-spacing: 0; color: var(--color-border); margin-left: 6px; font-size: var(--font-xs);">evals/day · last 60 days</span>
           </div>
           <svg viewBox={`0 0 ${velDays.length * 8} 60`} style="width: 100%; height: 60px; overflow: visible;" preserveAspectRatio="none">
             {/* Full evals (bottom) */}
             {velFull.map((v, i) => {
               const h = velMax > 0 ? (v / velMax) * 56 : 0;
-              return h > 0 ? <rect x={i * 8} y={60 - h} width={7} height={h} fill="#16a34a" opacity="0.8" /> : null;
+              return h > 0 ? <rect x={i * 8} y={60 - h} width={7} height={h} fill="var(--color-positive)" opacity="0.8" /> : null;
             })}
             {/* Lite evals (stacked on top) */}
             {velLite.map((v, i) => {
               const hFull = velMax > 0 ? (velFull[i] / velMax) * 56 : 0;
               const hLite = velMax > 0 ? (v / velMax) * 56 : 0;
-              return hLite > 0 ? <rect x={i * 8} y={60 - hFull - hLite} width={7} height={hLite} fill="#d56500" opacity="0.8" /> : null;
+              return hLite > 0 ? <rect x={i * 8} y={60 - hFull - hLite} width={7} height={hLite} fill="var(--color-orange)" opacity="0.8" /> : null;
             })}
           </svg>
-          <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs); color: #5b7279;">
-            <span><span style="color: #16a34a;">■</span> full</span>
-            <span><span style="color: #d56500;">■</span> lite</span>
+          <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs); color: var(--fg-secondary);">
+            <span><span style="color: var(--color-positive);">■</span> full</span>
+            <span><span style="color: var(--color-orange);">■</span> lite</span>
             {velDays.length > 0 && <span style="margin-left: auto;">{velDays[0].slice(5)} – {velDays[velDays.length - 1].slice(5)}</span>}
           </div>
         </td>
@@ -355,20 +355,20 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
   {/* Operations — always visible (promoted from collapsed tertiary) */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
-      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Operations</div>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Operations</div>
         <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
           <tr>
-            <td style="color: #5b7279; width: 140px;">Cron interval</td>
-            <td style="color: #98a8a8;">Every 5 minutes</td>
+            <td style="color: var(--fg-secondary); width: 140px;">Cron interval</td>
+            <td style="color: var(--fg-primary);">Every 5 minutes</td>
           </tr>
           <tr>
-            <td style="color: #5b7279;">Score refresh</td>
-            <td style="color: #98a8a8;">Every 5 min (updates) · 48h sweep every 10 min</td>
+            <td style="color: var(--fg-secondary);">Score refresh</td>
+            <td style="color: var(--fg-primary);">Every 5 min (updates) · 48h sweep every 10 min</td>
           </tr>
           <tr>
-            <td style="color: #5b7279;">Crawl surface</td>
-            <td style="color: #98a8a8;">top · new · best · ask · show (5 lists)</td>
+            <td style="color: var(--fg-secondary);">Crawl surface</td>
+            <td style="color: var(--fg-primary);">top · new · best · ask · show (5 lists)</td>
           </tr>
         </table>
       </td>
@@ -378,17 +378,17 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
   {/* Hub cards */}
   <div class="two-col" style="margin-bottom: 10px;">
     <div>
-      <a href="/status/models" style="text-decoration: none; display: block; padding: 10px; background: #093946; border: 1px solid #1a5568; border-left: 3px solid #259d94; border-radius: 6px; height: 100%;">
-        <div style="color: #259d94; font-size: var(--font-sm); font-weight: bold;">Models</div>
-        <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 2px;">Registry, trust index, calibration, signal completeness, model comparison, and measurement integrity.</div>
-        <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 4px;">/status/models →</div>
+      <a href="/status/models" style="text-decoration: none; display: block; padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-left: 3px solid var(--channel-hrcb); border-radius: 6px; height: 100%;">
+        <div style="color: var(--channel-hrcb); font-size: var(--font-sm); font-weight: bold;">Models</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 2px;">Registry, trust index, calibration, signal completeness, model comparison, and measurement integrity.</div>
+        <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 4px;">/status/models →</div>
       </a>
     </div>
     <div>
-      <a href="/status/events" style="text-decoration: none; display: block; padding: 10px; background: #093946; border: 1px solid #1a5568; border-left: 3px solid #d56500; border-radius: 6px; height: 100%;">
-        <div style="color: #d56500; font-size: var(--font-sm); font-weight: bold;">Events</div>
-        <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 2px;">Pipeline events, failures, evaluation queue, DLQ, rate limits, cycle performance, and latency.</div>
-        <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 4px;">/status/events →</div>
+      <a href="/status/events" style="text-decoration: none; display: block; padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-left: 3px solid var(--color-orange); border-radius: 6px; height: 100%;">
+        <div style="color: var(--color-orange); font-size: var(--font-sm); font-weight: bold;">Events</div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 2px;">Pipeline events, failures, evaluation queue, DLQ, rate limits, cycle performance, and latency.</div>
+        <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 4px;">/status/events →</div>
       </a>
     </div>
   </div>
@@ -407,7 +407,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
 
       es.addEventListener('connected', function() {
         if (indicator) {
-          indicator.style.color = '#16a34a';
+          indicator.style.color = 'var(--color-positive)';
           indicator.textContent = 'live';
         }
       });
@@ -416,13 +416,13 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
         var d = JSON.parse(e.data);
         var score = d.hcb_weighted_mean !== null ? d.hcb_weighted_mean.toFixed(2) : '?';
         var toast = document.createElement('div');
-        toast.style.cssText = 'background:#093946;border:1px solid #1a5568;border-radius:4px;padding:6px 10px;font-size:8pt;color:#8faaab;';
+        toast.style.cssText = 'background:var(--bg-highlight);border:1px solid var(--color-border);border-radius:4px;padding:6px 10px;font-size:8pt;color:var(--fg-emphasis);';
         var link = document.createElement('a');
         link.href = '/item/' + d.hn_id;
-        link.style.color = '#98a8a8';
+        link.style.color = 'var(--fg-primary)';
         link.textContent = (d.title || '').slice(0, 40);
         var scoreSpan = document.createElement('span');
-        scoreSpan.style.cssText = 'color:' + (d.hcb_weighted_mean > 0.05 ? '#16a34a' : d.hcb_weighted_mean < -0.05 ? '#dc2626' : '#eab308') + ';font-family:monospace;';
+        scoreSpan.style.cssText = 'color:' + (d.hcb_weighted_mean > 0.05 ? 'var(--color-positive)' : d.hcb_weighted_mean < -0.05 ? 'var(--color-negative)' : 'var(--color-warning)') + ';font-family:monospace;';
         scoreSpan.textContent = ' ' + score;
         toast.appendChild(link);
         toast.appendChild(scoreSpan);
@@ -435,13 +435,13 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
 
       es.addEventListener('timeout', function() {
         es.close();
-        if (indicator) { indicator.style.color = '#5b7279'; indicator.textContent = 'reconnecting...'; }
+        if (indicator) { indicator.style.color = 'var(--fg-secondary)'; indicator.textContent = 'reconnecting...'; }
         setTimeout(connect, 2000);
       });
 
       es.onerror = function() {
         es.close();
-        if (indicator) { indicator.style.color = '#5b7279'; indicator.textContent = 'offline'; }
+        if (indicator) { indicator.style.color = 'var(--fg-secondary)'; indicator.textContent = 'offline'; }
         setTimeout(connect, 30000);
       };
     }

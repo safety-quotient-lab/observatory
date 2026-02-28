@@ -187,8 +187,8 @@ const dcMax = Math.max(0.001, ...dcTotals);
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
-        <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Models</span>
-        <span style="color: #5b7279; margin-left: var(--space-lg);">
+        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Models</span>
+        <span style="color: var(--fg-secondary); margin-left: var(--space-lg);">
           Model registry, performance comparison, and measurement integrity.
         </span>
       </td>
@@ -196,18 +196,18 @@ const dcMax = Math.max(0.001, ...dcTotals);
   </table>
 
   {_pageError && (
-    <div style="padding: 10px; margin-bottom: 10px; background: #2d0000; border: 1px solid #dc2626; border-radius: 6px; color: #f87171; font-size: var(--font-sm); font-family: monospace;">
+    <div style="padding: 10px; margin-bottom: 10px; background: #2d0000; border: 1px solid var(--color-negative); border-radius: 6px; color: var(--color-negative-light); font-size: var(--font-sm); font-family: monospace;">
       <strong>Page Error:</strong> {_pageError}
     </div>
   )}
 
   {/* Timing diagnostics — remove after stabilization */}
-  <div style="padding: 6px 10px; margin-bottom: 10px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; font-size: 9px; color: #5b7279; font-family: monospace;">
-    <span style="color: #98a8a8;">queries {_queryMs}ms</span> · <span style="color: #98a8a8;">compute {_computeMs}ms</span> · <span style="color: #98a8a8;">total {_totalMs}ms</span>
+  <div style="padding: 6px 10px; margin-bottom: 10px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; font-size: 9px; color: var(--fg-secondary); font-family: monospace;">
+    <span style="color: var(--fg-primary);">queries {_queryMs}ms</span> · <span style="color: var(--fg-primary);">compute {_computeMs}ms</span> · <span style="color: var(--fg-primary);">total {_totalMs}ms</span>
     {_timings.length > 0 && (
       <span style="margin-left: 8px;">
         | {_timings.sort((a, b) => b.ms - a.ms).slice(0, 5).map(t => (
-          <span style={`color: ${t.ms > 2000 ? '#dc2626' : t.ms > 500 ? '#eab308' : '#5b7279'}; margin-right: 6px;`}>
+          <span style={`color: ${t.ms > 2000 ? 'var(--color-negative)' : t.ms > 500 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; margin-right: 6px;`}>
             {t.name}:{t.ms}ms
           </span>
         ))}
@@ -219,18 +219,18 @@ const dcMax = Math.max(0.001, ...dcTotals);
   {models.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Evaluation Models
             {modelComparison.length > 1 && (
-              <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+              <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
                 {modelComparison.length} models in history
               </span>
             )}
           </div>
           <div class="table-wrap">
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-            <tr style="color: #5b7279; font-size: var(--font-xs);">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs);">
               <td>Model</td>
               <td width="60" align="center">Status</td>
               <td width="70" align="center">Provider</td>
@@ -245,20 +245,20 @@ const dcMax = Math.max(0.001, ...dcTotals);
               const evalCount = active?.count ?? hist?.count ?? 0;
               const avgScore = active?.avg_score ?? hist?.avg_score ?? null;
               return (
-              <tr style="border-top: 1px solid #0d4655;">
-                <td style={`color: ${reg.enabled ? '#98a8a8' : '#5b7279'};`} class="score-font">
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style={`color: ${reg.enabled ? 'var(--fg-primary)' : 'var(--fg-secondary)'};`} class="score-font">
                   {reg.api_model_id}
                 </td>
                 <td align="center" class="score-font">
                   {reg.enabled
-                    ? <span style="color: #4ade80;">on</span>
-                    : <span style="color: #5b7279;">off</span>
+                    ? <span style="color: var(--color-positive-light);">on</span>
+                    : <span style="color: var(--fg-secondary);">off</span>
                   }
                 </td>
-                <td align="center" class="score-font" style={`color: ${reg.provider === 'anthropic' ? '#c084fc' : reg.provider === 'workers-ai' ? '#f59e0b' : '#60a5fa'};`}>
+                <td align="center" class="score-font" style={`color: ${reg.provider === 'anthropic' ? 'var(--color-purple-light)' : reg.provider === 'workers-ai' ? 'var(--color-amber)' : 'var(--channel-editorial)'};`}>
                   {reg.provider === 'anthropic' ? 'anth' : reg.provider === 'workers-ai' ? 'CF' : 'OR'}{reg.is_free ? '' : ''}
                 </td>
-                <td align="center" class="score-font" style="color: #5b7279;">
+                <td align="center" class="score-font" style="color: var(--fg-secondary);">
                   {evalCount > 0 ? evalCount : '---'}
                 </td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(avgScore)}; white-space: nowrap;`}>
@@ -284,10 +284,10 @@ const dcMax = Math.max(0.001, ...dcTotals);
   {channelAverages.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Channel Averages
-            <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px; font-size: var(--font-xs);">avg HRCB · E · S per model · done evals</span>
+            <span style="text-transform: none; letter-spacing: 0; color: var(--color-border); margin-left: 6px; font-size: var(--font-xs);">avg HRCB · E · S per model · done evals</span>
           </div>
           {(() => {
             const MAX_BAR = Math.max(0.01, ...channelAverages.flatMap(r => [
@@ -302,47 +302,47 @@ const dcMax = Math.max(0.001, ...dcTotals);
               const sW    = r.avg_s != null ? Math.round((Math.abs(r.avg_s) / MAX_BAR) * BAR_W) : null;
               const isLite = r.prompt_mode === 'lite' || r.prompt_mode === 'light';
               return (
-                <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid #0d4655; font-size: var(--font-xs);">
-                  <div style="width: 140px; color: #98a8a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;" title={r.eval_model}>
+                <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--bg-surface); font-size: var(--font-xs);">
+                  <div style="width: 140px; color: var(--fg-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;" title={r.eval_model}>
                     {modelDisplayName(r.eval_model)}
-                    {isLite && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
+                    {isLite && <span style="color: var(--color-orange); margin-left: 3px; font-size: 8px;">~lite</span>}
                   </div>
                   <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
                     {/* HRCB bar — full models only (lite has no structural channel so no composite) */}
                     {!isLite && (
                       <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">HRCB</span>
-                        <div style={`width: ${hrcbW}px; height: 7px; background: #259d94; border-radius: 2px;`}></div>
+                        <span style="color: var(--fg-secondary); width: 28px; text-align: right; font-size: 8px;">HRCB</span>
+                        <div style={`width: ${hrcbW}px; height: 7px; background: var(--channel-hrcb); border-radius: 2px;`}></div>
                         <span class="score-font" style={`color: ${scoreToColor(r.avg_hrcb)}; font-size: var(--font-xs);`}>{r.avg_hrcb != null ? r.avg_hrcb.toFixed(3) : '—'}</span>
                       </div>
                     )}
                     {/* E bar */}
                     <div style="display: flex; align-items: center; gap: 4px;">
-                      <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">E</span>
-                      <div style={`width: ${eW}px; height: 7px; background: #60a5fa; border-radius: 2px;`}></div>
+                      <span style="color: var(--fg-secondary); width: 28px; text-align: right; font-size: 8px;">E</span>
+                      <div style={`width: ${eW}px; height: 7px; background: var(--channel-editorial); border-radius: 2px;`}></div>
                       <span class="score-font" style={`color: ${scoreToColor(r.avg_e)}; font-size: var(--font-xs);`}>{r.avg_e != null ? r.avg_e.toFixed(3) : '—'}</span>
                     </div>
                     {/* S bar — full models only */}
                     {!isLite && (
                       <div style="display: flex; align-items: center; gap: 4px;">
-                        <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">S</span>
+                        <span style="color: var(--fg-secondary); width: 28px; text-align: right; font-size: 8px;">S</span>
                         {sW != null
-                          ? <div style={`width: ${sW}px; height: 7px; background: #a78bfa; border-radius: 2px;`}></div>
-                          : <span style="color: #1a5568; font-size: 8px;">n/a</span>
+                          ? <div style={`width: ${sW}px; height: 7px; background: var(--channel-structural); border-radius: 2px;`}></div>
+                          : <span style="color: var(--color-border); font-size: 8px;">n/a</span>
                         }
                         <span class="score-font" style={`color: ${scoreToColor(r.avg_s)}; font-size: var(--font-xs);`}>{r.avg_s != null ? r.avg_s.toFixed(3) : '—'}</span>
                       </div>
                     )}
                   </div>
-                  <div style="color: #1a5568; font-size: 8px; flex-shrink: 0; width: 36px; text-align: right;">{r.n.toLocaleString()}</div>
+                  <div style="color: var(--color-border); font-size: 8px; flex-shrink: 0; width: 36px; text-align: right;">{r.n.toLocaleString()}</div>
                 </div>
               );
             });
           })()}
-          <div style="display: flex; gap: 12px; margin-top: 8px; padding-top: 6px; border-top: 1px solid #0d4655; font-size: var(--font-xs); color: #5b7279;">
-            <span><span style="color: #259d94;">■</span> HRCB</span>
-            <span><span style="color: #60a5fa;">■</span> E editorial</span>
-            <span><span style="color: #a78bfa;">■</span> S structural</span>
+          <div style="display: flex; gap: 12px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--bg-surface); font-size: var(--font-xs); color: var(--fg-secondary);">
+            <span><span style="color: var(--channel-hrcb);">■</span> HRCB</span>
+            <span><span style="color: var(--channel-editorial);">■</span> E editorial</span>
+            <span><span style="color: var(--channel-structural);">■</span> S structural</span>
           </div>
         </td>
       </tr>
@@ -353,11 +353,11 @@ const dcMax = Math.max(0.001, ...dcTotals);
   {statusBreakdown.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Multi-Model Raters</div>
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Multi-Model Raters</div>
           <div class="table-wrap">
           <table cellpadding="0" cellspacing="0" width="100%">
-            <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td style="padding: 4px 8px;">Model</td>
               <td style="padding: 4px 8px; text-align: center;">Avg Score</td>
               <td style="padding: 4px 8px; text-align: center;">Conf</td>
@@ -369,42 +369,42 @@ const dcMax = Math.max(0.001, ...dcTotals);
             {statusBreakdown.map(rs => {
               const summary = raterSummary.find(s => s.model === rs.model);
               const coveragePct = rs.total_primary > 0 ? Math.round((rs.done / rs.total_primary) * 100) : 0;
-              const coverageColor = coveragePct >= 95 ? '#34d399' : coveragePct >= 50 ? '#eab308' : '#dc2626';
+              const coverageColor = coveragePct >= 95 ? 'var(--color-positive-medium)' : coveragePct >= 50 ? 'var(--color-warning)' : 'var(--color-negative)';
               const inFlight = rs.queued + rs.pending + rs.evaluating;
               return (
-                <tr style="border-top: 1px solid #0d4655;">
-                  <td style="padding: 6px 8px; color: #98a8a8; font-size: var(--font-sm); font-weight: bold;">
+                <tr style="border-top: 1px solid var(--bg-surface);">
+                  <td style="padding: 6px 8px; color: var(--fg-primary); font-size: var(--font-sm); font-weight: bold;">
                     {modelDisplayName(rs.model)}
-                    {isLiteMode(getModelDef(rs.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Lite evaluation — editorial only">lite</span>}
+                    {isLiteMode(getModelDef(rs.model)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Lite evaluation — editorial only">lite</span>}
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
-                    <span class="score-font" style={`color: ${summary?.avg_score != null ? scoreToColor(summary.avg_score) : '#5b7279'}; font-weight: bold;`}>
+                    <span class="score-font" style={`color: ${summary?.avg_score != null ? scoreToColor(summary.avg_score) : 'var(--fg-secondary)'}; font-weight: bold;`}>
                       {summary?.avg_score != null ? summary.avg_score.toFixed(3) : '---'}
                     </span>
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
-                    <span class="score-font" style={`color: ${summary?.avg_confidence != null ? confidenceToColor(summary.avg_confidence) : '#5b7279'};`}>
+                    <span class="score-font" style={`color: ${summary?.avg_confidence != null ? confidenceToColor(summary.avg_confidence) : 'var(--fg-secondary)'};`}>
                       {summary?.avg_confidence != null ? summary.avg_confidence.toFixed(2) : '---'}
                     </span>
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
-                    <span class="score-font" style="color: #34d399;">{rs.done}</span>
+                    <span class="score-font" style="color: var(--color-positive-medium);">{rs.done}</span>
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
                     {inFlight > 0
-                      ? <span class="score-font" style="color: #eab308;">{inFlight}</span>
-                      : <span style="color: #5b7279;">0</span>
+                      ? <span class="score-font" style="color: var(--color-warning);">{inFlight}</span>
+                      : <span style="color: var(--fg-secondary);">0</span>
                     }
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
                     {rs.failed > 0
-                      ? <span class="score-font" style="color: #dc2626;">{rs.failed}</span>
-                      : <span style="color: #5b7279;">0</span>
+                      ? <span class="score-font" style="color: var(--color-negative);">{rs.failed}</span>
+                      : <span style="color: var(--fg-secondary);">0</span>
                     }
                   </td>
                   <td style="padding: 6px 8px; text-align: center;">
                     <div style="display: inline-flex; align-items: center; gap: 4px;">
-                      <div style="width: 50px; height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                      <div style="width: 50px; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
                         <div style={`width: ${coveragePct}%; height: 100%; background: ${coverageColor}; border-radius: 3px;`}></div>
                       </div>
                       <span class="score-font" style={`color: ${coverageColor}; font-size: var(--font-xs);`}>{coveragePct}%</span>
@@ -433,20 +433,20 @@ const dcMax = Math.max(0.001, ...dcTotals);
       <details open class="collapsible-section">
         <summary>
           Coverage Progression
-          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
             new stories entering each tier per day (30d)
           </span>
         </summary>
         <div style="overflow-x: auto;">
         <svg width={W} viewBox={`0 0 ${W} ${H}`} style="display: block;">
-          <rect x="0" y="0" width={W} height={H} fill="#002d38" rx="4" />
+          <rect x="0" y="0" width={W} height={H} fill="var(--bg-primary)" rx="4" />
           {/* Y-axis labels */}
           {[0, Math.round(maxVal / 2), maxVal].map((v, i) => {
             const y = padT + innerH - (v / maxVal) * innerH;
             return (
               <g>
-                <text x={padL - 3} y={y + 3} fill="#5b7279" font-size="7" font-family="monospace" text-anchor="end">{v}</text>
-                <line x1={padL} y1={y} x2={padL + innerW} y2={y} stroke="#1a5568" stroke-width="0.5" />
+                <text x={padL - 3} y={y + 3} fill="var(--fg-secondary)" font-size="7" font-family="monospace" text-anchor="end">{v}</text>
+                <line x1={padL} y1={y} x2={padL + innerW} y2={y} stroke="var(--color-border)" stroke-width="0.5" />
               </g>
             );
           })}
@@ -458,17 +458,17 @@ const dcMax = Math.max(0.001, ...dcTotals);
             return (
               <g>
                 {row.lite > 0 && (
-                  <rect x={x} y={padT + innerH - hFull - hLite} width={barW} height={hLite} fill="#d56500" opacity="0.7">
+                  <rect x={x} y={padT + innerH - hFull - hLite} width={barW} height={hLite} fill="var(--color-orange)" opacity="0.7">
                     <title>{row.day}: {row.lite} lite</title>
                   </rect>
                 )}
                 {row.full > 0 && (
-                  <rect x={x} y={padT + innerH - hFull} width={barW} height={hFull} fill="#259d94" opacity="0.85">
+                  <rect x={x} y={padT + innerH - hFull} width={barW} height={hFull} fill="var(--channel-hrcb)" opacity="0.85">
                     <title>{row.day}: {row.full} full</title>
                   </rect>
                 )}
                 {i % Math.max(1, Math.floor(n / 8)) === 0 && (
-                  <text x={x + barW / 2} y={H - 4} fill="#5b7279" font-size="7" font-family="monospace" text-anchor="middle">{days[i]}</text>
+                  <text x={x + barW / 2} y={H - 4} fill="var(--fg-secondary)" font-size="7" font-family="monospace" text-anchor="middle">{days[i]}</text>
                 )}
               </g>
             );
@@ -477,14 +477,14 @@ const dcMax = Math.max(0.001, ...dcTotals);
         </div>
         <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs);">
           <span style="display: inline-flex; align-items: center; gap: 3px;">
-            <span style="display: inline-block; width: 10px; height: 8px; background: #259d94; border-radius: 1px;"></span>
-            <span style="color: #5b7279;">Full eval</span>
+            <span style="display: inline-block; width: 10px; height: 8px; background: var(--channel-hrcb); border-radius: 1px;"></span>
+            <span style="color: var(--fg-secondary);">Full eval</span>
           </span>
           <span style="display: inline-flex; align-items: center; gap: 3px;">
-            <span style="display: inline-block; width: 10px; height: 8px; background: #d56500; border-radius: 1px;"></span>
-            <span style="color: #5b7279;">Lite eval</span>
+            <span style="display: inline-block; width: 10px; height: 8px; background: var(--color-orange); border-radius: 1px;"></span>
+            <span style="color: var(--fg-secondary);">Lite eval</span>
           </span>
-          <span style="color: #1a5568; margin-left: 4px;">stories receiving their first evaluation of any kind</span>
+          <span style="color: var(--color-border); margin-left: 4px;">stories receiving their first evaluation of any kind</span>
         </div>
       </details>
     );
@@ -494,14 +494,14 @@ const dcMax = Math.max(0.001, ...dcTotals);
   {trustHistory.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
             Evaluator Trust Index
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">14-day composite trust score per model</span>
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">14-day composite trust score per model</span>
           </div>
           <div class="table-wrap">
           <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 500px;">
-            <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td style="padding: 3px 8px;">Model</td>
               <td style="padding: 3px 8px; text-align: center;">Latest</td>
               <td style="padding: 3px 8px; text-align: center;">Cal Acc</td>
@@ -513,7 +513,7 @@ const dcMax = Math.max(0.001, ...dcTotals);
             {[...trustByModel.entries()].map(([modelId, snaps]) => {
               const latest = snaps[snaps.length - 1];
               const trust = latest?.trust_score ?? null;
-              const trustColor = trust === null ? '#5b7279' : trust >= 0.7 ? '#34d399' : trust >= 0.5 ? '#eab308' : '#dc2626';
+              const trustColor = trust === null ? 'var(--fg-secondary)' : trust >= 0.7 ? 'var(--color-positive-medium)' : trust >= 0.5 ? 'var(--color-warning)' : 'var(--color-negative)';
               const sparkW = 80, sparkH = 20;
               const sparkVals = snaps.map(s => s.trust_score ?? null);
               const validVals = sparkVals.filter((v): v is number => v !== null);
@@ -526,24 +526,24 @@ const dcMax = Math.max(0.001, ...dcTotals);
               }).filter((p): p is { x: number; y: number; v: number } => p.y !== null);
               const polyPoints = sparkPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
               return (
-                <tr style="border-top: 1px solid #0d4655;">
-                  <td style="padding: 5px 8px; color: #98a8a8; font-size: var(--font-sm);">
+                <tr style="border-top: 1px solid var(--bg-surface);">
+                  <td style="padding: 5px 8px; color: var(--fg-primary); font-size: var(--font-sm);">
                     {modelDisplayName(modelId)}
-                    {isLiteMode(getModelDef(modelId)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px;">lite</span>}
+                    {isLiteMode(getModelDef(modelId)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 4px;">lite</span>}
                   </td>
                   <td style={`padding: 5px 8px; text-align: center; font-weight: bold; color: ${trustColor};`}>
                     {trust !== null ? trust.toFixed(2) : '—'}
                   </td>
-                  <td style="padding: 5px 8px; text-align: center; color: #8faaab; font-size: var(--font-sm);">
+                  <td style="padding: 5px 8px; text-align: center; color: var(--fg-emphasis); font-size: var(--font-sm);">
                     {latest?.calibration_accuracy !== null && latest?.calibration_accuracy !== undefined ? (latest.calibration_accuracy * 100).toFixed(0) + '%' : '—'}
                   </td>
-                  <td style="padding: 5px 8px; text-align: center; color: #8faaab; font-size: var(--font-sm);">
+                  <td style="padding: 5px 8px; text-align: center; color: var(--fg-emphasis); font-size: var(--font-sm);">
                     {latest?.consensus_agreement !== null && latest?.consensus_agreement !== undefined ? (latest.consensus_agreement * 100).toFixed(0) + '%' : '—'}
                   </td>
-                  <td style="padding: 5px 8px; text-align: center; color: #8faaab; font-size: var(--font-sm);">
+                  <td style="padding: 5px 8px; text-align: center; color: var(--fg-emphasis); font-size: var(--font-sm);">
                     {latest?.parse_success_rate !== null && latest?.parse_success_rate !== undefined ? (latest.parse_success_rate * 100).toFixed(0) + '%' : '—'}
                   </td>
-                  <td style="padding: 5px 8px; text-align: center; color: #5b7279; font-size: var(--font-sm);">
+                  <td style="padding: 5px 8px; text-align: center; color: var(--fg-secondary); font-size: var(--font-sm);">
                     {latest?.eval_count ?? 0}
                   </td>
                   <td style="padding: 5px 8px;">
@@ -555,7 +555,7 @@ const dcMax = Math.max(0.001, ...dcTotals);
                         )}
                       </svg>
                     ) : (
-                      <span style="color: #1a5568; font-size: var(--font-xs);">no history</span>
+                      <span style="color: var(--color-border); font-size: var(--font-xs);">no history</span>
                     )}
                   </td>
                 </tr>
@@ -563,7 +563,7 @@ const dcMax = Math.max(0.001, ...dcTotals);
             })}
           </table>
           </div>
-          <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 6px;">
+          <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 6px;">
             Trust = calibration accuracy (40%) + consensus agreement (35%) + parse success (25%) · updated hourly · &lt;0.3 for 7+ days triggers review alert
           </div>
         </td>
@@ -576,19 +576,19 @@ const dcMax = Math.max(0.001, ...dcTotals);
     <summary>Calibration</summary>
     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
       {/* Full calibration */}
-      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: #0d4655; border: 1px solid ${lastCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
-        <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Full Model</div>
+      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${lastCalibration?.status === 'fail' ? 'var(--color-negative)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+        <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Full Model</div>
         {!lastCalibration ? (
           <div style="font-size: var(--font-xs);">
-            <div style="color: #eab308;">No runs yet</div>
-            <div style="color: #1a5568; font-size: 9px;">{CALIBRATION_SET.length} URLs defined</div>
+            <div style="color: var(--color-warning);">No runs yet</div>
+            <div style="color: var(--color-border); font-size: 9px;">{CALIBRATION_SET.length} URLs defined</div>
           </div>
         ) : (
           <div style="font-size: var(--font-xs);">
-            <span style={`color: ${lastCalibration.status === 'pass' ? '#16a34a' : lastCalibration.status === 'fail' ? '#dc2626' : '#eab308'}; font-weight: bold; text-transform: uppercase;`}>{lastCalibration.status}</span>
-            <span style="color: #5b7279;"> · {lastCalibration.passed}/{lastCalibration.total_urls} passed</span>
-            {lastCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastCalibration.failed} failed</span>}
-            <div style="color: #1a5568; font-size: 9px; margin-top: 2px;">
+            <span style={`color: ${lastCalibration.status === 'pass' ? 'var(--color-positive)' : lastCalibration.status === 'fail' ? 'var(--color-negative)' : 'var(--color-warning)'}; font-weight: bold; text-transform: uppercase;`}>{lastCalibration.status}</span>
+            <span style="color: var(--fg-secondary);"> · {lastCalibration.passed}/{lastCalibration.total_urls} passed</span>
+            {lastCalibration.failed > 0 && <span style="color: var(--color-negative);"> · {lastCalibration.failed} failed</span>}
+            <div style="color: var(--color-border); font-size: 9px; margin-top: 2px;">
               {lastCalibration.model.replace('claude-', '').replace('-20251001', '')} · {lastCalibration.created_at.slice(0, 10)}
             </div>
           </div>
@@ -596,19 +596,19 @@ const dcMax = Math.max(0.001, ...dcTotals);
       </div>
 
       {/* Lite calibration */}
-      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: #0d4655; border: 1px solid ${lastLiteCalibration?.status === 'fail' ? '#dc262640' : '#0d4655'}; border-radius: 4px;`}>
-        <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Lite Model</div>
+      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${lastLiteCalibration?.status === 'fail' ? 'var(--color-negative)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+        <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Lite Model</div>
         {!lastLiteCalibration ? (
           <div style="font-size: var(--font-xs);">
-            <div style="color: #eab308;">No runs yet</div>
-            <div style="color: #1a5568; font-size: 9px;">{LITE_CALIBRATION_SET.length} URLs defined</div>
+            <div style="color: var(--color-warning);">No runs yet</div>
+            <div style="color: var(--color-border); font-size: 9px;">{LITE_CALIBRATION_SET.length} URLs defined</div>
           </div>
         ) : (
           <div style="font-size: var(--font-xs);">
-            <span style={`color: ${lastLiteCalibration.status === 'pass' ? '#16a34a' : lastLiteCalibration.status === 'fail' ? '#dc2626' : '#eab308'}; font-weight: bold; text-transform: uppercase;`}>{lastLiteCalibration.status}</span>
-            <span style="color: #5b7279;"> · {lastLiteCalibration.passed}/{lastLiteCalibration.total_urls} passed</span>
-            {lastLiteCalibration.failed > 0 && <span style="color: #dc2626;"> · {lastLiteCalibration.failed} failed</span>}
-            <div style="color: #1a5568; font-size: 9px; margin-top: 2px;">
+            <span style={`color: ${lastLiteCalibration.status === 'pass' ? 'var(--color-positive)' : lastLiteCalibration.status === 'fail' ? 'var(--color-negative)' : 'var(--color-warning)'}; font-weight: bold; text-transform: uppercase;`}>{lastLiteCalibration.status}</span>
+            <span style="color: var(--fg-secondary);"> · {lastLiteCalibration.passed}/{lastLiteCalibration.total_urls} passed</span>
+            {lastLiteCalibration.failed > 0 && <span style="color: var(--color-negative);"> · {lastLiteCalibration.failed} failed</span>}
+            <div style="color: var(--color-border); font-size: 9px; margin-top: 2px;">
               {lastLiteCalibration.model ?? 'lite-1.4'} · {lastLiteCalibration.created_at.slice(0, 10)}
             </div>
           </div>
@@ -616,20 +616,20 @@ const dcMax = Math.max(0.001, ...dcTotals);
       </div>
 
       {/* Content Gates */}
-      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: #0d4655; border: 1px solid ${globalGate.gate_pct > 20 ? '#eab30840' : '#0d4655'}; border-radius: 4px;`}>
-        <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Gates</div>
+      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${globalGate.gate_pct > 20 ? 'var(--color-warning)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+        <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Gates</div>
         <div style="font-size: var(--font-xs);">
-          <span style={`color: ${globalGate.gate_pct > 20 ? '#eab308' : '#5b7279'}; font-weight: bold;`}>{globalGate.gate_pct}%</span>
-          <span style="color: #5b7279;"> gated ({globalGate.gated}/{globalGate.total})</span>
+          <span style={`color: ${globalGate.gate_pct > 20 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-weight: bold;`}>{globalGate.gate_pct}%</span>
+          <span style="color: var(--fg-secondary);"> gated ({globalGate.gated}/{globalGate.total})</span>
         </div>
         {globalGate.breakdown.length > 0 && (
           <div style="margin-top: 3px; font-size: 9px;">
             {globalGate.breakdown.slice(0, 4).map(b => (
-              <div style="color: #5b7279;">
-                <span style={`color: ${b.gate_category === 'paywall' ? '#d56500' : b.gate_category === 'bot_protection' ? '#dc2626' : b.gate_category === 'error_page' ? '#5b7279' : '#eab308'};`}>
+              <div style="color: var(--fg-secondary);">
+                <span style={`color: ${b.gate_category === 'paywall' ? 'var(--color-orange)' : b.gate_category === 'bot_protection' ? 'var(--color-negative)' : b.gate_category === 'error_page' ? 'var(--fg-secondary)' : 'var(--color-warning)'};`}>
                   {b.gate_category.replace(/_/g, ' ')}
                 </span>
-                <span style="color: #1a5568;"> · {b.cnt}</span>
+                <span style="color: var(--color-border);"> · {b.cnt}</span>
               </div>
             ))}
           </div>
@@ -648,13 +648,13 @@ const dcMax = Math.max(0.001, ...dcTotals);
       <details open class="collapsible-section">
         <summary>
           Cost Attribution
-          <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+          <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
             estimated API spend per model (approx.)
           </span>
         </summary>
         <div class="table-wrap">
         <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-          <tr style="color: #5b7279; font-size: 9px; border-bottom: 1px solid #1a5568;">
+          <tr style="color: var(--fg-secondary); font-size: 9px; border-bottom: 1px solid var(--color-border);">
             <td style="padding: 3px 6px;">Model</td>
             <td style="padding: 3px 6px; text-align: right;">Evals 7d</td>
             <td style="padding: 3px 6px; text-align: right;">Evals 30d</td>
@@ -668,39 +668,39 @@ const dcMax = Math.max(0.001, ...dcTotals);
             const cost7d  = modelCost(r.eval_model, r.tokens_in_7d,  r.tokens_out_7d);
             const cost30d = modelCost(r.eval_model, r.tokens_in_30d, r.tokens_out_30d);
             const isFree  = !MODEL_PRICING[r.eval_model];
-            const costColor = cost7d > 5 ? '#eab308' : cost7d > 1 ? '#98a8a8' : '#5b7279';
+            const costColor = cost7d > 5 ? 'var(--color-warning)' : cost7d > 1 ? 'var(--fg-primary)' : 'var(--fg-secondary)';
             const cpe = r.evals_7d > 0 && !isFree ? cost7d / r.evals_7d : null;
             return (
-              <tr style="border-bottom: 1px solid #093946;">
-                <td style="padding: 3px 6px; color: #98a8a8;">
+              <tr style="border-bottom: 1px solid var(--bg-highlight);">
+                <td style="padding: 3px 6px; color: var(--fg-primary);">
                   {r.eval_model.replace('claude-', '').replace('-20251001', '').replace('-20251022', '')}
-                  <span style="color: #1a5568; font-size: 9px; margin-left: 4px;">{r.eval_provider}</span>
+                  <span style="color: var(--color-border); font-size: 9px; margin-left: 4px;">{r.eval_provider}</span>
                 </td>
-                <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{r.evals_7d}</td>
-                <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{r.evals_30d}</td>
-                <td style="padding: 3px 6px; text-align: right; color: #5b7279; font-family: monospace;">{(r.tokens_in_7d / 1000).toFixed(0)}k</td>
-                <td style="padding: 3px 6px; text-align: right; color: #5b7279; font-family: monospace;">{(r.tokens_out_7d / 1000).toFixed(0)}k</td>
-                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? '#1a5568' : '#5b7279'};`}>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{r.evals_7d}</td>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{r.evals_30d}</td>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary); font-family: monospace;">{(r.tokens_in_7d / 1000).toFixed(0)}k</td>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary); font-family: monospace;">{(r.tokens_out_7d / 1000).toFixed(0)}k</td>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? 'var(--color-border)' : 'var(--fg-secondary)'};`}>
                   {isFree ? 'free' : cpe == null ? '—' : `$${cpe < 0.01 ? cpe.toFixed(4) : cpe.toFixed(3)}`}
                 </td>
-                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? '#1a5568' : costColor};`}>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? 'var(--color-border)' : costColor};`}>
                   {isFree ? 'free' : cost7d === 0 ? '—' : `$${cost7d.toFixed(3)}`}
                 </td>
-                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? '#1a5568' : costColor};`}>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${isFree ? 'var(--color-border)' : costColor};`}>
                   {isFree ? 'free' : cost30d === 0 ? '—' : `$${cost30d.toFixed(2)}`}
                 </td>
               </tr>
             );
           })}
-          <tr style="border-top: 1px solid #1a5568; font-weight: bold;">
-            <td style="padding: 3px 6px; color: #5b7279;">Total</td>
-            <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{totalEvals7d}</td>
-            <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{totalEvals30d}</td>
+          <tr style="border-top: 1px solid var(--color-border); font-weight: bold;">
+            <td style="padding: 3px 6px; color: var(--fg-secondary);">Total</td>
+            <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{totalEvals7d}</td>
+            <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{totalEvals30d}</td>
             <td colspan="3"></td>
-            <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${totalCost7d > 5 ? '#eab308' : '#98a8a8'};`}>
+            <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${totalCost7d > 5 ? 'var(--color-warning)' : 'var(--fg-primary)'};`}>
               ${totalCost7d.toFixed(3)}
             </td>
-            <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${totalCost30d > 20 ? '#eab308' : '#98a8a8'};`}>
+            <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${totalCost30d > 20 ? 'var(--color-warning)' : 'var(--fg-primary)'};`}>
               ${totalCost30d.toFixed(2)}
             </td>
           </tr>
@@ -710,25 +710,25 @@ const dcMax = Math.max(0.001, ...dcTotals);
         {/* Daily burn rate chart */}
         {dcDays.length > 1 && (
           <div style="margin-top: 10px;">
-            <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+            <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
               Daily burn rate
-              <span style="text-transform: none; letter-spacing: 0; color: #1a5568; margin-left: 6px;">last 14 days · billed models only</span>
+              <span style="text-transform: none; letter-spacing: 0; color: var(--color-border); margin-left: 6px;">last 14 days · billed models only</span>
             </div>
             <svg viewBox={`0 0 ${dcDays.length * 10} 48`} style="width: 100%; height: 48px; overflow: visible;" preserveAspectRatio="none">
               {dcTotals.map((cost, i) => {
                 const h = dcMax > 0 ? (cost / dcMax) * 44 : 0;
-                return h > 0 ? <rect x={i * 10} y={44 - h} width={9} height={h} fill="#eab308" opacity="0.75" /> : null;
+                return h > 0 ? <rect x={i * 10} y={44 - h} width={9} height={h} fill="var(--color-warning)" opacity="0.75" /> : null;
               })}
             </svg>
-            <div style="display: flex; justify-content: space-between; margin-top: 2px; font-size: 9px; color: #5b7279; font-family: monospace;">
+            <div style="display: flex; justify-content: space-between; margin-top: 2px; font-size: 9px; color: var(--fg-secondary); font-family: monospace;">
               <span>{dcDays[0]?.slice(5)}</span>
-              <span style="color: #98a8a8;">peak ${dcMax.toFixed(3)}/day</span>
+              <span style="color: var(--fg-primary);">peak ${dcMax.toFixed(3)}/day</span>
               <span>{dcDays[dcDays.length - 1]?.slice(5)}</span>
             </div>
           </div>
         )}
 
-        <div style="margin-top: 4px; color: #1a5568; font-size: 9px;">
+        <div style="margin-top: 4px; color: var(--color-border); font-size: 9px;">
           Pricing approximate (Anthropic list rates). Workers AI and free-tier OpenRouter models not billed. Zero token rows = pre-2026-02-28 evals with no token data.
         </div>
       </details>
@@ -741,12 +741,12 @@ const dcMax = Math.max(0.001, ...dcTotals);
       <summary>
         Signal Completeness
         {signalCompleteness.some(r => r.any_below_80) && (
-          <span style="text-transform: none; letter-spacing: 0; color: #eab308; margin-left: 6px;">gaps detected</span>
+          <span style="text-transform: none; letter-spacing: 0; color: var(--color-warning); margin-left: 6px;">gaps detected</span>
         )}
       </summary>
       <div class="table-wrap">
       <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-        <tr style="color: #1a5568; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+        <tr style="color: var(--color-border); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
           <td style="padding: 2px 6px;">Model</td>
           <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Epistemic quality">EQ</td>
           <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Solution orientation">SO</td>
@@ -756,10 +756,10 @@ const dcMax = Math.max(0.001, ...dcTotals);
         </tr>
         {signalCompleteness.map(row => {
           const pct = (v: number | null) => v == null ? '—' : `${Math.round(v)}%`;
-          const col = (v: number | null) => v == null ? '#1a5568' : v < 80 ? '#dc2626' : v < 95 ? '#eab308' : '#5b7279';
+          const col = (v: number | null) => v == null ? 'var(--color-border)' : v < 80 ? 'var(--color-negative)' : v < 95 ? 'var(--color-warning)' : 'var(--fg-secondary)';
           return (
-            <tr style="border-top: 1px solid #0d4655;">
-              <td style="padding: 3px 6px; color: #98a8a8;">{row.eval_model}</td>
+            <tr style="border-top: 1px solid var(--bg-surface);">
+              <td style="padding: 3px 6px; color: var(--fg-primary);">{row.eval_model}</td>
               <td style={`padding: 3px 6px; text-align: right; color: ${col(row.eq_pct)};`}>{pct(row.eq_pct)}</td>
               <td style={`padding: 3px 6px; text-align: right; color: ${col(row.so_pct)};`}>{pct(row.so_pct)}</td>
               <td style={`padding: 3px 6px; text-align: right; color: ${col(row.td_pct)};`}>{pct(row.td_pct)}</td>
@@ -778,25 +778,25 @@ const dcMax = Math.max(0.001, ...dcTotals);
     <summary>Measurement Integrity</summary>
     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
       {/* Model Drift */}
-      <div style="flex: 1; min-width: 200px; padding: 6px 8px; background: #0d4655; border: 1px solid #0d4655; border-radius: 4px;">
-        <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Model Drift</div>
+      <div style="flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid var(--bg-surface); border-radius: 4px;">
+        <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Model Drift</div>
         {driftStats.models.length === 0 ? (
-          <div style="color: #5b7279; font-size: var(--font-xs);">No data</div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No data</div>
         ) : (
           <div style="font-size: var(--font-xs);">
             {driftStats.models.map((m) => (
-              <div style="color: #5b7279;">
-                <span style="color: #60a5fa;">{m.eval_model}</span>
-                <span style="color: #5b7279;"> · {m.count} evals · avg </span>
-                <span style={`color: ${m.avg_score > 0.05 ? '#16a34a' : m.avg_score < -0.05 ? '#dc2626' : '#5b7279'};`}>{m.avg_score?.toFixed(3)}</span>
-                <span style="color: #1a5568;"> ±{m.stddev?.toFixed(3)}</span>
+              <div style="color: var(--fg-secondary);">
+                <span style="color: var(--channel-editorial);">{m.eval_model}</span>
+                <span style="color: var(--fg-secondary);"> · {m.count} evals · avg </span>
+                <span style={`color: ${m.avg_score > 0.05 ? 'var(--color-positive)' : m.avg_score < -0.05 ? 'var(--color-negative)' : 'var(--fg-secondary)'};`}>{m.avg_score?.toFixed(3)}</span>
+                <span style="color: var(--color-border);"> ±{m.stddev?.toFixed(3)}</span>
               </div>
             ))}
             {driftStats.overlapping > 0 && (
-              <div style="margin-top: 2px; color: #5b7279; font-size: 9px;">
+              <div style="margin-top: 2px; color: var(--fg-secondary); font-size: 9px;">
                 {driftStats.overlapping} overlapping
                 {driftStats.meanDelta !== null && (
-                  <span> · mean |Δ| = <span style={`color: ${driftStats.meanDelta > 0.1 ? '#eab308' : '#5b7279'};`}>{driftStats.meanDelta.toFixed(3)}</span></span>
+                  <span> · mean |Δ| = <span style={`color: ${driftStats.meanDelta > 0.1 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>{driftStats.meanDelta.toFixed(3)}</span></span>
                 )}
               </div>
             )}
@@ -805,19 +805,19 @@ const dcMax = Math.max(0.001, ...dcTotals);
       </div>
 
       {/* Content Type Validation */}
-      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: #0d4655; border: 1px solid ${ctMisclass.misclassification_pct > 15 ? '#dc262640' : ctMisclass.misclassification_pct > 5 ? '#eab30840' : '#0d4655'}; border-radius: 4px;`}>
-        <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Type Validation</div>
+      <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${ctMisclass.misclassification_pct > 15 ? 'var(--color-negative)40' : ctMisclass.misclassification_pct > 5 ? 'var(--color-warning)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+        <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Type Validation</div>
         <div style="font-size: var(--font-xs);">
-          <span style={`color: ${ctMisclass.misclassification_pct > 15 ? '#dc2626' : ctMisclass.misclassification_pct > 5 ? '#eab308' : '#16a34a'}; font-weight: bold;`}>{ctMisclass.misclassification_pct}%</span>
-          <span style="color: #5b7279;"> suspect rate</span>
+          <span style={`color: ${ctMisclass.misclassification_pct > 15 ? 'var(--color-negative)' : ctMisclass.misclassification_pct > 5 ? 'var(--color-warning)' : 'var(--color-positive)'}; font-weight: bold;`}>{ctMisclass.misclassification_pct}%</span>
+          <span style="color: var(--fg-secondary);"> suspect rate</span>
         </div>
-        <div style="font-size: 9px; margin-top: 2px; color: #5b7279;">
+        <div style="font-size: 9px; margin-top: 2px; color: var(--fg-secondary);">
           {ctMisclass.structural_heavy_missing}/{ctMisclass.structural_heavy_total} structural-heavy missing S data
         </div>
         {ctMisclass.disagreement_count > 0 && (
           <div style="font-size: 9px; margin-top: 1px;">
-            <span style="color: #eab308;">{ctMisclass.disagreement_count}</span>
-            <span style="color: #5b7279;"> stories with model disagreement</span>
+            <span style="color: var(--color-warning);">{ctMisclass.disagreement_count}</span>
+            <span style="color: var(--fg-secondary);"> stories with model disagreement</span>
           </div>
         )}
       </div>
@@ -826,10 +826,10 @@ const dcMax = Math.max(0.001, ...dcTotals);
     {/* Content Type Breakdown (nested collapse) */}
     {ctValidation.length > 0 && (
       <details style="margin-bottom: 8px;">
-        <summary style="color: #5b7279; font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">Content Type Breakdown</summary>
+        <summary style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">Content Type Breakdown</summary>
         <div class="table-wrap">
         <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-          <tr style="color: #5b7279; border-bottom: 1px solid #1a5568;">
+          <tr style="color: var(--fg-secondary); border-bottom: 1px solid var(--color-border);">
             <td style="padding: 3px 6px;">Type</td>
             <td style="padding: 3px 6px; text-align: right;">Count</td>
             <td style="padding: 3px 6px; text-align: right;">Avg Score</td>
@@ -841,17 +841,17 @@ const dcMax = Math.max(0.001, ...dcTotals);
             const w = CT_WEIGHTS[row.content_type];
             const suspect = row.missing_structural + row.low_evidence_only;
             const suspectPct = row.total > 0 ? Math.round((suspect / row.total) * 100) : 0;
-            const suspectColor = suspectPct > 15 ? '#dc2626' : suspectPct > 5 ? '#eab308' : '#5b7279';
+            const suspectColor = suspectPct > 15 ? 'var(--color-negative)' : suspectPct > 5 ? 'var(--color-warning)' : 'var(--fg-secondary)';
             return (
-              <tr style="border-bottom: 1px solid #093946;">
-                <td style={`padding: 3px 6px; color: ${isHeavy ? '#d56500' : '#98a8a8'}; font-weight: ${isHeavy ? 'bold' : 'normal'};`}>
-                  {row.content_type}{isHeavy && <span style="color: #5b7279; font-weight: normal;" title="Structural-heavy type"> S</span>}
+              <tr style="border-bottom: 1px solid var(--bg-highlight);">
+                <td style={`padding: 3px 6px; color: ${isHeavy ? 'var(--color-orange)' : 'var(--fg-primary)'}; font-weight: ${isHeavy ? 'bold' : 'normal'};`}>
+                  {row.content_type}{isHeavy && <span style="color: var(--fg-secondary); font-weight: normal;" title="Structural-heavy type"> S</span>}
                 </td>
-                <td style="padding: 3px 6px; text-align: right; color: #98a8a8;">{row.total}</td>
-                <td style={`padding: 3px 6px; text-align: right; color: ${row.avg_score != null ? scoreToColor(row.avg_score) : '#5b7279'};`}>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-primary);">{row.total}</td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${row.avg_score != null ? scoreToColor(row.avg_score) : 'var(--fg-secondary)'};`}>
                   {row.avg_score != null ? row.avg_score.toFixed(3) : '—'}
                 </td>
-                <td style="padding: 3px 6px; text-align: center; color: #5b7279; font-family: monospace;">
+                <td style="padding: 3px 6px; text-align: center; color: var(--fg-secondary); font-family: monospace;">
                   {w ? `E:${w.e} S:${w.s}` : '—'}
                 </td>
                 <td style={`padding: 3px 6px; text-align: right; color: ${suspectColor};`}>
@@ -868,16 +868,16 @@ const dcMax = Math.max(0.001, ...dcTotals);
     {/* Cross-Model Type Disagreement (nested collapse) */}
     {ctDisagreement.length > 0 && (
       <details style="margin-bottom: 8px;">
-        <summary style="color: #5b7279; font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+        <summary style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
           Cross-Model Disagreement ({ctDisagreement.length})
         </summary>
         <div style="font-size: var(--font-xs);">
           {ctDisagreement.slice(0, 10).map(row => (
-            <div style="padding: 2px 0; border-bottom: 1px solid #093946;">
-              <a href={`/item/${row.hn_id}`} style="color: #2b90d8;">{row.hn_id}</a>
-              <span style="color: #5b7279;"> · </span>
-              <span style="color: #eab308;">{row.types_seen}</span>
-              <span style="color: #5b7279;"> · {row.models}</span>
+            <div style="padding: 2px 0; border-bottom: 1px solid var(--bg-highlight);">
+              <a href={`/item/${row.hn_id}`} style="color: var(--color-blue);">{row.hn_id}</a>
+              <span style="color: var(--fg-secondary);"> · </span>
+              <span style="color: var(--color-warning);">{row.types_seen}</span>
+              <span style="color: var(--fg-secondary);"> · {row.models}</span>
             </div>
           ))}
         </div>
@@ -887,12 +887,12 @@ const dcMax = Math.max(0.001, ...dcTotals);
     {/* Truncation Impact (nested collapse) */}
     {truncationImpact.length > 0 && (
       <details style="margin-bottom: 8px;">
-        <summary style="color: #5b7279; font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+        <summary style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
           Truncation Impact ({truncationImpact.filter(r => r.truncated_count > 0).length} models truncating)
         </summary>
         <div class="table-wrap">
         <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-          <tr style="color: #5b7279; border-bottom: 1px solid #1a5568; font-size: 9px;">
+          <tr style="color: var(--fg-secondary); border-bottom: 1px solid var(--color-border); font-size: 9px;">
             <td style="padding: 3px 6px;">Model</td>
             <td style="padding: 3px 6px; text-align: right;">Evals</td>
             <td style="padding: 3px 6px; text-align: right;">Truncated</td>
@@ -904,22 +904,22 @@ const dcMax = Math.max(0.001, ...dcTotals);
           {truncationImpact.map(r => {
             const delta = r.avg_score_truncated !== null && r.avg_score_full !== null
               ? r.avg_score_truncated - r.avg_score_full : null;
-            const deltaColor = delta === null ? '#5b7279' : Math.abs(delta) > 0.1 ? '#eab308' : Math.abs(delta) > 0.05 ? '#98a8a8' : '#5b7279';
+            const deltaColor = delta === null ? 'var(--fg-secondary)' : Math.abs(delta) > 0.1 ? 'var(--color-warning)' : Math.abs(delta) > 0.05 ? 'var(--fg-primary)' : 'var(--fg-secondary)';
             const truncPct = r.n > 0 ? Math.round((r.truncated_count / r.n) * 100) : 0;
             return (
-              <tr style="border-bottom: 1px solid #093946;">
-                <td style="padding: 3px 6px; color: #98a8a8;">{r.eval_model.replace('claude-', '').replace('-20251001', '').replace('-20251022', '')}</td>
-                <td style="padding: 3px 6px; text-align: right; color: #5b7279;">{r.n}</td>
-                <td style={`padding: 3px 6px; text-align: right; color: ${truncPct > 50 ? '#eab308' : '#5b7279'};`}>
-                  {r.truncated_count} <span style="color: #1a5568;">({truncPct}%)</span>
+              <tr style="border-bottom: 1px solid var(--bg-highlight);">
+                <td style="padding: 3px 6px; color: var(--fg-primary);">{r.eval_model.replace('claude-', '').replace('-20251001', '').replace('-20251022', '')}</td>
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{r.n}</td>
+                <td style={`padding: 3px 6px; text-align: right; color: ${truncPct > 50 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>
+                  {r.truncated_count} <span style="color: var(--color-border);">({truncPct}%)</span>
                 </td>
-                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${r.avg_truncation_pct > 60 ? '#eab308' : '#5b7279'};`}>
+                <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${r.avg_truncation_pct > 60 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>
                   {r.avg_truncation_pct != null ? r.avg_truncation_pct.toFixed(0) + '%' : '—'}
                 </td>
-                <td style="padding: 3px 6px; text-align: right; font-family: monospace; color: #5b7279;">
+                <td style="padding: 3px 6px; text-align: right; font-family: monospace; color: var(--fg-secondary);">
                   {r.avg_score_truncated !== null ? r.avg_score_truncated.toFixed(3) : '—'}
                 </td>
-                <td style="padding: 3px 6px; text-align: right; font-family: monospace; color: #5b7279;">
+                <td style="padding: 3px 6px; text-align: right; font-family: monospace; color: var(--fg-secondary);">
                   {r.avg_score_full !== null ? r.avg_score_full.toFixed(3) : '—'}
                 </td>
                 <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${deltaColor};`}>
@@ -930,7 +930,7 @@ const dcMax = Math.max(0.001, ...dcTotals);
           })}
         </table>
         </div>
-        <div style="color: #1a5568; font-size: 9px; margin-top: 3px;">
+        <div style="color: var(--color-border); font-size: 9px; margin-top: 3px;">
           Δ = avg score (truncated) − avg score (full content). Non-zero suggests truncation may bias scores.
         </div>
       </details>
@@ -939,7 +939,7 @@ const dcMax = Math.max(0.001, ...dcTotals);
     {/* Content Type Eval Mix (nested collapse) */}
     {ctEvalMix.length > 0 && (
       <details style="margin-bottom: 8px;">
-        <summary style="color: #5b7279; font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+        <summary style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
           Content Type Coverage Mix
         </summary>
         <div style="font-size: var(--font-xs);">
@@ -949,23 +949,23 @@ const dcMax = Math.max(0.001, ...dcTotals);
             const failedPct    = r.total > 0 ? (r.failed_skipped / r.total) * 100 : 0;
             const pendingPct   = r.total > 0 ? (r.pending        / r.total) * 100 : 0;
             return (
-              <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0; border-bottom: 1px solid #093946;">
-                <span style="width: 52px; color: #5b7279; text-align: right; font-family: monospace; flex-shrink: 0;">{r.content_type}</span>
-                <div style="flex: 1; display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: #002d38; min-width: 80px;">
-                  {donePct   > 0 && <div style={`width: ${donePct}%; background: #259d94; opacity: 0.85;`} title={`Done: ${r.done}`} />}
-                  {gatedPct  > 0 && <div style={`width: ${gatedPct}%; background: #d56500; opacity: 0.7;`} title={`Gated: ${r.gated}`} />}
-                  {failedPct > 0 && <div style={`width: ${failedPct}%; background: #dc2626; opacity: 0.6;`} title={`Failed/skipped: ${r.failed_skipped}`} />}
-                  {pendingPct > 0 && <div style={`width: ${pendingPct}%; background: #1a5568; opacity: 0.8;`} title={`Pending: ${r.pending}`} />}
+              <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0; border-bottom: 1px solid var(--bg-highlight);">
+                <span style="width: 52px; color: var(--fg-secondary); text-align: right; font-family: monospace; flex-shrink: 0;">{r.content_type}</span>
+                <div style="flex: 1; display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: var(--bg-primary); min-width: 80px;">
+                  {donePct   > 0 && <div style={`width: ${donePct}%; background: var(--channel-hrcb); opacity: 0.85;`} title={`Done: ${r.done}`} />}
+                  {gatedPct  > 0 && <div style={`width: ${gatedPct}%; background: var(--color-orange); opacity: 0.7;`} title={`Gated: ${r.gated}`} />}
+                  {failedPct > 0 && <div style={`width: ${failedPct}%; background: var(--color-negative); opacity: 0.6;`} title={`Failed/skipped: ${r.failed_skipped}`} />}
+                  {pendingPct > 0 && <div style={`width: ${pendingPct}%; background: var(--color-border); opacity: 0.8;`} title={`Pending: ${r.pending}`} />}
                 </div>
-                <span style="width: 36px; color: #1a5568; text-align: right; flex-shrink: 0; font-family: monospace;">{r.total}</span>
+                <span style="width: 36px; color: var(--color-border); text-align: right; flex-shrink: 0; font-family: monospace;">{r.total}</span>
               </div>
             );
           })}
           <div style="display: flex; gap: 10px; margin-top: 4px;">
-            {[['#259d94','Done'],['#d56500','Gated'],['#dc2626','Failed'],['#1a5568','Pending']].map(([c,l]) => (
+            {[['var(--channel-hrcb)','Done'],['var(--color-orange)','Gated'],['var(--color-negative)','Failed'],['var(--color-border)','Pending']].map(([c,l]) => (
               <span style="display: inline-flex; align-items: center; gap: 3px;">
                 <span style={`display: inline-block; width: 8px; height: 8px; background: ${c}; border-radius: 1px;`}></span>
-                <span style="color: #5b7279; font-size: 9px;">{l}</span>
+                <span style="color: var(--fg-secondary); font-size: 9px;">{l}</span>
               </span>
             ))}
           </div>
@@ -983,9 +983,9 @@ const dcMax = Math.max(0.001, ...dcTotals);
           const counts = histograms.find(h => h.model === mid)?.counts || [];
           return (
             <div style="flex: 1; min-width: 200px;">
-              <div style="color: #8faaab; font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">
+              <div style="color: var(--fg-emphasis); font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">
                 {modelDisplayName(mid)}
-                {isLiteMode(getModelDef(mid)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;">lite</span>}
+                {isLiteMode(getModelDef(mid)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 4px; font-weight: normal;">lite</span>}
               </div>
               <div style="display: flex; align-items: flex-end; gap: 2px; height: 60px;">
                 {counts.map((count, i) => {
@@ -1000,9 +1000,9 @@ const dcMax = Math.max(0.001, ...dcTotals);
                 })}
               </div>
               <div style="display: flex; justify-content: space-between; margin-top: 2px;">
-                <span style="color: #5b7279; font-size: 8px;">-0.5</span>
-                <span style="color: #5b7279; font-size: 8px;">0</span>
-                <span style="color: #5b7279; font-size: 8px;">+0.5</span>
+                <span style="color: var(--fg-secondary); font-size: 8px;">-0.5</span>
+                <span style="color: var(--fg-secondary); font-size: 8px;">0</span>
+                <span style="color: var(--fg-secondary); font-size: 8px;">+0.5</span>
               </div>
             </div>
           );
@@ -1016,46 +1016,46 @@ const dcMax = Math.max(0.001, ...dcTotals);
     <details open class="collapsible-section">
       <summary>
         Multi-Model Comparison
-        <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
           {totalStories} shared stories
         </span>
       </summary>
 
       {/* Summary stats */}
-      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 10px; padding: 10px; background: #0d4655; border-radius: 4px;">
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 10px; padding: 10px; background: var(--bg-surface); border-radius: 4px;">
         <div>
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Sign Agreement</div>
-          <span class="score-font" style={`color: ${agreePct >= 80 ? '#34d399' : agreePct >= 60 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Sign Agreement</div>
+          <span class="score-font" style={`color: ${agreePct >= 80 ? 'var(--color-positive-medium)' : agreePct >= 60 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
             {agreePct}%
           </span>
-          <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">{agreeCount}/{totalStories}</span>
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">{agreeCount}/{totalStories}</span>
         </div>
         <div>
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Class Agreement</div>
-          <span class="score-font" style={`color: ${classAgreePct >= 60 ? '#34d399' : classAgreePct >= 40 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Class Agreement</div>
+          <span class="score-font" style={`color: ${classAgreePct >= 60 ? 'var(--color-positive-medium)' : classAgreePct >= 40 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
             {classAgreePct}%
           </span>
-          <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">{classAgreeCount}/{totalStories}</span>
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">{classAgreeCount}/{totalStories}</span>
         </div>
         <div>
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Median Delta</div>
-          <span class="score-font" style={`color: ${medianDelta < 0.1 ? '#34d399' : medianDelta < 0.2 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Median Delta</div>
+          <span class="score-font" style={`color: ${medianDelta < 0.1 ? 'var(--color-positive-medium)' : medianDelta < 0.2 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
             {medianDelta.toFixed(3)}
           </span>
         </div>
         <div>
-          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Mean Delta</div>
-          <span class="score-font" style={`color: ${avgDelta < 0.1 ? '#34d399' : avgDelta < 0.2 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Mean Delta</div>
+          <span class="score-font" style={`color: ${avgDelta < 0.1 ? 'var(--color-positive-medium)' : avgDelta < 0.2 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
             {avgDelta.toFixed(3)}
           </span>
         </div>
         {pairCorrelations.map(pc => (
           <div>
-            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Pearson r</div>
-            <span class="score-font" style={`color: ${pc.r !== null && pc.r >= 0.7 ? '#34d399' : pc.r !== null && pc.r >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-lg); font-weight: bold;`}>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Pearson r</div>
+            <span class="score-font" style={`color: ${pc.r !== null && pc.r >= 0.7 ? 'var(--color-positive-medium)' : pc.r !== null && pc.r >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
               {pc.r !== null ? pc.r.toFixed(3) : '---'}
             </span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 4px;">n={pc.n}</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">n={pc.n}</span>
           </div>
         ))}
       </div>
@@ -1063,7 +1063,7 @@ const dcMax = Math.max(0.001, ...dcTotals);
       {/* Model Profiles table */}
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 600px;">
-        <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+        <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
           <td style="padding: 4px 8px;">Model</td>
           <td style="padding: 4px 8px; text-align: center;">Shared</td>
           <td style="padding: 4px 8px; text-align: center;">Avg HRCB</td>
@@ -1077,32 +1077,32 @@ const dcMax = Math.max(0.001, ...dcTotals);
         {aggregates.filter(a => modelIds.includes(a.model)).map(a => {
           const bias = biasAnalysis.find(b => b.model === a.model);
           return (
-            <tr style="border-top: 1px solid #0d4655;">
-              <td style="padding: 6px 8px; color: #98a8a8; font-weight: bold; font-size: var(--font-sm);">
+            <tr style="border-top: 1px solid var(--bg-surface);">
+              <td style="padding: 6px 8px; color: var(--fg-primary); font-weight: bold; font-size: var(--font-sm);">
                 {modelDisplayName(a.model)}
-                {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Lite evaluation — editorial only">lite</span>}
+                {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Lite evaluation — editorial only">lite</span>}
               </td>
-              <td style="padding: 6px 8px; text-align: center; color: #5b7279;">{a.story_count}</td>
+              <td style="padding: 6px 8px; text-align: center; color: var(--fg-secondary);">{a.story_count}</td>
               <td style={`padding: 6px 8px; text-align: center; font-weight: bold; color: ${scoreToColor(a.avg_score)};`}>
                 {formatScore(a.avg_score)}
-                {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: #5b7279; font-size: var(--font-xs); font-weight: normal; margin-left: 3px;" title="Editorial channel only — not comparable to full model weighted mean">E</span>}
+                {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: var(--fg-secondary); font-size: var(--font-xs); font-weight: normal; margin-left: 3px;" title="Editorial channel only — not comparable to full model weighted mean">E</span>}
               </td>
-              <td style="padding: 6px 8px; text-align: center; color: #8faaab;">{a.avg_abs_score.toFixed(3)}</td>
-              <td style="padding: 6px 8px; text-align: center; color: #34d399;">{a.positive_pct}%</td>
-              <td style="padding: 6px 8px; text-align: center; color: #5b7279;">{a.neutral_pct}%</td>
-              <td style="padding: 6px 8px; text-align: center; color: #dc2626;">{a.negative_pct}%</td>
+              <td style="padding: 6px 8px; text-align: center; color: var(--fg-emphasis);">{a.avg_abs_score.toFixed(3)}</td>
+              <td style="padding: 6px 8px; text-align: center; color: var(--color-positive-medium);">{a.positive_pct}%</td>
+              <td style="padding: 6px 8px; text-align: center; color: var(--fg-secondary);">{a.neutral_pct}%</td>
+              <td style="padding: 6px 8px; text-align: center; color: var(--color-negative);">{a.negative_pct}%</td>
               <td style="padding: 6px 8px; text-align: center;">
-                {bias && <span style={`color: ${bias.higherPct > 55 ? '#34d399' : '#5b7279'}; font-size: var(--font-sm);`}>{bias.higherPct}%</span>}
+                {bias && <span style={`color: ${bias.higherPct > 55 ? 'var(--color-positive-medium)' : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>{bias.higherPct}%</span>}
               </td>
               <td style="padding: 6px 8px; text-align: center;">
-                {bias && <span style={`color: ${bias.lowerPct > 55 ? '#dc2626' : '#5b7279'}; font-size: var(--font-sm);`}>{bias.lowerPct}%</span>}
+                {bias && <span style={`color: ${bias.lowerPct > 55 ? 'var(--color-negative)' : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>{bias.lowerPct}%</span>}
               </td>
             </tr>
           );
         })}
       </table>
       </div>
-      <div style="color: #1a5568; font-size: var(--font-xs); margin-top: 8px;">
+      <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 8px;">
         Avg HRCB: full models = editorial+structural weighted mean · lite models = editorial only (E) — not directly comparable
       </div>
     </details>
@@ -1113,31 +1113,31 @@ const dcMax = Math.max(0.001, ...dcTotals);
     <details class="collapsible-section">
       <summary>Section Divergences</summary>
       <table cellpadding="0" cellspacing="0" width="100%">
-        <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+        <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
           <td style="padding: 3px 6px;">Section</td>
-          <td style="padding: 3px 6px; color: #5b7279; font-weight: normal; text-transform: none;">Topic</td>
+          <td style="padding: 3px 6px; color: var(--fg-secondary); font-weight: normal; text-transform: none;">Topic</td>
           {modelIds.map(m => (
             <td style="padding: 3px 6px; text-align: center;">
               {modelDisplayName(m)}
-              {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+              {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
             </td>
           ))}
           <td style="padding: 3px 6px; text-align: center;">Gap</td>
         </tr>
         {topDivergent.map(d => (
-          <tr style="border-top: 1px solid #0d4655;">
+          <tr style="border-top: 1px solid var(--bg-surface);">
             <td style="padding: 4px 6px; font-size: var(--font-xs);">
-              <a href={`/article/${d.idx}`} style="color: #8faaab; text-decoration: none;">{d.section}</a>
+              <a href={`/article/${d.idx}`} style="color: var(--fg-emphasis); text-decoration: none;">{d.section}</a>
             </td>
-            <td style="padding: 4px 6px; color: #5b7279; font-size: var(--font-xs); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={d.title}>
+            <td style="padding: 4px 6px; color: var(--fg-secondary); font-size: var(--font-xs); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={d.title}>
               {d.title.length > 30 ? d.title.slice(0, 30) + '...' : d.title}
             </td>
             {d.vals.map(v => (
-              <td style={`padding: 4px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
+              <td style={`padding: 4px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
                 {v !== null ? formatScore(v) : '---'}
               </td>
             ))}
-            <td style={`padding: 4px 6px; text-align: center; color: ${d.delta >= 0.1 ? '#dc2626' : d.delta >= 0.05 ? '#eab308' : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
+            <td style={`padding: 4px 6px; text-align: center; color: ${d.delta >= 0.1 ? 'var(--color-negative)' : d.delta >= 0.05 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
               {d.delta.toFixed(3)}
             </td>
           </tr>
@@ -1152,35 +1152,35 @@ const dcMax = Math.max(0.001, ...dcTotals);
       <summary>Most Disagreed / Most Agreed</summary>
       <div class="two-col" style="margin-bottom: 10px;">
         <div>
-          <div style="padding: 10px; background: #0d4655; border-radius: 4px; height: 100%;">
-            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Disagreed</div>
+          <div style="padding: 10px; background: var(--bg-surface); border-radius: 4px; height: 100%;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Disagreed</div>
             <table cellpadding="0" cellspacing="0" width="100%">
-              <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">
+              <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">
                 <td style="padding: 3px 6px;">Story</td>
                 {modelIds.map(m => (
                   <td style="padding: 3px 6px; text-align: center;">
                     {modelDisplayName(m)}
-                    {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                    {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
                   </td>
                 ))}
                 <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
               </tr>
               {mostDisagreed.map(s => (
-                <tr style="border-top: 1px solid #093946;">
+                <tr style="border-top: 1px solid var(--bg-highlight);">
                   <td style="padding: 3px 6px; font-size: var(--font-xs);">
-                    <a href={`/item/${s.hn_id}`} style="color: #98a8a8; text-decoration: none;" title={s.title}>
+                    <a href={`/item/${s.hn_id}`} style="color: var(--fg-primary); text-decoration: none;" title={s.title}>
                       {s.title.length > 40 ? s.title.slice(0, 40) + '...' : s.title}
                     </a>
                   </td>
                   {modelIds.map(mid => {
                     const me = s.models.find(m => m.model === mid);
                     return (
-                      <td style={`padding: 3px 6px; text-align: center; color: ${me ? me.scoreColor : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
+                      <td style={`padding: 3px 6px; text-align: center; color: ${me ? me.scoreColor : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
                         {me ? me.scoreFormatted : '---'}
                       </td>
                     );
                   })}
-                  <td style={`padding: 3px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? '#dc2626' : s.maxDelta >= 0.15 ? '#eab308' : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
+                  <td style={`padding: 3px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? 'var(--color-negative)' : s.maxDelta >= 0.15 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
                     {s.maxDelta.toFixed(2)}
                   </td>
                 </tr>
@@ -1189,35 +1189,35 @@ const dcMax = Math.max(0.001, ...dcTotals);
           </div>
         </div>
         <div>
-          <div style="padding: 10px; background: #0d4655; border-radius: 4px; height: 100%;">
-            <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Agreed</div>
+          <div style="padding: 10px; background: var(--bg-surface); border-radius: 4px; height: 100%;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Agreed</div>
             <table cellpadding="0" cellspacing="0" width="100%">
-              <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">
+              <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">
                 <td style="padding: 3px 6px;">Story</td>
                 {modelIds.map(m => (
                   <td style="padding: 3px 6px; text-align: center;">
                     {modelDisplayName(m)}
-                    {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                    {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
                   </td>
                 ))}
                 <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
               </tr>
               {mostAgreed.map(s => (
-                <tr style="border-top: 1px solid #093946;">
+                <tr style="border-top: 1px solid var(--bg-highlight);">
                   <td style="padding: 3px 6px; font-size: var(--font-xs);">
-                    <a href={`/item/${s.hn_id}`} style="color: #98a8a8; text-decoration: none;" title={s.title}>
+                    <a href={`/item/${s.hn_id}`} style="color: var(--fg-primary); text-decoration: none;" title={s.title}>
                       {s.title.length > 40 ? s.title.slice(0, 40) + '...' : s.title}
                     </a>
                   </td>
                   {modelIds.map(mid => {
                     const me = s.models.find(m => m.model === mid);
                     return (
-                      <td style={`padding: 3px 6px; text-align: center; color: ${me ? me.scoreColor : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
+                      <td style={`padding: 3px 6px; text-align: center; color: ${me ? me.scoreColor : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
                         {me ? me.scoreFormatted : '---'}
                       </td>
                     );
                   })}
-                  <td style="padding: 3px 6px; text-align: center; color: #34d399; font-size: var(--font-sm);">
+                  <td style="padding: 3px 6px; text-align: center; color: var(--color-positive-medium); font-size: var(--font-sm);">
                     {s.maxDelta.toFixed(2)}
                   </td>
                 </tr>
@@ -1236,12 +1236,12 @@ const dcMax = Math.max(0.001, ...dcTotals);
       <div class="table-wrap">
       <div style="max-height: 500px; overflow-y: auto;">
         <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 400px;">
-          <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #093946;">
+          <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: var(--bg-highlight);">
             <td style="padding: 3px 6px;">Section</td>
             {modelIds.map(m => (
               <td style="padding: 3px 6px; text-align: center;">
                 {modelDisplayName(m)}
-                {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
               </td>
             ))}
             {modelIds.length >= 2 && <td style="padding: 3px 6px; text-align: center;">Gap</td>}
@@ -1251,16 +1251,16 @@ const dcMax = Math.max(0.001, ...dcTotals);
             const validVals = vals.filter((v): v is number => v !== null);
             const delta = validVals.length >= 2 ? Math.max(...validVals) - Math.min(...validVals) : null;
             const deltaColor = delta !== null
-              ? delta < 0.05 ? '#5b7279' : delta < 0.1 ? '#eab308' : '#dc2626'
-              : '#5b7279';
+              ? delta < 0.05 ? 'var(--fg-secondary)' : delta < 0.1 ? 'var(--color-warning)' : 'var(--color-negative)'
+              : 'var(--fg-secondary)';
             const title = idx > 0 && idx <= 30 ? ARTICLE_TITLES[idx - 1] : '';
             return (
-              <tr style="border-top: 1px solid #0d4655;">
-                <td style="padding: 2px 6px; color: #8faaab; font-size: var(--font-xs);" title={title}>
-                  <a href={`/article/${idx}`} style="color: #8faaab; text-decoration: none;">{section}</a>
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="padding: 2px 6px; color: var(--fg-emphasis); font-size: var(--font-xs);" title={title}>
+                  <a href={`/article/${idx}`} style="color: var(--fg-emphasis); text-decoration: none;">{section}</a>
                 </td>
                 {vals.map(v => (
-                  <td style={`padding: 2px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : '#5b7279'}; font-size: var(--font-sm);`}>
+                  <td style={`padding: 2px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>
                     {v !== null ? v.toFixed(3) : '---'}
                   </td>
                 ))}
@@ -1283,43 +1283,43 @@ const dcMax = Math.max(0.001, ...dcTotals);
     <details class="collapsible-section">
       <summary>
         All Compared Stories
-        <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">{totalStories}</span>
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">{totalStories}</span>
       </summary>
       <div class="table-wrap">
       <div style="max-height: 600px; overflow-y: auto;">
         <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 500px;">
-          <tr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: #093946;">
+          <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: var(--bg-highlight);">
             <td style="padding: 3px 6px;">Story</td>
             <td style="padding: 3px 6px;">Domain</td>
             {modelIds.map(m => (
               <td style="padding: 3px 6px; text-align: center;">
                 {modelDisplayName(m)}
-                {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: 6pt; margin-left: 2px;">lite</span>}
+                {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
               </td>
             ))}
             <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
           </tr>
           {comparedStories.map(s => (
-            <tr style={`border-top: 1px solid #0d4655;${!s.allAgree ? ' background: rgba(220, 38, 38, 0.04);' : ''}`}>
+            <tr style={`border-top: 1px solid var(--bg-surface);${!s.allAgree ? ' background: rgba(220, 38, 38, 0.04);' : ''}`}>
               <td style="padding: 2px 6px; font-size: var(--font-xs);">
-                <a href={`/item/${s.hn_id}`} style="color: #8faaab; text-decoration: none;" title={s.title}>
+                <a href={`/item/${s.hn_id}`} style="color: var(--fg-emphasis); text-decoration: none;" title={s.title}>
                   {s.title.length > 50 ? s.title.slice(0, 50) + '...' : s.title}
                 </a>
               </td>
-              <td style="padding: 2px 6px; font-size: var(--font-xs); color: #5b7279;">
+              <td style="padding: 2px 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
                 {s.domain ? (
-                  <a href={`/domain/${s.domain}`} style="color: #5b7279; text-decoration: none;">{s.domain.length > 20 ? s.domain.slice(0, 20) + '...' : s.domain}</a>
+                  <a href={`/domain/${s.domain}`} style="color: var(--fg-secondary); text-decoration: none;">{s.domain.length > 20 ? s.domain.slice(0, 20) + '...' : s.domain}</a>
                 ) : '---'}
               </td>
               {modelIds.map(mid => {
                 const me = s.models.find(m => m.model === mid);
                 return (
-                  <td style={`padding: 2px 6px; text-align: center; color: ${me ? me.scoreColor : '#5b7279'}; font-size: var(--font-sm);`}>
+                  <td style={`padding: 2px 6px; text-align: center; color: ${me ? me.scoreColor : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>
                     {me ? me.scoreFormatted : '---'}
                   </td>
                 );
               })}
-              <td style={`padding: 2px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? '#dc2626' : s.maxDelta >= 0.15 ? '#eab308' : '#5b7279'}; font-size: var(--font-sm);`}>
+              <td style={`padding: 2px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? 'var(--color-negative)' : s.maxDelta >= 0.15 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>
                 {s.maxDelta.toFixed(2)}
               </td>
             </tr>
@@ -1334,15 +1334,15 @@ const dcMax = Math.max(0.001, ...dcTotals);
   {excludedModels.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
-        <td style="padding: 8px 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-xs);">
-            <span style="color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em;">Excluded models</span> (fewer than {MIN_STORIES} shared stories):
+        <td style="padding: 8px 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs);">
+            <span style="color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Excluded models</span> (fewer than {MIN_STORIES} shared stories):
             {excludedModels.map((em, i) => (
               <span>
                 {i > 0 ? ', ' : ' '}
-                <span style="color: #5b7279;">{modelDisplayName(em.model)}</span>
-                {isLiteMode(getModelDef(em.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 2px;">lite</span>}
-                <span style="color: #1a5568;"> ({em.story_count})</span>
+                <span style="color: var(--fg-secondary);">{modelDisplayName(em.model)}</span>
+                {isLiteMode(getModelDef(em.model)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 2px;">lite</span>}
+                <span style="color: var(--color-border);"> ({em.story_count})</span>
               </span>
             ))}
           </div>

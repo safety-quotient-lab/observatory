@@ -35,6 +35,16 @@
     --color-nd: #4b5563;
     --color-muted: #6b7280;
 
+    /* Supplementary signal colors */
+    --color-inference:      #a855f7;   /* Fair Witness inferences, purple-500 */
+    --color-amber:          #f59e0b;   /* EQ/quality signal, amber-400 */
+    --color-amber-light:    #fb923c;   /* AR/arousal signal, orange-400 */
+    --color-hn-score:       #e2b340;   /* HN engagement metrics display */
+    --color-disabled:       #3a6272;   /* Greyed-out/coming-soon content */
+    --color-positive-vivid: #22c55e;   /* Observable facts, score gains, resolved markers */
+    --color-positive-faint: #86efac;   /* Leaning positive tier (about page) */
+    --color-negative-faint: #fca5a5;   /* Leaning negative tier (about page) */
+
     /* Categorical colors */
     --color-sentiment: #22d3ee;
     --color-theme: var(--color-violet);
