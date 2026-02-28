@@ -169,7 +169,7 @@ Far-future platform feature — useful when methodology changes need controlled 
 - **Content type browse page** — `/content-types` or content_type filter on feed. Only HN type (ask/show/job) filterable, not HRCB content type (ED/PO/LP/PR/AC/MI).
 - **User API endpoints** — `/api/v1/users` + `/api/v1/user/[username]`. DB functions exist, no API surface.
 - **Signals API endpoint** — `/api/v1/signals`. `getSignalOverview` exists, no API route.
-- **Domain → factions cross-link** — domain page has no "See in factions" link.
+- **Domain → factions cross-link** ✅ *(done 2026-02-28)* — domain page links to factions view.
 - **Filtered RSS feeds** ✅ *(done 2026-02-28)* — `/feed.xml?filter=positive|negative|neutral&article=N&domain=...&limit=N`. OPML at `/feed/opml.xml`.
 - **Date-range filter** in feed and API — only single-day (`/past?day=`) exists, no from/to range.
 

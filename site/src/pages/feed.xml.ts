@@ -32,7 +32,7 @@ const escapeXml = (s: string) =>
 
 /** Build a single Atom <entry> */
 function buildEntry(s: FeedStory, baseUrl: string, updated: string, articleLabel?: string): string {
-  const isLiteOnly = s.hcb_weighted_mean === null && s.hcb_editorial_mean !== null;
+  const isLiteOnly = s.hcb_weighted_mean == null && s.hcb_editorial_mean != null;
   const score = isLiteOnly ? '~lite' : formatScore(s.hcb_weighted_mean);
   const numericScore = s.hcb_weighted_mean ?? s.hcb_editorial_mean;
   const link = `${baseUrl}/item/${s.hn_id}`;

@@ -105,11 +105,11 @@ export async function updateEventTriage(
 
   if ('investigated' in fields) {
     sets.push('investigated = ?');
-    values.push(fields.investigated === null ? null : fields.investigated ? 1 : 0);
+    values.push(fields.investigated == null ? null : fields.investigated ? 1 : 0);
   }
   if ('resolved' in fields) {
     sets.push('resolved = ?');
-    values.push(fields.resolved === null ? null : fields.resolved ? 1 : 0);
+    values.push(fields.resolved == null ? null : fields.resolved ? 1 : 0);
   }
   if (sets.length === 0) return;
 

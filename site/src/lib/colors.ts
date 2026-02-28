@@ -88,8 +88,8 @@ export function directionalityColor(d: string): string {
 
 /** Compute SETL (Structural-Editorial Tension Level) via geometric mean of gap and signal strength.
  *  sign(E-S) * sqrt(|E-S| * max(|E|, |S|)) — rewards both large gaps AND strong signals. */
-export function computeSetl(structural: number | null, editorial: number | null): number | null {
-  if (structural === null || editorial === null) return null;
+export function computeSetl(structural: number | null | undefined, editorial: number | null | undefined): number | null {
+  if (structural == null || editorial == null) return null;
   const diff = editorial - structural;
   const strength = Math.max(Math.abs(editorial), Math.abs(structural));
   if (strength === 0 && diff === 0) return null;
@@ -114,9 +114,9 @@ export function setlToColor(setl: number | null | undefined): string {
 
 /** Compute evidence-weighted confidence using EVIDENCE_WEIGHTS_CONFIDENCE scale */
 export function computeConfidence(
-  evidenceH: number | null, evidenceM: number | null, evidenceL: number | null, ndCount: number | null
+  evidenceH: number | null | undefined, evidenceM: number | null | undefined, evidenceL: number | null | undefined, ndCount: number | null | undefined
 ): number | null {
-  if (evidenceH === null || evidenceM === null || evidenceL === null || ndCount === null) return null;
+  if (evidenceH == null || evidenceM == null || evidenceL == null || ndCount == null) return null;
   const total = evidenceH + evidenceM + evidenceL + ndCount;
   if (total === 0) return null;
   // Weights: H=1.0, M=0.6, L=0.2 (from EVIDENCE_WEIGHTS_CONFIDENCE in compute-aggregates.ts)

@@ -385,7 +385,7 @@ async function strategyHighSetlDeepDive(
       const { inserted, skipped } = await insertAlgoliaHits(db, hits, 'story', 'high_setl_deep_dive');
       totalInserted += inserted;
       totalSkipped += skipped;
-      domainResults.push(`${d.domain}(setl=${d.avg_setl.toFixed(2)}):${inserted}`);
+      domainResults.push(`${d.domain}(setl=${d.avg_setl?.toFixed(2) ?? 'null'}):${inserted}`);
     } catch (err) {
       console.error(`[coverage] high_setl_deep_dive failed for ${d.domain}:`, err);
     }

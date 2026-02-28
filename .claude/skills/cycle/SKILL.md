@@ -27,10 +27,15 @@ Work through each step. Skip any that don't apply to the changes described in $A
 - Add new sections if new concepts were introduced
 - Remove references to removed features
 
-### 3. Update CLAUDE.md
+### 3. Update CLAUDE.md files
 
+This project has **two** CLAUDE.md files — check both:
+- **Root `CLAUDE.md`** — project overview, architecture, build/deploy commands, event types, methodology
+- **`site/CLAUDE.md`** — lib file inventory, page taxonomy, storage schema, key patterns (gotchas live here)
+
+For each:
 - Check if architecture descriptions are still accurate
-- Update key patterns if new gotchas were discovered
+- Update key patterns if new gotchas were discovered (most go in `site/CLAUDE.md` Key Patterns)
 - Update file descriptions if new files were added or responsibilities changed
 - Update page listings if pages were added/removed/renamed
 - Keep it concise — CLAUDE.md is for developer orientation, not full docs
@@ -68,14 +73,28 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 4. If MEMORY.md exceeds ~60 lines, move content to the appropriate topic file
 5. Never duplicate content between CLAUDE.md and memory files — CLAUDE.md is for developers, memory is for Claude's cross-session orientation
 
-### 5. Update TODO.md
+### 5. Update TODO.md and IDEAS.md
 
-- Read `TODO.md` (project backlog — open items only, no completed items)
+**TODO.md** (project backlog — open items only, no completed items):
+- Read `TODO.md`
 - Check off any items that were completed by the changes in this session, then remove them (completed items belong in git history, not the TODO)
 - Add any new TODO items that surfaced during development (bugs found, follow-up work needed, ideas)
 - Remove items that are no longer relevant
 
-### 6. Check for orphaned references and files
+**IDEAS.md** (deferred ideas with mission alignment tiers):
+- Read `IDEAS.md`
+- Check off or remove any ideas that were just implemented
+- If development surfaced new ideas that aren't immediate TODO items, add them here with a mission tier (Tier 1 = direct pedagogy, Tier 2 = mission-supportive, Tier 3 = infrastructure)
+- Update effort estimates if implementation revealed something was easier/harder than expected
+
+### 6. Update active plans
+
+- Glob `.claude/plans/*.md` (skip `archive/` subdirectory)
+- If the current changes complete items from an active plan, mark those items done in the plan
+- If a plan is fully complete, move it to `.claude/plans/archive/`
+- If plan findings were fixed but the plan wasn't updated, update it to prevent stale work signals
+
+### 7. Check for orphaned references and files
 
 - Grep for any references to removed functions, renamed variables, or old section names
 - Check imports in modified files still resolve
@@ -86,12 +105,12 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
   - Stale test fixtures or data files no longer referenced by any code
 - When in doubt, grep the codebase for imports/references to the candidate file — if nothing references it (other than comments about it being replaced), it's safe to remove
 
-### 7. Build verification
+### 8. Build verification
 
 - Run `npx astro build` from `site/` to confirm everything compiles
 - Report any warnings or errors — fix before proceeding
 
-### 8. Git commit
+### 9. Git commit
 
 - Run `git status` and `git diff --stat` to review all staged and unstaged changes
 - Stage all relevant files (prefer naming specific files over `git add -A`; never stage secrets like `.env`, `.cron-secret`, credentials)
@@ -99,7 +118,7 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 - Commit using the standard Co-Authored-By trailer
 - Run `git status` after to verify clean working tree
 
-### 9. Deploy
+### 10. Deploy
 
 - Deploy the site: `cd site && npx wrangler pages deploy dist --project-name hn-hrcb`
 - If worker files changed (functions/*.ts), deploy the affected workers too:
@@ -111,13 +130,13 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 - If new migrations were added, apply them first: `npx wrangler d1 migrations apply hrcb-db --remote`
 - Report the deployment URL
 
-### 10. Cleanup
+### 11. Cleanup
 
 - Remove any scratch/temp files created during development (e.g., `*.tmp`, `*.bak`, test outputs)
 - Check for any `console.log` or debug statements that should be removed from production code
 - Verify `.gitignore` covers any new generated directories (e.g., `.astro/`, `dist/`)
 - If new untracked files remain after commit, flag them — they may be intentionally untracked or accidentally missed
 
-### 11. Summary
+### 12. Summary
 
 Report what was updated, what was committed, what was deployed, and what was skipped (with reason).

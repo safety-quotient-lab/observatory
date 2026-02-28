@@ -150,15 +150,15 @@ const displayScores = isDone ? scores.map(s => {
 
 // Power-ranked: sort by channel score descending, ND articles last
 const editorialRanked = [...displayScores].sort((a, b) => {
-  if (a.editorial === null && b.editorial === null) return 0;
-  if (a.editorial === null) return 1;
-  if (b.editorial === null) return -1;
+  if (a.editorial == null && b.editorial == null) return 0;
+  if (a.editorial == null) return 1;
+  if (b.editorial == null) return -1;
   return b.editorial - a.editorial;
 });
 const structuralRanked = [...displayScores].sort((a, b) => {
-  if (a.structural === null && b.structural === null) return 0;
-  if (a.structural === null) return 1;
-  if (b.structural === null) return -1;
+  if (a.structural == null && b.structural == null) return 0;
+  if (a.structural == null) return 1;
+  if (b.structural == null) return -1;
   return b.structural - a.structural;
 });
 // FW aggregate metrics

@@ -25,7 +25,7 @@ const PT_TECHNIQUE_WEIGHTS: Record<string, number> = {
 };
 
 function computePtScore(flags: Array<{ technique: string }> | null | undefined): number | null {
-  if (flags === null || flags === undefined) return null;
+  if (flags == null) return null;
   if (flags.length === 0) return 0;
   return flags.reduce((sum, f) => sum + (PT_TECHNIQUE_WEIGHTS[f.technique] ?? 0), 0);
 }
@@ -298,7 +298,7 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
 
     for (const r of results) {
       const score = r.hcb_weighted_mean ?? r.hcb_editorial_mean;
-      if (score === null) continue;
+      if (score == null) continue;
       const baseWeight = (r.prompt_mode === 'lite' || r.prompt_mode === 'light') ? 0.5 : 1.0;
       const truncPct = r.content_truncation_pct ?? 0;
       const weight = baseWeight * (1 - truncPct * 0.5);
@@ -647,7 +647,7 @@ export async function backfillPtScores(
         flags = null;
       }
       const score = computePtScore(flags);
-      if (score === null) continue;
+      if (score == null) continue;
       await db
         .prepare(`UPDATE stories SET pt_score = ? WHERE hn_id = ?`)
         .bind(score, row.hn_id)
@@ -669,7 +669,7 @@ export async function refreshDailySectionStats(
   const today = new Date().toISOString().split('T')[0];
   const stmts: D1PreparedStatement[] = [];
   for (const score of scores) {
-    if (score.final === null) continue;
+    if (score.final == null) continue;
     stmts.push(
       db
         .prepare(

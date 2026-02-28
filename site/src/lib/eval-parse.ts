@@ -248,8 +248,7 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
         }
       }
       // Editorial is the primary channel — if missing, final and structural are meaningless
-      if ((score.editorial === null || score.editorial === undefined) &&
-          (score.structural !== null && score.structural !== undefined)) {
+      if (score.editorial == null && score.structural != null) {
         repairs.push(`Nulled ${score.section}.structural (editorial was null — primary channel required)`);
         score.structural = null;
         score.final = null;
@@ -409,7 +408,7 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
   }
 
   // Editorial is required for lite evals
-  if (ev.editorial === null || ev.editorial === undefined) {
+  if (ev.editorial == null) {
     errors.push('Editorial score is null \u2014 no data to score');
   }
 
@@ -428,7 +427,7 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
   }
 
   // Confidence
-  if (ev.confidence === undefined || ev.confidence === null || typeof ev.confidence !== 'number') {
+  if (ev.confidence == null || typeof ev.confidence !== 'number') {
     ev.confidence = 0.5;
     repairs.push('Set confidence to 0.5 (was missing/invalid)');
   } else {
