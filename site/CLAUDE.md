@@ -1,0 +1,119 @@
+# site/CLAUDE.md
+
+Site-specific detail for the Astro + Cloudflare Pages frontend and Workers pipeline. See root `CLAUDE.md` for project overview, build/deploy commands, and local scripts.
+
+## Storage Schema
+
+**D1 (`hrcb-db`) tables:** stories, events, eval_history, domain_dcp, dlq_messages, calibration_runs, ratelimit_snapshots, domain_aggregates (materialized per-domain signal averages — `avg_hrcb`, `evaluated_count`, `story_count`, `avg_pt_count`, `avg_pt_score`), daily_section_stats, calibration_evals (UNIQUE on calibration_run+hn_id+eval_model+eval_provider; INSERT OR IGNORE deduplicates), model_registry (migration 0037 — `enabled`, `disabled_reason`, `updated_at`, `is_primary` migration 0045), domain_profile_snapshots (migration 0039 — daily snapshots, PK `(domain, snapshot_date)`, INSERT OR IGNORE idempotent), eval_queue (migration 0041 — pull-model dispatch, UNIQUE(hn_id, target_provider, target_model), stale claims auto-recovered after 5 min).
+
+**KV (`CONTENT_CACHE`) keys:** content cache, DCP cache (`7d TTL`), rate limit state per model, query result cache (`q:*`, TTL 300-600s), queue in-flight reservation (`queue:inflight:<provider>:<hn_id>`, TTL 300s), v1 API rate limit counters (`ratelimit:v1:<ip>`, TTL 3600s), daily domain snapshot guard (`snapshot:domain:${today}`, TTL 25h), cron distributed lock (`cron:lock`, TTL 120s), calibration run ID (`calibration:lite:current_run`, TTL 30d), credit pause flag (`credit_pause:anthropic`, TTL 600s).
+
+**R2 (`hrcb-content-snapshots`):** content snapshots for audit trail.
+
+## Site (Astro + Cloudflare Pages)
+
+**Navigation:** `stories | signals | sources | rights | status | about` (6 hubs). `/trends` exists but is not in the nav.
+
+**Page taxonomy:**
+- **Stories** (`/`): main feed, `/past` (archive by date), `/velocity`, `/dynamics`, `/item/[id]` (merged audit trail: eval_history + events)
+- **Signals** (`/signals`): live data dashboard — Core HRCB summary, Global Averages bar chart + 4 distribution charts, Derived Metrics cards, Supplementary Signals cards, Fair Witness one-liner, Eval Modes one-liner. Every signal links to `/about#anchor`. Uses `getStatusCounts` + `getSignalOverview`.
+- **Rights** (`/rights`): hub → `/rights/observatory`, `/rights/articles`, `/rights/network`, `/article/[n]`
+- **Sources** (`/sources`): live source intelligence dashboard — Source Universe one-liner, Source Metrics 4-card grid, Signal Leaders 8-card grid, Editorial Character 3 distribution charts, Source HRCB Distribution 7-band bar chart, Deep Dive hub cards. Data from `getDomainSignalProfiles(db)` (KV-cached). Sub-pages: `/domains`, `/domain/[domain]`, `/users`, `/user/[username]`, `/factions`
+- **Trends** (`/trends`): hub → `/seldon`, `/velocity`, `/dynamics`
+- **Status** (`/status`): pipeline health — Coverage Spectrum funnel, Workers Health, Queue Breakdown, Eval Velocity stacked bar, Operations. Sub-pages: `/status/models` (model registry + performance + measurement integrity), `/status/events` (activity log + diagnostics). All pages use `cachedQuery` with KV (keys `sys:*`, TTLs 60-600s); ops-critical data stays uncached.
+- **About** (`/about`): 3-tier progressive disclosure — Tier 1 always visible, Tier 2 `<details open>`, Tier 3 `<details>` collapsed. Reference sections have anchor IDs (e.g., `#classification`, `#setl`) for deep linking from `/signals`.
+- **Data** (`/data`): stub — live API endpoints table + greyed-out 501 export table.
+- **Support** (`/support`): donation page — PayPal + GitHub Sponsors, "mark as donated" bypass (7-day TTL).
+- **Redirects** (301): `/dashboard`→`/status`, `/system`→`/status`, `/models`→`/status/models`, `/front`→`/past`, `/articles`→`/rights/articles`, `/network`→`/rights/network`, `/user-intel`→`/users`, `/domain-intel`→`/domains`
+
+## Lib File Inventory
+
+- `site/src/lib/db.ts` — Barrel re-export from `db-stories.ts`, `db-entities.ts`, `db-analytics.ts`, `db-multi-model.ts`
+- `site/src/lib/db-stories.ts` — Story types, feed queries, dashboard stats, queue/failed stories, `getStory()` (reads from `rater_scores`), `getFairWitnessForStory()` (reads from `rater_witness`)
+- `site/src/lib/db-entities.ts` — Domain/user queries, signal profiles, DCP, pipeline health, content gate stats, events re-exports
+- `site/src/lib/db-analytics.ts` — Sparklines, histograms, scatter, velocity, daily HRCB, temporal patterns, observatory, `getProviderStats`, `getModelQueueStats`, `getDlqTrend`, `getSelfThrottleImpact`, `getEvalLatencyStats`, `getSignalCompleteness`, `getModelTrustHistory` + `groupTrustByModel`, `getDomainKarmaMap`, `getKarmaHrcbCorrelation`, `getContentTypeValidation` + `getContentTypeDisagreement` + `getMisclassificationSummary`, `getVelocityStats`, `getDailyEvalVelocity`, `getModelChannelAverages`
+- `site/src/lib/db-multi-model.ts` — Rater evals/scores/witness, model agreement, multi-model stories
+- `site/src/lib/db-utils.ts` — `SETL_CASE_SQL(alias)` SQL fragment helper, `cachedQuery<T>(kv, key, fn, ttl)` KV-backed query cache, `safeBatch()` D1 batch chunker, `D1_BATCH_SIZE = 100` (single source of truth — use this, not hardcoded `100`)
+- `site/src/lib/shared-eval.ts` — Barrel re-export from `eval-types.ts`, `models.ts`, `prompts.ts`, `eval-parse.ts`, `eval-write.ts`, `rater-health.ts`
+- `site/src/lib/eval-types.ts` — Type definitions, interfaces, ALL_SECTIONS constant
+- `site/src/lib/models.ts` — Model registry, provider types, queue bindings, `QUEUE_CONFIG` export, `getEnabledModelsFromDb(db)` (D1 overlay — intersects DB-enabled list with MODEL_REGISTRY, falls back to static on error)
+- `site/src/lib/prompts.ts` — System prompts (full, slim, lite)
+- `site/src/lib/eval-parse.ts` — Response parsing, validation, content fetching. `validateSlimEvalResponse` checks full eval `schema_version` against pattern `/^\d+\.\d+$/` (current DB version: '3.7') — future-proof; any MAJOR.MINOR version passes. Lite versions go through a separate validator.
+- `site/src/lib/evaluate.ts` — SSE trigger path + cron evaluator. `callClaude()` makes an Anthropic fetch with 90s AbortController timeout — no indefinite hang on API stalls. Re-exports `fetchUrlContent`, `writeEvalResult`, `PRIMARY_MODEL_ID` from `shared-eval` for the trigger endpoint.
+- `site/src/lib/eval-write.ts` — D1 write functions. `writeEvalResult()` updates `stories` only. `writeRaterEvalResult()` writes rater_evals + rater_scores + rater_witness + eval_history, then calls `writeEvalResult()`. `writeLiteRaterEvalResult()` does COALESCE fill-in UPDATE to `stories`. `updateConsensusScore()` called at end of both write paths. `requestArchive()` KV-rate-limited Wayback Machine preservation. `PT_TECHNIQUE_WEIGHTS` + `computePtScore()` — Tier A=3, B=2, C=1; cumulative; NULL=not measured (lite), 0=measured+clean (full).
+- `site/src/lib/rater-health.ts` — Per-model health tracking, auto-disable/re-enable
+- `site/src/lib/hn-bot.ts` — HN Firebase API crawling and queue dispatch. `enqueueForEvaluation()` (content pre-fetch, gate check, dispatch to eval_queue), `checkFlaggedStories()`, `refreshFromUpdates()`, `crawlComments()`, `crawlUserProfiles()`, `triggerReEvals()`, `dispatchFreeModelEvals()`, `preloadContentCache()`. Domain circuit breaker lives here. Core types: `HNItem`, `QueueMessage`, `CrawlResult`.
+- `site/src/lib/events.ts` — Structured event logger with typed event taxonomy
+- `site/src/lib/compute-aggregates.ts` — Deterministic aggregate computation (CPU-side)
+- `site/src/lib/calibration.ts` — Full-model `CALIBRATION_SET` (hn_ids -1001..-1015) + lite-model `LITE_CALIBRATION_SET` (-2001..-2015) + per-model thresholds + parameterized `runCalibrationCheck()`
+- `site/src/lib/content-gate.ts` — Pre-eval content classification (paywall, captcha, bot protection, etc.)
+- `site/src/lib/content-drift.ts` — `computeContentHash()` + `checkContentDrift()` for re-evaluating stories whose content changed since last eval
+- `site/src/lib/colors.ts` — Score/SETL/confidence/gate color mapping
+- `site/src/lib/api-v1.ts` — Shared helpers for v0 and v1 public API routes: `corsHeaders()`, `checkRateLimit()` (200 req/hour), `jsonResponse()`, `errorResponse()`, cache header helpers
+- `site/src/pages/api/v0/` — HN Firebase API-compatible endpoints: `topstories.json.ts`, `beststories.json.ts`, `newstories.json.ts`, `item/[id].json.ts`
+- `site/src/pages/api/v1/domain/[domain]/history.ts` — `GET /api/v1/domain/{domain}/history?days=30` (max 365). From `domain_profile_snapshots`.
+- `site/src/components/` — Reusable Astro components (Breadcrumb, SubNav, EvalCard, DcpTable, etc.). `SubNav.astro` renders pipe-separated sibling nav links.
+- `site/functions/rate-limit.ts` — Rate limit state, capacity checks, credit pause (KV TTL: 600s)
+- `site/functions/providers.ts` — API call adapters (Anthropic, OpenRouter, Workers AI) with 15s AbortController timeout
+
+## Factions Page
+
+`site/src/pages/factions.astro` clusters domains by editorial character using 8 supplementary signal dimensions (EQ, SO, SR, TD, PT inverted, AR, VA, FW).
+
+**Algorithm:** Z-normalize → cosine similarity → agglomerative hierarchical clustering at 1/φ threshold (fallback to 1/φ² if single giant cluster).
+
+**Page sections:** Signal Landscape → Parallel Coordinates → Signal Space (2D PCA scatter + 3D Three.js orbit) → Differentiation → Cluster Cards (radar charts, members, distributions, liminal flags) → Affinity Matrix → Interesting Pairs → Outliers → Methodology Notes.
+
+**Data flow:** `getDomainSignalProfiles(db)` → z-normalize → cluster → enrich → render. KV-cached (`q:domainSignalProfiles`, 5-min TTL). `Map<string, DomainSignalProfile>` is not JSON-serializable — cache arrays, reconstruct Map.
+
+**Signal Space** (`site/src/components/SignalSpace.astro`): Server-side PCA (power iteration, 3 components). 2D SVG scatter + 3D Three.js orbit (CDN lazy import via `<script is:inline define:vars>`). Toggle buttons for 2D/3D.
+
+## Key Patterns
+
+- **`compatibility_date` must stay `2024-09-23`** in `site/wrangler.toml`. Bumping breaks Astro SSR — every page returns `[object Object]` due to incompatible Response handling.
+- **Astro template gotcha**: Cannot use TypeScript generics with angle brackets (`Record<string, string>`) inside JSX template expressions — extract to frontmatter constants instead.
+- **Astro `.json.ts` routing**: Astro strips only the final `.ts` extension. Dynamic `.json` routes capture `123.json` as `params.id` — strip `.json` suffix: `parseInt(params.id.replace(/\.json$/, ''), 10)`.
+- **Semantic color system**: CSS custom properties in `global.css` `:root`: `--bg-*`, `--fg-*`, channel colors (`--channel-hrcb/editorial/structural`), status colors (`--color-negative/warning/positive`). Badge/text utility classes (`.badge-positive`, `.text-muted`, etc.). Dynamic score colors use `scoreToColor()` HSL interpolation in `colors.ts` (not CSS vars).
+- **Mobile responsiveness**: `.insight-grid`, `.two-col`, `.stat-cards` handle layout. Nav separators use plain `' | '` text (wrapping spans break flex). `word-break: break-word` scoped to `.titleline, .sitebit` only. Breakpoints: 640px, 400px.
+- **Progressive disclosure**: `.collapsible-section` styles `<details>/<summary>` for 3-tier content. Used on About (Tier 1 always visible, Tier 2 `<details open>`, Tier 3 `<details>`) and Status sub-pages.
+- **Hub pages as navigation gateways**: Rights and Trends hubs are lean nav gateways — minimal inline data. Sources (`/sources`) is a live dashboard like `/signals`. Don't duplicate sub-page data on hub pages.
+- **Consumer hash functions**: `hashString()` = SHA-256 first 16 bytes as hex (32 chars). Used for methodology_hash (system prompt only) and prompt_hash (system + user).
+- **Rate limiting**: Consumer reads `anthropic-ratelimit-*` headers proactively, self-throttles via KV before hitting 429s. Circuit breaker at 3+ consecutive 429s.
+- **Content gate dual placement**: Runs in cron pre-fetch (primary — blocks before queueing, writes `gate_category`/`gate_confidence`) AND consumer (safety net for KV cache misses). Pure regex, no LLM calls.
+- **age_gate false positive**: `age_gate` regex triggers on articles that *discuss* age verification, not just actual gates. Fix: require form elements or "enter your date of birth" / "are you 18?" phrases rather than topic keywords.
+- **eval_status lifecycle**: `pending` → `queued` → `evaluating` (manual SSE only) → `done` | `failed` | `skipped` | `rescoring`. Feed/query filters group `pending`+`queued`+`evaluating` together. `markFailed`/`markSkipped` guards: `NOT IN ('done', 'rescoring')`.
+- **domain_aggregates column names**: `avg_hrcb` (not `avg_hcb`), `evaluated_count` (not `eval_count`), `story_count`, `avg_pt_count`, `avg_pt_score` (migration 0053). `avg_hrcb` is null for domains with no evaluated stories — self-corrects on re-eval.
+- **D1 remote query complexity**: `ORDER BY` on `domain_aggregates` times out when combined with JOINs. Workaround: `WHERE evaluated_count >= N` first (uses index), then ORDER BY; or sort in application.
+- **Calibration IDs**: Full: -1001..-1015 (`CALIBRATION_SET`). Lite: -2001..-2015 (`LITE_CALIBRATION_SET`). Lite cal: `POST /calibrate?mode=lite` (inserts pending), `POST /calibrate/check?mode=lite` (reads rater_evals with `prompt_mode='lite'`).
+- **DCP caching**: 7-day TTL in KV per domain, also persisted to `domain_dcp` table.
+- **Lite prompt mode**: Workers AI models (`llama-4-scout-wai`, `llama-3.3-70b-wai`) use `METHODOLOGY_SYSTEM_PROMPT_LITE` (schema `lite-1.4`): integer 0-100 (50=neutral), converts via `(score-50)/50`. Editorial-only — no structural channel, no per-section scores, no PT (pt_flag_count/pt_score = null). `writeLiteRaterEvalResult` COALESCE fill-in to `stories` (nulls only); lite evals do NOT promote `eval_status`. `EvalCard.astro`: `hasEval = hcb_weighted_mean !== null || hcb_editorial_mean !== null`; `isLiteOnly = hcb_weighted_mean === null || hcb_structural_mean === null`; `displayScore = hcb_weighted_mean ?? hcb_editorial_mean`.
+- **Per-model content truncation**: `ModelDefinition.max_input_chars` limits content for small models (llama-3.3-70b-wai=6000, llama-4-scout-wai=12000). Truncation pct in `rater_evals.content_truncation_pct`; consensus weight discount: `weight *= (1 - truncPct * 0.5)`.
+- **eval_queue pull model**: Consumers claim from `eval_queue` (migration 0041) via `claimFromEvalQueue()`. UNIQUE(hn_id, target_provider, target_model) + INSERT OR IGNORE = idempotent. Stale claims (>5 min) auto-recovered. `batch_id` flows dispatch → `rater_evals.eval_batch_id` for regression isolation.
+- **eval_priority_score**: Time-decayed dispatch priority (migration 0044): `(hn_score * decay) + (hn_comments * 0.5 * decay) + log10(karma) * 10 + feed_count * 5`, `decay = exp(-hoursOld/24)`. Both dispatch and `/api/queue` ORDER BY `COALESCE(eval_priority_score, hn_score, 0) DESC`.
+- **Workers AI response format**: `ai.run()` may return `{ response: "string" }` or `{ response: { ...object } }` — consumer handles both.
+- **QueueMessage `prompt_mode`**: Non-primary model messages include `prompt_mode: model.prompt_mode` (set at dispatch). Consumer uses as fallback in `isLiteMode` detection.
+- **Cron KV distributed lock**: Scheduled handler acquires `cron:lock` (120s TTL) before running. Lock present → skip cycle. Lock check failure is non-fatal.
+- **Calibration cleanup**: `POST /calibrate` deletes eval_history + rater_* for cal IDs before re-enqueue. `POST /calibrate?mode=lite` deletes lite rater_evals for -2001..-2015 first — without this, NOT EXISTS filter skips already-evaluated IDs.
+- **Lite calibration cloud vs standalone gap**: `POST /calibrate?mode=lite` tests actual Workers AI models. `evaluate-standalone.mjs --mode lite` tests prompt structure only (uses local claude-haiku). CF Workers egress IPs get Cloudflare Bot Management 157-char blocks → triggers `age_gate`. Sites without `cf-ray` header are safe. Current EX-3 = pypi.org (Fastly CDN).
+- **calibration_evals longitudinal flow**: `POST /calibrate?mode=lite` stores run timestamp in KV (`calibration:lite:current_run`). `ingest.ts` reads this when hn_id is a cal ID and calls `writeCalibrationEval()`. `INSERT OR IGNORE` deduplicates concurrent writes.
+- **Unified read/write path**: All per-section data in `rater_scores`/`rater_witness` (legacy `scores`/`fair_witness` dropped — migration 0047). `writeEvalResult()` updates `stories` only; `writeRaterEvalResult()` writes rater tables + calls `writeEvalResult()`. Primary model: `model_registry.is_primary` (migration 0045), queried via `getPrimaryModelId(db)`.
+- **Item page materialized columns**: `/item/[id]` reads supplementary signals, labels, metadata from `stories` columns. Aggregates from `rater_scores` via `computeAggregates()`. `hcb_json` excluded (~12-15KB savings). Default tab uses `story.eval_model`.
+- **eval-write FK guards**: All 3 write functions do `SELECT 1 FROM stories WHERE hn_id = ?` at entry — throws if story doesn't exist, preventing orphaned eval rows.
+- **Structural channel guard**: `writeRaterEvalResult` checks `hcb_structural_mean === null` (editorial-only response) — rater data still written but story NOT promoted to `done`. Logs `eval_skip`.
+- **Consumer provider guards**: openrouter + workers-ai consumers check `prep.modelDef.provider` matches their expected provider — acks and skips if misrouted.
+- **Llama `+` numeric prefix**: Llama models emit `"+0.5"` instead of `"0.5"`. `extractJsonFromResponse` strips leading `+` via `/:\s*\+(\d)/g`.
+- **Consumer batch-level API key check**: Anthropic/OpenRouter check API key at batch level. Missing key → `msg.retry()` all messages and return.
+- **DLQ consumer ack placement**: `msg.ack()` only fires after successful DB write + event log. If write fails, message is NOT acked.
+- **Content gate columns**: `stories.gate_category` (TEXT) + `stories.gate_confidence` (REAL) — migration 0024. NULL = accessible or pending. Written by `markSkipped()`. Surfaced on domain/domains/sources/status pages.
+- **Re-promotion guard**: The story upsert in `enqueueForEvaluation()` (hn-bot.ts) must include `AND gate_category IS NULL` — otherwise permanently-gated stories get re-promoted every cron cycle (infinite skip loop). `autoEvalIds` is a local `Set` in `enqueueForEvaluation()` (not a standalone function) determining auto-eval vs skip. `url IS NOT NULL` is the wrong guard — blocks valid Ask HN posts.
+- **gate_category taxonomy**: Regex-based (content-gate.ts): paywall, bot_protection, captcha, login_wall, cookie_wall, geo_restriction, age_gate, app_gate, rate_limited, error_page, redirect_or_js_required. Pipeline-level (hn-bot.ts + consumer-shared.ts): binary_content, js_rendered, no_content, hn_removed.
+- **JSON-LD embedding**: `<script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />`. Applied to: index (ItemList), item/[id] (Article), article/[n], domain/[domain] (Organization + AggregateRating), domains (ItemList), about (AboutPage + Dataset), sources (CollectionPage).
+- **Public REST API**: `/api/v1/` Astro routes: stories, story/[id], domains, domain/[domain], domain/[domain]/history (from `domain_profile_snapshots`). Export stubs → 501. Public read-only, IP rate limit (200 req/hr), CORS `*`. Helpers in `api-v1.ts`.
+- **Model registry D1 overlay**: `model_registry` table (migration 0037) — toggle models via `wrangler d1 execute` without a deploy. `getEnabledModelsFromDb(db)` intersects DB with MODEL_REGISTRY. Cron uses this at dispatch time.
+- **checkFlaggedStories**: Runs every 10th minute (`minute % 10 === 3`). Three eval_error strings: "Story removed from HN", "Story flagged/killed on HN", "Story deleted on HN" — all gate_category='hn_removed'. CrawlResult field: `flagged_check`.
+- **Content drift detection**: `content_hash` (SHA-256 first 16 bytes hex) written on primary eval. `checkContentDrift()` re-fetches stories >7 days old, re-queues if hash changed. Triggered via `sweep=content_drift`. Self-posts excluded.
+- **Audit trail on item page**: `/item/[id]` merges eval_history + events into unified chronological trail. Eval entries show model, score, token count, and score drift delta badge on same-model re-evals.
+- **Algolia backfill sweep**: `sweep=algolia_backfill` uses `searchAlgolia()` + `insertAlgoliaHits()` (from `coverage-crawl.ts`). Parameters: `min_score` (default 500), `limit` (max 200), `days_back` (default 365).
+- **Credit pause fallback**: When `credit_pause:anthropic` KV key is set, `enqueueForEvaluation` skips Anthropic queue and dispatches to free model queues instead. Lite queue always fires regardless of credit state.
+- **Feed filter/sort COALESCE**: Positive/negative/neutral filters and score sorts use `COALESCE(hcb_weighted_mean, hcb_editorial_mean)` so lite-only stories surface correctly.
+- **Score mode toggle**: `Base.astro` injects `body[data-score-mode]` (default `hrcb`, persisted in localStorage). CSS highlights active channel. HRCB|E|S toggle rendered in `index.astro` filter bar.

@@ -286,17 +286,18 @@ export interface MultiModelStory {
 export async function getMultiModelStories(db: D1Database, limit = 500): Promise<MultiModelStory[]> {
   const { results: rows } = await db
     .prepare(
-      `SELECT re.hn_id, re.eval_model, re.hcb_weighted_mean, re.hcb_classification,
+      `WITH shared AS (
+         SELECT hn_id FROM rater_evals
+         WHERE eval_status = 'done'
+         GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+       )
+       SELECT re.hn_id, re.eval_model, re.hcb_weighted_mean, re.hcb_classification,
               re.hcb_confidence, re.hcb_setl, re.hcb_theme_tag,
               s.title, s.url, s.domain, s.hn_score
        FROM rater_evals re
+       JOIN shared sh ON sh.hn_id = re.hn_id
        JOIN stories s ON s.hn_id = re.hn_id
        WHERE re.eval_status = 'done'
-         AND re.hn_id IN (
-           SELECT hn_id FROM rater_evals
-           WHERE eval_status = 'done'
-           GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
-         )
        ORDER BY s.hn_time DESC, re.eval_model
        LIMIT ?`
     )
@@ -340,7 +341,12 @@ export async function getModelComparisonAggregates(db: D1Database): Promise<{
 }[]> {
   const { results } = await db
     .prepare(
-      `SELECT
+      `WITH shared AS (
+         SELECT hn_id FROM rater_evals
+         WHERE eval_status = 'done'
+         GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+       )
+       SELECT
          re.eval_model AS model,
          COUNT(*) AS story_count,
          AVG(re.hcb_weighted_mean) AS avg_score,
@@ -349,12 +355,8 @@ export async function getModelComparisonAggregates(db: D1Database): Promise<{
          ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean < -0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS negative_pct,
          ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS neutral_pct
        FROM rater_evals re
+       JOIN shared sh ON sh.hn_id = re.hn_id
        WHERE re.eval_status = 'done'
-         AND re.hn_id IN (
-           SELECT hn_id FROM rater_evals
-           WHERE eval_status = 'done'
-           GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
-         )
        GROUP BY re.eval_model
        ORDER BY re.eval_model`
     )
@@ -371,18 +373,19 @@ export async function getModelSectionAverages(db: D1Database): Promise<{
 }[]> {
   const { results } = await db
     .prepare(
-      `SELECT
+      `WITH shared AS (
+         SELECT hn_id FROM rater_evals
+         WHERE eval_status = 'done'
+         GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+       )
+       SELECT
          rs.eval_model AS model,
          rs.section,
          AVG(rs.final) AS avg_final,
          COUNT(*) AS count
        FROM rater_scores rs
-       WHERE rs.hn_id IN (
-         SELECT hn_id FROM rater_evals
-         WHERE eval_status = 'done'
-         GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
-       )
-       AND rs.final IS NOT NULL
+       JOIN shared sh ON sh.hn_id = rs.hn_id
+       WHERE rs.final IS NOT NULL
        GROUP BY rs.eval_model, rs.section
        ORDER BY rs.section, rs.eval_model`
     )

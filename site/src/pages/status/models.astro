@@ -51,47 +51,44 @@ let driftStats: { models: any[]; overlapping: number; meanDelta: number | null }
 let globalGate: { total: number; gated: number; gate_pct: number; breakdown: { gate_category: string; cnt: number }[] } = { total: 0, gated: 0, gate_pct: 0, breakdown: [] };
 let channelAverages: Awaited<ReturnType<typeof getModelChannelAverages>> = [];
 
+// Timed query helper — wraps cachedQuery + records per-query timing
+const _timings: { name: string; ms: number }[] = [];
+async function tq<T>(name: string, key: string, fn: () => Promise<T>, ttl: number, fallback: T): Promise<T> {
+  const t0 = Date.now();
+  try {
+    const result = await cachedQuery(kv, key, fn, ttl);
+    _timings.push({ name, ms: Date.now() - t0 });
+    return result;
+  } catch {
+    _timings.push({ name: name + '!ERR', ms: Date.now() - t0 });
+    return fallback;
+  }
+}
+
+// 14 lightweight queries + 3 heavy multi-model queries (reduced LIMIT)
+const _t0 = Date.now();
 try {
-// Batch 1: lightweight/cached queries
-[
-  models, modelComparison, raterSummary,
-  lastCalibration, lastLiteCalibration,
-  signalCompleteness, globalGate,
-] = await Promise.all([
-  getModelStats(db).catch(() => [] as Awaited<ReturnType<typeof getModelStats>>),
-  cachedQuery(kv, 'sys:modelComparison', () => getModelComparisonStats(db), 300).catch(() => [] as Awaited<ReturnType<typeof getModelComparisonStats>>),
-  cachedQuery(kv, 'sys:raterSummary', () => getRaterSummaryStats(db), 120).catch(() => [] as Awaited<ReturnType<typeof getRaterSummaryStats>>),
-  cachedQuery(kv, 'sys:lastCal', () => getLatestCalibrationRun(db), 600).catch(() => null),
-  cachedQuery(kv, 'sys:lastLiteCal', () => getLatestLiteCalibrationRun(db), 600).catch(() => null),
-  cachedQuery(kv, 'sys:signalComplete', () => getSignalCompleteness(db), 300).catch(() => [] as Awaited<ReturnType<typeof getSignalCompleteness>>),
-  cachedQuery(kv, 'sys:globalGate', () => getGlobalGateStats(db), 600).catch(() => ({ total: 0, gated: 0, gate_pct: 0, breakdown: [] as { gate_category: string; cnt: number }[] })),
-]);
-
-// Batch 2: heavier queries
-[
-  stories, allAggregates, sectionAvgs, statusBreakdown, trustHistory,
-  channelAverages,
-] = await Promise.all([
-  getMultiModelStories(db, 500).catch(() => [] as Awaited<ReturnType<typeof getMultiModelStories>>),
-  getModelComparisonAggregates(db).catch(() => [] as Awaited<ReturnType<typeof getModelComparisonAggregates>>),
-  getModelSectionAverages(db).catch(() => [] as Awaited<ReturnType<typeof getModelSectionAverages>>),
-  getRaterStatusBreakdown(db).catch(() => [] as Awaited<ReturnType<typeof getRaterStatusBreakdown>>),
-  getModelTrustHistory(db, 14).catch(() => [] as Awaited<ReturnType<typeof getModelTrustHistory>>),
-  getModelChannelAverages(db).catch(() => [] as Awaited<ReturnType<typeof getModelChannelAverages>>),
-]);
-
-// Batch 3: measurement integrity queries
-[
-  ctValidation, ctDisagreement, ctMisclass, driftStats,
-] = await Promise.all([
-  cachedQuery(kv, 'sys:ctValidation', () => getContentTypeValidation(db), 300).catch(() => [] as Awaited<ReturnType<typeof getContentTypeValidation>>),
-  cachedQuery(kv, 'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300).catch(() => [] as Awaited<ReturnType<typeof getContentTypeDisagreement>>),
-  cachedQuery(kv, 'sys:ctMisclass', () => getMisclassificationSummary(db), 300).catch(() => ({ structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 })),
-  cachedQuery(kv, 'sys:modelDrift', () => getModelDriftStats(db), 300).catch(() => ({ models: [] as any[], overlapping: 0, meanDelta: null })),
-]);
+  models         = await tq('modelStats',    'sys:modelStats',    () => getModelStats(db), 120, [] as Awaited<ReturnType<typeof getModelStats>>);
+  modelComparison = await tq('modelComp',    'sys:modelComparison', () => getModelComparisonStats(db), 300, [] as Awaited<ReturnType<typeof getModelComparisonStats>>);
+  channelAverages = await tq('channelAvg',   'sys:channelAvg',    () => getModelChannelAverages(db), 120, [] as Awaited<ReturnType<typeof getModelChannelAverages>>);
+  statusBreakdown = await tq('statusBkdn',   'sys:statusBkdn',    () => getRaterStatusBreakdown(db), 60, [] as Awaited<ReturnType<typeof getRaterStatusBreakdown>>);
+  raterSummary    = await tq('raterSum',     'sys:raterSummary',  () => getRaterSummaryStats(db), 120, [] as Awaited<ReturnType<typeof getRaterSummaryStats>>);
+  trustHistory    = await tq('trustHist',    'sys:trustHist',     () => getModelTrustHistory(db, 14), 120, [] as Awaited<ReturnType<typeof getModelTrustHistory>>);
+  lastCalibration = await tq('lastCal',      'sys:lastCal',       () => getLatestCalibrationRun(db), 600, null);
+  lastLiteCalibration = await tq('lastLiteCal', 'sys:lastLiteCal', () => getLatestLiteCalibrationRun(db), 600, null);
+  signalCompleteness = await tq('sigComplete', 'sys:signalComplete', () => getSignalCompleteness(db), 300, [] as Awaited<ReturnType<typeof getSignalCompleteness>>);
+  globalGate      = await tq('globalGate',   'sys:globalGate',    () => getGlobalGateStats(db), 600, { total: 0, gated: 0, gate_pct: 0, breakdown: [] as { gate_category: string; cnt: number }[] });
+  driftStats      = await tq('modelDrift',   'sys:modelDrift',    () => getModelDriftStats(db), 300, { models: [] as any[], overlapping: 0, meanDelta: null });
+  ctValidation    = await tq('ctValid',      'sys:ctValidation',  () => getContentTypeValidation(db), 300, [] as Awaited<ReturnType<typeof getContentTypeValidation>>);
+  ctDisagreement  = await tq('ctDisagree',   'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300, [] as Awaited<ReturnType<typeof getContentTypeDisagreement>>);
+  ctMisclass      = await tq('ctMisclass',   'sys:ctMisclass',    () => getMisclassificationSummary(db), 300, { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 });
+  // Test: multiModel + compAgg
+  stories         = await tq('multiModel',   'sys:multiModel',    () => getMultiModelStories(db, 100), 300, [] as Awaited<ReturnType<typeof getMultiModelStories>>);
+  allAggregates   = await tq('compAgg',      'sys:compAgg',       () => getModelComparisonAggregates(db), 300, [] as Awaited<ReturnType<typeof getModelComparisonAggregates>>);
 } catch (err: unknown) {
   _pageError = `Query phase: ${err instanceof Error ? err.message : String(err)}`;
 }
+const _queryMs = Date.now() - _t0;
 
 let trustByModel = new Map<string, any[]>();
 let aggregates: typeof allAggregates = [];
@@ -116,10 +113,6 @@ let biasAnalysis: any[] = [];
 let excludedModels: typeof allAggregates = [];
 let sectionByModelMap = new Map<string, Map<string, number>>();
 
-try {
-trustByModel = groupTrustByModel(trustHistory);
-
-// Content type validation constants (extracted to frontmatter — Astro generics gotcha)
 const STRUCTURAL_HEAVY = new Set(['PO', 'LP', 'AD', 'AC', 'CO']);
 const CT_WEIGHTS: Record<string, { e: number; s: number }> = {
   ED: { e: 0.6, s: 0.4 }, PO: { e: 0.3, s: 0.7 }, LP: { e: 0.3, s: 0.7 },
@@ -127,6 +120,10 @@ const CT_WEIGHTS: Record<string, { e: number; s: number }> = {
   RE: { e: 0.7, s: 0.3 }, SA: { e: 0.8, s: 0.2 }, MX: { e: 0.5, s: 0.5 },
 };
 const MIN_STORIES = 10;
+const BINS = 10;
+const BIN_MIN = -0.5;
+const BIN_MAX = 0.5;
+const BIN_WIDTH = (BIN_MAX - BIN_MIN) / BINS;
 
 function pearsonCorrelation(xs: number[], ys: number[]): number | null {
   if (xs.length < 3) return null;
@@ -144,6 +141,10 @@ function pearsonCorrelation(xs: number[], ys: number[]): number | null {
   const denom = Math.sqrt(denomX * denomY);
   return denom === 0 ? null : num / denom;
 }
+
+const _t1 = Date.now();
+try {
+trustByModel = groupTrustByModel(trustHistory);
 
 aggregates = allAggregates.filter(a => a.story_count >= MIN_STORIES);
 modelIds = aggregates.map(a => a.model);
@@ -204,10 +205,6 @@ pairCorrelations = (() => {
   return pairs;
 })();
 
-const BINS = 10;
-const BIN_MIN = -0.5;
-const BIN_MAX = 0.5;
-const BIN_WIDTH = (BIN_MAX - BIN_MIN) / BINS;
 for (const mid of modelIds) {
   const counts = new Array(BINS).fill(0);
   for (const s of filteredStories) {
@@ -248,6 +245,8 @@ excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && a.stor
 } catch (err: unknown) {
   _pageError = _pageError ?? `Compute phase: ${err instanceof Error ? err.message : String(err)}`;
 }
+const _computeMs = Date.now() - _t1;
+const _totalMs = Date.now() - _t0;
 ---
 
 <Base title="Models">
@@ -269,6 +268,20 @@ excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && a.stor
       <strong>Page Error:</strong> {_pageError}
     </div>
   )}
+
+  {/* Timing diagnostics — remove after stabilization */}
+  <div style="padding: 6px 10px; margin-bottom: 10px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; font-size: 9px; color: #5b7279; font-family: monospace;">
+    <span style="color: #98a8a8;">queries {_queryMs}ms</span> · <span style="color: #98a8a8;">compute {_computeMs}ms</span> · <span style="color: #98a8a8;">total {_totalMs}ms</span>
+    {_timings.length > 0 && (
+      <span style="margin-left: 8px;">
+        | {_timings.sort((a, b) => b.ms - a.ms).slice(0, 5).map(t => (
+          <span style={`color: ${t.ms > 2000 ? '#dc2626' : t.ms > 500 ? '#eab308' : '#5b7279'}; margin-right: 6px;`}>
+            {t.name}:{t.ms}ms
+          </span>
+        ))}
+      </span>
+    )}
+  </div>
 
   {/* ═══ Evaluation Models (absorbed from /system) — always visible ═══ */}
   {models.length > 0 && (

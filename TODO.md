@@ -67,7 +67,7 @@ rounds. 30/43 items already fixed; remaining items below.
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
   - [x] **Model channel averages** — HRCB/E/S triple bar per model on `/status/models`. *(done 2026-02-28)*
-  - [x] **Eval velocity chart** — stacked bar evals/day (full+light) on `/status`. *(done 2026-02-28)*
+  - [x] **Eval velocity chart** — stacked bar evals/day (full+lite) on `/status`. *(done 2026-02-28)*
   - [ ] **Coverage progression** — daily funnel: no-coverage → light → full → multi-model.
     Needs `daily_coverage_stats` materialized table or query from `stories` + `rater_evals`
   - [ ] **Per-content-type eval mix** — which content types (ED, PO, LP, PR, etc.) are
