@@ -22,7 +22,7 @@ const status = await getStatusCounts(db);
 
 const [
   velocity, cronRuns, providerStats, modelQueueStats,
-  dlqStats, costStats, recentPipelineEvents, evalVelocity,
+  dlqStats, costStats, recentPipelineEvents, evalVelocity, lastDlqRow,
 ] = await Promise.all([
   getVelocityStats(db, status.pending),
   getCronRuns(db, 5).catch(() => [] as Awaited<ReturnType<typeof getCronRuns>>),
@@ -32,6 +32,7 @@ const [
   cachedQuery(kv, 'sys:costStats', () => getCostStats(db), 120),
   getRecentEvents(db, 15).catch(() => [] as Awaited<ReturnType<typeof getRecentEvents>>),
   getDailyEvalVelocity(db, 60).catch(() => [] as Awaited<ReturnType<typeof getDailyEvalVelocity>>),
+  db.prepare("SELECT created_at FROM events WHERE event_type IN ('dlq','dlq_replay','dlq_auto_replay') ORDER BY created_at DESC LIMIT 1").first<{created_at: string}>().catch(() => null),
 ]);
 
 // Prep eval velocity chart data
@@ -222,8 +223,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
 
           {/* DLQ worker */}
           {(() => {
-            const lastDlqEvent = recentPipelineEvents.find(e => e.event_type === 'dlq' || e.event_type === 'dlq_replay');
-            const lastActive = lastDlqEvent?.created_at ?? null;
+            const lastActive = lastDlqRow?.created_at ?? null;
             const dot = workerDot(lastActive);
             return (
               <tr style="border-top: 1px solid #0d4655;">
