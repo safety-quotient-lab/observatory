@@ -21,6 +21,8 @@ const title = ARTICLE_TITLES[score.section] || score.section;
 
 const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low'};
 const DIRECTION_LABELS: Record<string, string> = {A: 'Advocacy', F: 'Framing', P: 'Practice', C: 'Coverage'};
+const sectionMatch = score.section.match(/^Article\s+(\d+)$/i);
+const sectionIndex = score.section === 'Preamble' ? 0 : sectionMatch ? parseInt(sectionMatch[1], 10) : null;
 const articleSetl = computeSetl(score.structural, score.editorial);
 
 const hasFw = (score.witness_facts && score.witness_facts.length > 0) || (score.witness_inferences && score.witness_inferences.length > 0);
@@ -40,7 +42,11 @@ const fwRatio = score.witness_ratio ?? null;
     <!-- Section info -->
     <div class="flex-1 min-w-0">
       <div class="flex items-center gap-2">
-        <span class="score-font text-sm text-gray-300">{score.section}</span>
+        {sectionIndex !== null ? (
+          <a href={`/article/${sectionIndex}`} class="score-font text-sm text-gray-300" style="text-decoration: none; color: inherit;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">{score.section}</a>
+        ) : (
+          <span class="score-font text-sm text-gray-300">{score.section}</span>
+        )}
         <span class="text-sm text-gray-500">{title}</span>
       </div>
     </div>

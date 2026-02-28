@@ -27,7 +27,7 @@ const PT_TECHNIQUE_WEIGHTS: Record<string, number> = {
 function computePtScore(flags: Array<{ technique: string }> | null | undefined): number | null {
   if (flags === null || flags === undefined) return null;
   if (flags.length === 0) return 0;
-  return flags.reduce((sum, f) => sum + (PT_TECHNIQUE_WEIGHTS[f.technique] ?? 1), 0);
+  return flags.reduce((sum, f) => sum + (PT_TECHNIQUE_WEIGHTS[f.technique] ?? 0), 0);
 }
 
 // --- DB write helpers ---

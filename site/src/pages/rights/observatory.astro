@@ -373,7 +373,7 @@ const groupColors: Record<string, string> = {
                   <a href={`/item/${s.hn_id}`} style="color: #98a8a8; text-decoration: none;">{s.title}</a>
                 </td>
                 <td title={s.domain ?? '--'} style="width: 120px; padding: 4px 0; color: #5b7279; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  {s.domain ?? '--'}
+                  {s.domain ? <a href={`/domain/${s.domain}`} style="color: #5b7279; text-decoration: none;">{s.domain}</a> : '--'}
                 </td>
                 <td style="width: 50px; text-align: right; padding: 4px 0; color: #f87171;" class="score-font">
                   {s.pt_flag_count}

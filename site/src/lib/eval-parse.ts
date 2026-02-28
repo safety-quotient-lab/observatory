@@ -232,6 +232,21 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
           }
         }
       }
+      // Evidence-level cap enforcement: H = max 1.0, M = max 0.7, L = max 0.4
+      const ev = score.evidence ? String(score.evidence).toUpperCase() : null;
+      const evidenceCap: Record<string, number> = { M: 0.7, L: 0.4 };
+      if (ev && ev in evidenceCap) {
+        const cap = evidenceCap[ev];
+        for (const channel of ['editorial', 'structural'] as const) {
+          if (score[channel] !== null && score[channel] !== undefined && typeof score[channel] === 'number') {
+            if (Math.abs(score[channel]) > cap) {
+              const original = score[channel];
+              score[channel] = Math.max(-cap, Math.min(cap, score[channel]));
+              repairs.push(`Evidence-capped ${score.section}.${channel}: ${original} \u2192 ${score[channel]} (evidence=${ev}, max=${cap})`);
+            }
+          }
+        }
+      }
       // Editorial is the primary channel — if missing, final and structural are meaningless
       if ((score.editorial === null || score.editorial === undefined) &&
           (score.structural !== null && score.structural !== undefined)) {

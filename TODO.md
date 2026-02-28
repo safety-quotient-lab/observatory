@@ -64,6 +64,21 @@ rounds. 30/43 items already fixed; remaining items below.
 - [x] **Passthrough FTS** — `/search?q=...` page with Algolia + D1 enrichment, SLEEPER_RULES eager consumer, donor-gated play button
 - [x] **Longitudinal item page** — dual sparkline (HN score + HRCB dots, shared time axis) + audit trail type/model filter + sort toggle
 
+### Round 4.6 — Extrapolation Audit Fixes
+
+- [x] **Fix `getModelAgreement` FK** *(done 2026-02-28)* — `mr.id` → `mr.model_id`
+- [x] **Enforce evidence caps in parser** *(done 2026-02-28)* — H=1.0, M=0.7, L=0.4 enforced in `validateSlimEvalResponse`
+- [x] **Fix volatility thresholds** *(done 2026-02-28)* — 0.15/0.35 → 0.10/0.25 per methodology spec
+- [x] **Emit `model_divergence` events** *(already implemented)* — `updateConsensusScore` logs at spread >0.25
+- [x] **Validate PT technique names** *(done 2026-02-28)* — unknown techniques now contribute 0 (not 1)
+- [x] **Add missing event type colors** *(done 2026-02-28)* — 9 event types given distinct colors on /status/events
+- [x] **Show `archive_url` on item page** *(done 2026-02-28)* — "archived" link when Wayback URL exists
+- [x] **Disclose `archive_used` on item page** *(done 2026-02-28)* — "from archive" note in eval metadata
+- [x] **Surface `consensus_spread`** *(done 2026-02-28)* — "Contested" badge when spread >0.3 + 2+ models
+- [x] **Link section scores to `/article/[n]`** *(done 2026-02-28)* — ArticleDetail section labels now clickable
+- [x] **Render `dominant_sentiment` on HTML pages** *(done 2026-02-28)* — 4th distribution chart on /sources
+- [x] **Link observatory propaganda table domain column** *(done 2026-02-28)* — domain text → `/domain/[domain]` link
+
 ### Round 5 — Data Expansion
 
 - [ ] **Enhanced comments**

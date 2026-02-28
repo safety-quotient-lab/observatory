@@ -100,6 +100,32 @@ materialized table (like `domain_aggregates`). Deferred because the query depend
 on user-controlled sort/filter params — simple cachedQuery won't work,
 full materialization adds a write-path step for marginal gain.
 
+### Dark Data Surfacing
+
+- **Transparency disclosure rates** — `td_author_identified`, `td_conflicts_disclosed`, `td_funding_disclosed` have no corpus/domain aggregate view. "Only 34% of stories identify their author."
+- **Temporal framing aggregate** — `tf_primary_focus` (retrospective/present/prospective) collected per-story but never aggregated. Distribution chart on `/signals`.
+- **Jargon/knowledge-level aggregate** — `cl_jargon_density`, `cl_assumed_knowledge` have no aggregate view beyond reading level tier.
+- **Lite reasoning viewer** — `rater_evals.reasoning` stored but invisible. Surface on item page audit trail.
+- **Methodology drift detector** — `getMethodologyDistribution()` implemented, never called. Show % of evals on current vs old methodology hash on `/status/models`.
+- **Batch regression isolation** — `eval_batch_id` links evals to cron cycles. Per-batch quality view: avg HRCB, failure rate, latency.
+
+### Structural Extensions
+
+- **Content type browse page** — `/content-types` or content_type filter on feed. Only HN type (ask/show/job) filterable, not HRCB content type (ED/PO/LP/PR/AC/MI).
+- **User API endpoints** — `/api/v1/users` + `/api/v1/user/[username]`. DB functions exist, no API surface.
+- **Signals API endpoint** — `/api/v1/signals`. `getSignalOverview` exists, no API route.
+- **Domain → factions cross-link** — domain page has no "See in factions" link.
+- **Filtered RSS feeds** — `/feed.xml?filter=negative&domain=example.com`. Currently global-only.
+- **Date-range filter** in feed and API — only single-day (`/past?day=`) exists, no from/to range.
+
+### Methodology Improvements
+
+- **Confidence-weighted consensus** — use `hcb_confidence` in `updateConsensusScore` instead of flat 1.0/0.5.
+- **Outlier rejection in consensus** — trimmed mean or IQR filter when 4+ models rate a story.
+- **Calibration: add strongly-negative site** — EX class ranges -0.18 to -0.02. No site < -0.3 in cal set.
+- **DCP staleness window fix** — KV expires at 7d, alert at 30d. Silent 8-30d gap where DCP refreshes without logging.
+- **Cross-model PT agreement** — flag PT techniques only when N of M models agree (quorum filter).
+
 ---
 
 ## The Synthesis

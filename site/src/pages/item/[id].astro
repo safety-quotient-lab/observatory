@@ -597,6 +597,7 @@ function timeAgo(unixTime: number): string {
             ) : null})
           </span>
         )}
+        {storyData.archive_url && <a href={storyData.archive_url} style="color: var(--color-muted, #5b7279); font-size: var(--font-xs); margin-left: 8px;" target="_blank" rel="noopener">archived</a>}
       </td>
     </tr>
     <tr>
@@ -616,12 +617,22 @@ function timeAgo(unixTime: number): string {
         >
           {aggregates.classification}
         </span>
+        {storyData.consensus_model_count != null && storyData.consensus_model_count >= 2 && storyData.consensus_spread != null && storyData.consensus_spread > 0.3 && (
+          <span
+            class="badge"
+            style="background: rgba(217,119,6,0.15); color: #d97706; font-size: var(--font-xs); margin-left: 4px;"
+            title={`Cross-model spread: ${storyData.consensus_spread.toFixed(2)} across ${storyData.consensus_model_count} models`}
+          >
+            Contested
+          </span>
+        )}
         <span style="color: #5b7279; margin-left: 4px;">
           <span title={`Content type: ${CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}`} style="cursor: help;">
             {CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}
           </span>
           {storyData.schema_version && <span>· v{storyData.schema_version}</span>}
           {storyData.evaluated_at && <span>· {storyData.evaluated_at.split('T')[0]}</span>}
+          {storyData.archive_used && <span style="color: #a855f7;">· from archive</span>}
         </span>
         {hasFairWitness && (
           <button

@@ -119,7 +119,7 @@ export function computeAggregates(
   const mean = unweightedSum / scored.length;
   const variance = scored.reduce((sum, s) => sum + Math.pow(s.final! - mean, 2), 0) / scored.length;
   const stdDev = round(Math.sqrt(variance));
-  const volatilityLabel = stdDev < 0.15 ? 'Low' : stdDev < 0.35 ? 'Medium' : 'High';
+  const volatilityLabel = stdDev < 0.10 ? 'Low' : stdDev < 0.25 ? 'Medium' : 'High';
 
   // Classification from weighted mean
   const classification = classifyScore(weightedMean);

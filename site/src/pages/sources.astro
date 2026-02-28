@@ -61,6 +61,7 @@ interface SourceMetrics {
   toneEntries: [string, number][];
   scopeEntries: [string, number][];
   levelEntries: [string, number][];
+  sentimentEntries: [string, number][];
   bands: HrcbBand[];
 }
 
@@ -116,10 +117,12 @@ function computeSourceMetrics(profs: DomainSignalProfile[]): SourceMetrics {
   const toneCounts: Record<string, number> = {};
   const scopeCounts: Record<string, number> = {};
   const levelCounts: Record<string, number> = {};
+  const sentimentCounts: Record<string, number> = {};
   for (const p of profs) {
     if (p.dominant_tone) toneCounts[p.dominant_tone] = (toneCounts[p.dominant_tone] || 0) + 1;
     if (p.dominant_scope) scopeCounts[p.dominant_scope] = (scopeCounts[p.dominant_scope] || 0) + 1;
     if (p.dominant_reading_level) levelCounts[p.dominant_reading_level] = (levelCounts[p.dominant_reading_level] || 0) + 1;
+    if (p.dominant_sentiment) sentimentCounts[p.dominant_sentiment] = (sentimentCounts[p.dominant_sentiment] || 0) + 1;
   }
 
   // HRCB Band Distribution
@@ -149,15 +152,17 @@ function computeSourceMetrics(profs: DomainSignalProfile[]): SourceMetrics {
     toneEntries: Object.entries(toneCounts).sort((a, b) => b[1] - a[1]),
     scopeEntries: Object.entries(scopeCounts).sort((a, b) => b[1] - a[1]),
     levelEntries: Object.entries(levelCounts).sort((a, b) => b[1] - a[1]),
+    sentimentEntries: Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1]),
     bands,
   };
 }
 
 const metrics = await cachedQuery<SourceMetrics>(kv, 'sys:sourceMetrics', () => Promise.resolve(computeSourceMetrics(profiles)), 120);
-const { avgSetl, avgFw, avgConf, hrcbSpreadMin, hrcbSpreadMax, leaders, toneEntries, scopeEntries, levelEntries, bands } = metrics;
+const { avgSetl, avgFw, avgConf, hrcbSpreadMin, hrcbSpreadMax, leaders, toneEntries, scopeEntries, levelEntries, sentimentEntries, bands } = metrics;
 const maxTone = toneEntries.length > 0 ? toneEntries[0][1] : 1;
 const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
 const maxLevel = levelEntries.length > 0 ? levelEntries[0][1] : 1;
+const maxSentiment = sentimentEntries.length > 0 ? sentimentEntries[0][1] : 1;
 const maxBand = Math.max(...bands.map(b => b.count), 1);
 
 // --- Hub cards ---
@@ -315,7 +320,7 @@ const jsonLd = {
 
         {/* ═══ SECTION 4 — Editorial Character ═══ */}
 
-        {(toneEntries.length > 0 || scopeEntries.length > 0 || levelEntries.length > 0) && (
+        {(toneEntries.length > 0 || scopeEntries.length > 0 || levelEntries.length > 0 || sentimentEntries.length > 0) && (
           <div>
             <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Editorial Character</h2>
             <p style="color: #5b7279; font-size: var(--font-sm); margin-bottom: 10px;">How sources distribute across tone, scope, and reading level</p>
@@ -378,6 +383,28 @@ const jsonLd = {
                           <td style="padding: 2px 8px;">
                             <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
                               <div style={`width: ${pct}%; height: 100%; background: #eab308; border-radius: 3px;`}></div>
+                            </div>
+                          </td>
+                          <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>
+                        </tr>
+                      );
+                    })}
+                  </table>
+                </div>
+              )}
+
+              {sentimentEntries.length > 0 && (
+                <div style="background: #093946; border: 1px solid #1a5568; border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Sentiment</p>
+                  <table cellpadding="0" cellspacing="0" width="100%">
+                    {sentimentEntries.map(([label, count]) => {
+                      const pct = maxSentiment > 0 ? Math.round((count / maxSentiment) * 100) : 0;
+                      return (
+                        <tr>
+                          <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 8px;">
+                            <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: #16a34a; border-radius: 3px;`}></div>
                             </div>
                           </td>
                           <td style="width: 36px; text-align: right; color: #5b7279; font-size: var(--font-xs);" class="score-font">{count}</td>

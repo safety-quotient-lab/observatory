@@ -33,8 +33,8 @@ export async function getModelAgreement(db: D1Database): Promise<ModelAgreementP
         ELSE NULL END as pearson_r
        FROM rater_evals a
        JOIN rater_evals b ON a.hn_id = b.hn_id AND a.eval_model < b.eval_model
-       INNER JOIN model_registry mr_a ON mr_a.id = a.eval_model AND mr_a.enabled = 1
-       INNER JOIN model_registry mr_b ON mr_b.id = b.eval_model AND mr_b.enabled = 1
+       INNER JOIN model_registry mr_a ON mr_a.model_id = a.eval_model AND mr_a.enabled = 1
+       INNER JOIN model_registry mr_b ON mr_b.model_id = b.eval_model AND mr_b.enabled = 1
        WHERE a.eval_status = 'done' AND b.eval_status = 'done'
          AND a.hcb_weighted_mean IS NOT NULL AND b.hcb_weighted_mean IS NOT NULL
        GROUP BY a.eval_model, b.eval_model
