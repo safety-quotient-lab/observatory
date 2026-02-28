@@ -93,11 +93,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Round 6 — User-Facing Features
 
-- [ ] **Article deep dive enhancements** (`/article/[n]`)
-  - Stddev distribution, evidence strength breakdown
-  - Top 3 positive/negative stories per article (wire up orphaned
-    `getTopPositiveStories`/`getTopNegativeStories` from db-stories.ts)
-  - Directionality marker distribution, theme tag word cloud
 
 - [ ] **Domain factions enhancements**
   - Faction drift tracking over time

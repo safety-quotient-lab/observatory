@@ -3,7 +3,8 @@ import Base from '../../layouts/Base.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
-import { getArticleRanking, getArticleCoverage } from '../../lib/db';
+import { getArticleRanking, getArticleCoverage, getArticleDetailStats, getArticleDirectionalityBreakdown, getArticleThemeBreakdown } from '../../lib/db';
+import type { ArticleRankingRow } from '../../lib/db';
 import { readDb } from '../../lib/db-utils';
 
 const { n } = Astro.params;
@@ -32,6 +33,37 @@ const displayRankings = hasMore ? rankings.slice(0, PER_PAGE) : rankings;
 
 // Build a map of section -> { signal_count, avg_final } for the article selector
 const coverageMap = new Map(coverage.map(c => [c.section, c]));
+
+// Deep dive data
+const deepStats = await getArticleDetailStats(db, section);
+const [directionality, themes, bottom3] = await Promise.all([
+  getArticleDirectionalityBreakdown(db, section),
+  getArticleThemeBreakdown(db, section),
+  page === 1 ? getArticleRanking(db, articleNum, 3, 0, 'asc') : Promise.resolve([] as ArticleRankingRow[]),
+]);
+const stddev = deepStats?.variance != null ? Math.sqrt(deepStats.variance) : null;
+const top3 = page === 1 ? displayRankings.slice(0, 3) : [];
+const showDeepDive = page === 1 && displayRankings.length > 0 && deepStats != null && deepStats.count > 0;
+const evTotal = deepStats ? deepStats.evidence_h + deepStats.evidence_m + deepStats.evidence_l + deepStats.evidence_nd : 0;
+const evPcts = evTotal > 0
+  ? { h: (deepStats!.evidence_h / evTotal) * 100, m: (deepStats!.evidence_m / evTotal) * 100,
+      l: (deepStats!.evidence_l / evTotal) * 100, nd: (deepStats!.evidence_nd / evTotal) * 100 }
+  : { h: 0, m: 0, l: 0, nd: 0 };
+const evidenceRows = deepStats && evTotal > 0 ? [
+  { key: 'h',  label: 'High',   count: deepStats.evidence_h,  pct: evPcts.h,  color: '#16a34a' },
+  { key: 'm',  label: 'Medium', count: deepStats.evidence_m,  pct: evPcts.m,  color: '#eab308' },
+  { key: 'l',  label: 'Low',    count: deepStats.evidence_l,  pct: evPcts.l,  color: '#d56500' },
+  { key: 'nd', label: 'ND',     count: deepStats.evidence_nd, pct: evPcts.nd, color: '#1a5568' },
+] : [];
+const dirMax = directionality.length > 0 ? Math.max(...directionality.map(d => d.cnt)) : 1;
+const DIRMETA: { [k: string]: { label: string; desc: string; color: string } } = {
+  A: { label: 'Affirming',  desc: 'Content affirms the right',           color: '#16a34a' },
+  P: { label: 'Pressuring', desc: 'Content pressures toward the right',  color: '#eab308' },
+  F: { label: 'Framing',    desc: 'Frames narrative around the right',   color: '#3b82f6' },
+  C: { label: 'Contesting', desc: 'Content contests or undermines',      color: '#dc2626' },
+  D: { label: 'Deflecting', desc: 'Deflects attention from the right',   color: '#9333ea' },
+  N: { label: 'Neutral',    desc: 'Neutral or factual reference',        color: '#5b7279' },
+};
 
 const prevNum = articleNum > 0 ? articleNum - 1 : null;
 const nextNum = articleNum < 30 ? articleNum + 1 : null;
@@ -273,6 +305,133 @@ const jsonLd = udhrSection ? {
         </td>
       </tr>
     </table>
+  )}
+
+  {/* ═══ Deep Dive ═══ */}
+  {showDeepDive && deepStats && (
+    <details open class="collapsible-section" style="margin-top: 10px;">
+      <summary>
+        Deep Dive
+        <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+          {deepStats.count.toLocaleString()} stories · all-time section stats
+        </span>
+      </summary>
+
+      {/* Score stat cards */}
+      <div class="stat-cards" style="margin-bottom: 10px; gap: 6px;">
+        <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Stories</div>
+          <div class="score-font" style="font-size: var(--font-md); color: #98a8a8;">{deepStats.count.toLocaleString()}</div>
+        </div>
+        <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Avg</div>
+          <div class="score-font" style={`font-size: var(--font-md); color: ${scoreToColor(deepStats.avg_final)};`}>{formatScore(deepStats.avg_final)}</div>
+        </div>
+        {stddev != null && (
+          <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+            <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Stddev</div>
+            <div class="score-font" style="font-size: var(--font-md); color: #5b7279;">{stddev.toFixed(3)}</div>
+          </div>
+        )}
+        <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Best</div>
+          <div class="score-font" style={`font-size: var(--font-md); color: ${scoreToColor(deepStats.max_final)};`}>{formatScore(deepStats.max_final)}</div>
+        </div>
+        <div style="background: #0d4655; padding: 8px 12px; border-radius: 4px; flex: 1; min-width: 70px;">
+          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px;">Worst</div>
+          <div class="score-font" style={`font-size: var(--font-md); color: ${scoreToColor(deepStats.min_final)};`}>{formatScore(deepStats.min_final)}</div>
+        </div>
+      </div>
+
+      {/* Top 3 / Bottom 3 */}
+      {(top3.length > 0 || bottom3.length > 0) && (
+        <div class="two-col" style="gap: 8px; margin-bottom: 10px;">
+          {top3.length > 0 && (
+            <div>
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Strongest alignment</div>
+              {top3.map(r => (
+                <div style={`background: #0d4655; border-radius: 4px; padding: 6px 10px; margin-bottom: 4px; border-left: 3px solid ${scoreToColor(r.final)};`}>
+                  <div class="score-font" style={`color: ${scoreToColor(r.final)}; font-size: var(--font-sm); font-weight: bold;`}>{formatScore(r.final)}</div>
+                  <div style="font-size: var(--font-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
+                    <a href={`/item/${r.hn_id}`} style="color: #98a8a8;">{r.title}</a>
+                  </div>
+                  {r.domain && <div style="color: #5b7279; font-size: 9px;">{r.domain}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+          {bottom3.length > 0 && (
+            <div>
+              <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">Weakest alignment</div>
+              {bottom3.map(r => (
+                <div style={`background: #0d4655; border-radius: 4px; padding: 6px 10px; margin-bottom: 4px; border-left: 3px solid ${scoreToColor(r.final)};`}>
+                  <div class="score-font" style={`color: ${scoreToColor(r.final)}; font-size: var(--font-sm); font-weight: bold;`}>{formatScore(r.final)}</div>
+                  <div style="font-size: var(--font-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
+                    <a href={`/item/${r.hn_id}`} style="color: #98a8a8;">{r.title}</a>
+                  </div>
+                  {r.domain && <div style="color: #5b7279; font-size: 9px;">{r.domain}</div>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Evidence breakdown */}
+      {evidenceRows.length > 0 && (
+        <div style="margin-bottom: 10px;">
+          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Evidence strength</div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            {evidenceRows.filter(ev => ev.count > 0).map(ev => (
+              <div style="display: flex; align-items: center; gap: 6px; font-size: var(--font-xs);">
+                <span style={`color: ${ev.color}; width: 44px; flex-shrink: 0;`}>{ev.label}</span>
+                <div style="flex: 1; height: 8px; background: #082e38; border-radius: 3px; overflow: hidden;">
+                  <div style={`width: ${ev.pct.toFixed(1)}%; height: 100%; background: ${ev.color}; border-radius: 3px;`}></div>
+                </div>
+                <span style="color: #5b7279; width: 58px; text-align: right; flex-shrink: 0; font-family: monospace; font-size: 9px;">{ev.count} ({ev.pct.toFixed(0)}%)</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Directionality markers */}
+      {directionality.length > 0 && (
+        <div style="margin-bottom: 10px;">
+          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Directionality markers</div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            {directionality.map(d => {
+              const meta = DIRMETA[d.marker] ?? { label: d.marker, desc: '', color: '#5b7279' };
+              const pct = dirMax > 0 ? (d.cnt / dirMax) * 100 : 0;
+              return (
+                <div style="display: flex; align-items: center; gap: 6px; font-size: var(--font-xs);" title={meta.desc}>
+                  <span style={`color: ${meta.color}; width: 70px; flex-shrink: 0;`}>{meta.label}</span>
+                  <div style="flex: 1; height: 8px; background: #082e38; border-radius: 3px; overflow: hidden;">
+                    <div style={`width: ${pct.toFixed(1)}%; height: 100%; background: ${meta.color}; border-radius: 3px; opacity: 0.75;`}></div>
+                  </div>
+                  <span style="color: #5b7279; width: 30px; text-align: right; flex-shrink: 0; font-family: monospace; font-size: 9px;">{d.cnt}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Theme tags */}
+      {themes.length > 0 && (
+        <div>
+          <div style="color: #5b7279; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Top themes</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            {themes.map(t => (
+              <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: #0d4655; border-radius: 10px; font-size: 9px; color: #98a8a8; border: 1px solid #1a5568;">
+                {t.theme}
+                <span style="color: #1a5568;">{t.cnt}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </details>
   )}
 
   <script>

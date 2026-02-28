@@ -448,10 +448,12 @@ export async function getArticleRanking(
   db: D1Database,
   articleNum: number,
   limit = 30,
-  offset = 0
+  offset = 0,
+  sortDir: 'asc' | 'desc' = 'desc'
 ): Promise<ArticleRankingRow[]> {
   try {
     const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
+    const order = sortDir === 'asc' ? 'ASC' : 'DESC';
     const { results } = await db
       .prepare(
         `SELECT s.hn_id, s.title, s.domain, s.url, s.hn_score, s.hn_comments,
@@ -464,7 +466,7 @@ export async function getArticleRanking(
          JOIN stories s ON s.hn_id = sc.hn_id
          WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'
            AND sc.eval_model = s.eval_model
-         ORDER BY sc.final DESC
+         ORDER BY sc.final ${order}
          LIMIT ? OFFSET ?`
       )
       .bind(section, limit, offset)

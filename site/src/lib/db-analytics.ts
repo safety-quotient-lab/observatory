@@ -1353,3 +1353,107 @@ export async function getCostStats(db: D1Database): Promise<CostStatRow[]> {
   }
 }
 
+// --- Article deep dive analytics ---
+
+export interface ArticleDetailStats {
+  count: number;
+  avg_final: number | null;
+  min_final: number | null;
+  max_final: number | null;
+  variance: number | null;
+  evidence_h: number;
+  evidence_m: number;
+  evidence_l: number;
+  evidence_nd: number;
+}
+
+export async function getArticleDetailStats(db: D1Database, section: string): Promise<ArticleDetailStats | null> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT COUNT(*) as count,
+                AVG(sc.final) as avg_final,
+                MIN(sc.final) as min_final,
+                MAX(sc.final) as max_final,
+                MAX(0.0, AVG(sc.final * sc.final) - AVG(sc.final) * AVG(sc.final)) as variance,
+                SUM(CASE WHEN sc.evidence = 'H' THEN 1 ELSE 0 END) as evidence_h,
+                SUM(CASE WHEN sc.evidence = 'M' THEN 1 ELSE 0 END) as evidence_m,
+                SUM(CASE WHEN sc.evidence = 'L' THEN 1 ELSE 0 END) as evidence_l,
+                SUM(CASE WHEN sc.evidence IS NULL THEN 1 ELSE 0 END) as evidence_nd
+         FROM rater_scores sc
+         JOIN stories s ON s.hn_id = sc.hn_id AND s.eval_model = sc.eval_model
+         INNER JOIN model_registry mr ON mr.model_id = sc.eval_model AND mr.enabled = 1
+         WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'`
+      )
+      .bind(section)
+      .first<ArticleDetailStats>();
+    return row ?? null;
+  } catch (err) {
+    console.error('[getArticleDetailStats]', err);
+    return null;
+  }
+}
+
+export interface DirectionalityBreakdownRow {
+  marker: string;
+  cnt: number;
+}
+
+export async function getArticleDirectionalityBreakdown(
+  db: D1Database,
+  section: string
+): Promise<DirectionalityBreakdownRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT je.value as marker, COUNT(*) as cnt
+         FROM rater_scores sc
+         JOIN stories s ON s.hn_id = sc.hn_id AND s.eval_model = sc.eval_model
+         INNER JOIN model_registry mr ON mr.model_id = sc.eval_model AND mr.enabled = 1,
+         json_each(sc.directionality) je
+         WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'
+           AND sc.directionality IS NOT NULL
+           AND sc.directionality NOT IN ('[]', 'null', '')
+         GROUP BY je.value
+         ORDER BY cnt DESC`
+      )
+      .bind(section)
+      .all<DirectionalityBreakdownRow>();
+    return results;
+  } catch (err) {
+    console.error('[getArticleDirectionalityBreakdown]', err);
+    return [];
+  }
+}
+
+export interface ThemeBreakdownRow {
+  theme: string;
+  cnt: number;
+}
+
+export async function getArticleThemeBreakdown(
+  db: D1Database,
+  section: string
+): Promise<ThemeBreakdownRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT s.hcb_theme_tag as theme, COUNT(*) as cnt
+         FROM rater_scores sc
+         JOIN stories s ON s.hn_id = sc.hn_id AND s.eval_model = sc.eval_model
+         INNER JOIN model_registry mr ON mr.model_id = sc.eval_model AND mr.enabled = 1
+         WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'
+           AND s.hcb_theme_tag IS NOT NULL AND s.hcb_theme_tag != ''
+         GROUP BY s.hcb_theme_tag
+         ORDER BY cnt DESC
+         LIMIT 12`
+      )
+      .bind(section)
+      .all<ThemeBreakdownRow>();
+    return results;
+  } catch (err) {
+    console.error('[getArticleThemeBreakdown]', err);
+    return [];
+  }
+}
+
