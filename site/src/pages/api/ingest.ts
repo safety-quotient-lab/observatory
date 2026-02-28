@@ -75,9 +75,64 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const safeInputTokens = Number.isInteger(input_tokens) && input_tokens >= 0 ? input_tokens : 0;
   const safeOutputTokens = Number.isInteger(output_tokens) && output_tokens >= 0 ? output_tokens : 0;
 
-  if (prompt_mode === 'light') {
-    const light = result as LightEvalResponse;
-    const validation = validateLightEvalResponse(light);
+  try {
+    if (prompt_mode === 'light') {
+      const light = result as LightEvalResponse;
+      const validation = validateLightEvalResponse(light);
+      if (!validation.valid) {
+        return new Response(JSON.stringify({ error: 'Validation failed', details: validation.errors }), {
+          status: 422,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      await writeLightRaterEvalResult(
+        env.DB, hn_id, light, model_id, provider,
+        prompt_hash ?? null, methodology_hash ?? null,
+        safeInputTokens, safeOutputTokens, 0,
+      );
+
+      // Longitudinal calibration snapshot: if this is a calibration ID and a run is active, persist to calibration_evals
+      const isCalId = hn_id >= -2015 && hn_id <= -2001;
+      if (isCalId && env.CONTENT_CACHE) {
+        const runStr = await env.CONTENT_CACHE.get('calibration:light:current_run').catch(() => null);
+        const calibrationRun = runStr ? parseInt(runStr) : NaN;
+        if (!isNaN(calibrationRun)) {
+          await writeCalibrationEval(env.DB, calibrationRun, hn_id, light, model_id, provider);
+        }
+      }
+
+      const agg = computeLightAggregates(light);
+
+      return new Response(JSON.stringify({
+        ok: true, hn_id, model_id, prompt_mode: 'light',
+        weighted_mean: agg.weighted_mean,
+        classification: agg.classification,
+        repairs: validation.repairs,
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Full mode
+    const slim = result as SlimEvalResponse;
+
+    // Normalize content_type: string "ED" → { primary: "ED", secondary: [] }
+    if (slim.evaluation && typeof slim.evaluation.content_type === 'string') {
+      (slim.evaluation as any).content_type = { primary: slim.evaluation.content_type, secondary: [] };
+    }
+
+    // Hoist supplementary_signals to top level if nested (standalone evaluator raw output)
+    const sup = (result as any).supplementary_signals;
+    if (sup && typeof sup === 'object') {
+      for (const key of ['epistemic_quality', 'propaganda_flags', 'solution_orientation',
+        'emotional_tone', 'stakeholder_representation', 'temporal_framing',
+        'geographic_scope', 'complexity_level', 'transparency_disclosure']) {
+        if (sup[key] !== undefined && (slim as any)[key] === undefined) {
+          (slim as any)[key] = sup[key];
+        }
+      }
+    }
+
+    const validation = validateSlimEvalResponse(slim);
     if (!validation.valid) {
       return new Response(JSON.stringify({ error: 'Validation failed', details: validation.errors }), {
         status: 422,
@@ -85,63 +140,30 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    await writeLightRaterEvalResult(
-      env.DB, hn_id, light, model_id, provider,
+    const channelWeights = slim.evaluation.channel_weights ?? { editorial: 0.5, structural: 0.5 };
+    const aggregates = computeAggregates(slim.scores, channelWeights);
+    const dcp = typeof slim.domain_context_profile === 'string'
+      ? { domain: slim.evaluation.domain, eval_date: slim.evaluation.date, elements: {} }
+      : slim.domain_context_profile;
+    const fullResult: EvalResult = { ...slim, domain_context_profile: dcp, aggregates };
+
+    await writeRaterEvalResult(
+      env.DB, hn_id, fullResult, model_id, provider,
       prompt_hash ?? null, methodology_hash ?? null,
       safeInputTokens, safeOutputTokens, 0,
     );
 
-    // Longitudinal calibration snapshot: if this is a calibration ID and a run is active, persist to calibration_evals
-    const isCalId = hn_id >= -2015 && hn_id <= -2001;
-    if (isCalId && env.CONTENT_CACHE) {
-      const runStr = await env.CONTENT_CACHE.get('calibration:light:current_run').catch(() => null);
-      const calibrationRun = runStr ? parseInt(runStr) : NaN;
-      if (!isNaN(calibrationRun)) {
-        await writeCalibrationEval(env.DB, calibrationRun, hn_id, light, model_id, provider);
-      }
-    }
-
-    const agg = computeLightAggregates(light);
-
-    // writeLightRaterEvalResult above fills hcb_editorial_mean, theme_tag, etc. via COALESCE.
-    // eval_status is NOT changed — stories remain pending/queued until full eval promotes them.
     return new Response(JSON.stringify({
-      ok: true, hn_id, model_id, prompt_mode: 'light',
-      weighted_mean: agg.weighted_mean,
-      classification: agg.classification,
+      ok: true, hn_id, model_id, prompt_mode: 'full',
+      weighted_mean: aggregates.weighted_mean,
+      classification: aggregates.classification,
       repairs: validation.repairs,
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-  }
-
-  // Full mode
-  const slim = result as SlimEvalResponse;
-  const validation = validateSlimEvalResponse(slim);
-  if (!validation.valid) {
-    return new Response(JSON.stringify({ error: 'Validation failed', details: validation.errors }), {
-      status: 422,
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ error: 'Internal error', detail: message, hn_id, model_id }), {
+      status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-
-  const channelWeights = slim.evaluation.channel_weights ?? { editorial: 0.5, structural: 0.5 };
-  const aggregates = computeAggregates(slim.scores, channelWeights);
-  const dcp = typeof slim.domain_context_profile === 'string'
-    ? { domain: slim.evaluation.domain, eval_date: slim.evaluation.date, elements: {} }
-    : slim.domain_context_profile;
-  const fullResult: EvalResult = { ...slim, domain_context_profile: dcp, aggregates };
-
-  await writeRaterEvalResult(
-    env.DB, hn_id, fullResult, model_id, provider,
-    prompt_hash ?? null, methodology_hash ?? null,
-    safeInputTokens, safeOutputTokens, 0,
-  );
-
-  // writeRaterEvalResult already promotes eval_status to 'done' via writeEvalResult
-
-  return new Response(JSON.stringify({
-    ok: true, hn_id, model_id, prompt_mode: 'full',
-    weighted_mean: aggregates.weighted_mean,
-    classification: aggregates.classification,
-    repairs: validation.repairs,
-  }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 };

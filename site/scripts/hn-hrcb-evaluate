@@ -465,11 +465,13 @@ USERMSG
     *)      MODEL_ID="$MODEL" ;;
   esac
 
-  INGEST_BODY=$(jq -n \
+  local INGEST_FILE
+  INGEST_FILE=$(mktemp)
+  jq -n \
     --argjson hn_id "$HN_ID" \
     --arg model_id "$MODEL_ID" \
     --arg provider "claude-code-standalone" \
-    --argjson result "$(cat "$EVAL_FILE")" \
+    --slurpfile result "$EVAL_FILE" \
     '{
       hn_id: $hn_id,
       model_id: $model_id,
@@ -479,16 +481,21 @@ USERMSG
       output_tokens: 0,
       prompt_hash: null,
       methodology_hash: null,
-      result: $result
-    }')
+      result: $result[0]
+    }' > "$INGEST_FILE"
 
-  INGEST_RESP=$(curl -s -X POST \
+  local HTTP_CODE
+  INGEST_RESP=$(curl -s -w '\n%{http_code}' -X POST \
     -H "Authorization: Bearer $TRIGGER_SECRET" \
     -H "Content-Type: application/json" \
-    -d "$INGEST_BODY" \
-    "$INGEST_URL" 2>/dev/null || echo '{"error":"curl failed"}')
+    -d @"$INGEST_FILE" \
+    "$INGEST_URL" 2>/dev/null || echo -e '{"error":"curl failed"}\n000')
+  rm -f "$INGEST_FILE"
 
-  INGEST_OK=$(echo "$INGEST_RESP" | jq -r '.ok // false')
+  HTTP_CODE=$(echo "$INGEST_RESP" | tail -1)
+  INGEST_RESP=$(echo "$INGEST_RESP" | sed '$d')
+
+  INGEST_OK=$(echo "$INGEST_RESP" | jq -r '.ok // false' 2>/dev/null)
 
   DB_END=$(date +%s%3N)
   DB_MS=$((DB_END - DB_START))
@@ -501,7 +508,8 @@ USERMSG
     echo "  ingest: $(fmt_ms $DB_MS) → done (hrcb=$WM, $CLS, ${REPAIRS} repairs)"
   else
     local ERR_MSG
-    ERR_MSG=$(echo "$INGEST_RESP" | jq -r '.error // "unknown error"')
+    ERR_MSG=$(echo "$INGEST_RESP" | jq -r '([.error, .detail, (.details | if type == "array" then join("; ") else . end)] | map(select(. != null)) | join(": "))' 2>/dev/null)
+    [ -z "$ERR_MSG" ] && ERR_MSG="HTTP $HTTP_CODE"
     echo "  ingest: $(fmt_ms $DB_MS) FAILED ($ERR_MSG)"
     run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'ingest failed: $ERR_MSG' WHERE hn_id = $HN_ID"
     rm -f "$EVAL_FILE"
