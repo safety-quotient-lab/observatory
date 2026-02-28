@@ -35,12 +35,38 @@ Work through each step. Skip any that don't apply to the changes described in $A
 - Update page listings if pages were added/removed/renamed
 - Keep it concise — CLAUDE.md is for developer orientation, not full docs
 
-### 4. Update project memory (`~/.claude/projects/-home-kashif-projects-unudhr/memory/MEMORY.md`)
+### 4. Update project memory
 
-- Record any new stable patterns confirmed during this session
-- Record any new gotchas discovered (e.g., type coercion bugs, API quirks)
-- Update existing entries if they're now wrong
-- Don't duplicate what's already in CLAUDE.md — memory is for cross-session insights
+Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines — it is a lean orientation doc, not a knowledge dump. Details live in topic files that are Read on demand.
+
+**Memory locations:**
+- `~/.claude/projects/-home-kashif-projects-unudhr/memory/` — unudhr-specific (loaded when CWD = `~/projects/unudhr/`)
+  - `MEMORY.md` — orientation index: user prefs, quick facts, key gotchas, links to topic files
+  - `unudhr-ops.md` — deployment commands, endpoints, daemon, Workers AI, schema, key files, calibration IDs
+  - `unudhr-patterns.md` — gotchas, Astro/CSS patterns, site taxonomy, light prompt mode, module architecture
+- `~/.claude/projects/-home-kashif-projects/memory/` — cross-project (loaded when CWD = `~/projects/`)
+  - `MEMORY.md` — cross-project index (unudhr overview, PSQ, PJE)
+  - `hncb-calibration.md` — calibration history, cal set table, run history
+  - `hncb-pipeline.md` — pipeline architecture, hardening, archive, trust, open source strategy
+  - `safetyquotient.md` — PSQ project state, hard constraints, scripts
+
+**Routing rules — what goes where:**
+| Changed | Update |
+|---------|--------|
+| New gotcha (Astro/CSS/D1/CF quirk) | `unudhr-patterns.md` |
+| New deployment command or endpoint | `unudhr-ops.md` |
+| Schema migration or data model change | `unudhr-ops.md` (Schema section) |
+| Calibration run result or cal set change | `hncb-calibration.md` |
+| Pipeline architecture change (new worker, new KV pattern) | `hncb-pipeline.md` |
+| New always-on-context gotcha (affects every session) | `MEMORY.md` → Key Gotchas |
+| PSQ project state change | `safetyquotient.md` (from cross-project memory dir) |
+
+**Process:**
+1. Read the relevant topic file(s) before editing — never write blind
+2. Update in place (Edit tool) rather than appending to avoid duplicates
+3. Remove entries that are now wrong or superseded
+4. If MEMORY.md exceeds ~60 lines, move content to the appropriate topic file
+5. Never duplicate content between CLAUDE.md and memory files — CLAUDE.md is for developers, memory is for Claude's cross-session orientation
 
 ### 5. Update TODO.md
 
