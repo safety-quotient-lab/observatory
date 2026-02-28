@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getStatusCounts, getSignalOverview } from '../lib/db';
+import { getStatusCounts, getSignalOverview, getTdSignalAggregates } from '../lib/db';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -17,6 +17,11 @@ try {
   ]);
   storyCount = status.done;
   signalData = signals;
+} catch {}
+
+let tdData: Awaited<ReturnType<typeof getTdSignalAggregates>> | null = null;
+try {
+  tdData = await cachedQuery(kv, 'sys:tdSignalAggregates', () => getTdSignalAggregates(db), 300);
 } catch {}
 
 const avgEq = signalData?.avg_eq ?? 0;
@@ -59,6 +64,13 @@ const techEntries = signalData?.technique_distribution
   ? Object.entries(signalData.technique_distribution).sort((a, b) => b[1] - a[1]).slice(0, 5)
   : [];
 const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
+
+const tdRows = tdData ? [
+  { label: 'Any disclosure',      pct: tdData.any_disclosure_pct },
+  { label: 'Author identified',   pct: tdData.author_identified_pct },
+  { label: 'Conflicts disclosed', pct: tdData.conflicts_disclosed_pct },
+  { label: 'Funding disclosed',   pct: tdData.funding_disclosed_pct },
+] : [];
 ---
 
 <Base title="Signal Dashboard">
@@ -307,6 +319,46 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
             <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
           </div>
         </div>
+
+        {/* ═══ Transparency Disclosure Rates ═══ */}
+
+        {tdData && tdData.td_measured > 0 && (
+          <div style="margin-bottom: 20px;">
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">
+              Transparency Observatory
+              <span style="color: var(--fg-secondary); font-weight: normal; margin-left: 4px;">
+                ({tdData.td_measured.toLocaleString()} of {tdData.total_evaluated.toLocaleString()} stories measured)
+              </span>
+            </p>
+            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+              <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+                {tdRows.map(({ label, pct }) => (
+                  <tr>
+                    <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
+                    <td style="padding: 0 8px;">
+                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+                        <div style={`background: var(--color-positive); opacity: 0.5; border-radius: 3px; height: 14px; width: ${pct ?? 0}%;`}></div>
+                      </div>
+                    </td>
+                    <td style="width: 40px; text-align: right; color: var(--fg-primary);" class="score-font">
+                      {pct !== null ? `${pct.toFixed(0)}%` : 'n/a'}
+                    </td>
+                  </tr>
+                ))}
+              </table>
+              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+                Each rate is the share of stories where that field was measured and true.
+                Avg TD score: <span class="score-font">{tdData.avg_td_score !== null ? tdData.avg_td_score.toFixed(2) : 'n/a'}</span>.
+                {tdData.high_td_pct !== null && (
+                  <> <span style="color: var(--color-positive);">{tdData.high_td_pct.toFixed(0)}%</span> high (≥ 0.5)</>
+                )}
+                {tdData.low_td_pct !== null && (
+                  <> · <span style="color: var(--color-negative);">{tdData.low_td_pct.toFixed(0)}%</span> low (≤ −0.3)</>
+                )}.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ═══ SECTION 4 — Fair Witness ═══ */}
 
