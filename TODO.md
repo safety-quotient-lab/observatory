@@ -63,24 +63,15 @@ rounds. 30/43 items already fixed; remaining items below.
   - Top 10 files = 82% of instances: about (242), item/[id] (170), status/models (152), signals (114), factions (107), rights/observatory (89), status (84), users (70), status/events (70), dynamics (53)
   - **Assigned to a separate agent** — do not interleave with feature work
 
-### Round 4 — Analytics (runs on existing data, no migrations needed)
+### Round 4 — Analytics *(done 2026-02-28)*
 
-- [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
-  - [x] **Model channel averages** — HRCB/E/S triple bar per model on `/status/models`. *(done 2026-02-28)*
-  - [x] **Eval velocity chart** — stacked bar evals/day (full+lite) on `/status`. *(done 2026-02-28)*
-  - [ ] **Coverage progression** — daily funnel: no-coverage → light → full → multi-model. On `/status/models`.
-    Needs `daily_coverage_stats` materialized table or live query from `stories` + `rater_evals`
-  - [ ] **Per-content-type eval mix** — which content types (ED, PO, LP, PR, etc.) are
-    getting evaluated vs skipped. On `/status/models`.
-  - [ ] **Truncation impact dashboard** — distribution of `content_truncation_pct` across
-    models, correlation with score divergence. Data from migration 0040. On `/status/models`.
-
-- [ ] **Cost attribution widget** — cost/eval by model + daily burn rate on `/status/models`
-  - Token count data reliable since 2026-02-28. Needs pricing table (Anthropic/OpenRouter rates hardcoded).
-  - Workers AI = $0 (CF doesn't expose usage). Rate limit forecasting deferred to Phase 2.
-
-- [ ] **SETL spike alerting** — emit `event_type='setl_spike'` when domain avg |SETL| crosses threshold.
-  Visible on `/status/events`. No new UI.
+- [x] **Model channel averages** — HRCB/E/S triple bar per model on `/status/models`.
+- [x] **Eval velocity chart** — stacked bar evals/day (full+lite) on `/status`.
+- [x] **Coverage progression** — 30-day stacked bar (full/lite) on `/status/models`. Live query, no materialization.
+- [x] **Per-content-type eval mix** — stacked bar per content_type in Measurement Integrity on `/status/models`.
+- [x] **Truncation impact** — per-model score bias (truncated vs full) in Measurement Integrity on `/status/models`.
+- [x] **Cost attribution widget** — estimated API spend (7d/30d) per model on `/status/models`. MODEL_PRICING hardcoded.
+- [x] **SETL spike alerting** — `sweep=setl_spikes` emits `setl_spike` warn events. Rate limit forecasting deferred.
 
 - [ ] **Velocity enhancements**
   - Velocity alerts (stories hitting score threshold)
