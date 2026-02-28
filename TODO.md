@@ -77,19 +77,10 @@ rounds. 30/43 items already fixed; remaining items below.
   - Velocity alerts (stories hitting score threshold)
   - Velocity decay analysis
 
-### Round 4.5 — Search + Longitudinal
+### Round 4.5 — Search + Longitudinal *(done 2026-02-28)*
 
-- [ ] **Passthrough FTS** — Algolia-backed search with mirror + eval integration
-  - UI: nav "search" link → `/search?q=...` page (HN-style: simple input, results below)
-  - Scope: stories (Algolia) + domains + users (D1)
-  - Results: all hits — evaluated with HRCB scores, unevaluated with badges — plus filter controls
-  - **Eager consumer**: auto-pulls stories matching `(score ≥100 AND age ≤7d) OR (score ≤10 AND comments ≥5 AND age ≤12h)` + readable URL required. The second branch is the **sleeper detector** — a pluggable `SLEEPER_RULES` array (each rule: `{ maxScore, minComments, maxAgeHours, label }`) so rules can be added/removed without code restructuring.
-  - **Play button** (►): donor-only (same 7-day donation cookie as homepage/stories page). Non-donors see locked button.
-  - Donation cookie check: `request.headers.get('cookie')` includes `donated=1` — same as existing support page bypass
-
-- [ ] **Longitudinal item page** — dual sparkline + tightened audit trail
-  - Dual mini-chart on `/item/[id]`: HN score trajectory (area/line from `story_snapshots`) + HRCB dots (from `eval_history`) on shared time axis. Show only when ≥2 eval_history entries OR ≥5 story_snapshots.
-  - Audit trail: type filter chips (eval / pipeline / content drift), model filter dropdown, newest/oldest sort toggle
+- [x] **Passthrough FTS** — `/search?q=...` page with Algolia + D1 enrichment, SLEEPER_RULES eager consumer, donor-gated play button
+- [x] **Longitudinal item page** — dual sparkline (HN score + HRCB dots, shared time axis) + audit trail type/model filter + sort toggle
 
 ### Round 5 — Data Expansion
 
