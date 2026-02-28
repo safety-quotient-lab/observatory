@@ -992,8 +992,9 @@ export async function writeLiteRaterEvalResult(
     .run();
 
   // COALESCE fill-in: write lite signals to stories where full eval hasn't set them yet.
-  // Also promotes eval_status to 'done' if story isn't already done (first eval wins;
-  // full evals overwrite via writeEvalResult which has no guard).
+  // Lite evals do NOT promote eval_status — stories stay pending/queued until a full eval
+  // calls writeEvalResult(). EvalCard.hasEval checks scores directly (not eval_status),
+  // so lite-filled stories still display in the feed with editorial scores + [L] icon.
   await db.prepare(
     `UPDATE stories SET
        eq_score = COALESCE(eq_score, ?),
@@ -1005,11 +1006,7 @@ export async function writeLiteRaterEvalResult(
        hcb_editorial_mean = COALESCE(hcb_editorial_mean, ?),
        hcb_theme_tag = COALESCE(hcb_theme_tag, ?),
        hcb_sentiment_tag = COALESCE(hcb_sentiment_tag, ?),
-       hcb_executive_summary = COALESCE(hcb_executive_summary, ?),
-       eval_status = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN 'done' ELSE eval_status END,
-       eval_model = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN ? ELSE eval_model END,
-       eval_error = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN NULL ELSE eval_error END,
-       evaluated_at = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN datetime('now') ELSE evaluated_at END
+       hcb_executive_summary = COALESCE(hcb_executive_summary, ?)
      WHERE hn_id = ?`
   ).bind(
     lite.eq_score ?? null,   // EQ
@@ -1022,7 +1019,6 @@ export async function writeLiteRaterEvalResult(
     lite.theme_tag || null,  // hcb_theme_tag
     lite.sentiment_tag || null, // hcb_sentiment_tag
     lite.short_description || null, // hcb_executive_summary
-    modelId,                  // eval_model (only set if not already done)
     hnId,
   ).run().catch(() => {});
 

@@ -56,6 +56,12 @@ rounds. 30/43 items already fixed; remaining items below.
   - >50% failures → decrement; avg claude_ms > 180s → decrement (model under load)
   - Empty queue → reset to initial. ~20 lines in daemon loop.
 
+### Round 3.5 — HRCB Analytical Model Audit
+
+- [ ] **HRCB model audit findings** — 2 high, 7 medium, 8 low across scoring, validation, calibration
+  - Full plan: `.claude/plans/hrcb-model-audit-2026-02-28.md`
+  - Key items: C2 lite-first promotion, H2 SETL range, supplementary signal validation, evidence weight dedup
+
 ### Round 3.5 — Triage UX Audit
 
 - [ ] **UX audit findings** — 31 items across navigation, accessibility, visual design, mobile

@@ -59,8 +59,9 @@ if (viewParam === 'compare' && raterEvals.length >= 2) {
 const isFailed = storyData.eval_status === 'failed';
 const isDone = storyData.eval_status === 'done' && storyData.hcb_weighted_mean !== null;
 const isPending = storyData.eval_status === 'pending' || storyData.eval_status === 'evaluating';
-// Lite-only: done status but no full weighted_mean — has rater_evals with lite models
-const isLiteOnlyEval = !isDone && storyData.eval_status === 'done' && raterEvals.some(re => isLiteMode(re.prompt_mode));
+// Lite-only: has editorial scores but no full weighted_mean — lite eval filled COALESCE
+// fields but didn't promote eval_status (story stays pending/queued until full eval)
+const isLiteOnlyEval = !isDone && storyData.hcb_editorial_mean !== null && storyData.hcb_weighted_mean === null && raterEvals.some(re => isLiteMode(re.prompt_mode));
 const liteEval = isLiteOnlyEval ? (raterEvals.find(re => isLiteMode(re.prompt_mode)) ?? null) : null;
 
 // DCP: fetch from D1 table (for both done and failed states)
