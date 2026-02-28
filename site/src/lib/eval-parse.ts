@@ -211,6 +211,13 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
           }
         }
       }
+      // Editorial is the primary channel — if missing, final and structural are meaningless
+      if ((score.editorial === null || score.editorial === undefined) &&
+          (score.structural !== null && score.structural !== undefined)) {
+        repairs.push(`Nulled ${score.section}.structural (editorial was null — primary channel required)`);
+        score.structural = null;
+        score.final = null;
+      }
       // Evidence
       if (score.evidence !== null && score.evidence !== undefined) {
         const ev = String(score.evidence).toUpperCase();

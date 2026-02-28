@@ -129,13 +129,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Housekeeping (no urgency)
 
-- [ ] **Fix 48 stories with structural but no editorial mean**
-  - Root cause: model output includes `structural` + `final` but `editorial: null` for sections
-  - `computeAggregates` and `writeEvalResult` correctly propagate nulls, so `hcb_editorial_mean = null`
-  - Fix 1: validation — reject sections where `final` is non-null but `editorial` is null (editorial is primary channel)
-  - Fix 2: backfill — re-evaluate the 48 affected stories (`WHERE hcb_structural_mean IS NOT NULL AND hcb_editorial_mean IS NULL`)
-  - Mostly `deepseek-v3.2` and `claude-haiku-4-5-20251001` eval_models
-
 - [ ] **Prune orphaned query functions** *(data model DM-3)*
   - ~16 exported functions never called — keep as future dashboard candidates
     but consider marking with `/** @internal future use */` JSDoc
