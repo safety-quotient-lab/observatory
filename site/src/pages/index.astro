@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
 import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
-import type { SortOption, FilterOption, TypeOption, ModelOption } from '../lib/db';
+import type { SortOption, FilterOption, TypeOption, ContentTypeOption, ModelOption } from '../lib/db';
 import { modelDisplayName, getModelDef, isLiteMode } from '../lib/shared-eval';
 import { readDb } from '../lib/db-utils';
 
@@ -12,15 +12,18 @@ const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'top') as SortOption;
 const filter = (url.searchParams.get('filter') || 'all') as FilterOption;
 const type = (url.searchParams.get('type') || 'all') as TypeOption;
+const ctype = (url.searchParams.get('ctype') || 'all') as ContentTypeOption;
 const model = (url.searchParams.get('model') || 'any') as ModelOption;
 const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
 const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'velocity'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
+const validCtypes: ContentTypeOption[] = ['all', 'ED', 'PO', 'LP', 'PR', 'AC', 'MI'];
 const safeSort = validSorts.includes(sort) ? sort : 'top';
 const safeFilter = validFilters.includes(filter) ? filter : 'all';
 const safeType = validTypes.includes(type) ? type : 'all';
+const safeCtype = validCtypes.includes(ctype) ? ctype : 'all';
 
 // Fetch distinct models for the selector — only show enabled models with evaluations
 const allDistinctModels = await getDistinctModels(db);
@@ -34,7 +37,7 @@ const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
 // Single JOIN query: stories + scores in one round-trip
-const stories = await getFilteredStoriesWithScores(db, safeSort, safeFilter, safeType, PER_PAGE + 1, offset, undefined, safeModel);
+const stories = await getFilteredStoriesWithScores(db, safeSort, safeFilter, safeType, PER_PAGE + 1, offset, undefined, safeModel, safeCtype);
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
@@ -45,11 +48,13 @@ function buildUrl(params: Record<string, string>): string {
   const s = params.sort ?? safeSort;
   const f = params.filter ?? safeFilter;
   const t = params.type ?? safeType;
+  const ct = params.ctype ?? safeCtype;
   const m = params.model ?? safeModel;
   const pg = params.p ?? '1';
   if (s !== 'top') p.set('sort', s);
   if (f !== 'all') p.set('filter', f);
   if (t !== 'all') p.set('type', t);
+  if (ct !== 'all') p.set('ctype', ct);
   if (m !== 'any') p.set('model', m);
   if (pg !== '1') p.set('p', pg);
   const qs = p.toString();
@@ -82,6 +87,7 @@ const canonicalParams = new URLSearchParams();
 if (safeSort !== 'top') canonicalParams.set('sort', safeSort);
 if (safeFilter !== 'all') canonicalParams.set('filter', safeFilter);
 if (safeType !== 'all') canonicalParams.set('type', safeType);
+if (safeCtype !== 'all') canonicalParams.set('ctype', safeCtype);
 if (safeModel !== 'any') canonicalParams.set('model', safeModel);
 const canonicalQs = canonicalParams.toString();
 const canonicalUrl = `${url.origin}${canonicalQs ? `/?${canonicalQs}` : '/'}`;
@@ -106,6 +112,16 @@ const FILTER_OPTIONS = [
   { value: 'pending', label: 'pending' },
   { value: 'failed', label: 'failed' },
 ] as const;
+
+const CTYPE_OPTIONS: { value: ContentTypeOption; label: string }[] = [
+  { value: 'all', label: 'all' },
+  { value: 'ED', label: 'editorial' },
+  { value: 'PO', label: 'opinion' },
+  { value: 'LP', label: 'legal' },
+  { value: 'PR', label: 'press' },
+  { value: 'AC', label: 'academic' },
+  { value: 'MI', label: 'misc' },
+];
 
 // Short display label for model IDs
 function modelLabel(id: string): string {
@@ -140,6 +156,18 @@ function isLiteModel(id: string): boolean {
           {safeFilter === opt.value
             ? <span class="filter-active">{opt.label}</span>
             : <a href={buildUrl({ filter: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
+          }
+        </>
+      ))}
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">content:</span>
+      {CTYPE_OPTIONS.map((opt, i) => (
+        <>
+          {i > 0 && <span class="filter-sep"> | </span>}
+          {safeCtype === opt.value
+            ? <span class="filter-active">{opt.label}</span>
+            : <a href={buildUrl({ ctype: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
           }
         </>
       ))}

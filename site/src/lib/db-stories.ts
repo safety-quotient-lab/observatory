@@ -173,6 +173,7 @@ function scoreRowToScore(row: ScoreRow): Score {
 export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show' | 'job';
+export type ContentTypeOption = 'all' | 'ED' | 'PO' | 'LP' | 'PR' | 'AC' | 'MI';
 export type ModelOption = string; // 'all' or a model ID like 'claude-haiku-4-5-20251001'
 
 export async function getDistinctModels(db: D1Database): Promise<string[]> {
@@ -219,7 +220,8 @@ export async function getFilteredStoriesWithScores(
   limit = 30,
   offset = 0,
   day?: string,
-  model: ModelOption = 'all'
+  model: ModelOption = 'all',
+  ctype: ContentTypeOption = 'all'
 ): Promise<StoryWithMiniScores[]> {
   const conditions: string[] = ['1=1'];
   switch (filter) {
@@ -236,6 +238,8 @@ export async function getFilteredStoriesWithScores(
     case 'show': conditions.push("s.hn_type = 'show'"); break;
     case 'job': conditions.push("s.hn_type = 'job'"); break;
   }
+
+  if (ctype !== 'all') conditions.push(`s.content_type = '${ctype}'`);
 
   const bindParams: (string | number)[] = [];
   const isAltModel = model !== 'all' && model !== 'any';
