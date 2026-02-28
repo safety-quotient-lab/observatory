@@ -1139,15 +1139,17 @@ export interface ModelChannelAverage {
 export async function getModelChannelAverages(db: D1Database): Promise<ModelChannelAverage[]> {
   const { results } = await db
     .prepare(
-      `SELECT eval_model, prompt_mode,
+      `SELECT re.eval_model, re.prompt_mode,
          COUNT(*) as n,
-         AVG(hcb_weighted_mean) as avg_hrcb,
-         AVG(hcb_editorial_mean) as avg_e,
-         AVG(hcb_structural_mean) as avg_s
-       FROM rater_evals
-       WHERE eval_status = 'done'
-         AND hcb_editorial_mean IS NOT NULL
-       GROUP BY eval_model, prompt_mode
+         AVG(re.hcb_weighted_mean) as avg_hrcb,
+         AVG(re.hcb_editorial_mean) as avg_e,
+         AVG(re.hcb_structural_mean) as avg_s
+       FROM rater_evals re
+       INNER JOIN model_registry mr ON mr.id = re.eval_model
+       WHERE re.eval_status = 'done'
+         AND re.hcb_editorial_mean IS NOT NULL
+         AND re.hn_id > 0
+       GROUP BY re.eval_model, re.prompt_mode
        ORDER BY n DESC`
     )
     .all<ModelChannelAverage>();
