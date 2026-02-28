@@ -45,12 +45,11 @@ rounds. 30/43 items already fixed; remaining items below.
   - Dashboard headroom widget
 
 - [ ] **Cost attribution per model**
-  - Blocked: token counts missing for Anthropic (consumer doesn't write usage) and Workers AI (CF doesn't expose usage). Only DeepSeek/OpenRouter has data.
-  - Prerequisites: fix Anthropic consumer to extract `usage.input_tokens`/`output_tokens` from API response; Workers AI = $0 (hardcode)
+  - [x] Anthropic trigger path now writes real token counts *(done 2026-02-28 — `callClaude()` extracts `usage`; consumer-anthropic.ts was already correct)*
+  - Historical 278 Anthropic evals have 0 tokens (not backfilled). Workers AI = $0 (CF doesn't expose usage; hardcode).
   - Daily cost per model from rater_evals token counts + pricing table
-  - Dashboard widget: cost/eval by model, daily burn rate
+  - Dashboard widget: cost/eval by model, daily burn rate — rebuild `getCostStats` now that data is reliable
   - *Directly informs Phase 2 pricing tiers*
-  - `getCostStats` removed (2026-02-28) — was showing zeros. Rebuild when token data is reliable.
 
 ### Round 3.5 — Triage UX Audit
 
