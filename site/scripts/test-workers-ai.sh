@@ -6,7 +6,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-ACCOUNT_ID="82cd6d38b51fdc6019af192853b1fced"
+ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-<your-account-id>}"  # export CLOUDFLARE_ACCOUNT_ID or set here
 MODEL="${1:-@cf/meta/llama-3.3-70b-instruct-fp8-fast}"
 
 # Get API token from wrangler oauth config

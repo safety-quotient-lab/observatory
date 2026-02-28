@@ -5,7 +5,7 @@ compatibility_date = "2026-02-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "hrcb-db"
-database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
+database_id = "<your-d1-database-id>"  # wrangler d1 list
 
 # Queue producer bindings — one per provider queue for per-provider replay routing
 [[queues.producers]]
