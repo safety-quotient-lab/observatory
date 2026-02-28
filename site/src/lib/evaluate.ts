@@ -4,7 +4,7 @@
  */
 
 import {
-  EVAL_MODEL,
+  PRIMARY_MODEL_ID,
   METHODOLOGY_SYSTEM_PROMPT,
   buildUserMessage,
   parseEvalResponse,
@@ -13,7 +13,7 @@ import {
 import { computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from './compute-aggregates';
 
 // Re-export shared primitives for the trigger endpoint
-export { fetchUrlContent, writeEvalResult, EVAL_MODEL } from './shared-eval';
+export { fetchUrlContent, writeEvalResult, PRIMARY_MODEL_ID } from './shared-eval';
 export type { EvalResult } from './shared-eval';
 
 export interface EvalCallResult {
@@ -50,7 +50,7 @@ export async function callClaude(
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: EVAL_MODEL,
+      model: PRIMARY_MODEL_ID,
       max_tokens: 10240,
       system: [
         {
@@ -88,7 +88,7 @@ export async function callClaude(
 
   return {
     result: parsed,
-    model: EVAL_MODEL,
+    model: PRIMARY_MODEL_ID,
     promptHash,
   };
 }

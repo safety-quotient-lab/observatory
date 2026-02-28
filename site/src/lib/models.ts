@@ -171,6 +171,21 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
 
 export const PRIMARY_MODEL_ID = 'claude-haiku-4-5-20251001';
 
+/**
+ * DB-backed primary model lookup. Queries model_registry for is_primary=1.
+ * Falls back to static PRIMARY_MODEL_ID on error or missing row.
+ */
+export async function getPrimaryModelId(db: D1Database): Promise<string> {
+  try {
+    const row = await db
+      .prepare(`SELECT model_id FROM model_registry WHERE is_primary = 1 LIMIT 1`)
+      .first<{ model_id: string }>();
+    return row?.model_id ?? PRIMARY_MODEL_ID;
+  } catch {
+    return PRIMARY_MODEL_ID;
+  }
+}
+
 export function getModelDef(modelId: string): ModelDefinition | undefined {
   return MODEL_REGISTRY.find(m => m.id === modelId);
 }

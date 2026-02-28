@@ -113,7 +113,9 @@ export async function getArticlePairStats(db: D1Database): Promise<ArticlePairDa
         SUM(a.final * b.final) as sum_ab,
         SUM(a.final) as sum_a, SUM(b.final) as sum_b,
         SUM(a.final * a.final) as sum_a2, SUM(b.final * b.final) as sum_b2
-       FROM scores a JOIN scores b ON a.hn_id = b.hn_id
+       FROM rater_scores a
+       JOIN rater_scores b ON a.hn_id = b.hn_id AND a.eval_model = b.eval_model
+       JOIN stories s ON s.hn_id = a.hn_id AND a.eval_model = s.eval_model
        WHERE a.final IS NOT NULL AND b.final IS NOT NULL AND a.sort_order <= b.sort_order
        GROUP BY a.section, b.section
        HAVING COUNT(*) >= 5`
@@ -333,8 +335,9 @@ export async function getStoryScatterData(db: D1Database, limit = 500): Promise<
               AVG(sc.editorial) as avg_editorial,
               AVG(sc.structural) as avg_structural,
               s.hcb_confidence as conf
-       FROM stories s JOIN scores sc ON s.hn_id = sc.hn_id
-       WHERE s.eval_status = 'done' AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+       FROM stories s JOIN rater_scores sc ON s.hn_id = sc.hn_id
+       WHERE s.eval_status = 'done' AND sc.eval_model = s.eval_model
+         AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
        GROUP BY s.hn_id
        ORDER BY s.evaluated_at DESC
        LIMIT ?`

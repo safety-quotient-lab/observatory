@@ -1,6 +1,6 @@
 import type { Story, MiniScore, StoryWithMiniScores, DomainStat } from './db-stories';
 import { getStoriesByEntity, getEntityDetailStats, type EntityDetailStats, type DomainDetailStats } from './db-stories';
-import { PRIMARY_MODEL_ID, getEnabledModels } from './shared-eval';
+import { getEnabledModels } from './shared-eval';
 import { SETL_CASE_SQL } from './db-utils';
 
 // --- SETL queries ---
@@ -9,8 +9,10 @@ export async function getMeanSetl(db: D1Database): Promise<number | null> {
   const row = await db
     .prepare(
       `SELECT AVG(${SETL_CASE_SQL('sc')}) as mean_setl
-       FROM scores sc
-       WHERE sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
+       FROM rater_scores sc
+       JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE sc.eval_model = s.eval_model
+         AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
          AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)`
     )
     .first<{ mean_setl: number | null }>();
@@ -21,9 +23,9 @@ export async function getDomainSetl(db: D1Database, domain: string): Promise<num
   const row = await db
     .prepare(
       `SELECT AVG(${SETL_CASE_SQL('sc')}) as setl
-       FROM scores sc
+       FROM rater_scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE s.domain = ?
+       WHERE s.domain = ? AND sc.eval_model = s.eval_model
          AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
          AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)`
     )
@@ -136,12 +138,12 @@ export async function getDomainIntelligence(
               / NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) as negative_pct,
         ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END)
               / NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) as neutral_pct,
-        (SELECT ROUND(AVG(sc.editorial), 4) FROM scores sc
+        (SELECT ROUND(AVG(sc.editorial), 4) FROM rater_scores sc
          JOIN stories s2 ON s2.hn_id = sc.hn_id
-         WHERE s2.domain = s.domain AND sc.editorial IS NOT NULL) as avg_editorial,
-        (SELECT ROUND(AVG(sc.structural), 4) FROM scores sc
+         WHERE s2.domain = s.domain AND sc.eval_model = s2.eval_model AND sc.editorial IS NOT NULL) as avg_editorial,
+        (SELECT ROUND(AVG(sc.structural), 4) FROM rater_scores sc
          JOIN stories s2 ON s2.hn_id = sc.hn_id
-         WHERE s2.domain = s.domain AND sc.structural IS NOT NULL) as avg_structural
+         WHERE s2.domain = s.domain AND sc.eval_model = s2.eval_model AND sc.structural IS NOT NULL) as avg_structural
       FROM stories s
       WHERE s.domain IS NOT NULL
       GROUP BY s.domain
@@ -169,8 +171,9 @@ export async function getDomainFingerprints(db: D1Database, domains: string[]): 
   const { results } = await db
     .prepare(
       `SELECT s.domain, sc.sort_order, AVG(sc.final) as avg_final
-       FROM scores sc JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE s.eval_status = 'done' AND s.domain IN (${domains.map(() => '?').join(',')})
+       FROM rater_scores sc JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE s.eval_status = 'done' AND sc.eval_model = s.eval_model
+         AND s.domain IN (${domains.map(() => '?').join(',')})
        GROUP BY s.domain, sc.sort_order
        ORDER BY s.domain, sc.sort_order`
     )
@@ -270,9 +273,9 @@ export async function getDomainSetlHistory(db: D1Database, domain: string, limit
                 AVG(sc.editorial) as avg_editorial,
                 AVG(sc.structural) as avg_structural,
                 COUNT(DISTINCT s.hn_id) as count
-         FROM scores sc
+         FROM rater_scores sc
          JOIN stories s ON s.hn_id = sc.hn_id
-         WHERE s.domain = ?
+         WHERE s.domain = ? AND sc.eval_model = s.eval_model
            AND s.eval_status = 'done'
            AND s.evaluated_at IS NOT NULL
            AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
@@ -328,9 +331,9 @@ export async function getUserSetl(db: D1Database, username: string): Promise<num
   const row = await db
     .prepare(
       `SELECT AVG(${SETL_CASE_SQL('sc')}) as setl
-       FROM scores sc
+       FROM rater_scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE s.hn_by = ?
+       WHERE s.hn_by = ? AND sc.eval_model = s.eval_model
          AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
          AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)`
     )
@@ -346,8 +349,8 @@ export async function getUserFingerprint(db: D1Database, username: string): Prom
     const { results } = await db
       .prepare(
         `SELECT sc.sort_order, AVG(sc.final) as avg_final
-         FROM scores sc JOIN stories s ON s.hn_id = sc.hn_id
-         WHERE s.hn_by = ? AND s.eval_status = 'done'
+         FROM rater_scores sc JOIN stories s ON s.hn_id = sc.hn_id
+         WHERE s.hn_by = ? AND s.eval_status = 'done' AND sc.eval_model = s.eval_model
          GROUP BY sc.sort_order
          ORDER BY sc.sort_order`
       )
@@ -378,9 +381,9 @@ export async function getUserSetlHistory(db: D1Database, username: string, limit
                 AVG(sc.editorial) as avg_editorial,
                 AVG(sc.structural) as avg_structural,
                 COUNT(DISTINCT s.hn_id) as count
-         FROM scores sc
+         FROM rater_scores sc
          JOIN stories s ON s.hn_id = sc.hn_id
-         WHERE s.hn_by = ?
+         WHERE s.hn_by = ? AND sc.eval_model = s.eval_model
            AND s.eval_status = 'done'
            AND s.evaluated_at IS NOT NULL
            AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
@@ -409,9 +412,10 @@ export async function getGlobalSetlHistory(db: D1Database, limit = 90): Promise<
                 AVG(sc.editorial) as avg_editorial,
                 AVG(sc.structural) as avg_structural,
                 COUNT(DISTINCT s.hn_id) as count
-         FROM scores sc
+         FROM rater_scores sc
          JOIN stories s ON s.hn_id = sc.hn_id
-         WHERE s.eval_status = 'done'
+         WHERE sc.eval_model = s.eval_model
+           AND s.eval_status = 'done'
            AND s.evaluated_at IS NOT NULL
            AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
            AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)

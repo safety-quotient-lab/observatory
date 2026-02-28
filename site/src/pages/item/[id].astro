@@ -10,7 +10,7 @@ import { scoreToColor, formatScore, classificationColor, classificationTextColor
 import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getEvalHistoryForStory, getRaterEvalsForStory, getRaterScores, getFairWitnessForStory } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import { computeAggregates, type Aggregates } from '../../lib/compute-aggregates';
-import { modelDisplayName, PRIMARY_MODEL_ID, isLightMode } from '../../lib/shared-eval';
+import { modelDisplayName, isLightMode } from '../../lib/shared-eval';
 import { sanitizeHtml } from '../../lib/sanitize';
 
 const { id } = Astro.params;
@@ -368,10 +368,10 @@ function timeAgo(unixTime: number): string {
     <div style="padding: 6px 0; margin-bottom: 4px; display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
       <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 4px;">Model:</span>
       {raterEvals.map(re => {
-        const isActive = modelParam ? modelParam === re.eval_model : re.eval_model === PRIMARY_MODEL_ID;
-        const isPrimary = re.eval_model === PRIMARY_MODEL_ID;
+        const isActive = modelParam ? modelParam === re.eval_model : re.eval_model === storyData.eval_model;
+        const isDefault = re.eval_model === storyData.eval_model;
         return (
-          <a href={isPrimary ? `/item/${hnId}` : `/item/${hnId}?model=${re.eval_model}`}
+          <a href={isDefault ? `/item/${hnId}` : `/item/${hnId}?model=${re.eval_model}`}
              style={`padding: 2px 8px; font-size: var(--font-xs); border-radius: 3px; text-decoration: none; ${isActive ? 'background: #0d4655; color: #98a8a8; border: 1px solid #1a5568;' : 'background: #093946; color: #5b7279; border: 1px solid #0d4655;'}`}>
             {modelDisplayName(re.eval_model)}
             {isLightMode(re.prompt_mode) && <span style="color: #d56500; margin-left: 3px;" title="Light evaluation — editorial only, no per-section scores">lite</span>}

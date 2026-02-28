@@ -759,19 +759,21 @@ export async function writeRaterEvalResult(
     )
     .run();
 
-  // If this is the primary model, also write to stories/scores/fair_witness for backward compat
-  if (modelId === PRIMARY_MODEL_ID) {
+  // Promote story to done: first full eval wins, later evals don't overwrite.
+  // All models are peers — no primary model special case.
+  const story = await db.prepare(
+    `SELECT eval_status FROM stories WHERE hn_id = ?`
+  ).bind(hnId).first<{ eval_status: string }>();
+  if (story && story.eval_status !== 'done' && story.eval_status !== 'rescoring') {
     await writeEvalResult(db, hnId, result, modelId, promptHash);
   }
 
   // Update ensemble consensus score (best-effort, non-blocking)
   await updateConsensusScore(db, hnId);
 
-  // Refresh materialized domain aggregate (best-effort, skipped if primary already did it)
-  if (modelId !== PRIMARY_MODEL_ID) {
-    const domain = result.evaluation?.domain;
-    if (domain) await refreshDomainAggregate(db, domain);
-  }
+  // Refresh materialized domain aggregate
+  const domain = result.evaluation?.domain;
+  if (domain) await refreshDomainAggregate(db, domain);
 }
 
 export async function markRaterFailed(
@@ -973,7 +975,8 @@ export async function writeLightRaterEvalResult(
     .run();
 
   // COALESCE fill-in: write light signals to stories where full eval hasn't set them yet.
-  // Does NOT change eval_status — stories remain pending/queued until full eval promotes them to done.
+  // Also promotes eval_status to 'done' if story isn't already done (first eval wins;
+  // full evals overwrite via writeEvalResult which has no guard).
   await db.prepare(
     `UPDATE stories SET
        eq_score = COALESCE(eq_score, ?),
@@ -985,7 +988,11 @@ export async function writeLightRaterEvalResult(
        hcb_editorial_mean = COALESCE(hcb_editorial_mean, ?),
        hcb_theme_tag = COALESCE(hcb_theme_tag, ?),
        hcb_sentiment_tag = COALESCE(hcb_sentiment_tag, ?),
-       hcb_executive_summary = COALESCE(hcb_executive_summary, ?)
+       hcb_executive_summary = COALESCE(hcb_executive_summary, ?),
+       eval_status = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN 'done' ELSE eval_status END,
+       eval_model = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN ? ELSE eval_model END,
+       eval_error = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN NULL ELSE eval_error END,
+       evaluated_at = CASE WHEN eval_status NOT IN ('done', 'rescoring') THEN datetime('now') ELSE evaluated_at END
      WHERE hn_id = ?`
   ).bind(
     light.eq_score ?? null,   // EQ
@@ -998,6 +1005,7 @@ export async function writeLightRaterEvalResult(
     light.theme_tag || null,  // hcb_theme_tag
     light.sentiment_tag || null, // hcb_sentiment_tag
     light.short_description || null, // hcb_executive_summary
+    modelId,                  // eval_model (only set if not already done)
     hnId,
   ).run().catch(() => {});
 

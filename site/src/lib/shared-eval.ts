@@ -7,8 +7,6 @@
 
 // --- Constants (kept here as canonical source) ---
 
-export const EVAL_MODEL = 'claude-haiku-4-5-20251001';
-
 export const EVAL_MAX_TOKENS = 10240;
 
 /** Extended token budget for retry after stop_reason === 'end_turn' truncation */

@@ -5,7 +5,7 @@
  */
 
 import {
-  EVAL_MODEL,
+  PRIMARY_MODEL_ID,
   CONTENT_MAX_CHARS,
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
   METHODOLOGY_SYSTEM_PROMPT_LIGHT,
@@ -25,7 +25,6 @@ import {
   getCachedDcp,
   cacheDcp,
   getModelDef,
-  PRIMARY_MODEL_ID,
   raterHealthKvKey,
   emptyRaterHealth,
   shouldSkipModel,
@@ -305,7 +304,6 @@ export async function handleRaterHealthSuccess(
 export interface PreparedContent {
   content: string;
   contentHash: string | null;
-  isPrimary: boolean;
   isLightMode: boolean;
   modelDef: ModelDefinition | undefined;
   provider: string;
@@ -351,40 +349,34 @@ export async function prepareContent(
   const db = env.DB;
   const story = msg.body;
 
-  const msgModelId = story.eval_model || env.EVAL_MODEL_OVERRIDE || EVAL_MODEL;
+  const msgModelId = story.eval_model || env.EVAL_MODEL_OVERRIDE || PRIMARY_MODEL_ID;
   const modelDef = getModelDef(msgModelId);
   const provider = story.eval_provider || modelDef?.provider || 'anthropic';
   const modelToUse = modelDef?.api_model_id || msgModelId;
-  const isPrimary = msgModelId === PRIMARY_MODEL_ID || (!story.eval_model && !env.EVAL_MODEL_OVERRIDE);
-
   // Credit pause check
   if (await checkCreditPause(env.CONTENT_CACHE, provider)) {
     console.warn(`[consumer] Credit pause active for provider=${provider}, deferring hn_id=${story.hn_id}`);
-    if (isPrimary) {
-      await db.prepare(`UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status IN ('queued', 'evaluating')`).bind(story.hn_id).run().catch(() => {});
-    }
+    await db.prepare(`UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status IN ('queued', 'evaluating')`).bind(story.hn_id).run().catch(() => {});
     msg.ack();
     return null;
   }
 
   console.log(`[consumer] Processing hn_id=${story.hn_id} model=${msgModelId} provider=${provider}: ${story.title}`);
 
-  // For non-primary models, check rater health
-  if (!isPrimary) {
-    const healthKey = raterHealthKvKey(msgModelId);
-    let health: RaterHealthState = emptyRaterHealth();
-    try {
-      const stored = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null;
-      if (stored) health = stored;
-    } catch {}
+  // Check rater health for all models
+  const healthKey = raterHealthKvKey(msgModelId);
+  let health: RaterHealthState = emptyRaterHealth();
+  try {
+    const stored = await env.CONTENT_CACHE.get(healthKey, 'json') as RaterHealthState | null;
+    if (stored) health = stored;
+  } catch {}
 
-    const skipCheck = shouldSkipModel(health);
-    if (skipCheck.skip) {
-      console.warn(`[consumer] Model ${msgModelId} auto-disabled: ${skipCheck.reason}`);
-      await markRaterFailed(db, story.hn_id, msgModelId, provider, `Auto-disabled: ${skipCheck.reason}`);
-      msg.ack();
-      return null;
-    }
+  const skipCheck = shouldSkipModel(health);
+  if (skipCheck.skip) {
+    console.warn(`[consumer] Model ${msgModelId} auto-disabled: ${skipCheck.reason}`);
+    await markRaterFailed(db, story.hn_id, msgModelId, provider, `Auto-disabled: ${skipCheck.reason}`);
+    msg.ack();
+    return null;
   }
 
   const isSelfPost = !story.url && !!story.hn_text;
@@ -392,23 +384,19 @@ export async function prepareContent(
 
   // Skip binary content
   if (story.url && /\.(pdf|zip|tar|gz|exe|dmg|pkg|deb|rpm|iso|mp4|mp3|wav|avi|mov)(\?|$)/i.test(story.url)) {
-    if (isPrimary) {
-      await markSkipped(db, story.hn_id, 'Binary/unsupported content type', 'binary_content', 1.0);
-    }
+    await markSkipped(db, story.hn_id, 'Binary/unsupported content type', 'binary_content', 1.0);
     await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: binary/unsupported content type').catch(() => {});
     await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: binary/unsupported content type`, details: { reason: 'binary', url: story.url, model: msgModelId } });
     msg.ack();
     return null;
   }
 
-  // Non-primary: skip if primary already skipped
-  if (!isPrimary) {
-    const primaryStatus = await db.prepare('SELECT eval_status FROM stories WHERE hn_id = ?').bind(story.hn_id).first<{ eval_status: string }>();
-    if (primaryStatus?.eval_status === 'skipped') {
-      await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: primary model skipped this story').catch(() => {});
-      msg.ack();
-      return null;
-    }
+  // Skip if story is already skipped (any model that skipped first wins)
+  const storyStatus = await db.prepare('SELECT eval_status FROM stories WHERE hn_id = ?').bind(story.hn_id).first<{ eval_status: string }>();
+  if (storyStatus?.eval_status === 'skipped') {
+    await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: story already skipped').catch(() => {});
+    msg.ack();
+    return null;
   }
 
   // Fetch content (KV cache first)
@@ -446,11 +434,9 @@ export async function prepareContent(
       // 4. Handle unrecoverable failure (Wayback also unavailable)
       if (!liveOk && !archiveUsed) {
         if (gate?.blocked) {
-          if (isPrimary) {
-            await markSkipped(db, story.hn_id,
-              `Content gate: ${gate.category} (${gate.confidence.toFixed(2)})`,
-              gate.category, gate.confidence);
-          }
+          await markSkipped(db, story.hn_id,
+            `Content gate: ${gate.category} (${gate.confidence.toFixed(2)})`,
+            gate.category, gate.confidence);
           await markRaterFailed(db, story.hn_id, msgModelId, provider,
             `Skipped: ${gate.category} (${gate.signals.join('; ')})`).catch(() => {});
           await logEvent(db, {
@@ -459,17 +445,11 @@ export async function prepareContent(
             details: { reason: gate.category, confidence: gate.confidence, signals: gate.signals, model: msgModelId },
           });
         } else if (rawHtml.startsWith('[error:binary]')) {
-          // Binary content-type (PDF, zip, video, etc.)
-          if (isPrimary) {
-            await markSkipped(db, story.hn_id, 'Binary/unsupported content type', 'binary_content', 1.0);
-          }
+          await markSkipped(db, story.hn_id, 'Binary/unsupported content type', 'binary_content', 1.0);
           await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: binary content').catch(() => {});
           await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: binary content type`, details: { reason: 'binary', raw_length: rawHtml.length, model: msgModelId } });
         } else {
-          // Error response or no readable text
-          if (isPrimary) {
-            await markSkipped(db, story.hn_id, 'No readable content (JavaScript-only page)', 'js_rendered', 0.9);
-          }
+          await markSkipped(db, story.hn_id, 'No readable content (JavaScript-only page)', 'js_rendered', 0.9);
           await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: no readable content').catch(() => {});
           await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: no readable text in HTML (likely JS-rendered SPA)`, details: { reason: 'no_readable_text', raw_length: rawHtml.length, model: msgModelId } });
         }
@@ -485,9 +465,7 @@ export async function prepareContent(
   }
 
   if (content.length < 50) {
-    if (isPrimary) {
-      await markSkipped(db, story.hn_id, 'Content too short');
-    }
+    await markSkipped(db, story.hn_id, 'Content too short');
     await markRaterFailed(db, story.hn_id, msgModelId, provider, 'Skipped: content too short').catch(() => {});
     await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_skip', severity: 'info', message: `Skipped: content too short (${content.length} chars)`, details: { reason: 'too_short', content_length: content.length, model: msgModelId } });
     msg.ack();
@@ -515,7 +493,6 @@ export async function prepareContent(
   return {
     content,
     contentHash,
-    isPrimary,
     isLightMode,
     modelDef,
     provider,
@@ -656,39 +633,44 @@ export async function processFullResult(
   const promptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT_SLIM, userMessage);
   const methodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_SLIM);
 
-  // Write to rater tables (always) — writeRaterEvalResult also writes to stories/scores/fair_witness if primary
+  // Check if this is the first full eval for this story (determines housekeeping tasks)
+  const preWriteStatus = await db.prepare('SELECT eval_status FROM stories WHERE hn_id = ?')
+    .bind(story.hn_id).first<{ eval_status: string }>();
+  const isFirstFullEval = preWriteStatus != null && preWriteStatus.eval_status !== 'done' && preWriteStatus.eval_status !== 'rescoring';
+
+  // Write to rater tables — writeRaterEvalResult also materializes to stories table (first full eval wins)
   await writeRaterEvalResult(db, story.hn_id, fullResult, prep.msgModelId, prep.provider, promptHash, methodologyHash, inputTokens, outputTokens, prep.contentTruncationPct, story.batch_id ?? null);
 
-  // Primary model: write methodology hash + content hash + invalidate query caches
-  if (prep.isPrimary) {
+  // First full eval: write methodology hash + content hash + invalidate query caches
+  if (isFirstFullEval) {
     try {
       await db
         .prepare(`UPDATE stories SET methodology_hash = ?, content_hash = COALESCE(?, content_hash), content_last_fetched = datetime('now') WHERE hn_id = ?`)
         .bind(methodologyHash, prep.contentHash, story.hn_id)
         .run();
     } catch {}
-
-    // Invalidate KV query caches for pages that show domain/article aggregates
-    const cacheKeys = [
-      'q:allDomainStats:count:50',
-      'q:allDomainStats:count:200',
-      'q:allDomainStats:score:200',
-      'q:allDomainStats:setl:200',
-      'q:allDomainStats:conf:200',
-      'q:domainSignalProfiles',
-      'q:domainIntelligence',
-      'q:mostGatekeptDomains',
-      'q:articleDetailedStats',
-      'q:articleSparklines:30',
-      'q:globalGateStats',
-    ];
-    for (const key of cacheKeys) {
-      env.CONTENT_CACHE.delete(key).catch(() => {});
-    }
   }
 
-  // R2 snapshot (primary only)
-  if (prep.isPrimary) {
+  // Invalidate KV query caches (all evals, not just first — data changed)
+  const cacheKeys = [
+    'q:allDomainStats:count:50',
+    'q:allDomainStats:count:200',
+    'q:allDomainStats:score:200',
+    'q:allDomainStats:setl:200',
+    'q:allDomainStats:conf:200',
+    'q:domainSignalProfiles',
+    'q:domainIntelligence',
+    'q:mostGatekeptDomains',
+    'q:articleDetailedStats',
+    'q:articleSparklines:30',
+    'q:globalGateStats',
+  ];
+  for (const key of cacheKeys) {
+    env.CONTENT_CACHE.delete(key).catch(() => {});
+  }
+
+  // R2 snapshot (first full eval only — subsequent evals don't re-snapshot)
+  if (isFirstFullEval) {
     try {
       const snapshotKey = `${story.hn_id}/${new Date().toISOString().slice(0, 10)}.txt`;
       await env.CONTENT_SNAPSHOTS.put(snapshotKey, prep.content, {
@@ -708,13 +690,13 @@ export async function processFullResult(
     }
   }
 
-  // Internet Archive preservation (primary only, fire-and-forget — Phase 39C Part 1)
-  if (prep.isPrimary && story.url) {
+  // Internet Archive preservation (first full eval only)
+  if (isFirstFullEval && story.url) {
     requestArchive(db, env.CONTENT_CACHE, story.hn_id, story.url).catch(() => {});
   }
 
-  // Cache DCP if new (primary only)
-  if (prep.isPrimary) {
+  // Cache DCP if new (first full eval only)
+  if (isFirstFullEval) {
     const dcpObj = slim.domain_context_profile as { elements?: Record<string, unknown> };
     if (!cachedDcp && prep.domain && typeof slim.domain_context_profile !== 'string' && dcpObj?.elements) {
       const dcpElements = dcpObj.elements;
@@ -725,10 +707,8 @@ export async function processFullResult(
     }
   }
 
-  // Rater health success (non-primary)
-  if (!prep.isPrimary) {
-    await handleRaterHealthSuccess(env, db, story, prep.msgModelId);
-  }
+  // Track rater health for all models
+  await handleRaterHealthSuccess(env, db, story, prep.msgModelId);
 
   const evalDurationMs = Date.now() - evalStartMs;
   console.log(`[consumer] Done: hn_id=${story.hn_id} → ${aggregates.classification} (${aggregates.weighted_mean}) [${prep.msgModelId}] ${evalDurationMs}ms`);
@@ -760,15 +740,12 @@ export async function handleMessageFailure(
 ): Promise<void> {
   const db = env.DB;
   const story = msg.body;
-  const msgModelId = prep?.msgModelId || story.eval_model || EVAL_MODEL;
+  const msgModelId = prep?.msgModelId || story.eval_model || PRIMARY_MODEL_ID;
   const provider = prep?.provider || story.eval_provider || 'unknown';
-  const isPrimary = prep?.isPrimary ?? (msgModelId === PRIMARY_MODEL_ID);
   const evalDurationMs = Date.now() - evalStartMs;
 
   console.error(`[consumer] Failed: hn_id=${story.hn_id} model=${msgModelId} (${evalDurationMs}ms):`, error);
-  if (isPrimary) {
-    await markFailed(db, story.hn_id, `${error}`).catch(() => {});
-  }
+  await markFailed(db, story.hn_id, `${error}`).catch(() => {});
   await markRaterFailed(db, story.hn_id, msgModelId, provider, `${error}`).catch(() => {});
   await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_failure', severity: 'error', message: `Evaluation failed: ${String(error).slice(0, 200)}`, details: { error: String(error).slice(0, 500), duration_ms: evalDurationMs, model: msgModelId, provider } });
   msg.retry();

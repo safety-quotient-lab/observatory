@@ -2,7 +2,7 @@
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../lib/colors';
 import MiniBar from './MiniBar.astro';
 import type { Story, StoryWithMiniScores } from '../lib/db';
-import { modelShortName, PRIMARY_MODEL_ID, isLightMode } from '../lib/shared-eval';
+import { modelShortName, isLightMode } from '../lib/shared-eval';
 import type { RaterEvalRef } from '../lib/db';
 
 interface Props {
@@ -12,8 +12,8 @@ interface Props {
 }
 
 const { story, rank, raterModels } = Astro.props;
-// Non-primary models that have evaluated this story
-const otherModels = (raterModels || []).filter(m => m.eval_model !== PRIMARY_MODEL_ID);
+// Other models (beyond the story's eval_model) that have evaluated this story
+const otherModels = (raterModels || []).filter(m => m.eval_model !== story.eval_model);
 
 const hasEval = story.hcb_weighted_mean !== null || story.hcb_editorial_mean !== null;
 const isLightOnly = hasEval && story.hcb_weighted_mean === null;

@@ -28,7 +28,7 @@ import {
   type DcpElement,
 } from '../src/lib/compute-aggregates';
 import { runCrawlCycle, enqueueForEvaluation, dispatchFreeModelEvals, preloadContentCache } from '../src/lib/hn-bot';
-import { getModelQueue } from '../src/lib/shared-eval';
+import { getModelQueue, PRIMARY_MODEL_ID } from '../src/lib/shared-eval';
 
 interface Env {
   DB: D1Database;
@@ -171,7 +171,7 @@ export default {
 
         for (const row of dlqRows) {
           try {
-            const targetQueue = getModelQueue(row.eval_model || 'claude-haiku-4-5-20251001', env as unknown as Record<string, any>);
+            const targetQueue = getModelQueue(row.eval_model || PRIMARY_MODEL_ID, env as unknown as Record<string, any>);
             if (!targetQueue) {
               await db.prepare(`UPDATE dlq_messages SET manual_review_required = 1 WHERE id = ?`).bind(row.id).run();
               continue;
@@ -223,6 +223,7 @@ export default {
           await db.batch([
             db.prepare(`DELETE FROM eval_history WHERE hn_id IN (${placeholders})`).bind(...calIds),
             db.prepare(`DELETE FROM fair_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
+            db.prepare(`DELETE FROM rater_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
             db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${placeholders})`).bind(...calIds),
             db.prepare(`DELETE FROM calibration_runs WHERE created_at < datetime('now', '-30 days')`),
           ]);
@@ -780,6 +781,7 @@ export default {
         await db.batch([
           db.prepare(`DELETE FROM eval_history WHERE hn_id IN (${placeholders})`).bind(...calIds),
           db.prepare(`DELETE FROM fair_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
+          db.prepare(`DELETE FROM rater_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
           db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${placeholders})`).bind(...calIds),
           db.prepare(`DELETE FROM calibration_runs WHERE created_at < datetime('now', '-30 days')`),
         ]);
@@ -816,7 +818,7 @@ export default {
 
         // Non-primary enabled models — route to per-model queues
         for (const model of enabledModels) {
-          if (model.id === 'claude-haiku-4-5-20251001') continue; // primary already sent
+          if (model.id === PRIMARY_MODEL_ID) continue; // primary already sent
           const modelQueue = getModelQueue(model.id, env as unknown as Record<string, any>);
           await modelQueue.send({
             hn_id: syntheticId,
@@ -1107,12 +1109,14 @@ export default {
 
       for (const story of stories) {
         try {
+          // Read from rater_scores using story's eval_model
+          const rescoreModel = story.eval_model;
           const { results: scoreRows } = await db
             .prepare(
               `SELECT section, editorial, structural, evidence, directionality, note, editorial_note, structural_note
-               FROM scores WHERE hn_id = ? ORDER BY sort_order`
+               FROM rater_scores WHERE hn_id = ? AND eval_model = ? ORDER BY sort_order`
             )
-            .bind(story.hn_id)
+            .bind(story.hn_id, rescoreModel)
             .all<{
               section: string;
               editorial: number | null;
@@ -1131,8 +1135,8 @@ export default {
           }
 
           const { results: fwRows } = await db
-            .prepare(`SELECT section, fact_type, fact_text FROM fair_witness WHERE hn_id = ?`)
-            .bind(story.hn_id)
+            .prepare(`SELECT section, fact_type, fact_text FROM rater_witness WHERE hn_id = ? AND eval_model = ?`)
+            .bind(story.hn_id, rescoreModel)
             .all<{ section: string; fact_type: string; fact_text: string }>();
 
           const witnessBySection = new Map<string, { facts: string[]; inferences: string[] }>();
@@ -1186,10 +1190,10 @@ export default {
           const scoreStmts = derivedScores.map(s => {
             return db
               .prepare(
-                `UPDATE scores SET final = ?, combined = ?, context_modifier = ?
-                 WHERE hn_id = ? AND section = ?`
+                `UPDATE rater_scores SET final = ?, combined = ?, context_modifier = ?
+                 WHERE hn_id = ? AND eval_model = ? AND section = ?`
               )
-              .bind(s.final, s.combined ?? null, s.context_modifier ?? null, story.hn_id, s.section);
+              .bind(s.final, s.combined ?? null, s.context_modifier ?? null, story.hn_id, rescoreModel, s.section);
           });
           for (let i = 0; i < scoreStmts.length; i += 100) {
             await db.batch(scoreStmts.slice(i, i + 100));
@@ -1216,7 +1220,7 @@ export default {
                 hcb_evidence_m = ?,
                 hcb_evidence_l = ?,
                 hcb_json = ?,
-                eval_model = 'claude-haiku-4-5-20251001',
+                eval_model = ?,
                 fw_ratio = ?,
                 fw_observable_count = ?,
                 fw_inference_count = ?,
@@ -1237,6 +1241,7 @@ export default {
               aggregates.evidence_profile?.M ?? 0,
               aggregates.evidence_profile?.L ?? 0,
               hcbJson,
+              rescoreModel,
               fwAgg.fw_ratio,
               fwAgg.fw_observable_count,
               fwAgg.fw_inference_count,

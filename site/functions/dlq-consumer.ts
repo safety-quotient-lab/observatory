@@ -14,7 +14,7 @@
 
 import { logEvent } from '../src/lib/events';
 import { extractDomain, getModelDef } from '../src/lib/shared-eval';
-import { MODEL_QUEUE_BINDINGS } from '../src/lib/models';
+import { MODEL_QUEUE_BINDINGS, PRIMARY_MODEL_ID } from '../src/lib/models';
 
 interface Env {
   DB: D1Database;
@@ -222,7 +222,7 @@ export default {
             .run();
 
           // Reset story eval_status so it gets re-evaluated (primary model only)
-          if (!row.eval_model || row.eval_model === 'claude-haiku-4-5-20251001') {
+          if (!row.eval_model || row.eval_model === PRIMARY_MODEL_ID) {
             await db
               .prepare(`UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status = 'failed'`)
               .bind(row.hn_id)

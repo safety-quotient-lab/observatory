@@ -336,7 +336,7 @@ async function strategyHighSetlDeepDive(
       `SELECT s.domain, COUNT(*) as cnt,
               AVG(ABS(COALESCE(sc.editorial, 0) - COALESCE(sc.structural, 0))) as avg_setl
        FROM stories s
-       JOIN scores sc ON s.hn_id = sc.hn_id
+       JOIN rater_scores sc ON s.hn_id = sc.hn_id AND sc.eval_model = s.eval_model
        WHERE s.eval_status = 'done' AND s.domain IS NOT NULL
        GROUP BY s.domain
        HAVING COUNT(*) <= 3 AND AVG(ABS(COALESCE(sc.editorial, 0) - COALESCE(sc.structural, 0))) > 0.15
@@ -528,12 +528,14 @@ async function strategyArticleGapFill(
   // Query per-article signal counts
   const { results: articleStats } = await db
     .prepare(
-      `SELECT section, sort_order,
-              SUM(CASE WHEN final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
-              SUM(CASE WHEN final < 0 THEN 1 ELSE 0 END) as neg_count
-       FROM scores
-       GROUP BY section
-       ORDER BY sort_order`,
+      `SELECT sc.section, sc.sort_order,
+              SUM(CASE WHEN sc.final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
+              SUM(CASE WHEN sc.final < 0 THEN 1 ELSE 0 END) as neg_count
+       FROM rater_scores sc
+       JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE sc.eval_model = s.eval_model
+       GROUP BY sc.section
+       ORDER BY sc.sort_order`,
     )
     .all<{ section: string; sort_order: number; signal_count: number; neg_count: number }>();
 

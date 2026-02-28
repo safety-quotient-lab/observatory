@@ -1,5 +1,5 @@
 import type { Score } from './types';
-import { PRIMARY_MODEL_ID, getEnabledModels } from './shared-eval';
+import { getEnabledModels } from './shared-eval';
 import { SETL_CASE_SQL } from './db-utils';
 
 export interface Story {
@@ -236,7 +236,7 @@ export async function getFilteredStoriesWithScores(
   }
 
   const bindParams: (string | number)[] = [];
-  const isAltModel = model !== 'all' && model !== 'any' && model !== PRIMARY_MODEL_ID;
+  const isAltModel = model !== 'all' && model !== 'any';
 
   // "all" model filter: only show stories evaluated by every enabled full-mode model
   if (model === 'all') {
@@ -286,13 +286,12 @@ export async function getFilteredStoriesWithScores(
     case 'velocity': orderBy = 's.hn_score DESC NULLS LAST'; break; // proxy: highest points = most momentum
   }
 
-  // SETL subquery uses rater_scores for alt models
-  const setlScoreTable = isAltModel ? 'rater_scores' : 'scores';
-  const setlExtraWhere = isAltModel ? ` AND sc2.eval_model = ?` : '';
+  // SETL subquery always uses rater_scores
+  const setlExtraWhere = isAltModel ? ` AND sc2.eval_model = ?` : ` AND sc2.eval_model = s.eval_model`;
   const setlBindParams: (string | number)[] = isAltModel && joinSetl ? [model] : [];
   const setlSelect = joinSetl ? `,
               (SELECT AVG(${SETL_CASE_SQL('sc2')})
-               FROM ${setlScoreTable} sc2
+               FROM rater_scores sc2
                WHERE sc2.hn_id = s.hn_id
                  AND sc2.editorial IS NOT NULL AND sc2.structural IS NOT NULL
                  AND (ABS(sc2.editorial) > 0 OR ABS(sc2.structural) > 0)${setlExtraWhere}
@@ -335,16 +334,17 @@ export async function getFilteredStoriesWithScores(
   const scoresByHnId = new Map<number, MiniScore[]>();
 
   if (evaluatedIds.length > 0) {
-    // Use rater_scores for alt models, scores for primary/all
-    const scoreTable = isAltModel ? 'rater_scores' : 'scores';
-    const extraWhere = isAltModel ? ` AND eval_model = ?` : '';
+    // Always read from rater_scores — for alt models filter by requested model,
+    // otherwise use each story's eval_model via JOIN
+    const extraWhere = isAltModel ? ` AND rs.eval_model = ?` : ` AND rs.eval_model = s2.eval_model`;
     const extraBinds = isAltModel ? [model] : [];
     const { results: scoreRows } = await db
       .prepare(
-        `SELECT hn_id, section, sort_order, final, editorial, structural
-         FROM ${scoreTable}
-         WHERE hn_id IN (${evaluatedIds.map(() => '?').join(',')})${extraWhere}
-         ORDER BY sort_order`
+        `SELECT rs.hn_id, rs.section, rs.sort_order, rs.final, rs.editorial, rs.structural
+         FROM rater_scores rs
+         JOIN stories s2 ON s2.hn_id = rs.hn_id
+         WHERE rs.hn_id IN (${evaluatedIds.map(() => '?').join(',')})${extraWhere}
+         ORDER BY rs.sort_order`
       )
       .bind(...evaluatedIds, ...extraBinds)
       .all<{ hn_id: number; section: string; sort_order: number; final: number | null; editorial: number | null; structural: number | null }>();
@@ -378,32 +378,23 @@ export async function getStory(db: D1Database, hnId: number): Promise<StoryWithS
 
     if (!story) return null;
 
-    // Primary scores table (written by PRIMARY_MODEL_ID evals)
-    const { results: scoreRows } = await db
-      .prepare(`SELECT * FROM scores WHERE hn_id = ? ORDER BY sort_order`)
-      .bind(hnId)
-      .all<ScoreRow>();
-
-    let scores = scoreRows.map(scoreRowToScore);
-
-    // Fallback: if no primary scores but story is done (evaluated by non-primary model),
-    // use rater_scores from the best available full-mode rater eval
-    if (scores.length === 0 && story.eval_status === 'done') {
-      // Find the eval_model to use: story.eval_model, or first full-mode rater_eval
-      let fallbackModel = story.eval_model;
-      if (!fallbackModel) {
+    // Read per-section scores from rater_scores using the story's eval_model
+    let scores: Score[] = [];
+    if (story.eval_status === 'done') {
+      let targetModel = story.eval_model;
+      if (!targetModel) {
         const best = await db
           .prepare(`SELECT eval_model FROM rater_evals WHERE hn_id = ? AND eval_status = 'done' AND prompt_mode = 'full' ORDER BY evaluated_at DESC LIMIT 1`)
           .bind(hnId)
           .first<{ eval_model: string }>();
-        fallbackModel = best?.eval_model ?? null;
+        targetModel = best?.eval_model ?? null;
       }
-      if (fallbackModel) {
-        const { results: raterRows } = await db
+      if (targetModel) {
+        const { results: scoreRows } = await db
           .prepare(`SELECT * FROM rater_scores WHERE hn_id = ? AND eval_model = ? ORDER BY sort_order`)
-          .bind(hnId, fallbackModel)
+          .bind(hnId, targetModel)
           .all<ScoreRow>();
-        scores = raterRows.map(scoreRowToScore);
+        scores = scoreRows.map(scoreRowToScore);
       }
     }
 
@@ -425,20 +416,23 @@ export interface FairWitnessFact {
 
 export async function getFairWitnessForStory(db: D1Database, hnId: number, evalModel?: string | null): Promise<FairWitnessFact[]> {
   try {
-    const { results } = await db
-      .prepare(`SELECT section, fact_type, fact_text FROM fair_witness WHERE hn_id = ? ORDER BY section, fact_type`)
-      .bind(hnId)
-      .all<FairWitnessFact>();
-
-    // Fallback: if no primary fair_witness but rater_witness exists (non-primary model eval)
-    if (results.length === 0 && evalModel) {
-      const { results: raterResults } = await db
+    if (evalModel) {
+      const { results } = await db
         .prepare(`SELECT section, fact_type, fact_text FROM rater_witness WHERE hn_id = ? AND eval_model = ? ORDER BY section, fact_type`)
         .bind(hnId, evalModel)
         .all<FairWitnessFact>();
-      return raterResults;
+      return results;
     }
-
+    // No model specified — get from any full-mode rater
+    const { results } = await db
+      .prepare(
+        `SELECT rw.section, rw.fact_type, rw.fact_text FROM rater_witness rw
+         JOIN stories s ON s.hn_id = rw.hn_id
+         WHERE rw.hn_id = ? AND rw.eval_model = s.eval_model
+         ORDER BY rw.section, rw.fact_type`
+      )
+      .bind(hnId)
+      .all<FairWitnessFact>();
     return results;
   } catch {
     return [];
@@ -462,9 +456,10 @@ export async function getArticleRanking(
               s.hcb_evidence_h, s.hcb_evidence_m, s.hcb_evidence_l,
               sc.section, sc.final, sc.editorial, sc.structural,
               sc.evidence, sc.note
-       FROM scores sc
+       FROM rater_scores sc
        JOIN stories s ON s.hn_id = sc.hn_id
        WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'
+         AND sc.eval_model = s.eval_model
        ORDER BY sc.final DESC
        LIMIT ? OFFSET ?`
     )
@@ -483,12 +478,14 @@ export interface ArticleCoverageRow {
 export async function getArticleCoverage(db: D1Database): Promise<ArticleCoverageRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT section, sort_order,
-              SUM(CASE WHEN final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
-              AVG(final) as avg_final
-       FROM scores
-       GROUP BY section
-       ORDER BY sort_order`
+      `SELECT sc.section, sc.sort_order,
+              SUM(CASE WHEN sc.final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
+              AVG(sc.final) as avg_final
+       FROM rater_scores sc
+       JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE sc.eval_model = s.eval_model
+       GROUP BY sc.section
+       ORDER BY sc.sort_order`
     )
     .all<ArticleCoverageRow>();
   return results;
@@ -617,17 +614,20 @@ export interface ArticleDetailedStat {
 export async function getArticleDetailedStats(db: D1Database): Promise<ArticleDetailedStat[]> {
   const { results } = await db
     .prepare(
-      `SELECT section, sort_order,
-              AVG(final) as avg_final,
-              AVG(editorial) as avg_editorial,
-              AVG(structural) as avg_structural,
-              AVG(final * final) as avg_final_sq,
-              SUM(CASE WHEN final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
-              SUM(CASE WHEN final IS NULL THEN 1 ELSE 0 END) as nd_count,
-              SUM(CASE WHEN evidence = 'H' THEN 1 ELSE 0 END) as evidence_h,
-              SUM(CASE WHEN evidence = 'M' THEN 1 ELSE 0 END) as evidence_m,
-              SUM(CASE WHEN evidence = 'L' THEN 1 ELSE 0 END) as evidence_l
-       FROM scores GROUP BY section ORDER BY sort_order`
+      `SELECT sc.section, sc.sort_order,
+              AVG(sc.final) as avg_final,
+              AVG(sc.editorial) as avg_editorial,
+              AVG(sc.structural) as avg_structural,
+              AVG(sc.final * sc.final) as avg_final_sq,
+              SUM(CASE WHEN sc.final IS NOT NULL THEN 1 ELSE 0 END) as signal_count,
+              SUM(CASE WHEN sc.final IS NULL THEN 1 ELSE 0 END) as nd_count,
+              SUM(CASE WHEN sc.evidence = 'H' THEN 1 ELSE 0 END) as evidence_h,
+              SUM(CASE WHEN sc.evidence = 'M' THEN 1 ELSE 0 END) as evidence_m,
+              SUM(CASE WHEN sc.evidence = 'L' THEN 1 ELSE 0 END) as evidence_l
+       FROM rater_scores sc
+       JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE sc.eval_model = s.eval_model
+       GROUP BY sc.section ORDER BY sc.sort_order`
     )
     .all<ArticleDetailedStat & { avg_final_sq: number | null }>();
   return results.map(r => {
@@ -669,8 +669,8 @@ export async function getTopSetlStories(db: D1Database, limit = 5): Promise<Setl
     .prepare(
       `SELECT s.*,
               (SELECT AVG(${SETL_CASE_SQL('sc')})
-               FROM scores sc
-               WHERE sc.hn_id = s.hn_id
+               FROM rater_scores sc
+               WHERE sc.hn_id = s.hn_id AND sc.eval_model = s.eval_model
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
                  AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
               ) as story_setl
@@ -687,8 +687,8 @@ export async function getBottomSetlStories(db: D1Database, limit = 5): Promise<S
     .prepare(
       `SELECT s.*,
               (SELECT AVG(${SETL_CASE_SQL('sc')})
-               FROM scores sc
-               WHERE sc.hn_id = s.hn_id
+               FROM rater_scores sc
+               WHERE sc.hn_id = s.hn_id AND sc.eval_model = s.eval_model
                  AND sc.editorial IS NOT NULL AND sc.structural IS NOT NULL
                  AND (ABS(sc.editorial) > 0 OR ABS(sc.structural) > 0)
               ) as story_setl
@@ -818,10 +818,12 @@ export async function getStoriesByEntity(
   if (evaluatedIds.length > 0) {
     const { results: scoreRows } = await db
       .prepare(
-        `SELECT hn_id, section, sort_order, final, editorial, structural
-         FROM scores
-         WHERE hn_id IN (${evaluatedIds.map(() => '?').join(',')})
-         ORDER BY sort_order`
+        `SELECT rs.hn_id, rs.section, rs.sort_order, rs.final, rs.editorial, rs.structural
+         FROM rater_scores rs
+         JOIN stories s2 ON s2.hn_id = rs.hn_id
+         WHERE rs.hn_id IN (${evaluatedIds.map(() => '?').join(',')})
+           AND rs.eval_model = s2.eval_model
+         ORDER BY rs.sort_order`
       )
       .bind(...evaluatedIds)
       .all<{ hn_id: number; section: string; sort_order: number; final: number | null; editorial: number | null; structural: number | null }>();
@@ -880,8 +882,8 @@ export async function getEntityDetailStats(db: D1Database, type: 'domain' | 'use
   const editStructRow = await db
     .prepare(
       `SELECT AVG(sc.editorial) as avg_ed, AVG(sc.structural) as avg_st
-       FROM scores sc JOIN stories s ON s.hn_id = sc.hn_id
-       WHERE s.${col} = ? AND sc.final IS NOT NULL`
+       FROM rater_scores sc JOIN stories s ON s.hn_id = sc.hn_id
+       WHERE s.${col} = ? AND sc.final IS NOT NULL AND sc.eval_model = s.eval_model`
     )
     .bind(value)
     .first<{ avg_ed: number | null; avg_st: number | null }>();
