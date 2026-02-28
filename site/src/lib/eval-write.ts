@@ -317,13 +317,13 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
   try {
     const { results } = await db
       .prepare(
-        `SELECT eval_model, hcb_weighted_mean, hcb_editorial_mean, prompt_mode
+        `SELECT eval_model, hcb_weighted_mean, hcb_editorial_mean, prompt_mode, content_truncation_pct
          FROM rater_evals
          WHERE hn_id = ? AND eval_status = 'done'
            AND (hcb_weighted_mean IS NOT NULL OR hcb_editorial_mean IS NOT NULL)`
       )
       .bind(hnId)
-      .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null }>();
+      .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null; content_truncation_pct: number | null }>();
 
     if (results.length < 2) return;
 
@@ -334,7 +334,9 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
     for (const r of results) {
       const score = r.hcb_weighted_mean ?? r.hcb_editorial_mean;
       if (score === null) continue;
-      const weight = r.prompt_mode === 'light' ? 0.5 : 1.0;
+      const baseWeight = r.prompt_mode === 'light' ? 0.5 : 1.0;
+      const truncPct = r.content_truncation_pct ?? 0;
+      const weight = baseWeight * (1 - truncPct * 0.5);
       weightedSum += score * weight;
       totalWeight += weight;
       scores.push(score);
@@ -542,6 +544,7 @@ export async function writeRaterEvalResult(
   methodologyHash: string | null,
   inputTokens: number,
   outputTokens: number,
+  contentTruncationPct: number = 0,
 ): Promise<void> {
   // FK guard: bail if story doesn't exist (stale queue message)
   const exists = await db.prepare('SELECT 1 FROM stories WHERE hn_id = ?').bind(hnId).first();
@@ -601,7 +604,7 @@ export async function writeRaterEvalResult(
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
         eq_score, so_score, et_primary_tone, et_valence,
         sr_score, pt_flag_count, td_score,
-        input_tokens, output_tokens,
+        input_tokens, output_tokens, content_truncation_pct,
         evaluated_at
       ) VALUES (
         ?, ?, ?, 'done', 'full',
@@ -615,7 +618,7 @@ export async function writeRaterEvalResult(
         ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?,
-        ?, ?,
+        ?, ?, ?,
         datetime('now')
       )
       ON CONFLICT(hn_id, eval_model) DO UPDATE SET
@@ -653,6 +656,7 @@ export async function writeRaterEvalResult(
         td_score = excluded.td_score,
         input_tokens = excluded.input_tokens,
         output_tokens = excluded.output_tokens,
+        content_truncation_pct = excluded.content_truncation_pct,
         evaluated_at = excluded.evaluated_at`
     )
     .bind(
@@ -674,7 +678,7 @@ export async function writeRaterEvalResult(
       sr?.sr_score ?? null,
       pt ? pt.length : 0,
       td?.td_score ?? null,
-      inputTokens, outputTokens,
+      inputTokens, outputTokens, contentTruncationPct,
     )
     .run();
 
@@ -842,6 +846,7 @@ export async function writeLightRaterEvalResult(
   methodologyHash: string | null,
   inputTokens: number,
   outputTokens: number,
+  contentTruncationPct: number = 0,
 ): Promise<void> {
   // FK guard: bail if story doesn't exist (stale queue message)
   const exists = await db.prepare('SELECT 1 FROM stories WHERE hn_id = ?').bind(hnId).first();
@@ -872,7 +877,7 @@ export async function writeLightRaterEvalResult(
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
         eq_score, so_score, et_primary_tone, et_valence, et_arousal,
         sr_score, pt_flag_count, td_score,
-        input_tokens, output_tokens,
+        input_tokens, output_tokens, content_truncation_pct,
         evaluated_at
       ) VALUES (
         ?, ?, ?, 'done', 'light',
@@ -886,7 +891,7 @@ export async function writeLightRaterEvalResult(
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?,
-        ?, ?,
+        ?, ?, ?,
         datetime('now')
       )
       ON CONFLICT(hn_id, eval_model) DO UPDATE SET
@@ -925,6 +930,7 @@ export async function writeLightRaterEvalResult(
         td_score = excluded.td_score,
         input_tokens = excluded.input_tokens,
         output_tokens = excluded.output_tokens,
+        content_truncation_pct = excluded.content_truncation_pct,
         evaluated_at = excluded.evaluated_at`
     )
     .bind(
@@ -956,7 +962,7 @@ export async function writeLightRaterEvalResult(
       null,                          // SR (not in light)
       null,                          // PT (not in light — null, not 0)
       light.td_score ?? null,        // TD
-      inputTokens, outputTokens,
+      inputTokens, outputTokens, contentTruncationPct,
     )
     .run();
 

@@ -70,6 +70,118 @@ export interface QueueMessage {
   prompt_mode?: 'full' | 'light';
 }
 
+/** Wake-up signal sent to CF Queues instead of full story payloads (pull model). */
+export interface WakeUpMessage {
+  trigger: 'new_work';
+  provider: string;
+}
+
+/** A claimed row from eval_queue. */
+export interface EvalQueueClaim {
+  id: number;
+  hn_id: number;
+  target_provider: string;
+  target_model: string;
+  prompt_mode: 'full' | 'light';
+}
+
+// --- eval_queue pull model helpers ---
+
+/**
+ * Atomically claim up to batchSize rows from eval_queue for this provider.
+ * Also recovers stale claims (>5 min) before claiming new ones.
+ * Returns claimed rows, or [] if nothing is available.
+ */
+export async function claimFromEvalQueue(
+  db: D1Database,
+  provider: string,
+  workerId: string,
+  batchSize = 5,
+): Promise<EvalQueueClaim[]> {
+  // Recover stale claims for this provider (>5 min old)
+  await db.prepare(
+    `UPDATE eval_queue SET status='pending', claimed_by=NULL, claimed_at=NULL
+     WHERE status='claimed' AND target_provider=? AND claimed_at < datetime('now', '-5 minutes')`
+  ).bind(provider).run().catch(() => {});
+
+  // Select candidate IDs to claim
+  const { results: candidates } = await db.prepare(
+    `SELECT id FROM eval_queue WHERE target_provider=? AND status='pending'
+     ORDER BY priority DESC, enqueued_at ASC LIMIT ?`
+  ).bind(provider, batchSize).all<{ id: number }>();
+
+  if (candidates.length === 0) return [];
+
+  const ids = candidates.map(r => r.id);
+  const placeholders = ids.map(() => '?').join(',');
+
+  // Mark as claimed
+  await db.prepare(
+    `UPDATE eval_queue SET status='claimed', claimed_by=?, claimed_at=datetime('now')
+     WHERE id IN (${placeholders}) AND status='pending'`
+  ).bind(workerId, ...ids).run();
+
+  // Fetch what we actually claimed (concurrent workers may have taken some)
+  const { results: claimed } = await db.prepare(
+    `SELECT id, hn_id, target_provider, target_model, prompt_mode
+     FROM eval_queue WHERE id IN (${placeholders}) AND claimed_by=?`
+  ).bind(...ids, workerId).all<EvalQueueClaim>();
+
+  return claimed;
+}
+
+/**
+ * Fetch story fields needed to build a QueueMessage for an eval_queue claim.
+ */
+export async function getStoryForClaim(
+  db: D1Database,
+  hnId: number,
+): Promise<{ hn_id: number; url: string | null; title: string; hn_text: string | null; domain: string | null } | null> {
+  return db.prepare(
+    `SELECT hn_id, url, title, hn_text, domain FROM stories WHERE hn_id=?`
+  ).bind(hnId).first<{ hn_id: number; url: string | null; title: string; hn_text: string | null; domain: string | null }>();
+}
+
+/**
+ * Create a fake Message<QueueMessage> stub for an eval_queue claim.
+ *
+ * ack()   → marks the eval_queue row 'done' (used for success and permanent skips).
+ * retry() → releases the claim back to 'pending' (used for transient failures).
+ *
+ * Both are fire-and-forget DB updates (not awaited by callers).
+ */
+export function makeEvalQueueMsg(
+  claim: EvalQueueClaim,
+  storyData: { hn_id: number; url: string | null; title: string; hn_text: string | null; domain: string | null },
+  db: D1Database,
+): Message<QueueMessage> {
+  const body: QueueMessage = {
+    hn_id: storyData.hn_id,
+    url: storyData.url,
+    title: storyData.title,
+    hn_text: storyData.hn_text,
+    domain: storyData.domain,
+    eval_model: claim.target_model,
+    eval_provider: claim.target_provider,
+    prompt_mode: claim.prompt_mode,
+  };
+
+  return {
+    id: String(claim.id),
+    timestamp: new Date(),
+    attempts: 1,
+    body,
+    ack() {
+      db.prepare(`UPDATE eval_queue SET status='done', claimed_by=NULL WHERE id=?`)
+        .bind(claim.id).run().catch(() => {});
+    },
+    retry(_opts?: { delaySeconds?: number }) {
+      db.prepare(`UPDATE eval_queue SET status='pending', claimed_by=NULL, claimed_at=NULL WHERE id=?`)
+        .bind(claim.id).run().catch(() => {});
+    },
+  } as unknown as Message<QueueMessage>;
+}
+
 // --- Hash utilities ---
 
 export async function hashString(input: string): Promise<string> {
@@ -199,6 +311,7 @@ export interface PreparedContent {
   isSelfPost: boolean;
   evalUrl: string;
   domain: string | null;
+  contentTruncationPct: number;
 }
 
 /**
@@ -379,7 +492,9 @@ export async function prepareContent(
   }
 
   // Per-model content truncation for small-context models
+  let contentTruncationPct = 0;
   if (modelDef?.max_input_chars && content.length > modelDef.max_input_chars) {
+    contentTruncationPct = 1 - (modelDef.max_input_chars / content.length);
     content = content.slice(0, modelDef.max_input_chars);
   }
 
@@ -406,6 +521,7 @@ export async function prepareContent(
     isSelfPost,
     evalUrl,
     domain,
+    contentTruncationPct,
   };
 }
 
@@ -452,7 +568,7 @@ export async function processLightResult(
   const lightMethodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_LIGHT);
 
   // Write
-  await writeLightRaterEvalResult(db, story.hn_id, lightParsed, prep.msgModelId, prep.provider, lightPromptHash, lightMethodologyHash, inputTokens, outputTokens);
+  await writeLightRaterEvalResult(db, story.hn_id, lightParsed, prep.msgModelId, prep.provider, lightPromptHash, lightMethodologyHash, inputTokens, outputTokens, prep.contentTruncationPct);
 
   // Invalidate domain caches — light eval fills hcb_editorial_mean which affects feed/domain display
   const cacheKeys = [
@@ -538,7 +654,7 @@ export async function processFullResult(
   const methodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_SLIM);
 
   // Write to rater tables (always) — writeRaterEvalResult also writes to stories/scores/fair_witness if primary
-  await writeRaterEvalResult(db, story.hn_id, fullResult, prep.msgModelId, prep.provider, promptHash, methodologyHash, inputTokens, outputTokens);
+  await writeRaterEvalResult(db, story.hn_id, fullResult, prep.msgModelId, prep.provider, promptHash, methodologyHash, inputTokens, outputTokens, prep.contentTruncationPct);
 
   // Primary model: write methodology hash + content hash + invalidate query caches
   if (prep.isPrimary) {

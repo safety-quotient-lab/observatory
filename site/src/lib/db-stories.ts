@@ -478,6 +478,11 @@ export interface StatusCounts {
   failed: number;
   skipped: number;
   total: number;
+  // Coverage spectrum
+  coverageFull: number;       // done + hcb_weighted_mean IS NOT NULL
+  coverageLight: number;      // hcb_editorial_mean IS NOT NULL AND hcb_weighted_mean IS NULL
+  coverageMultiModel: number; // consensus_model_count >= 2
+  coverageNone: number;       // no scores at all (pending/evaluating/failed with no editorial)
 }
 
 export async function getStatusCounts(db: D1Database): Promise<StatusCounts> {
@@ -485,12 +490,32 @@ export async function getStatusCounts(db: D1Database): Promise<StatusCounts> {
     .prepare(`SELECT eval_status, COUNT(*) as cnt FROM stories GROUP BY eval_status`)
     .all<{ eval_status: string; cnt: number }>();
 
-  const counts: StatusCounts = { done: 0, pending: 0, evaluating: 0, failed: 0, skipped: 0, total: 0 };
+  const counts: StatusCounts = {
+    done: 0, pending: 0, evaluating: 0, failed: 0, skipped: 0, total: 0,
+    coverageFull: 0, coverageLight: 0, coverageMultiModel: 0, coverageNone: 0,
+  };
   for (const r of results) {
-    const key = r.eval_status as keyof Omit<StatusCounts, 'total'>;
-    if (key in counts) counts[key] = r.cnt;
+    const key = r.eval_status as keyof Omit<StatusCounts, 'total' | 'coverageFull' | 'coverageLight' | 'coverageMultiModel' | 'coverageNone'>;
+    if (key in counts) (counts as any)[key] = r.cnt;
     counts.total += r.cnt;
   }
+
+  // Coverage spectrum (single query, 3 conditional counts)
+  const cov = await db.prepare(
+    `SELECT
+       COUNT(CASE WHEN hcb_weighted_mean IS NOT NULL THEN 1 END) as full_coverage,
+       COUNT(CASE WHEN hcb_editorial_mean IS NOT NULL AND hcb_weighted_mean IS NULL THEN 1 END) as light_only,
+       COUNT(CASE WHEN consensus_model_count >= 2 THEN 1 END) as multi_model
+     FROM stories WHERE hn_id > 0`
+  ).first<{ full_coverage: number; light_only: number; multi_model: number }>();
+
+  if (cov) {
+    counts.coverageFull = cov.full_coverage;
+    counts.coverageLight = cov.light_only;
+    counts.coverageMultiModel = cov.multi_model;
+    counts.coverageNone = counts.total - cov.full_coverage - cov.light_only - counts.skipped;
+  }
+
   return counts;
 }
 

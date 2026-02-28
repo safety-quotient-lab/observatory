@@ -15,11 +15,12 @@
  * - Re-evaluation triggers for viral stories
  */
 
-import { extractDomain, markSkipped, fetchUrlContent, getEnabledFreeModels, getModelQueue } from './shared-eval';
+import { extractDomain, markSkipped, fetchUrlContent, getEnabledFreeModels, getModelQueue, PRIMARY_MODEL_ID } from './shared-eval';
 import { cleanHtml, hasReadableText } from './html-clean';
 import { classifyContent } from './content-gate';
 import { logEvent } from './events';
 import { checkCreditPause } from '../../functions/rate-limit';
+import { safeBatch } from './db-utils';
 
 // ─── Types ───
 
@@ -613,78 +614,92 @@ export async function enqueueForEvaluation(
     enqueuedIds.push(...filteredIds);
   }
 
-  // Check Anthropic credit pause before dispatching to primary queue
+  // ── eval_queue pull model dispatch ──────────────────────────────────────────
+  // Insert rows into eval_queue instead of pushing full payloads to CF Queues.
+  // Consumers wake up via a tiny { trigger: 'new_work' } signal and pull from here.
+  // UNIQUE(hn_id, target_provider, target_model) + INSERT OR IGNORE = idempotent.
+
+  // Clean up 'done' eval_queue rows for stories still pending (handles credit-pause requeue)
+  if (enqueuedIds.length > 0) {
+    const idPlaceholders = enqueuedIds.map(() => '?').join(',');
+    await db.prepare(
+      `DELETE FROM eval_queue WHERE status='done' AND hn_id IN (${idPlaceholders})`
+    ).bind(...enqueuedIds).run().catch(() => {});
+  }
+
   const anthropicPaused = await checkCreditPause(kv, 'anthropic');
+
   if (anthropicPaused) {
     console.warn('[queue] Anthropic credit pause active — dispatching to free model queues instead');
     await logEvent(db, {
       event_type: 'eval_skip', severity: 'warn',
-      message: `Anthropic credit pause: dispatching ${messages.length} stories to free models`,
-      details: { reason: 'credit_pause', provider: 'anthropic', count: messages.length },
+      message: `Anthropic credit pause: dispatching ${enqueuedIds.length} stories to free models`,
+      details: { reason: 'credit_pause', provider: 'anthropic', count: enqueuedIds.length },
     });
 
-    // Dispatch to free model queues as primary evaluators
+    // Insert eval_queue rows for each free model as primary evaluator
     if (env) {
       const freeModels = getEnabledFreeModels();
       for (const model of freeModels) {
+        const freeStmts = enqueuedIds.map(hnId =>
+          db.prepare(
+            `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority) VALUES (?, ?, ?, ?, 0)`
+          ).bind(hnId, model.provider, model.id, model.prompt_mode ?? 'full')
+        );
+        if (freeStmts.length > 0) await safeBatch(db, freeStmts);
+
+        // UPSERT rater_evals shell rows for tracking
+        for (const hnId of enqueuedIds) {
+          await db.prepare(
+            `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, prompt_mode)
+             VALUES (?, ?, ?, 'queued', ?)
+             ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status='queued', prompt_mode=excluded.prompt_mode`
+          ).bind(hnId, model.id, model.provider, model.prompt_mode ?? 'full').run().catch(() => {});
+        }
+
+        // Send wake-up signal to model's queue
         const modelQueue = getModelQueue(model.id, env);
-        const freeMessages: { body: QueueMessage }[] = [];
-        for (const msg of messages) {
-          freeMessages.push({
-            body: {
-              ...msg.body,
-              eval_model: model.id,
-              eval_provider: model.provider,
-              prompt_mode: model.prompt_mode,
-            },
-          });
-          // UPSERT rater_evals shell row
-          await db
-            .prepare(
-              `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, prompt_mode)
-               VALUES (?, ?, ?, 'queued', ?)
-               ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued', prompt_mode = excluded.prompt_mode`
-            )
-            .bind(msg.body.hn_id, model.id, model.provider, model.prompt_mode ?? 'full')
-            .run()
-            .catch(() => {});
-        }
-        // Send to per-model queue in batches of 25
-        for (let i = 0; i < freeMessages.length; i += 25) {
-          const batch = freeMessages.slice(i, i + 25);
-          await modelQueue.sendBatch(batch);
-        }
-        console.log(`[queue] Credit pause fallback: dispatched ${freeMessages.length} stories to ${model.id}`);
+        await (modelQueue as any).send({ trigger: 'new_work', provider: model.provider }).catch(() => {});
+        console.log(`[queue] Credit pause fallback: inserted ${enqueuedIds.length} eval_queue rows for ${model.id}`);
       }
     }
   } else {
-    // Send to queue in batches of 25 (Queue.sendBatch limit)
-    for (let i = 0; i < messages.length; i += 25) {
-      const batch = messages.slice(i, i + 25);
-      await queue.sendBatch(batch);
+    // Insert eval_queue rows for Anthropic primary model
+    const anthStmts = enqueuedIds.map(hnId =>
+      db.prepare(
+        `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority) VALUES (?, 'anthropic', ?, 'full', 0)`
+      ).bind(hnId, PRIMARY_MODEL_ID)
+    );
+    if (anthStmts.length > 0) await safeBatch(db, anthStmts);
+
+    // Wake up Anthropic consumer (proportional to backlog, max 5)
+    const anthWakeCount = Math.min(Math.ceil(enqueuedIds.length / 10) + 1, 5);
+    for (let i = 0; i < anthWakeCount; i++) {
+      await (queue as any).send({ trigger: 'new_work', provider: 'anthropic' }).catch(() => {});
     }
   }
 
-  // Light-dispatch: send ALL stories to Workers AI light queue.
-  // Light evals fill hcb_editorial_mean + supplementary signals for ~lite feed display
+  // Light-dispatch: insert eval_queue rows for Workers AI light models.
+  // Fills hcb_editorial_mean + supplementary signals for ~lite feed display
   // while stories await full eval. Does not promote stories to 'done'.
   if (lightQueue) {
-    for (const msg of messages) {
-      try {
-        await lightQueue.send({
-          hn_id: msg.body.hn_id,
-          url: msg.body.url,
-          title: msg.body.title,
-          domain: msg.body.domain,
-          prompt_mode: 'light',
-        });
-      } catch {
-        // Non-fatal — light eval is best-effort
-      }
+    const waiModels = getEnabledFreeModels().filter(m => m.provider === 'workers-ai');
+    for (const model of waiModels) {
+      const waiStmts = enqueuedIds.map(hnId =>
+        db.prepare(
+          `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority) VALUES (?, 'workers-ai', ?, 'light', 0)`
+        ).bind(hnId, model.id)
+      );
+      if (waiStmts.length > 0) await safeBatch(db, waiStmts);
+    }
+
+    if (waiModels.length > 0) {
+      // Wake up Workers AI consumer
+      await (lightQueue as any).send({ trigger: 'new_work', provider: 'workers-ai' }).catch(() => {});
     }
   }
 
-  // Mark stories as queued
+  // Mark stories as queued in stories table
   const updateStmts = enqueuedIds.map(hnId =>
     db
       .prepare(`UPDATE stories SET eval_status = 'queued' WHERE hn_id = ?`)
@@ -695,7 +710,7 @@ export async function enqueueForEvaluation(
     await db.batch(updateStmts);
   }
 
-  console.log(`[queue] Enqueued ${messages.length} stories`);
+  console.log(`[queue] Inserted ${enqueuedIds.length} stories into eval_queue`);
 }
 
 // ─── Re-evaluation trigger ───
@@ -802,15 +817,23 @@ export async function dispatchFreeModelEvals(
         .run();
     }
 
-    // Send to per-model queue in batches of 25
+    // Insert eval_queue rows for this model (idempotent — INSERT OR IGNORE)
+    const evalStmts = candidates.map(story =>
+      db.prepare(
+        `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority) VALUES (?, ?, ?, ?, 0)`
+      ).bind(story.hn_id, model.provider, model.id, model.prompt_mode ?? 'full')
+    );
+    if (evalStmts.length > 0) await safeBatch(db, evalStmts);
+
+    // Wake up this model's consumer queue (proportional, max 3)
     const modelQueue = getModelQueue(model.id, env);
-    for (let i = 0; i < messages.length; i += 25) {
-      const batch = messages.slice(i, i + 25);
-      await modelQueue.sendBatch(batch);
+    const wakeCount = Math.min(Math.ceil(candidates.length / 5) + 1, 3);
+    for (let i = 0; i < wakeCount; i++) {
+      await (modelQueue as any).send({ trigger: 'new_work', provider: model.provider }).catch(() => {});
     }
 
-    results.push({ model: model.id, dispatched: messages.length });
-    console.log(`[multi-model] Dispatched ${messages.length} stories for model ${model.id}`);
+    results.push({ model: model.id, dispatched: candidates.length });
+    console.log(`[multi-model] Inserted ${candidates.length} eval_queue rows for model ${model.id}`);
   }
 
   return results;

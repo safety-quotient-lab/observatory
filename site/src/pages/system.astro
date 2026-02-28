@@ -168,6 +168,13 @@ const pctDone = status.total > 0 ? Math.round((status.done / status.total) * 100
 const pctPending = status.total > 0 ? Math.round((status.pending / status.total) * 100) : 0;
 const pctFailed = status.total > 0 ? Math.round((status.failed / status.total) * 100) : 0;
 const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total) * 100) : 0;
+
+// Coverage spectrum percentages (of non-skipped stories)
+const evaluable = status.total - status.skipped;
+const pctCovMulti = evaluable > 0 ? Math.round((status.coverageMultiModel / evaluable) * 100) : 0;
+const pctCovFull = evaluable > 0 ? Math.round(((status.coverageFull - status.coverageMultiModel) / evaluable) * 100) : 0;
+const pctCovLight = evaluable > 0 ? Math.round((status.coverageLight / evaluable) * 100) : 0;
+const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
 ---
 
 <Base title="System">
@@ -183,46 +190,55 @@ const pctSkipped = status.total > 0 ? Math.round((status.skipped / status.total)
     </tr>
   </table>
 
-  {/* Pipeline Status */}
+  {/* Coverage Spectrum */}
   <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
     <tr>
       <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Pipeline</div>
+        <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Coverage</div>
 
-        {/* Progress bar */}
+        {/* Coverage spectrum bar (excludes skipped) */}
         <div style="width: 100%; height: 8px; background: #0d4655; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 10px;">
-          {status.done > 0 && <div style={`width: ${pctDone}%; background: #16a34a;`}></div>}
-          {status.skipped > 0 && <div style={`width: ${pctSkipped}%; background: #5b7279;`}></div>}
-          {status.failed > 0 && <div style={`width: ${pctFailed}%; background: #dc2626;`}></div>}
-          {status.pending > 0 && <div style={`width: ${pctPending}%; background: #0d4655;`}></div>}
+          {pctCovMulti > 0 && <div style={`width: ${pctCovMulti}%; background: #259d94;`} title={`Multi-model: ${status.coverageMultiModel}`}></div>}
+          {pctCovFull > 0 && <div style={`width: ${pctCovFull}%; background: #16a34a;`} title={`Full: ${status.coverageFull - status.coverageMultiModel}`}></div>}
+          {pctCovLight > 0 && <div style={`width: ${pctCovLight}%; background: #d56500;`} title={`Light: ${status.coverageLight}`}></div>}
+          {pctCovNone > 0 && <div style={`width: ${pctCovNone}%; background: #0d4655;`}></div>}
         </div>
 
         <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-base);">
           <tr>
-            <td style="text-align: center; width: 20%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #16a34a; font-weight: bold;">{status.done}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Done</div>
+            <td style="text-align: center; width: 25%;">
+              <div class="score-font" style="font-size: var(--font-lg); color: #259d94; font-weight: bold;">{status.coverageMultiModel}</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Multi-Model</div>
             </td>
-            <td style="text-align: center; width: 20%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #eab308; font-weight: bold;">{status.pending}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Pending</div>
+            <td style="text-align: center; width: 25%;">
+              <div class="score-font" style="font-size: var(--font-lg); color: #16a34a; font-weight: bold;">{status.coverageFull}</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Full</div>
             </td>
-            <td style="text-align: center; width: 20%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #60a5fa; font-weight: bold;">{status.evaluating}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Evaluating</div>
+            <td style="text-align: center; width: 25%;">
+              <div class="score-font" style="font-size: var(--font-lg); color: #d56500; font-weight: bold;">{status.coverageLight}</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Light</div>
             </td>
-            <td style="text-align: center; width: 20%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #dc2626; font-weight: bold;">{status.failed}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Failed</div>
-            </td>
-            <td style="text-align: center; width: 20%;">
-              <div class="score-font" style="font-size: var(--font-lg); color: #5b7279; font-weight: bold;">{status.skipped}</div>
-              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">Skipped</div>
+            <td style="text-align: center; width: 25%;">
+              <div class="score-font" style="font-size: var(--font-lg); color: #5b7279; font-weight: bold;">{evaluable > 0 ? evaluable - status.coverageFull - status.coverageLight : 0}</div>
+              <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase;">No Coverage</div>
             </td>
           </tr>
         </table>
+
+        {/* Pipeline status row */}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; display: flex; gap: 12px; flex-wrap: wrap; font-size: var(--font-sm); color: #5b7279;">
+          <span><span class="score-font" style="color: #16a34a;">{status.done}</span> done</span>
+          <span><span class="score-font" style="color: #eab308;">{status.pending}</span> pending</span>
+          {status.evaluating > 0 && <span><span class="score-font" style="color: #60a5fa;">{status.evaluating}</span> evaluating</span>}
+          {status.failed > 0 && <span><span class="score-font" style="color: #dc2626;">{status.failed}</span> failed</span>}
+          <span><span class="score-font" style="color: #5b7279;">{status.skipped}</span> skipped</span>
+          <span style="color: #1a5568;">|</span>
+          <span><span class="score-font" style="color: #98a8a8;">{status.total}</span> total</span>
+        </div>
+
+        {/* Velocity footer */}
         {velocity.evalsPerDay > 0 && (
-          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; display: flex; gap: 16px; font-size: var(--font-sm); color: #5b7279;">
+          <div style="margin-top: 6px; display: flex; gap: 16px; font-size: var(--font-sm); color: #5b7279;">
             <span>
               <span class="score-font" style="color: #5b7279;">{velocity.evalsPerDay.toFixed(1)}</span> evals/day
             </span>

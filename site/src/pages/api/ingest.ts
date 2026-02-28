@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     await writeLightRaterEvalResult(
       env.DB, hn_id, light, model_id, provider,
       prompt_hash ?? null, methodology_hash ?? null,
-      safeInputTokens, safeOutputTokens,
+      safeInputTokens, safeOutputTokens, 0,
     );
 
     // Longitudinal calibration snapshot: if this is a calibration ID and a run is active, persist to calibration_evals
@@ -130,7 +130,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   await writeRaterEvalResult(
     env.DB, hn_id, fullResult, model_id, provider,
     prompt_hash ?? null, methodology_hash ?? null,
-    safeInputTokens, safeOutputTokens,
+    safeInputTokens, safeOutputTokens, 0,
   );
 
   // Mark story as done so it doesn't get re-queued
