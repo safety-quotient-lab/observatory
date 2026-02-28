@@ -5,9 +5,10 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getStoriesByUser, getUserSetl, getUserDetailStats, getHnUser, getUserFingerprint, getUserSetlHistory } from '../../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { sanitizeHtml } from '../../lib/sanitize';
+import { readDb } from '../../lib/db-utils';
 
 const { username } = Astro.params;
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 
 if (!username || !/^[a-zA-Z0-9_-]+$/.test(username)) {
   return Astro.redirect('/');

@@ -5,8 +5,9 @@ import SubNav from '../components/SubNav.astro';
 import { getStoryDynamics, getEngagementByType } from '../lib/db';
 import type { StoryDynamics } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
+import { readDb } from '../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 
 const url = new URL(Astro.request.url);
 const sort = url.searchParams.get('sort') || 'peak';

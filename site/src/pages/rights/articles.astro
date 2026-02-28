@@ -5,9 +5,9 @@ import SubNav from '../../components/SubNav.astro';
 import { scoreToColor, formatScore, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ARTICLE_GROUPS, SECTIONS } from '../../lib/udhr';
 import { getArticleDetailedStats, getArticleSparklines } from '../../lib/db';
-import { cachedQuery } from '../../lib/db-utils';
+import { cachedQuery, readDb } from '../../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const [articleStats, sparklinesRaw] = await Promise.all([

@@ -3,10 +3,10 @@ import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { getStatusCounts, getDomainSignalProfiles, getGlobalGateStats } from '../lib/db';
 import type { DomainSignalProfile } from '../lib/db-entities';
-import { cachedQuery } from '../lib/db-utils';
+import { cachedQuery, readDb } from '../lib/db-utils';
 import { scoreToColor, formatScore, setlToColor, formatSetl, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../lib/colors';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 let statusCounts = { total: 0, done: 0, pending: 0, failed: 0 };

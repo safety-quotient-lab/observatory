@@ -3,8 +3,9 @@ import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import EvalCard from '../components/EvalCard.astro';
 import { getFilteredStoriesWithScores } from '../lib/db';
+import { readDb } from '../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const url = new URL(Astro.request.url);
 
 // Default to yesterday

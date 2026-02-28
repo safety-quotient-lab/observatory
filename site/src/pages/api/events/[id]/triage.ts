@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { updateEventTriage } from '../../../../lib/events';
+import { writeDb } from '../../../../lib/db-utils';
 
 export const POST: APIRoute = async ({ params, request, locals }) => {
   // Auth: require TRIGGER_SECRET or same-origin
@@ -34,7 +35,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     });
   }
 
-  const db = locals.runtime.env.DB;
+  const db = writeDb(locals.runtime.env.DB);
   try {
     await updateEventTriage(db, id, body);
     return new Response(JSON.stringify({ ok: true }), {

@@ -18,9 +18,9 @@ import {
   getSelfThrottleImpact,
   getEvalLatencyStats,
 } from '../../lib/db';
-import { cachedQuery } from '../../lib/db-utils';
+import { cachedQuery, readDb } from '../../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const emptyEventStats = { total: 0, by_type: {}, by_severity: {}, last_24h: 0, last_7d: 0, error_count_7d: 0 };

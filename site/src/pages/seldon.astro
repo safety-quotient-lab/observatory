@@ -5,8 +5,9 @@ import SubNav from '../components/SubNav.astro';
 import { getDailyHrcb, getDailyContentTypeHrcb, getFeedDailyHrcb, getGlobalSetlHistory } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 import { CONTENT_TYPE_LABELS } from '../lib/types';
+import { readDb } from '../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 
 const [dailyHrcb, dailyContentType, dailyFeed, globalSetl] = await Promise.all([
   getDailyHrcb(db, 90),

@@ -5,9 +5,10 @@ import DcpTable from '../../components/DcpTable.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp, getDomainSetlHistory, getDomainSignals, getDomainGateStats } from '../../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence, gateToColor } from '../../lib/colors';
+import { readDb } from '../../lib/db-utils';
 
 const { domain } = Astro.params;
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 
 if (!domain || !/^[a-zA-Z0-9]([a-zA-Z0-9-]*\.)+[a-zA-Z]{2,}$/.test(domain)) {
   return Astro.redirect('/domains');

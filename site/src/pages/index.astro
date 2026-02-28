@@ -4,8 +4,9 @@ import EvalCard from '../components/EvalCard.astro';
 import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
 import type { SortOption, FilterOption, TypeOption, ModelOption } from '../lib/db';
 import { modelDisplayName, getModelDef, isLiteMode } from '../lib/shared-eval';
+import { readDb } from '../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 
 const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'top') as SortOption;

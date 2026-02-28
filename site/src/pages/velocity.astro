@@ -4,8 +4,9 @@ import Breadcrumb from '../components/Breadcrumb.astro';
 import SubNav from '../components/SubNav.astro';
 import { getHighVelocityStories, getVelocityVsHrcb } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
+import { readDb } from '../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 
 const [highVelocity, velocityHrcb] = await Promise.all([
   getHighVelocityStories(db, 30),

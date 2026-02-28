@@ -4,9 +4,9 @@ import Breadcrumb from '../components/Breadcrumb.astro';
 import { getUserIntelligence, getHourlyPatterns, getDayOfWeekPatterns, getKarmaHrcbCorrelation } from '../lib/db';
 import type { UserIntelSortOption } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
-import { cachedQuery } from '../lib/db-utils';
+import { cachedQuery, readDb } from '../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const url = new URL(Astro.request.url);

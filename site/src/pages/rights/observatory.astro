@@ -5,8 +5,9 @@ import SubNav from '../../components/SubNav.astro';
 import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution } from '../../lib/db';
 import { scoreToColor, formatScore, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
 import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../../lib/udhr';
+import { readDb } from '../../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 
 const [articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories] = await Promise.all([
   getArticleDetailedStats(db),

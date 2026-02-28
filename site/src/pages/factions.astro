@@ -4,10 +4,10 @@ import Breadcrumb from '../components/Breadcrumb.astro';
 import { getAllDomainStats, getDomainSignalProfiles, getDomainKarmaMap } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 import type { DomainSignalProfile } from '../lib/db';
-import { cachedQuery } from '../lib/db-utils';
+import { cachedQuery, readDb } from '../lib/db-utils';
 import SignalSpace from '../components/SignalSpace.astro';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 // --- 1. Parallel fetch ---

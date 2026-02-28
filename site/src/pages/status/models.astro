@@ -29,9 +29,9 @@ import {
   MODEL_COMPARISON_KV_KEY,
 } from '../../lib/db';
 import type { ModelComparisonBlob, ComparedStory } from '../../lib/db';
-import { cachedQuery } from '../../lib/db-utils';
+import { cachedQuery, readDb } from '../../lib/db-utils';
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 let _pageError: string | null = null;

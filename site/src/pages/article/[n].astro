@@ -4,6 +4,7 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { ARTICLE_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
 import { getArticleRanking, getArticleCoverage } from '../../lib/db';
+import { readDb } from '../../lib/db-utils';
 
 const { n } = Astro.params;
 const articleNum = parseInt(n!, 10);
@@ -16,7 +17,7 @@ const section = articleNum === 0 ? 'Preamble' : `Article ${articleNum}`;
 const articleTitle = ARTICLE_TITLES[section] || section;
 const udhrSection = getSection(articleNum);
 
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const url = new URL(Astro.request.url);
 const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const PER_PAGE = 30;
