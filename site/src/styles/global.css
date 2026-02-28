@@ -157,6 +157,68 @@
     color: var(--color-orange) !important;
   }
 
+  /* Tripartite score display (HRCB | E | S stacked) */
+  .tripartite-score {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    line-height: 1.2;
+  }
+
+  .tripartite-score .score-row {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  .tripartite-score .score-label {
+    color: var(--fg-secondary);
+    font-size: var(--font-xs);
+    width: 28px;
+    text-align: right;
+  }
+
+  .tripartite-score .score-value {
+    font-size: var(--font-xs);
+  }
+
+  /* Active channel highlight — body[data-score-mode] controls which row is prominent */
+  body[data-score-mode="hrcb"] .score-row[data-channel="hrcb"] .score-value,
+  body:not([data-score-mode]) .score-row[data-channel="hrcb"] .score-value {
+    font-size: var(--font-md);
+    font-weight: bold;
+  }
+
+  body[data-score-mode="editorial"] .score-row[data-channel="editorial"] .score-value {
+    font-size: var(--font-md);
+    font-weight: bold;
+  }
+
+  body[data-score-mode="structural"] .score-row[data-channel="structural"] .score-value {
+    font-size: var(--font-md);
+    font-weight: bold;
+  }
+
+  /* Score mode toggle buttons */
+  .score-mode-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--fg-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--font-sm);
+    padding: 0 2px;
+  }
+
+  .score-mode-btn:hover {
+    color: var(--color-cyan);
+  }
+
+  .score-mode-btn.active {
+    color: var(--color-orange);
+    font-weight: bold;
+  }
+
   /* Responsive insight card grid */
   .insight-grid {
     display: grid;

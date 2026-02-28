@@ -438,6 +438,7 @@ export async function enqueueForEvaluation(
   queue: Queue,
   kv: KVNamespace,
   lightQueue?: Queue,
+  env?: Record<string, any>,
 ): Promise<void> {
   const limit = 100;
   console.log(`[queue] Dispatching up to ${limit} pending stories`);
@@ -594,12 +595,47 @@ export async function enqueueForEvaluation(
   // Check Anthropic credit pause before dispatching to primary queue
   const anthropicPaused = await checkCreditPause(kv, 'anthropic');
   if (anthropicPaused) {
-    console.warn('[queue] Anthropic credit pause active — skipping primary queue dispatch');
+    console.warn('[queue] Anthropic credit pause active — dispatching to free model queues instead');
     await logEvent(db, {
       event_type: 'eval_skip', severity: 'warn',
-      message: `Skipped primary queue dispatch: Anthropic credit pause active (${messages.length} stories held)`,
-      details: { reason: 'credit_pause', provider: 'anthropic', held: messages.length },
+      message: `Anthropic credit pause: dispatching ${messages.length} stories to free models`,
+      details: { reason: 'credit_pause', provider: 'anthropic', count: messages.length },
     });
+
+    // Dispatch to free model queues as primary evaluators
+    if (env) {
+      const freeModels = getEnabledFreeModels();
+      for (const model of freeModels) {
+        const modelQueue = getModelQueue(model.id, env);
+        const freeMessages: { body: QueueMessage }[] = [];
+        for (const msg of messages) {
+          freeMessages.push({
+            body: {
+              ...msg.body,
+              eval_model: model.id,
+              eval_provider: model.provider,
+              prompt_mode: model.prompt_mode,
+            },
+          });
+          // UPSERT rater_evals shell row
+          await db
+            .prepare(
+              `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, prompt_mode)
+               VALUES (?, ?, ?, 'queued', ?)
+               ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued', prompt_mode = excluded.prompt_mode`
+            )
+            .bind(msg.body.hn_id, model.id, model.provider, model.prompt_mode ?? 'full')
+            .run()
+            .catch(() => {});
+        }
+        // Send to per-model queue in batches of 25
+        for (let i = 0; i < freeMessages.length; i += 25) {
+          const batch = freeMessages.slice(i, i + 25);
+          await modelQueue.sendBatch(batch);
+        }
+        console.log(`[queue] Credit pause fallback: dispatched ${freeMessages.length} stories to ${model.id}`);
+      }
+    }
   } else {
     // Send to queue in batches of 25 (Queue.sendBatch limit)
     for (let i = 0; i < messages.length; i += 25) {
@@ -608,13 +644,11 @@ export async function enqueueForEvaluation(
     }
   }
 
-  // Selective light-dispatch: only low-signal stories get the Workers AI ~lite preview.
-  // High/medium-signal stories (full/multi depth) skip the light queue — they'll have
-  // a proper primary eval quickly and don't benefit from a transient ~lite label.
+  // Light-dispatch: send ALL pending stories to Workers AI light queue.
+  // When Anthropic is credit-paused, light evals are the primary path to 'done'.
+  // When Anthropic is active, light evals provide fast ~lite feed presence.
   if (lightQueue) {
     for (const msg of messages) {
-      const story = pending.find(p => p.hn_id === msg.body.hn_id);
-      if (!story || determineEvalDepth(story) !== 'light') continue;
       try {
         await lightQueue.send({
           hn_id: msg.body.hn_id,
@@ -694,14 +728,17 @@ export async function dispatchFreeModelEvals(
       .prepare(
         `SELECT s.hn_id, s.url, s.title, s.domain, s.hn_text
          FROM stories s
-         WHERE s.eval_status = 'done'
+         WHERE s.eval_status IN ('done', 'pending')
+           AND (s.url IS NOT NULL OR s.hn_text IS NOT NULL)
            AND NOT EXISTS (
              SELECT 1 FROM rater_evals re
              WHERE re.hn_id = s.hn_id
                AND re.eval_model = ?
                AND re.eval_status IN ('done', 'queued', 'evaluating', 'pending')
            )
-         ORDER BY s.evaluated_at DESC
+         ORDER BY
+           CASE WHEN s.eval_status = 'pending' THEN 0 ELSE 1 END,
+           s.hn_time DESC
          LIMIT ?`
       )
       .bind(model.id, limit)
@@ -944,6 +981,7 @@ export async function runCrawlCycle(
   kv: KVNamespace,
   minute: number,
   lightQueue?: Queue,
+  env?: Record<string, any>,
 ): Promise<CrawlResult> {
   const startTime = Date.now();
   const result: CrawlResult = {
@@ -1265,7 +1303,7 @@ export async function runCrawlCycle(
     )
     .run();
 
-  await enqueueForEvaluation(db, queue, kv, lightQueue);
+  await enqueueForEvaluation(db, queue, kv, lightQueue, env);
   result.enqueued = true;
 
   // Skip self-posts with no text AND no URL

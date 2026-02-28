@@ -73,7 +73,7 @@ export default {
 
     let crawlResult: Awaited<ReturnType<typeof runCrawlCycle>>;
     try {
-      crawlResult = await runCrawlCycle(db, env.EVAL_QUEUE, env.CONTENT_CACHE, minute, env.WORKERS_AI_QUEUE);
+      crawlResult = await runCrawlCycle(db, env.EVAL_QUEUE, env.CONTENT_CACHE, minute, env.WORKERS_AI_QUEUE, env as unknown as Record<string, any>);
     } catch (err) {
       console.error('[cron] Crawl cycle failed (non-fatal):', err);
       await logEvent(db, { event_type: 'cron_error', severity: 'error', message: `Crawl cycle failed`, details: { phase: 'crawl', error: String(err) } }).catch(() => {});
@@ -565,7 +565,7 @@ export default {
         const promoted = meta?.changes ?? 0;
 
         if (promoted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
         }
 
         await logEvent(db, {
@@ -602,7 +602,7 @@ export default {
         const promoted = meta?.changes ?? 0;
 
         if (promoted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
         }
 
         await logEvent(db, {
@@ -641,7 +641,7 @@ export default {
         const totalInserted = results.reduce((sum, r) => sum + r.inserted, 0);
 
         if (totalInserted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
         }
 
         await logEvent(db, {
@@ -661,7 +661,7 @@ export default {
         const result = await checkContentDrift(db, rawLimit);
 
         if (result.drifted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
         }
 
         await logEvent(db, {
@@ -694,7 +694,7 @@ export default {
         const { inserted, skipped } = await insertAlgoliaHits(db, hits, 'story', 'algolia_backfill');
 
         if (inserted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE);
+          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
         }
 
         await logEvent(db, {

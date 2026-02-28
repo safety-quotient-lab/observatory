@@ -446,8 +446,31 @@ export async function processLightResult(
   const lightPromptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT_LIGHT, lightUserMessage);
   const lightMethodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_LIGHT);
 
+  // Check if story is pending (will be promoted to done by writeLightRaterEvalResult)
+  let wasPending = false;
+  try {
+    const statusRow = await db.prepare('SELECT eval_status FROM stories WHERE hn_id = ?')
+      .bind(story.hn_id).first<{ eval_status: string }>();
+    wasPending = statusRow?.eval_status === 'pending' || statusRow?.eval_status === 'queued';
+  } catch {}
+
   // Write
   await writeLightRaterEvalResult(db, story.hn_id, lightParsed, prep.msgModelId, prep.provider, lightPromptHash, lightMethodologyHash, inputTokens, outputTokens);
+
+  // Invalidate feed caches if story was promoted from pending to done
+  if (wasPending) {
+    const cacheKeys = [
+      'q:domainSignalProfiles',
+      'q:allDomainStats:count:50',
+      'q:allDomainStats:count:200',
+      'q:allDomainStats:score:200',
+      'q:allDomainStats:setl:200',
+      'q:allDomainStats:conf:200',
+    ];
+    for (const key of cacheKeys) {
+      env.CONTENT_CACHE.delete(key).catch(() => {});
+    }
+  }
 
   // Health success
   await handleRaterHealthSuccess(env, db, story, prep.msgModelId);

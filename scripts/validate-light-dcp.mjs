@@ -42,7 +42,7 @@ const CALIBRATION = [
   { slot: 'EN-5', url: 'https://www.merriam-webster.com',        lo: -0.05, hi: 0.10 },
   { slot: 'EX-1', url: 'https://www.shopify.com',                lo: -0.10, hi: 0.25 },
   { slot: 'EX-2', url: 'https://www.presstv.ir',                 lo: -0.80, hi: -0.20 },
-  { slot: 'EX-3', url: 'https://www.npmjs.com',                  lo: -0.10, hi: 0.15 },  // neutral developer utility registry
+  { slot: 'EX-3', url: 'https://pypi.org',                        lo: -0.10, hi: 0.15 },  // neutral Python package registry (Fastly CDN, no CF Bot Management)
   { slot: 'EX-4', url: 'https://jacobin.com',                    lo:  0.35, hi: 0.90 },
   { slot: 'EX-5', url: 'https://www.globaltimes.cn',             lo: -0.80, hi: -0.10 },
 ];
@@ -56,7 +56,7 @@ const BASELINE = {
   'EN-2': { mean: 0.060, sigma: 0.085 }, 'EN-3': { mean: 0.000, sigma: 0.000 },
   'EN-4': { mean: 0.000, sigma: 0.000 }, 'EN-5': { mean: 0.000, sigma: 0.000 },
   'EX-1': { mean: 0.000, sigma: 0.000 }, 'EX-2': { mean: -0.685, sigma: 0.049 },
-  'EX-3': { mean: 0.000, sigma: 0.000 }, 'EX-4': { mean: 0.765, sigma: 0.021 },  // EX-3 baseline reset (npmjs.com replaces booking.com 2026-02-28)
+  'EX-3': { mean: 0.000, sigma: 0.000 }, 'EX-4': { mean: 0.765, sigma: 0.021 },  // EX-3 baseline reset (pypi.org replaces npmjs.com 2026-02-28 — npmjs also blocked by CF Bot Mgmt)
   'EX-5': { mean: -0.390, sigma: 0.297 },
 };
 

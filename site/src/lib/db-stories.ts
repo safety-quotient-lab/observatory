@@ -209,9 +209,9 @@ export async function getFilteredStoriesWithScores(
   const conditions: string[] = ['1=1'];
   switch (filter) {
     case 'evaluated': conditions.push("s.eval_status = 'done'"); break;
-    case 'positive': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean > 0.05"); break;
-    case 'negative': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean < -0.05"); break;
-    case 'neutral': conditions.push("s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05"); break;
+    case 'positive': conditions.push("s.eval_status = 'done' AND COALESCE(s.hcb_weighted_mean, s.hcb_editorial_mean) > 0.05"); break;
+    case 'negative': conditions.push("s.eval_status = 'done' AND COALESCE(s.hcb_weighted_mean, s.hcb_editorial_mean) < -0.05"); break;
+    case 'neutral': conditions.push("s.eval_status = 'done' AND COALESCE(s.hcb_weighted_mean, s.hcb_editorial_mean) BETWEEN -0.05 AND 0.05"); break;
     case 'pending': conditions.push("s.eval_status IN ('pending', 'queued', 'evaluating')"); break;
     case 'failed': conditions.push("s.eval_status IN ('failed', 'skipped')"); break;
   }
@@ -263,8 +263,8 @@ export async function getFilteredStoriesWithScores(
   let joinSetl = false;
   switch (sort) {
     case 'top': orderBy = 's.hn_rank ASC NULLS LAST, s.hn_time DESC'; break;
-    case 'score_desc': orderBy = `${scorePrefix}.hcb_weighted_mean DESC NULLS LAST`; break;
-    case 'score_asc': orderBy = `${scorePrefix}.hcb_weighted_mean ASC NULLS LAST`; break;
+    case 'score_desc': orderBy = `COALESCE(${scorePrefix}.hcb_weighted_mean, ${scorePrefix}.hcb_editorial_mean) DESC NULLS LAST`; break;
+    case 'score_asc': orderBy = `COALESCE(${scorePrefix}.hcb_weighted_mean, ${scorePrefix}.hcb_editorial_mean) ASC NULLS LAST`; break;
     case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
     case 'conf_desc': orderBy = `${scorePrefix}.hcb_confidence DESC NULLS LAST`; break;
     case 'conf_asc': orderBy = `${scorePrefix}.hcb_confidence ASC NULLS LAST`; break;

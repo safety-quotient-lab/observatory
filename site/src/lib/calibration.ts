@@ -66,7 +66,7 @@ export const DRIFT_THRESHOLDS = {
  * URL selection notes:
  *   EX-1 → shopify.com (Temu triggers parametric labor/Uyghur knowledge)
  *   EX-2 → presstv.ir (RT RSS rotates content, can flip positive; presstv is stable)
- *   EX-3 → npmjs.com (booking.com blocked Cloudflare Workers egress IPs → age_gate false positive)
+ *   EX-3 → pypi.org (npmjs.com + booking.com both use Cloudflare Bot Management → age_gate on Workers egress IPs; pypi.org is Fastly CDN)
  *   EX-4 → jacobin.com (news.gab.com too volatile; jacobin has stable socialist editorial)
  *   EN-5 → merriam-webster.com (speedtest.net triggers digital-divide parametric noise)
  *
@@ -86,7 +86,7 @@ export const LIGHT_CALIBRATION_SET: CalibrationUrl[] = [
   { slot: 'EN-5', url: 'https://www.merriam-webster.com', expectedClass: 'EN', expectedMeanMin: -0.05, expectedMeanMax: 0.10, label: 'Merriam-Webster' },
   { slot: 'EX-1', url: 'https://www.shopify.com', expectedClass: 'EN', expectedMeanMin: -0.10, expectedMeanMax: 0.25, label: 'Shopify' },
   { slot: 'EX-2', url: 'https://www.presstv.ir', expectedClass: 'EX', expectedMeanMin: -0.80, expectedMeanMax: -0.20, label: 'PressTV' },
-  { slot: 'EX-3', url: 'https://www.npmjs.com', expectedClass: 'EN', expectedMeanMin: -0.10, expectedMeanMax: 0.15, label: 'npm Registry' },
+  { slot: 'EX-3', url: 'https://pypi.org', expectedClass: 'EN', expectedMeanMin: -0.10, expectedMeanMax: 0.15, label: 'PyPI' },
   { slot: 'EX-4', url: 'https://jacobin.com', expectedClass: 'EP', expectedMeanMin: 0.35, expectedMeanMax: 0.90, label: 'Jacobin' },
   { slot: 'EX-5', url: 'https://www.globaltimes.cn', expectedClass: 'EX', expectedMeanMin: -0.80, expectedMeanMax: -0.10, label: 'Global Times' },
 ];
@@ -105,7 +105,7 @@ export const LIGHT_DRIFT_THRESHOLDS = {
   pairs: {
     EP1_EP3: 0.15,  // amnesty vs hrw (both high-advocacy NGOs)
     EX2_EX5: 0.70,  // presstv vs globaltimes — fundamentally different editorial styles; presstv aggressively negative, globaltimes neutral-toned; observed delta ~0.58
-    EX1_EX3: 0.25,  // shopify vs npmjs (neutral commercial; variance expected)
+    EX1_EX3: 0.25,  // shopify vs pypi (neutral commercial; variance expected)
   },
   classOrdering: true,
 };

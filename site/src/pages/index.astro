@@ -167,6 +167,13 @@ function modelLabel(id: string): string {
             </>
           )}
           <br />
+          <span style="color: #5b7279;">score:</span>
+          <button class="score-mode-btn" data-mode="hrcb">HRCB</button>
+          <span style="color: #1a5568;"> | </span>
+          <button class="score-mode-btn" data-mode="editorial">E</button>
+          <span style="color: #1a5568;"> | </span>
+          <button class="score-mode-btn" data-mode="structural">S</button>
+          <br />
           <span style="color: #5b7279;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
           {evaluatedCount > 0 && <span style="color: #5b7279;"> ({evaluatedCount} evaluated)</span>}
           {page > 1 && <span style="color: #5b7279;"> · page {page}</span>}

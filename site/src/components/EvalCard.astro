@@ -17,8 +17,8 @@ const otherModels = (raterModels || []).filter(m => m.eval_model !== PRIMARY_MOD
 
 const hasEval = story.eval_status === 'done' && (story.hcb_weighted_mean !== null || story.hcb_editorial_mean !== null);
 const isLightOnly = hasEval && story.hcb_weighted_mean === null && story.hcb_editorial_mean !== null;
-// Display editorial score as primary; fall back to weighted_mean if editorial not available
-const displayScore = story.hcb_editorial_mean ?? story.hcb_weighted_mean;
+// Display HRCB: weighted_mean for full evals, editorial_mean for light-only
+const displayScore = story.hcb_weighted_mean ?? story.hcb_editorial_mean;
 const displayColor = hasEval ? scoreToColor(displayScore) : '#5b7279';
 const structuralScore = story.hcb_structural_mean;
 const classLabel = story.hcb_classification?.split(' — ')[0] || story.hcb_classification;
@@ -65,46 +65,26 @@ function timeAgo(unixTime: number): string {
   <td valign="top" style="padding-right: 5px; width: 90px; min-width: 90px; text-align: left; white-space: nowrap;">
     {hasEval ? (
       <a href={`/item/${story.hn_id}`} style="text-decoration: none;" title={`Editorial: ${formatScore(displayScore)} — ${classLabel} | Conf: ${formatConfidence(confidence)} | Structural: ${structuralScore !== null ? formatScore(structuralScore) : 'ND'} | SETL: ${formatSetl(aggSetl)}`}>
-        <div style="white-space: nowrap;">
-          <span class="score-font" style="color: #5b7279; font-size: var(--font-xs);" title={isLightOnly ? "HRCB editorial score — lite model (editorial only)" : "Editorial score (author's stance toward human rights)"}>{isLightOnly ? '~lite' : 'HRCB'}</span>
-          <span
-            class="score-font"
-            style={`color: ${displayColor}; font-size: var(--font-md); font-weight: bold; margin-left: 2px; white-space: nowrap;`}
-          >
-            {formatScore(displayScore)}
-          </span>
-        </div>
-        <div style="white-space: nowrap; margin-top: 1px;">
-          {confidence !== null && (
-            <>
-              <span class="score-font" style="color: #5b7279; font-size: var(--font-xs);" title={`Confidence: ${story.hcb_signal_sections}/${(story.hcb_signal_sections || 0) + (story.hcb_nd_count || 0)} articles scored`}>Conf</span>
-              <span
-                class="score-font"
-                style={`color: ${confidenceToColor(confidence)}; font-size: var(--font-sm); margin-left: 2px;`}
-              >
-                {formatConfidence(confidence)}
-              </span>
-            </>
-          )}
-        </div>
-        {avgEditorial !== null && avgStructural !== null && (
-          <div style="margin-top: 3px; width: 80px;" title={`Editorial: ${avgEditorial > 0 ? '+' : ''}${avgEditorial.toFixed(2)} | Structural: ${avgStructural > 0 ? '+' : ''}${avgStructural.toFixed(2)}`}>
-            <div style="display: flex; gap: 2px; align-items: center;">
-              <span class="score-font" style="color: #5b7279; font-size: 8px; width: 8px;">E</span>
-              <div style="flex: 1; height: 5px; background: #0d4655; border-radius: 2px; position: relative; overflow: hidden;">
-                <div style={`position: absolute; ${avgEditorial >= 0 ? 'left: 50%' : `left: ${50 + avgEditorial * 50}%`}; width: ${Math.abs(avgEditorial) * 50}%; height: 100%; background: ${scoreToColor(avgEditorial)}; border-radius: 1px;`}></div>
-                <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #0d4655;"></div>
-              </div>
-            </div>
-            <div style="display: flex; gap: 2px; align-items: center; margin-top: 1px;">
-              <span class="score-font" style="color: #5b7279; font-size: 8px; width: 8px;">S</span>
-              <div style="flex: 1; height: 5px; background: #0d4655; border-radius: 2px; position: relative; overflow: hidden;">
-                <div style={`position: absolute; ${avgStructural >= 0 ? 'left: 50%' : `left: ${50 + avgStructural * 50}%`}; width: ${Math.abs(avgStructural) * 50}%; height: 100%; background: ${scoreToColor(avgStructural)}; border-radius: 1px;`}></div>
-                <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #0d4655;"></div>
-              </div>
-            </div>
+        <div class="tripartite-score">
+          <div class="score-row" data-channel="hrcb">
+            <span class="score-font score-label">{isLightOnly ? '~lite' : 'HRCB'}</span>
+            <span class="score-font score-value" style={`color: ${displayColor};`}>
+              {formatScore(displayScore)}
+            </span>
           </div>
-        )}
+          <div class="score-row" data-channel="editorial">
+            <span class="score-font score-label">E</span>
+            <span class="score-font score-value" style={`color: ${story.hcb_editorial_mean !== null ? scoreToColor(story.hcb_editorial_mean) : '#5b7279'};`}>
+              {story.hcb_editorial_mean !== null ? formatScore(story.hcb_editorial_mean) : '--'}
+            </span>
+          </div>
+          <div class="score-row" data-channel="structural">
+            <span class="score-font score-label">S</span>
+            <span class="score-font score-value" style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : '#5b7279'};`}>
+              {structuralScore !== null ? formatScore(structuralScore) : '--'}
+            </span>
+          </div>
+        </div>
       </a>
     ) : story.eval_status === 'evaluating' ? (
       <span class="eval-spinner" style="color: #60a5fa; font-size: var(--font-sm); display: inline-block;" title="Evaluating...">&#9881;</span>
@@ -139,12 +119,7 @@ function timeAgo(unixTime: number): string {
     </span>
     {story.domain && (
       <span class="sitebit" style="font-size: var(--font-sm); margin-left: 5px;">
-        (<a href={`/domain/${story.domain}`}>{story.domain}</a>{hasEval && !isLightOnly && (
-          <span style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : '#5b7279'}; margin-left: 4px;`}
-                title={structuralScore !== null ? `Structural: ${formatScore(structuralScore)} (what the site does — privacy, access, tracking)` : 'Structural: no data'}>
-            S:{structuralScore !== null ? formatScore(structuralScore) : 'ND'}
-          </span>
-        )})
+        (<a href={`/domain/${story.domain}`}>{story.domain}</a>)
       </span>
     )}
   </td>

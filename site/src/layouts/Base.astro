@@ -98,6 +98,29 @@ try {
     </div>
 
     <script>
+      // Apply stored score mode on page load
+      document.body.dataset.scoreMode = localStorage.getItem('hrcb_score_mode') || 'hrcb';
+
+      // Highlight active score mode button
+      function updateScoreModeButtons() {
+        const mode = document.body.dataset.scoreMode || 'hrcb';
+        document.querySelectorAll('.score-mode-btn').forEach((btn) => {
+          const el = btn as HTMLElement;
+          el.classList.toggle('active', el.dataset.mode === mode);
+        });
+      }
+      updateScoreModeButtons();
+
+      // Score mode toggle handler
+      document.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.score-mode-btn') as HTMLElement | null;
+        if (!btn || !btn.dataset.mode) return;
+        const mode = btn.dataset.mode;
+        localStorage.setItem('hrcb_score_mode', mode);
+        document.body.dataset.scoreMode = mode;
+        updateScoreModeButtons();
+      });
+
       function scoreColor(score: number): string {
         if (score > 0) {
           const t = Math.min(score, 1);
@@ -140,7 +163,9 @@ try {
       }
 
       function hasDonated(): boolean {
-        return !!localStorage.getItem('hrcb_donated');
+        const ts = localStorage.getItem('hrcb_donated');
+        if (!ts) return false;
+        return (Date.now() - new Date(ts).getTime()) < 86400000; // 24 hours
       }
 
       function onDonationConfirmed() {

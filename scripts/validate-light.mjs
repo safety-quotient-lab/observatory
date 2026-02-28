@@ -59,7 +59,7 @@ const CALIBRATION = [
   // EX: negative editorially (state media) or neutral (commercial)
   { slot: 'EX-1', url: 'https://www.shopify.com',                lo: -0.10, hi: 0.25 },  // e-commerce platform, commercial SaaS, no editorial voice
   { slot: 'EX-2', url: 'https://www.presstv.ir',                 lo: -0.80, hi: -0.20 }, // Iranian state media: government-aligned framing
-  { slot: 'EX-3', url: 'https://www.npmjs.com',                  lo: -0.10, hi: 0.15 },  // neutral developer utility registry; no editorial stance
+  { slot: 'EX-3', url: 'https://pypi.org',                        lo: -0.10, hi: 0.15 },  // neutral Python package registry (Fastly CDN, no CF Bot Management); no editorial stance
   { slot: 'EX-4', url: 'https://jacobin.com',                    lo:  0.35, hi: 0.90 },  // Socialist magazine: labor/economic rights = moderate-to-high positive
   { slot: 'EX-5', url: 'https://www.globaltimes.cn',             lo: -0.80, hi: -0.10 }, // Chinese state media, English — CPC editorial framing
 ];
