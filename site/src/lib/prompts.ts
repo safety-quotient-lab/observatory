@@ -131,7 +131,6 @@ Techniques: loaded_language, name_calling, repetition, exaggeration, doubt, appe
 For each flagged technique provide:
 - **technique**: One of the 18 technique names above.
 - **evidence**: A direct quote or brief description of the observable instance.
-- **severity**: "low" (subtle/single instance), "medium" (clear/repeated), "high" (dominant rhetorical strategy).
 
 ### 10.3 Solution Orientation
 - **framing**: "problem_only" (identifies problems without constructive framing), "mixed" (some solutions alongside problems), "solution_oriented" (primarily focuses on solutions, progress, or constructive approaches).
@@ -230,7 +229,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "eq_score": <0.0-1.0>
   },
   "propaganda_flags": [
-    { "technique": "<ptc18_name>", "evidence": "<text>", "severity": "<low|medium|high>" }
+    { "technique": "<ptc18_name>", "evidence": "<text>" }
   ],
   "solution_orientation": {
     "framing": "<problem_only|mixed|solution_oriented>",
@@ -415,7 +414,6 @@ Techniques: loaded_language, name_calling, repetition, exaggeration, doubt, appe
 For each flagged technique provide:
 - **technique**: One of the 18 technique names above.
 - **evidence**: A direct quote or brief description of the observable instance.
-- **severity**: "low" (subtle/single instance), "medium" (clear/repeated), "high" (dominant rhetorical strategy).
 
 ### 10.3 Solution Orientation
 - **framing**: "problem_only" (identifies problems without constructive framing), "mixed" (some solutions alongside problems), "solution_oriented" (primarily focuses on solutions, progress, or constructive approaches).
@@ -514,7 +512,7 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "eq_score": <0.0-1.0>
   },
   "propaganda_flags": [
-    { "technique": "<ptc18_name>", "evidence": "<text>", "severity": "<low|medium|high>" }
+    { "technique": "<ptc18_name>", "evidence": "<text>" }
   ],
   "solution_orientation": {
     "framing": "<problem_only|mixed|solution_oriented>",

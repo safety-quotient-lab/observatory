@@ -45,6 +45,7 @@ export interface Story {
   eq_purpose_transparency: number | null;
   eq_claim_density: string | null;
   pt_flag_count: number | null;
+  pt_score: number | null;
   pt_flags_json: string | null;
   so_score: number | null;
   so_framing: string | null;
@@ -96,7 +97,7 @@ const STORY_LIST_COLS = `hn_id, url, title, domain, hn_score, hn_comments, hn_by
   fw_ratio, fw_observable_count, fw_inference_count, schema_version,
   hcb_theme_tag, hcb_sentiment_tag, hcb_executive_summary,
   eq_score, eq_source_quality, eq_evidence_reasoning, eq_uncertainty_handling, eq_purpose_transparency, eq_claim_density,
-  pt_flag_count, pt_flags_json, so_score, so_framing, so_reader_agency,
+  pt_flag_count, pt_score, pt_flags_json, so_score, so_framing, so_reader_agency,
   et_primary_tone, et_valence, et_arousal, et_dominance,
   sr_score, sr_perspective_count, sr_voice_balance, sr_who_speaks, sr_who_spoken_about,
   tf_primary_focus, tf_time_horizon, gs_scope, gs_regions_json,

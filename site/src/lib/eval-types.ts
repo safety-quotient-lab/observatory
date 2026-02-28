@@ -26,7 +26,6 @@ export interface EpistemicQuality {
 export interface PropagandaFlag {
   technique: string;
   evidence: string;
-  severity: 'low' | 'medium' | 'high';
 }
 
 export interface SolutionOrientation {
@@ -246,6 +245,7 @@ export interface RaterEval {
   et_valence: number | null;
   sr_score: number | null;
   pt_flag_count: number;
+  pt_score: number | null;
   td_score: number | null;
   input_tokens: number | null;
   output_tokens: number | null;

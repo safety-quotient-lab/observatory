@@ -113,6 +113,7 @@ export interface RaterEvalRow {
   et_valence: number | null;
   sr_score: number | null;
   pt_flag_count: number | null;
+  pt_score: number | null;
   td_score: number | null;
   input_tokens: number | null;
   output_tokens: number | null;

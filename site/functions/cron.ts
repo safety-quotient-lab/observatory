@@ -28,7 +28,7 @@ import {
   type DcpElement,
 } from '../src/lib/compute-aggregates';
 import { runCrawlCycle, enqueueForEvaluation, dispatchFreeModelEvals, preloadContentCache } from '../src/lib/hn-bot';
-import { refreshDomainAggregate, refreshAllDomainAggregates } from '../src/lib/eval-write';
+import { refreshDomainAggregate, refreshAllDomainAggregates, backfillPtScores } from '../src/lib/eval-write';
 import { getModelQueue, PRIMARY_MODEL_ID } from '../src/lib/shared-eval';
 
 interface Env {
@@ -797,7 +797,35 @@ export default {
         );
       }
 
-      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage', 'algolia_backfill', 'content_drift', 'refresh_domain_aggregates'] }), {
+      if (sweep === 'backfill_pt_score') {
+        const limit = Math.min(2000, Math.max(1, parseInt(url.searchParams.get('limit') || '500', 10)));
+        ctx.waitUntil(
+          (async () => {
+            try {
+              const result = await backfillPtScores(db, { limit });
+              await logEvent(db, {
+                event_type: 'trigger',
+                severity: 'info',
+                message: `Sweep backfill_pt_score: ${result.updated} updated, ${result.errors} errors`,
+                details: { sweep: 'backfill_pt_score', ...result },
+              });
+            } catch (err) {
+              await logEvent(db, {
+                event_type: 'cron_error',
+                severity: 'error',
+                message: `Sweep backfill_pt_score failed: ${String(err).slice(0, 300)}`,
+                details: { sweep: 'backfill_pt_score', error: String(err) },
+              }).catch(() => {});
+            }
+          })(),
+        );
+        return new Response(
+          JSON.stringify({ sweep: 'backfill_pt_score', status: 'started', limit, description: 'Backfilling pt_score from pt_flags_json for stories without it.' }),
+          { status: 202, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+
+      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage', 'algolia_backfill', 'content_drift', 'refresh_domain_aggregates', 'backfill_pt_score'] }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });

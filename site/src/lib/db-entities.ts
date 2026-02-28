@@ -218,6 +218,7 @@ export interface DomainSignalProfile {
   avg_sr: number | null;
   avg_td: number | null;
   avg_pt_count: number | null;
+  avg_pt_score: number | null;
   avg_valence: number | null;
   avg_arousal: number | null;
   avg_dominance: number | null;
@@ -244,7 +245,7 @@ export async function getDomainSignalProfiles(db: D1Database): Promise<Map<strin
         `SELECT
            story_count as count,
            domain,
-           avg_eq, avg_so, avg_sr, avg_td, avg_pt_count,
+           avg_eq, avg_so, avg_sr, avg_td, avg_pt_count, avg_pt_score,
            avg_valence, avg_arousal, avg_dominance, avg_fw_ratio,
            avg_hn_score, avg_hn_comments,
            NULL as avg_poster_karma,

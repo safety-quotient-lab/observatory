@@ -544,6 +544,7 @@ export interface PropagandaStory {
   url: string | null;
   domain: string | null;
   pt_flag_count: number;
+  pt_score: number | null;
   pt_flags_json: string | null;
   hcb_weighted_mean: number | null;
   hcb_editorial_mean: number | null;
@@ -552,10 +553,10 @@ export interface PropagandaStory {
 export async function getTopPropagandaStories(db: D1Database, limit = 10): Promise<PropagandaStory[]> {
   const { results } = await db
     .prepare(
-      `SELECT hn_id, title, url, domain, pt_flag_count, pt_flags_json, hcb_weighted_mean, hcb_editorial_mean
+      `SELECT hn_id, title, url, domain, pt_flag_count, pt_score, pt_flags_json, hcb_weighted_mean, hcb_editorial_mean
        FROM stories
        WHERE eval_status = 'done' AND pt_flag_count > 0
-       ORDER BY pt_flag_count DESC
+       ORDER BY COALESCE(pt_score, pt_flag_count) DESC
        LIMIT ?`
     )
     .bind(limit)

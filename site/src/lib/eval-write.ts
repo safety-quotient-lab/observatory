@@ -10,6 +10,26 @@ import { computeLiteAggregates } from './eval-parse';
 import { PRIMARY_MODEL_ID } from './models';
 import { logEvent } from './events';
 
+// --- Propaganda technique weights (PTC-18) ---
+// Weights reflect inherent rhetorical impact of each technique, not per-instance severity.
+// Tier A (3): bypasses reasoning or dehumanizes
+// Tier B (2): manipulative but recoverable
+// Tier C (1): rhetorical but ubiquitous
+const PT_TECHNIQUE_WEIGHTS: Record<string, number> = {
+  reductio_ad_hitlerum: 3, appeal_to_fear: 3, name_calling: 3,
+  false_dilemma: 3, thought_terminating_cliche: 3,
+  causal_oversimplification: 2, strawman: 2, whataboutism: 2,
+  bandwagon: 2, flag_waving: 2, exaggeration: 2, doubt: 2,
+  loaded_language: 1, repetition: 1, appeal_to_authority: 1,
+  slogans: 1, red_herring: 1, obfuscation: 1,
+};
+
+function computePtScore(flags: Array<{ technique: string }> | null | undefined): number | null {
+  if (flags === null || flags === undefined) return null;
+  if (flags.length === 0) return 0;
+  return flags.reduce((sum, f) => sum + (PT_TECHNIQUE_WEIGHTS[f.technique] ?? 1), 0);
+}
+
 // --- DB write helpers ---
 
 export async function writeEvalResult(
@@ -98,6 +118,7 @@ export async function writeEvalResult(
         eq_purpose_transparency = ?,
         eq_claim_density = ?,
         pt_flag_count = ?,
+        pt_score = ?,
         pt_flags_json = ?,
         so_score = ?,
         so_framing = ?,
@@ -159,6 +180,7 @@ export async function writeEvalResult(
       eq?.claim_density ?? null,
       // Propaganda Flags
       pt ? pt.length : 0,
+      computePtScore(pt),
       pt && pt.length > 0 ? JSON.stringify(pt) : null,
       // Solution Orientation
       so?.so_score ?? null,
@@ -317,7 +339,7 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
         `INSERT INTO domain_aggregates (
            domain, story_count, evaluated_count,
            avg_hrcb, avg_setl, avg_editorial, avg_structural, avg_confidence,
-           avg_eq, avg_so, avg_sr, avg_td, avg_pt_count,
+           avg_eq, avg_so, avg_sr, avg_td, avg_pt_count, avg_pt_score,
            avg_valence, avg_arousal, avg_dominance, avg_fw_ratio,
            avg_hn_score, avg_hn_comments,
            dominant_tone, dominant_scope, dominant_reading_level, dominant_sentiment,
@@ -337,6 +359,7 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
            AVG(CASE WHEN eval_status = 'done' THEN sr_score END),
            AVG(CASE WHEN eval_status = 'done' THEN td_score END),
            AVG(CASE WHEN eval_status = 'done' AND pt_flag_count IS NOT NULL THEN pt_flag_count END),
+           AVG(CASE WHEN eval_status = 'done' AND pt_score IS NOT NULL THEN pt_score END),
            AVG(CASE WHEN eval_status = 'done' THEN et_valence END),
            AVG(CASE WHEN eval_status = 'done' THEN et_arousal END),
            AVG(CASE WHEN eval_status = 'done' THEN et_dominance END),
@@ -370,6 +393,7 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
            avg_sr = excluded.avg_sr,
            avg_td = excluded.avg_td,
            avg_pt_count = excluded.avg_pt_count,
+           avg_pt_score = excluded.avg_pt_score,
            avg_valence = excluded.avg_valence,
            avg_arousal = excluded.avg_arousal,
            avg_dominance = excluded.avg_dominance,
@@ -432,6 +456,54 @@ export async function refreshAllDomainAggregates(
   }
 
   return { refreshed, errors, durationMs: Date.now() - t0 };
+}
+
+/**
+ * Backfill pt_score for stories that have pt_flags_json but no pt_score yet.
+ * Reads existing flag data, applies PT_TECHNIQUE_WEIGHTS, writes pt_score to stories.
+ * Safe to run multiple times (WHERE pt_score IS NULL guard).
+ */
+export async function backfillPtScores(
+  db: D1Database,
+  opts: { limit?: number } = {},
+): Promise<{ updated: number; errors: number }> {
+  const { limit = 500 } = opts;
+
+  // Fetch stories with pt_flags_json but no pt_score yet
+  const { results } = await db
+    .prepare(
+      `SELECT hn_id, pt_flags_json FROM stories
+       WHERE pt_flags_json IS NOT NULL AND pt_score IS NULL
+       LIMIT ?`,
+    )
+    .bind(limit)
+    .all<{ hn_id: number; pt_flags_json: string }>();
+
+  let updated = 0;
+  let errors = 0;
+
+  for (const row of results) {
+    try {
+      let flags: Array<{ technique: string }> | null = null;
+      try {
+        flags = JSON.parse(row.pt_flags_json);
+      } catch {
+        flags = null;
+      }
+      const score = computePtScore(flags);
+      if (score === null) continue;
+      await db
+        .prepare(`UPDATE stories SET pt_score = ? WHERE hn_id = ?`)
+        .bind(score, row.hn_id)
+        .run();
+      updated++;
+    } catch (err) {
+      errors++;
+      console.error(`[backfillPtScores] Failed for hn_id=${row.hn_id}:`, err);
+    }
+  }
+
+  return { updated, errors };
 }
 
 export async function refreshDailySectionStats(
@@ -603,7 +675,7 @@ export async function writeRaterEvalResult(
         fw_ratio, fw_observable_count, fw_inference_count,
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
         eq_score, so_score, et_primary_tone, et_valence, et_arousal,
-        sr_score, pt_flag_count, td_score,
+        sr_score, pt_flag_count, pt_score, td_score,
         input_tokens, output_tokens, content_truncation_pct,
         eval_batch_id, evaluated_at
       ) VALUES (
@@ -617,7 +689,7 @@ export async function writeRaterEvalResult(
         ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
-        ?, ?, ?,
+        ?, ?, ?, ?,
         ?, ?, ?,
         ?, datetime('now')
       )
@@ -654,6 +726,7 @@ export async function writeRaterEvalResult(
         et_arousal = excluded.et_arousal,
         sr_score = excluded.sr_score,
         pt_flag_count = excluded.pt_flag_count,
+        pt_score = excluded.pt_score,
         td_score = excluded.td_score,
         input_tokens = excluded.input_tokens,
         output_tokens = excluded.output_tokens,
@@ -679,6 +752,7 @@ export async function writeRaterEvalResult(
       et?.primary_tone ?? null, et?.valence ?? null, et?.arousal ?? null,
       sr?.sr_score ?? null,
       pt ? pt.length : 0,
+      computePtScore(pt),
       td?.td_score ?? null,
       inputTokens, outputTokens, contentTruncationPct,
       batchId,
@@ -893,7 +967,7 @@ export async function writeLiteRaterEvalResult(
         fw_ratio, fw_observable_count, fw_inference_count,
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
         eq_score, so_score, et_primary_tone, et_valence, et_arousal,
-        sr_score, pt_flag_count, td_score,
+        sr_score, pt_flag_count, pt_score, td_score,
         input_tokens, output_tokens, content_truncation_pct,
         eval_batch_id, reasoning, evaluated_at
       ) VALUES (
@@ -907,7 +981,7 @@ export async function writeLiteRaterEvalResult(
         ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
-        ?, ?, ?,
+        ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?, datetime('now')
       )
@@ -944,6 +1018,7 @@ export async function writeLiteRaterEvalResult(
         et_arousal = excluded.et_arousal,
         sr_score = excluded.sr_score,
         pt_flag_count = excluded.pt_flag_count,
+        pt_score = excluded.pt_score,
         td_score = excluded.td_score,
         input_tokens = excluded.input_tokens,
         output_tokens = excluded.output_tokens,
@@ -979,7 +1054,8 @@ export async function writeLiteRaterEvalResult(
       lite.valence ?? null,         // VA (lite-1.3+)
       lite.arousal ?? null,         // AR (lite-1.3+)
       null,                          // SR (not in lite)
-      null,                          // PT (not in lite — null, not 0)
+      null,                          // PT flag count (not in lite — null, not 0)
+      null,                          // PT score (not in lite)
       lite.td_score ?? null,        // TD
       inputTokens, outputTokens, contentTruncationPct,
       batchId,
