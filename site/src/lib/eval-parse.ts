@@ -211,8 +211,7 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
 
   // Schema version warning
   if (parsed.schema_version !== undefined) {
-    const known = ['3.7'];
-    if (!known.includes(parsed.schema_version)) {
+    if (!/^\d+\.\d+$/.test(parsed.schema_version)) {
       warnings.push(`Unrecognized schema_version "${parsed.schema_version}"`);
     }
   }
