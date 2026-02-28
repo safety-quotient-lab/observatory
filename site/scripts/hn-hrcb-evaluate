@@ -603,14 +603,15 @@ echo "  Rate: ~$(( TOTAL_COUNT * 60 / (BATCH_ELAPSED > 0 ? BATCH_ELAPSED : 1) ))
 if $RECALC && [ "$SUCCESS" -gt 0 ]; then
   echo ""
   echo "  Triggering /recalc..."
-  CRON_SECRET_FILE="$SITE_DIR/.cron-secret"
-  if [ -f "$CRON_SECRET_FILE" ]; then
+  DEV_VARS_FILE="$SITE_DIR/.dev.vars"
+  TRIGGER_SECRET=$(grep '^TRIGGER_SECRET=' "$DEV_VARS_FILE" 2>/dev/null | cut -d= -f2-)
+  if [ -n "$TRIGGER_SECRET" ]; then
     RECALC_RESULT=$(curl -s -X POST \
-      -H "Authorization: Bearer $(cat "$CRON_SECRET_FILE")" \
+      -H "Authorization: Bearer $TRIGGER_SECRET" \
       https://hn-hrcb-cron.kashifshah.workers.dev/recalc 2>/dev/null || echo "failed")
     echo "  /recalc: $RECALC_RESULT"
   else
-    echo "  WARNING: .cron-secret not found, cannot trigger /recalc"
+    echo "  WARNING: TRIGGER_SECRET not found in .dev.vars, cannot trigger /recalc"
     echo "  Stories are in 'rescoring' state. Trigger /recalc manually."
   fi
 else

@@ -186,8 +186,8 @@ correct license when the value is in the running service, not in code secrecy.
 Before any `git push` to a public repo:
 
 - Revoke/rotate credentials in `site/.dev.vars` (ANTHROPIC_API_KEY, OPENROUTER_API_KEY,
-  TRIGGER_SECRET) and `site/.cron-secret` before any public exposure
+  TRIGGER_SECRET) before any public exposure
 - Replace hardcoded Cloudflare account ID in `test-workers-ai.sh` with env var
 - Replace real D1/KV resource IDs in `wrangler*.toml` with placeholder comments
-- Run `git log --all --full-history -- site/.dev.vars site/.cron-secret`
+- Run `git log --all --full-history -- site/.dev.vars`
   to confirm secrets were never committed; purge with `git filter-repo` if found

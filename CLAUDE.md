@@ -108,31 +108,31 @@ npx wrangler deploy --config wrangler.dlq.toml             # DLQ worker
 # Migrations
 npx wrangler d1 migrations apply hrcb-db --remote
 
-# Manual triggers (auth via .cron-secret)
-curl -s -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-cron.kashifshah.workers.dev/trigger
-curl -s -X POST -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-cron.kashifshah.workers.dev/calibrate
-curl -s -X POST -H "Authorization: Bearer $(cat .cron-secret)" https://hn-hrcb-dlq.kashifshah.workers.dev/replay
+# Manual triggers (auth via TRIGGER_SECRET in .dev.vars)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" https://hn-hrcb-cron.kashifshah.workers.dev/trigger
+curl -s -X POST -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" https://hn-hrcb-cron.kashifshah.workers.dev/calibrate
+curl -s -X POST -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" https://hn-hrcb-dlq.kashifshah.workers.dev/replay
 
 # Sweep: retry failed evaluations (default limit 50, max 200)
-curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=failed"
 
 # Sweep: backfill skipped stories with score >= 100 (default min_score 50, default limit 50)
-curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=skipped&min_score=100&limit=30"
 
 # Sweep: coverage-driven crawl (all strategies or a specific one)
-curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=coverage"
-curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=coverage&strategy=domain_min_coverage"
 
 # Sweep: Algolia historical backfill (default min_score 500, days_back 365)
-curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=algolia_backfill&min_score=500&limit=50"
 
 # Sweep: content drift detection (re-evaluates stories whose content changed)
-curl -s -H "Authorization: Bearer $(cat .cron-secret)" \
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=content_drift&limit=20"
 
 # Health check (no auth)

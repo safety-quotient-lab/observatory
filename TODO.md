@@ -10,11 +10,10 @@
   - `site/.dev.vars` also contains `TRIGGER_SECRET`.
     Revoke the OpenRouter key at openrouter.ai → Keys. Rotate `TRIGGER_SECRET` by running
     `openssl rand -base64 32` and updating both `site/.dev.vars` and your wrangler secrets.
-  - `site/.cron-secret` contains the bearer token for your admin endpoints (`/trigger`, `/calibrate`,
-    `/replay`). Anyone with this token can fire arbitrary cron cycles against production.
-    Rotate it: `openssl rand -base64 32 > site/.cron-secret`, then `wrangler secret put TRIGGER_SECRET`.
   - **Verified clean:** `git log --all --full-history` confirms none of these were ever committed.
-    Root `.gitignore` covers `*.key`, `.dev.vars`, `.cron-secret`. Safe — but revoke anyway.
+    Root `.gitignore` covers `*.key` and `.dev.vars`. Safe — but revoke anyway.
+  - To rotate TRIGGER_SECRET: `openssl rand -base64 32`, update `TRIGGER_SECRET=` in
+    `site/.dev.vars`, then `wrangler secret put TRIGGER_SECRET` for each deployed worker.
 
 ## Data Model / Taxonomy
 
