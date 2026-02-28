@@ -18,19 +18,35 @@ const classify = url.searchParams.get('class') || 'all';
 const validClassify = ['all', 'positive', 'negative', 'neutral', 'contested'];
 const safeClassify = validClassify.includes(classify) ? classify : 'all';
 
-// Fetch more to allow filtering
-const [allDomains, intelDomains, gatekeptDomains, karmaMapArr] = await Promise.all([
-  cachedQuery(kv, `allDomainStats:${safeSort}:200`, () => getAllDomainStats(db, safeSort, 200)).catch(() => []),
-  cachedQuery(kv, 'domainIntelligence', () => getDomainIntelligence(db, 'stories', 3, 150)).catch(() => []),
-  cachedQuery(kv, 'mostGatekeptDomains', () => getMostGatekeptDomains(db)).catch(() => []),
-  cachedQuery<{domain: string; avg_karma: number; user_count: number}[]>(kv, 'domainKarmaMap', async () => {
-    const m = await getDomainKarmaMap(db);
-    return [...m.values()];
-  }, 600).catch(() => []),
-]);
+const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
+const PER_PAGE = 50;
+const offset = (page - 1) * PER_PAGE;
+const isFirstPage = page === 1;
+
+// For classification filters, we need to fetch more since filtering reduces results.
+// For 'all' (no filter), use paginated DB query directly.
+const fetchLimit = safeClassify === 'all' ? PER_PAGE + 1 : 500;
+const fetchOffset = safeClassify === 'all' ? offset : 0;
+
+const fetchPromises: [Promise<DomainStat[]>, Promise<any[]>, Promise<any[]>, Promise<{domain: string; avg_karma: number; user_count: number}[]>] = [
+  cachedQuery(kv, `allDomainStats:${safeSort}:${fetchLimit}:${fetchOffset}`, () => getAllDomainStats(db, safeSort, fetchLimit, fetchOffset)).catch(() => []),
+  isFirstPage
+    ? cachedQuery(kv, 'domainIntelligence', () => getDomainIntelligence(db, 'stories', 3, 150)).catch(() => [])
+    : Promise.resolve([]),
+  isFirstPage
+    ? cachedQuery(kv, 'mostGatekeptDomains', () => getMostGatekeptDomains(db)).catch(() => [])
+    : Promise.resolve([]),
+  isFirstPage
+    ? cachedQuery<{domain: string; avg_karma: number; user_count: number}[]>(kv, 'domainKarmaMap', async () => {
+        const m = await getDomainKarmaMap(db);
+        return [...m.values()];
+      }, 600).catch(() => [])
+    : Promise.resolve([]),
+];
+const [allDomains, intelDomains, gatekeptDomains, karmaMapArr] = await Promise.all(fetchPromises);
 const karmaMap = new Map(karmaMapArr.map(k => [k.domain, k]));
 
-// Insight cards from domain-intel
+// Insight cards from domain-intel (page 1 only)
 const hrcbDomains = intelDomains.filter(d => d.evaluated >= 3 && d.avg_hrcb !== null);
 const topHrcb = [...hrcbDomains].sort((a, b) => (b.avg_hrcb || 0) - (a.avg_hrcb || 0)).slice(0, 5);
 const bottomHrcb = [...hrcbDomains].sort((a, b) => (a.avg_hrcb || 0) - (b.avg_hrcb || 0)).slice(0, 5);
@@ -39,7 +55,7 @@ const highEngagement = intelDomains.filter(d => d.stories >= 3 && d.comment_per_
 const diverse = intelDomains.filter(d => d.stories >= 3).sort((a, b) => b.unique_submitters - a.unique_submitters).slice(0, 5);
 const topKarma = [...karmaMap.values()].sort((a, b) => b.avg_karma - a.avg_karma).slice(0, 5);
 
-// Scatter data: merge karma + HRCB per domain
+// Scatter data: merge karma + HRCB per domain (page 1 only)
 const scatterDomains = intelDomains
   .filter(d => d.avg_hrcb !== null && karmaMap.has(d.domain) && (karmaMap.get(d.domain)?.avg_karma ?? 0) > 0)
   .map(d => {
@@ -64,24 +80,39 @@ if (scatterDomains.length >= 5) {
 }
 const domainScatterJson = JSON.stringify(scatterDomains);
 
-// Filter by classification
-const domains = safeClassify === 'all' ? allDomains.slice(0, 100) : allDomains.filter(d => {
-  if (d.avg_score === null) return false;
-  switch (safeClassify) {
-    case 'positive': return d.avg_score > 0.05;
-    case 'negative': return d.avg_score < -0.05;
-    case 'neutral': return d.avg_score >= -0.05 && d.avg_score <= 0.05;
-    case 'contested': return d.count >= 3 && d.avg_score !== null && Math.abs(d.avg_score) < 0.15;
-    default: return true;
-  }
-}).slice(0, 100);
+// Filter by classification + paginate
+let domains: DomainStat[];
+let hasMore: boolean;
+
+if (safeClassify === 'all') {
+  // DB-level pagination — fetched PER_PAGE + 1
+  hasMore = allDomains.length > PER_PAGE;
+  domains = hasMore ? allDomains.slice(0, PER_PAGE) : allDomains;
+} else {
+  // Client-side filter — fetched 500, slice for current page
+  const filtered = allDomains.filter(d => {
+    if (d.avg_score === null) return false;
+    switch (safeClassify) {
+      case 'positive': return d.avg_score > 0.05;
+      case 'negative': return d.avg_score < -0.05;
+      case 'neutral': return d.avg_score >= -0.05 && d.avg_score <= 0.05;
+      case 'contested': return d.count >= 3 && d.avg_score !== null && Math.abs(d.avg_score) < 0.15;
+      default: return true;
+    }
+  });
+  const pageSlice = filtered.slice(offset, offset + PER_PAGE + 1);
+  hasMore = pageSlice.length > PER_PAGE;
+  domains = hasMore ? pageSlice.slice(0, PER_PAGE) : pageSlice;
+}
 
 function buildDomainUrl(params: Record<string, string>): string {
   const p = new URLSearchParams();
   const s = params.sort ?? safeSort;
   const c = params.class ?? safeClassify;
+  const pg = params.p ?? '1';
   if (s !== 'count') p.set('sort', s);
   if (c !== 'all') p.set('class', c);
+  if (pg !== '1') p.set('p', pg);
   const qs = p.toString();
   return qs ? `/domains?${qs}` : '/domains';
 }
@@ -114,7 +145,7 @@ const jsonLd = {
       <td>
         <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">Domains</span>
         <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-base);">
-          {domains.length} domains{safeClassify !== 'all' ? ` (${safeClassify})` : ''}
+          {safeClassify !== 'all' ? `(${safeClassify})` : ''}{page > 1 ? ` · page ${page}` : ''}
         </span>
         <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
           <span style="color: #5b7279;">sort:</span>
@@ -146,8 +177,8 @@ const jsonLd = {
     </tr>
   </table>
 
-  {/* Domain insight cards */}
-  {hrcbDomains.length > 0 && (
+  {/* Domain insight cards (page 1 only) */}
+  {isFirstPage && hrcbDomains.length > 0 && (
     <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; margin-bottom: 10px;">
       <div class="insight-grid">
         <div style="padding: 4px 8px;">
@@ -224,8 +255,8 @@ const jsonLd = {
     </div>
   )}
 
-  {/* Domain Karma vs HRCB scatter */}
-  {scatterDomains.length >= 5 && (
+  {/* Domain Karma vs HRCB scatter (page 1 only) */}
+  {isFirstPage && scatterDomains.length >= 5 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
       <tr>
         <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
@@ -271,7 +302,7 @@ const jsonLd = {
               const coverageColor = pct === 100 ? '#4ade80' : pct >= 50 ? '#eab308' : '#5b7279';
               return (
               <tr style="border-top: 1px solid #0d4655;">
-                <td style="color: #5b7279;" class="score-font">{i + 1}</td>
+                <td style="color: #5b7279;" class="score-font">{offset + i + 1}</td>
                 <td>
                   <a href={`/domain/${d.domain}`} style="color: #98a8a8;">{d.domain}</a>
                 </td>
@@ -310,6 +341,27 @@ const jsonLd = {
     </tr>
   </table>
   </div>
+
+  {/* Pagination */}
+  {(hasMore || page > 1) && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+      <tr>
+        <td style="text-align: center; padding: 8px;">
+          {page > 1 && (
+            <a href={buildDomainUrl({ p: String(page - 1) })} style="color: #d56500; margin-right: 16px;">
+              prev
+            </a>
+          )}
+          {hasMore && (
+            <a href={buildDomainUrl({ p: String(page + 1) })} style="color: #d56500;">
+              More
+            </a>
+          )}
+        </td>
+      </tr>
+    </table>
+  )}
+
   <script define:vars={{ domainScatterJson }}>
     const data = JSON.parse(domainScatterJson);
     const canvas = document.getElementById('domain-karma-scatter');

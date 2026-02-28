@@ -47,7 +47,8 @@ export type DomainSortOption = 'count' | 'score' | 'setl' | 'conf';
 export async function getAllDomainStats(
   db: D1Database,
   sort: DomainSortOption = 'count',
-  limit = 50
+  limit = 50,
+  offset = 0
 ): Promise<DomainStat[]> {
   try {
     let orderBy = 'count DESC';
@@ -69,9 +70,9 @@ export async function getAllDomainStats(
          WHERE s.domain IS NOT NULL
          GROUP BY s.domain
          ORDER BY ${orderBy}
-         LIMIT ?`
+         LIMIT ? OFFSET ?`
       )
-      .bind(limit)
+      .bind(limit, offset)
       .all<DomainStat>();
     return results;
   } catch (err) {
