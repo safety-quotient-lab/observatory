@@ -15,12 +15,6 @@ sequenced prerequisites for GitHub publishing and commercialization respectively
     `site/.dev.vars`, run `wrangler secret put TRIGGER_SECRET` on each worker
   - **Status:** never committed (`git log` verified); `.gitignore` covers `*.key` + `.dev.vars`
 
-- [ ] **Decide on `site/src/pages/system/events.astro`** — untracked file from a previous
-  session. Finish and commit, or `git rm` it.
-
-- [ ] **Commit pending `TODO.md` temporal trends expansion** — minor unstaged change already
-  in working tree from a previous session (pre-dates this restructure; now incorporated here).
-
 ---
 
 ## Phase 1 — Open Source Prep
