@@ -1,0 +1,59 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Support" description="Support HN HRCB — help keep the evaluations running">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    <tr class="athing">
+      <td style="padding: 12px 10px 4px;">
+        <span style="font-size:13pt; color:#98a8a8;">Support HN HRCB</span>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 10px 24px;">
+        <div style="color:#5b7279; font-size:9pt; line-height:1.8; max-width:580px;">
+          <p>HN HRCB evaluates Hacker News stories against the <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" style="color:#d56500;">UN Universal Declaration of Human Rights</a> using large language models. Each evaluation costs real API credits — multiple models, multiple passes, continuous pipeline.</p>
+
+          <p>The service runs 24/7 with no ads, no tracking, no paywalls, and no VC funding. It runs entirely on personal donations. If you find it useful — as a research tool, a way to spot media bias, or just an interesting lens on the news — please consider contributing.</p>
+
+          <div style="margin:24px 0; display:flex; flex-direction:column; gap:10px; max-width:360px;">
+            <form action="https://www.paypal.com/donate" method="post" target="_blank" id="support-donate-form">
+              <input type="hidden" name="hosted_button_id" value="56GCFHDZHB7AJ" />
+              <button type="submit" style="width:100%; background:rgba(234,179,8,0.2); border:1px solid rgba(234,179,8,0.4); color:#eab308; cursor:pointer; padding:12px 28px; font-size:11pt; border-radius:6px; font-weight:bold;">
+                Donate via PayPal
+              </button>
+            </form>
+            <a href="https://github.com/sponsors/kashif" target="_blank" id="support-sponsors-link" style="display:block; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#a78bfa; padding:12px 28px; font-size:11pt; border-radius:6px; font-weight:bold; text-decoration:none; text-align:center;">
+              ♥ GitHub Sponsors
+            </a>
+          </div>
+
+          <p>Already donated? <a href="#" id="support-mark-donated" style="color:#5b7279; text-decoration:underline;">Click here to skip the donation prompt</a> for 7 days.</p>
+
+          <p style="margin-top:24px; color:#1a5568;">
+            The source code is on <a href="https://github.com/kashif/unudhr" style="color:#d56500;">GitHub</a>. Contributions and issue reports are welcome.
+          </p>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <script is:inline>
+    document.getElementById('support-donate-form')?.addEventListener('submit', function() {
+      localStorage.setItem('hrcb_donated', new Date().toISOString());
+    });
+    document.getElementById('support-sponsors-link')?.addEventListener('click', function() {
+      localStorage.setItem('hrcb_donated', new Date().toISOString());
+    });
+    document.getElementById('support-mark-donated')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      localStorage.setItem('hrcb_donated', new Date().toISOString());
+      var el = document.getElementById('support-mark-donated');
+      if (el) {
+        el.textContent = 'Done — thank you!';
+        el.style.color = '#16a34a';
+        el.style.pointerEvents = 'none';
+      }
+    });
+  </script>
+</Base>

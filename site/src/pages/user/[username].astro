@@ -257,8 +257,9 @@ const accountAgeDays = hnUser?.created
     btn.addEventListener('click', function() {
       if (btn.disabled) return;
 
-      // Gate: require donation
-      if (!localStorage.getItem('hrcb_donated')) {
+      // Gate: require donation (7-day TTL)
+      var _dt = localStorage.getItem('hrcb_donated');
+      if (!_dt || (Date.now() - new Date(_dt).getTime()) >= 604800000) {
         var modal = document.getElementById('donate-modal');
         if (modal) {
           // Store reference so modal can re-trigger

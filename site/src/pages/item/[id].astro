@@ -1167,8 +1167,9 @@ function timeAgo(unixTime: number): string {
     <script is:inline>
     document.querySelectorAll('.trigger-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        // Gate: require donation
-        if (!localStorage.getItem('hrcb_donated')) {
+        // Gate: require donation (7-day TTL)
+        var _dt = localStorage.getItem('hrcb_donated');
+        if (!_dt || (Date.now() - new Date(_dt).getTime()) >= 604800000) {
           var modal = document.getElementById('donate-modal');
           if (modal) {
             window.__pendingRetryBtn = btn;
