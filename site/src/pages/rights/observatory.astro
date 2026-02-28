@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
+import SubNav from '../../components/SubNav.astro';
 import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution } from '../../lib/db';
 import { scoreToColor, formatScore, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
 import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../../lib/udhr';
@@ -113,6 +114,7 @@ const groupColors: Record<string, string> = {
 
 <Base title="Human Rights Observatory">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'rights', href: '/rights' }, { label: 'observatory' }]} />
+  <SubNav items={[{ label: 'Articles', href: '/rights/articles' }, { label: 'Observatory', href: '/rights/observatory' }, { label: 'Network', href: '/rights/network' }]} current="/rights/observatory" />
   <div style="padding: 8px 0 16px 0;">
 
     <!-- 1. Header -->
@@ -177,7 +179,7 @@ const groupColors: Record<string, string> = {
                     <td style={`width: 22px; padding: 3px 4px; color: ${score !== null ? color : '#0d4655'}; font-weight: bold;`} class="score-font">
                       <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{label}</a>
                     </td>
-                    <td style={`padding: 3px 4px; color: ${score !== null ? '#98a8a8' : '#5b7279'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
+                    <td title={title} style={`padding: 3px 4px; color: ${score !== null ? '#98a8a8' : '#5b7279'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
                       <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{title}</a>
                     </td>
                     <td style="width: 140px; padding: 3px 4px;">
@@ -335,7 +337,7 @@ const groupColors: Record<string, string> = {
               const pct = maxTechniqueCount > 0 ? Math.round((count / maxTechniqueCount) * 100) : 0;
               return (
                 <tr>
-                  <td style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <td title={technique} style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {technique}
                   </td>
                   <td style="padding: 3px 8px;">
@@ -366,10 +368,10 @@ const groupColors: Record<string, string> = {
             </tr>
             {propagandaStories.map(s => (
               <tr style="border-top: 1px solid #0d4655;">
-                <td style="padding: 4px 0; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <td title={s.title} style="padding: 4px 0; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   <a href={`/item/${s.hn_id}`} style="color: #98a8a8; text-decoration: none;">{s.title}</a>
                 </td>
-                <td style="width: 120px; padding: 4px 0; color: #5b7279; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <td title={s.domain ?? '--'} style="width: 120px; padding: 4px 0; color: #5b7279; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   {s.domain ?? '--'}
                 </td>
                 <td style="width: 50px; text-align: right; padding: 4px 0; color: #f87171;" class="score-font">
@@ -398,7 +400,7 @@ const groupColors: Record<string, string> = {
               const pct = maxSpeaks > 0 ? Math.round((count / maxSpeaks) * 100) : 0;
               return (
                 <tr>
-                  <td style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <td title={name} style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {name}
                   </td>
                   <td style="padding: 3px 8px;">
@@ -425,7 +427,7 @@ const groupColors: Record<string, string> = {
               const pct = maxAbout > 0 ? Math.round((count / maxAbout) * 100) : 0;
               return (
                 <tr>
-                  <td style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <td title={name} style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {name}
                   </td>
                   <td style="padding: 3px 8px;">
@@ -484,7 +486,7 @@ const groupColors: Record<string, string> = {
               const pct = maxRegionCount > 0 ? Math.round((r.count / maxRegionCount) * 100) : 0;
               return (
                 <tr>
-                  <td style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <td title={r.region} style="padding: 3px 0; color: #98a8a8; font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                     {r.region}
                   </td>
                   <td style="padding: 3px 8px;">

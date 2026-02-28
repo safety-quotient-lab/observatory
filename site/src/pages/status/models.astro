@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
+import SubNav from '../../components/SubNav.astro';
 import { scoreToColor, formatScore, classificationColor, confidenceToColor } from '../../lib/colors';
 import { modelDisplayName, ALL_SECTIONS, isLiteMode, getModelDef, MODEL_REGISTRY } from '../../lib/shared-eval';
 import { ARTICLE_TITLES } from '../../lib/udhr';
@@ -192,6 +193,7 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
 
 <Base title="Models">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'status', href: '/status' }, { label: 'models' }]} />
+  <SubNav items={[{ label: 'Models', href: '/status/models' }, { label: 'Events', href: '/status/events' }]} current="/status/models" />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>

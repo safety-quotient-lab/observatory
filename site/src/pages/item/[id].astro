@@ -760,13 +760,19 @@ function timeAgo(unixTime: number): string {
   {hasSignals && (
     <div style="padding: 5px 0 20px 0;">
       <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; border-top: 3px solid #f59e0b;">
-        <div style="color: #f59e0b; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 12px;">Supplementary Signals</div>
+        <div style="color: #f59e0b; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; margin-bottom: 4px;">Supplementary Signals</div>
+        <div style="color: #5b7279; font-size: var(--font-xs); margin-bottom: 12px;">How this content communicates, beyond directional lean. <a href="/about#supplementary" style="color: #259d94; text-decoration: none;">Learn more</a></div>
 
         <div class="insight-grid">
-          {/* Epistemic Quality */}
+          {/* Epistemic Quality — primary */}
+          {(eqData || eqScore !== null) && (
           <div>
                 <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Epistemic Quality</div>
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Epistemic Quality</span>
+                    <a href="/about#eq" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Source credibility, evidence reasoning, uncertainty handling">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">How well-sourced and evidence-based is this content?</div>
                   {eqData ? (
                     <>
                       <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
@@ -782,16 +788,19 @@ function timeAgo(unixTime: number): string {
                     </>
                   ) : eqScore !== null ? (
                     <span class="score-font" style={`color: ${eqScore >= 0.7 ? '#16a34a' : eqScore >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{eqScore.toFixed(2)}</span>
-                  ) : (
-                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
-                  )}
+                  ) : null}
                 </div>
           </div>
+          )}
 
-          {/* Propaganda Flags */}
+          {/* Propaganda Flags — primary */}
           <div>
                 <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Propaganda Flags</div>
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Propaganda Flags</span>
+                    <a href="/about#pt" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="18 propaganda techniques from PTC-18 taxonomy">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">{ptFlagCount === 0 ? 'No manipulative rhetoric detected' : `${ptFlagCount} manipulative rhetoric technique${ptFlagCount !== 1 ? 's' : ''} found`}</div>
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                     <span class="badge" style={`background: ${ptFlagCount === 0 ? 'rgba(22,163,106,0.15)' : ptFlagCount <= 2 ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${ptFlagCount === 0 ? '#16a34a' : ptFlagCount <= 2 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm);`}>{ptFlagCount}</span>
                     <span style="color: #5b7279; font-size: var(--font-xs);">techniques detected</span>
@@ -809,155 +818,169 @@ function timeAgo(unixTime: number): string {
                 </div>
           </div>
 
-          {/* Solution Orientation */}
+          {/* Emotional Tone — primary */}
+          {etData && (
           <div>
                 <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Solution Orientation</div>
-                  {soData ? (
-                    <>
-                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                        <span class="score-font" style={`color: ${soData.so_score >= 0.7 ? '#16a34a' : soData.so_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{soData.so_score.toFixed(2)}</span>
-                        <span class="badge" style={`background: ${soData.framing === 'solution_oriented' ? 'rgba(22,163,106,0.15)' : soData.framing === 'mixed' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${soData.framing === 'solution_oriented' ? '#16a34a' : soData.framing === 'mixed' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{soData.framing.replace(/_/g, ' ')}</span>
-                      </div>
-                      <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                        <tr><td style="color: #5b7279;">Reader Agency</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${soData.reader_agency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right; width: 30px;">{soData.reader_agency.toFixed(1)}</td></tr>
-                      </table>
-                    </>
-                  ) : (
-                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
-                  )}
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Emotional Tone</span>
+                    <a href="/about#et" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Valence, arousal, dominance (Russell's Circumplex Model)">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Emotional character: positive/negative, intensity, authority</div>
+                  <div style="margin-bottom: 6px;">
+                    <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7; font-size: var(--font-sm);">{etData.primary_tone}</span>
+                  </div>
+                  <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                    <tr><td style="color: #5b7279; width: 55%;">Valence</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden; position: relative;"><div style={`position: absolute; left: 50%; width: ${Math.abs(etData.valence) * 50}%; height: 100%; background: ${etData.valence >= 0 ? '#16a34a' : '#dc2626'}; ${etData.valence >= 0 ? '' : 'transform: translateX(-100%);'}`}></div></div></td><td style="color: #5b7279; text-align: right; width: 35px;">{etData.valence > 0 ? '+' : ''}{etData.valence.toFixed(1)}</td></tr>
+                    <tr><td style="color: #5b7279;">Arousal</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.arousal * 100}%; height: 100%; background: #f59e0b;`}></div></div></td><td style="color: #5b7279; text-align: right;">{etData.arousal.toFixed(1)}</td></tr>
+                    <tr><td style="color: #5b7279;">Dominance</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.dominance * 100}%; height: 100%; background: #22d3ee;`}></div></div></td><td style="color: #5b7279; text-align: right;">{etData.dominance.toFixed(1)}</td></tr>
+                  </table>
                 </div>
           </div>
+          )}
 
-          {/* Emotional Tone */}
+          {/* Transparency & Disclosure — primary */}
+          {tdData && (
           <div>
                 <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Emotional Tone</div>
-                  {etData ? (
-                    <>
-                      <div style="margin-bottom: 6px;">
-                        <span class="badge" style="background: rgba(168,85,247,0.15); color: #a855f7; font-size: var(--font-sm);">{etData.primary_tone}</span>
-                      </div>
-                      <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
-                        <tr><td style="color: #5b7279; width: 55%;">Valence</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden; position: relative;"><div style={`position: absolute; left: 50%; width: ${Math.abs(etData.valence) * 50}%; height: 100%; background: ${etData.valence >= 0 ? '#16a34a' : '#dc2626'}; ${etData.valence >= 0 ? '' : 'transform: translateX(-100%);'}`}></div></div></td><td style="color: #5b7279; text-align: right; width: 35px;">{etData.valence > 0 ? '+' : ''}{etData.valence.toFixed(1)}</td></tr>
-                        <tr><td style="color: #5b7279;">Arousal</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.arousal * 100}%; height: 100%; background: #f59e0b;`}></div></div></td><td style="color: #5b7279; text-align: right;">{etData.arousal.toFixed(1)}</td></tr>
-                        <tr><td style="color: #5b7279;">Dominance</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${etData.dominance * 100}%; height: 100%; background: #22d3ee;`}></div></div></td><td style="color: #5b7279; text-align: right;">{etData.dominance.toFixed(1)}</td></tr>
-                      </table>
-                    </>
-                  ) : (
-                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
-                  )}
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Transparency</span>
+                    <a href="/about#td" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Author identification, conflict and funding disclosure">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Does the content identify its author and disclose interests?</div>
+                  <div style="margin-bottom: 6px;">
+                    <span class="score-font" style={`color: ${tdData.td_score >= 0.7 ? '#16a34a' : tdData.td_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{tdData.td_score.toFixed(2)}</span>
+                  </div>
+                  <div style="font-size: var(--font-xs); display: flex; flex-wrap: wrap; gap: 4px;">
+                    <span style={`color: ${tdData.author_identified ? '#16a34a' : '#dc2626'};`}>{tdData.author_identified ? '\u2713' : '\u2717'} Author</span>
+                    {tdData.conflicts_disclosed !== null && (
+                      <span style={`color: ${tdData.conflicts_disclosed ? '#16a34a' : '#dc2626'};`}>{tdData.conflicts_disclosed ? '\u2713' : '\u2717'} Conflicts</span>
+                    )}
+                    {tdData.funding_disclosed !== null && (
+                      <span style={`color: ${tdData.funding_disclosed ? '#16a34a' : '#dc2626'};`}>{tdData.funding_disclosed ? '\u2713' : '\u2717'} Funding</span>
+                    )}
+                  </div>
                 </div>
           </div>
-
-          {/* Stakeholder Representation */}
-          <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Stakeholder Voice</div>
-                  {srData ? (
-                    <>
-                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                        <span class="score-font" style={`color: ${srData.sr_score >= 0.7 ? '#16a34a' : srData.sr_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{srData.sr_score.toFixed(2)}</span>
-                        <span style="color: #5b7279; font-size: var(--font-xs);">{srData.perspective_count} perspective{srData.perspective_count !== 1 ? 's' : ''}</span>
-                      </div>
-                      {srData.who_speaks && srData.who_speaks.length > 0 && (
-                        <div style="font-size: var(--font-xs); margin-bottom: 3px;">
-                          <span style="color: #5b7279;">Speaks: </span>
-                          {srData.who_speaks.map((s: string) => (
-                            <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
-                          ))}
-                        </div>
-                      )}
-                      {srData.who_is_spoken_about && srData.who_is_spoken_about.length > 0 && (
-                        <div style="font-size: var(--font-xs);">
-                          <span style="color: #5b7279;">About: </span>
-                          {srData.who_is_spoken_about.map((s: string) => (
-                            <span class="badge" style="background: rgba(107,114,128,0.15); color: #6b7280; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
-                  )}
-                </div>
-          </div>
-
-          {/* Temporal Framing */}
-          <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Temporal Framing</div>
-                  {tfData ? (
-                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                      <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs);">{tfData.primary_focus}</span>
-                      <span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279; font-size: var(--font-xs);">{tfData.time_horizon.replace(/_/g, ' ')}</span>
-                    </div>
-                  ) : (
-                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
-                  )}
-                </div>
-          </div>
-
-          {/* Geographic Scope */}
-          <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Geographic Scope</div>
-                  {gsData ? (
-                    <>
-                      <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs); margin-bottom: 4px;">{gsData.scope}</span>
-                      {gsData.regions_mentioned && gsData.regions_mentioned.length > 0 && (
-                        <div style="font-size: var(--font-xs); color: #5b7279; margin-top: 4px;">
-                          {gsData.regions_mentioned.join(', ')}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
-                  )}
-                </div>
-          </div>
-
-          {/* Complexity Level */}
-          <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Complexity</div>
-                  {clData ? (
-                    <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                      <span class="badge" style={`background: ${clData.reading_level === 'accessible' ? 'rgba(22,163,106,0.15)' : clData.reading_level === 'moderate' ? 'rgba(96,165,250,0.15)' : clData.reading_level === 'technical' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.reading_level === 'accessible' ? '#16a34a' : clData.reading_level === 'moderate' ? '#60a5fa' : clData.reading_level === 'technical' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.reading_level}</span>
-                      <span class="badge" style={`background: ${clData.jargon_density === 'low' ? 'rgba(22,163,106,0.15)' : clData.jargon_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.jargon_density === 'low' ? '#16a34a' : clData.jargon_density === 'medium' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.jargon_density} jargon</span>
-                      <span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279; font-size: var(--font-xs);">{clData.assumed_knowledge.replace(/_/g, ' ')}</span>
-                    </div>
-                  ) : (
-                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
-                  )}
-                </div>
-          </div>
-
-          {/* Transparency & Disclosure */}
-          <div>
-                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
-                  <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Transparency</div>
-                  {tdData ? (
-                    <>
-                      <div style="margin-bottom: 6px;">
-                        <span class="score-font" style={`color: ${tdData.td_score >= 0.7 ? '#16a34a' : tdData.td_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{tdData.td_score.toFixed(2)}</span>
-                      </div>
-                      <div style="font-size: var(--font-xs); display: flex; flex-wrap: wrap; gap: 4px;">
-                        <span style={`color: ${tdData.author_identified ? '#16a34a' : '#dc2626'};`}>{tdData.author_identified ? '\u2713' : '\u2717'} Author</span>
-                        {tdData.conflicts_disclosed !== null && (
-                          <span style={`color: ${tdData.conflicts_disclosed ? '#16a34a' : '#dc2626'};`}>{tdData.conflicts_disclosed ? '\u2713' : '\u2717'} Conflicts</span>
-                        )}
-                        {tdData.funding_disclosed !== null && (
-                          <span style={`color: ${tdData.funding_disclosed ? '#16a34a' : '#dc2626'};`}>{tdData.funding_disclosed ? '\u2713' : '\u2717'} Funding</span>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <span style="color: #1a5568; font-size: var(--font-xs);">No data</span>
-                  )}
-                </div>
-          </div>
+          )}
         </div>
+
+        {/* Secondary signals — collapsed */}
+        {(soData || srData || tfData || gsData || clData) && (
+          <details class="collapsible-section" style="margin-top: 10px;">
+            <summary style="color: #5b7279; font-size: var(--font-xs); cursor: pointer;">More signals: context, framing &amp; audience</summary>
+            <div class="insight-grid" style="margin-top: 8px;">
+
+              {/* Solution Orientation */}
+              {soData && (
+              <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Solution Orientation</span>
+                    <a href="/about#so" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Problem-only vs solution-oriented framing">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Does this content offer solutions or only describe problems?</div>
+                  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                    <span class="score-font" style={`color: ${soData.so_score >= 0.7 ? '#16a34a' : soData.so_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{soData.so_score.toFixed(2)}</span>
+                    <span class="badge" style={`background: ${soData.framing === 'solution_oriented' ? 'rgba(22,163,106,0.15)' : soData.framing === 'mixed' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${soData.framing === 'solution_oriented' ? '#16a34a' : soData.framing === 'mixed' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{soData.framing.replace(/_/g, ' ')}</span>
+                  </div>
+                  <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                    <tr><td style="color: #5b7279;">Reader Agency</td><td><div style="height: 4px; background: #0d4655; border-radius: 2px; overflow: hidden;"><div style={`width: ${soData.reader_agency * 100}%; height: 100%; background: #60a5fa;`}></div></div></td><td style="color: #5b7279; text-align: right; width: 30px;">{soData.reader_agency.toFixed(1)}</td></tr>
+                  </table>
+                </div>
+              </div>
+              )}
+
+              {/* Stakeholder Representation */}
+              {srData && (
+              <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Stakeholder Voice</span>
+                    <a href="/about#sr" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Who speaks vs who is spoken about">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Whose perspectives are represented in this content?</div>
+                  <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                    <span class="score-font" style={`color: ${srData.sr_score >= 0.7 ? '#16a34a' : srData.sr_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-md);`}>{srData.sr_score.toFixed(2)}</span>
+                    <span style="color: #5b7279; font-size: var(--font-xs);">{srData.perspective_count} perspective{srData.perspective_count !== 1 ? 's' : ''}</span>
+                  </div>
+                  {srData.who_speaks && srData.who_speaks.length > 0 && (
+                    <div style="font-size: var(--font-xs); margin-bottom: 3px;">
+                      <span style="color: #5b7279;">Speaks: </span>
+                      {srData.who_speaks.map((s: string) => (
+                        <span class="badge" style="background: rgba(22,163,106,0.15); color: #16a34a; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
+                      ))}
+                    </div>
+                  )}
+                  {srData.who_is_spoken_about && srData.who_is_spoken_about.length > 0 && (
+                    <div style="font-size: var(--font-xs);">
+                      <span style="color: #5b7279;">About: </span>
+                      {srData.who_is_spoken_about.map((s: string) => (
+                        <span class="badge" style="background: rgba(107,114,128,0.15); color: #6b7280; font-size: var(--font-xs); margin-right: 2px;">{s}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              )}
+
+              {/* Temporal Framing */}
+              {tfData && (
+              <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Temporal Framing</span>
+                    <a href="/about#tf" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Past, present, or future focus">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">Is this content looking backward, at the present, or forward?</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs);">{tfData.primary_focus}</span>
+                    <span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279; font-size: var(--font-xs);">{tfData.time_horizon.replace(/_/g, ' ')}</span>
+                  </div>
+                </div>
+              </div>
+              )}
+
+              {/* Geographic Scope */}
+              {gsData && (
+              <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Geographic Scope</span>
+                    <a href="/about#gs" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Local, national, regional, or global scope">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">What geographic area does this content cover?</div>
+                  <span class="badge" style="background: rgba(96,165,250,0.15); color: #60a5fa; font-size: var(--font-xs); margin-bottom: 4px;">{gsData.scope}</span>
+                  {gsData.regions_mentioned && gsData.regions_mentioned.length > 0 && (
+                    <div style="font-size: var(--font-xs); color: #5b7279; margin-top: 4px;">
+                      {gsData.regions_mentioned.join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+              )}
+
+              {/* Complexity Level */}
+              {clData && (
+              <div>
+                <div style="padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px; height: 100%;">
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Complexity</span>
+                    <a href="/about#cl" style="color: #259d94; font-size: var(--font-xs); text-decoration: none;" title="Reading level, jargon density, assumed knowledge">&#8505;</a>
+                  </div>
+                  <div style="color: #5b7279; font-size: 7px; margin-bottom: 6px;">How accessible is this content to a general audience?</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                    <span class="badge" style={`background: ${clData.reading_level === 'accessible' ? 'rgba(22,163,106,0.15)' : clData.reading_level === 'moderate' ? 'rgba(96,165,250,0.15)' : clData.reading_level === 'technical' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.reading_level === 'accessible' ? '#16a34a' : clData.reading_level === 'moderate' ? '#60a5fa' : clData.reading_level === 'technical' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.reading_level}</span>
+                    <span class="badge" style={`background: ${clData.jargon_density === 'low' ? 'rgba(22,163,106,0.15)' : clData.jargon_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.jargon_density === 'low' ? '#16a34a' : clData.jargon_density === 'medium' ? '#eab308' : '#dc2626'}; font-size: var(--font-xs);`}>{clData.jargon_density} jargon</span>
+                    <span class="badge" style="background: rgba(107,114,128,0.15); color: #5b7279; font-size: var(--font-xs);">{clData.assumed_knowledge.replace(/_/g, ' ')}</span>
+                  </div>
+                </div>
+              </div>
+              )}
+
+            </div>
+          </details>
+        )}
       </div>
     </div>
   )}

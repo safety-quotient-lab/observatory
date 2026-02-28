@@ -60,9 +60,9 @@ rounds. 30/43 items already fixed; remaining items below.
 
 - [ ] **UX audit findings** — 23 remaining of 31 items (8 done)
   - Full plan: `.claude/plans/ux-audit-2026-02-28.md`
-  - Done: NAV-02, NAV-03, NAV-04, NAV-05, MOB-02, VIS-01, VIS-02, VIS-07
+  - Done: NAV-02, NAV-03, NAV-04, NAV-05, MOB-02, MOB-03, VIS-01, VIS-02, VIS-04, VIS-07
   - Remaining critical: NAV-01 (sibling nav), MOB-01 (touch targets)
-  - Remaining high: A11Y-01, A11Y-02, A11Y-03, MOB-03, VIS-03, VIS-04
+  - Remaining high: A11Y-01, A11Y-02, A11Y-03, VIS-03
   - Key next: NAV-01 (SubNav.astro + 8 sub-pages), MOB-01 (global.css 2 lines)
 
 - [ ] **Semantic color system** — replace 1,400+ hardcoded hex values with CSS variables

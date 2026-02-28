@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
+import SubNav from '../../components/SubNav.astro';
 import { scoreToColor, formatScore } from '../../lib/colors';
 import { modelDisplayName } from '../../lib/shared-eval';
 import {
@@ -59,6 +60,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
 
 <Base title="System Events">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'status', href: '/status' }, { label: 'events' }]} />
+  <SubNav items={[{ label: 'Models', href: '/status/models' }, { label: 'Events', href: '/status/events' }]} current="/status/events" />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>

@@ -189,7 +189,7 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
                         const displayName = technique.replace(/_/g, ' ');
                         return (
                           <tr>
-                            <td style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{displayName}</td>
+                            <td title={displayName} style="padding: 2px 0; color: #98a8a8; font-size: var(--font-xs); width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{displayName}</td>
                             <td style="padding: 2px 8px;">
                               <div style="height: 6px; background: #0d4655; border-radius: 3px; overflow: hidden;">
                                 <div style={`width: ${pct}%; height: 100%; background: #f87171; border-radius: 3px;`}></div>

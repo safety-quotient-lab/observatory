@@ -258,6 +258,14 @@
     font-weight: bold;
   }
 
+  @media (max-width: 640px) {
+    .score-mode-btn {
+      padding: 8px 12px;
+      min-height: 44px;
+      font-size: var(--font-base);
+    }
+  }
+
   /* Responsive insight card grid */
   .insight-grid {
     display: grid;

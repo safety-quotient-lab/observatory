@@ -169,11 +169,11 @@ function isLiteModel(id: string): boolean {
           )}
           <br />
           <span style="color: #5b7279;">score:</span>
-          <button class="score-mode-btn" data-mode="hrcb">HRCB</button>
+          <button class="score-mode-btn" data-mode="hrcb" aria-label="Show HRCB composite scores">HRCB</button>
           <span style="color: #1a5568;"> | </span>
-          <button class="score-mode-btn" data-mode="editorial">E</button>
+          <button class="score-mode-btn" data-mode="editorial" aria-label="Show Editorial channel scores">E</button>
           <span style="color: #1a5568;"> | </span>
-          <button class="score-mode-btn" data-mode="structural">S</button>
+          <button class="score-mode-btn" data-mode="structural" aria-label="Show Structural channel scores">S</button>
           <br />
           <span style="color: #5b7279;">{displayStories.length}{hasMore ? '+' : ''} stories</span>
           {evaluatedCount > 0 && <span style="color: #5b7279;"> ({evaluatedCount} evaluated)</span>}

@@ -1,0 +1,23 @@
+---
+interface NavItem {
+  label: string;
+  href: string;
+}
+interface Props {
+  items: NavItem[];
+  current: string;
+}
+const { items, current } = Astro.props;
+---
+
+<nav style="padding: 2px 0 8px 0; font-size: var(--font-xs);">
+  {items.map((item, i) => (
+    <>
+      {i > 0 && <span style="color: var(--color-border);"> | </span>}
+      {item.href === current
+        ? <span style="color: var(--fg-primary); font-weight: bold;">{item.label}</span>
+        : <a href={item.href} style="color: var(--fg-secondary);">{item.label}</a>
+      }
+    </>
+  ))}
+</nav>

@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
+import SubNav from '../components/SubNav.astro';
 import { getDailyHrcb, getDailyContentTypeHrcb, getFeedDailyHrcb, getGlobalSetlHistory } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 import { CONTENT_TYPE_LABELS } from '../lib/types';
@@ -100,6 +101,7 @@ const regimeData = JSON.stringify(regimeChanges);
 
 <Base title="Seldon Dashboard — HN HRCB">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'trends', href: '/trends' }, { label: 'seldon' }]} />
+  <SubNav items={[{ label: 'Seldon', href: '/seldon' }, { label: 'Velocity', href: '/velocity' }, { label: 'Dynamics', href: '/dynamics' }]} current="/seldon" />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>

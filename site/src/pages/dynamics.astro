@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
+import SubNav from '../components/SubNav.astro';
 import { getStoryDynamics, getEngagementByType } from '../lib/db';
 import type { StoryDynamics } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
@@ -67,6 +68,7 @@ const sortLabels: SortLabels = {
 
 <Base title="Story Dynamics — HN HRCB">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'trends', href: '/trends' }, { label: 'dynamics' }]} />
+  <SubNav items={[{ label: 'Seldon', href: '/seldon' }, { label: 'Velocity', href: '/velocity' }, { label: 'Dynamics', href: '/dynamics' }]} current="/dynamics" />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
     <tr>
       <td>
