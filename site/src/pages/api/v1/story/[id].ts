@@ -33,10 +33,12 @@ export const GET: APIRoute = async ({ locals, request, params }) => {
       .first<Record<string, unknown>>(),
     env.DB
       .prepare(
-        `SELECT eval_model, eval_provider, prompt_mode, eval_status,
-                hcb_editorial_mean, hcb_weighted_mean, evaluated_at
-         FROM rater_evals WHERE hn_id = ? AND eval_status = 'done'
-         ORDER BY evaluated_at DESC`
+        `SELECT re.eval_model, re.eval_provider, re.prompt_mode, re.eval_status,
+                re.hcb_editorial_mean, re.hcb_weighted_mean, re.evaluated_at
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         WHERE re.hn_id = ? AND re.eval_status = 'done'
+         ORDER BY re.evaluated_at DESC`
       )
       .bind(hnId)
       .all<Record<string, unknown>>(),

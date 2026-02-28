@@ -274,10 +274,11 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
   try {
     const { results } = await db
       .prepare(
-        `SELECT eval_model, hcb_weighted_mean, hcb_editorial_mean, prompt_mode, content_truncation_pct
-         FROM rater_evals
-         WHERE hn_id = ? AND eval_status = 'done'
-           AND (hcb_weighted_mean IS NOT NULL OR hcb_editorial_mean IS NOT NULL)`
+        `SELECT re.eval_model, re.hcb_weighted_mean, re.hcb_editorial_mean, re.prompt_mode, re.content_truncation_pct
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         WHERE re.hn_id = ? AND re.eval_status = 'done'
+           AND (re.hcb_weighted_mean IS NOT NULL OR re.hcb_editorial_mean IS NOT NULL)`
       )
       .bind(hnId)
       .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null; content_truncation_pct: number | null }>();

@@ -61,6 +61,24 @@ export default {
     const db = env.DB;
     const minute = new Date(event.scheduledTime).getMinutes();
 
+    // ─── Pre-compute model comparison blob (lock-free, safe to overlap) ───
+    // This runs outside the cron lock because it's read-only + KV write.
+    // Heavy multi-model queries run here (30s CPU budget) so the Pages
+    // function (10ms CPU limit) can read a single KV blob.
+    if (minute % 10 === 5) {
+      try {
+        const blob = await computeModelComparisonBlob(db);
+        await env.CONTENT_CACHE.put(
+          MODEL_COMPARISON_KV_KEY,
+          JSON.stringify(blob),
+          { expirationTtl: MODEL_COMPARISON_TTL }
+        );
+        console.log(`[cron] Model comparison blob computed: ${blob.totalStories} stories, ${blob.modelIds.length} models`);
+      } catch (err) {
+        console.error('[cron] Model comparison blob failed (non-fatal):', err);
+      }
+    }
+
     // ─── Distributed lock (prevent overlapping cron cycles) ───
     const lockKey = 'cron:lock';
     try {
@@ -528,24 +546,6 @@ export default {
         }
       } catch (err) {
         console.error('[cron] Stale domain refresh failed (non-fatal):', err);
-      }
-    }
-
-    // ─── Pre-compute model comparison blob for /status/models (every 10 min) ───
-    // Models page has 10ms CPU limit on CF Pages — heavy multi-model queries +
-    // O(n²) correlation/histogram compute exceeds budget. Pre-compute here (30s CPU).
-
-    if (minute % 10 === 5) {
-      try {
-        const blob = await computeModelComparisonBlob(db);
-        await env.CONTENT_CACHE.put(
-          MODEL_COMPARISON_KV_KEY,
-          JSON.stringify(blob),
-          { expirationTtl: MODEL_COMPARISON_TTL }
-        );
-        console.log(`[cron] Model comparison blob computed: ${blob.totalStories} stories, ${blob.modelIds.length} models`);
-      } catch (err) {
-        console.error('[cron] Model comparison blob failed (non-fatal):', err);
       }
     }
 

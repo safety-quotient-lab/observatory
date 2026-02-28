@@ -33,6 +33,8 @@ export async function getModelAgreement(db: D1Database): Promise<ModelAgreementP
         ELSE NULL END as pearson_r
        FROM rater_evals a
        JOIN rater_evals b ON a.hn_id = b.hn_id AND a.eval_model < b.eval_model
+       INNER JOIN model_registry mr_a ON mr_a.id = a.eval_model AND mr_a.enabled = 1
+       INNER JOIN model_registry mr_b ON mr_b.id = b.eval_model AND mr_b.enabled = 1
        WHERE a.eval_status = 'done' AND b.eval_status = 'done'
          AND a.hcb_weighted_mean IS NOT NULL AND b.hcb_weighted_mean IS NOT NULL
        GROUP BY a.eval_model, b.eval_model
@@ -70,6 +72,7 @@ export async function getTopModelMovers(db: D1Database, limit = 10): Promise<Mod
         s.hcb_weighted_mean as primary_score
        FROM rater_evals r
        JOIN stories s ON s.hn_id = r.hn_id
+       INNER JOIN model_registry mr ON mr.id = r.eval_model AND mr.enabled = 1
        WHERE r.eval_status = 'done' AND r.hcb_weighted_mean IS NOT NULL
        GROUP BY r.hn_id
        HAVING COUNT(DISTINCT r.eval_model) >= 2
@@ -199,9 +202,10 @@ export async function getRaterEvalCounts(db: D1Database, hnIds: number[]): Promi
   const placeholders = hnIds.map(() => '?').join(',');
   const { results } = await db
     .prepare(
-      `SELECT hn_id, eval_model, prompt_mode FROM rater_evals
-       WHERE hn_id IN (${placeholders}) AND eval_status = 'done'
-       ORDER BY hn_id, eval_model`
+      `SELECT re.hn_id, re.eval_model, re.prompt_mode FROM rater_evals re
+       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       WHERE re.hn_id IN (${placeholders}) AND re.eval_status = 'done'
+       ORDER BY re.hn_id, re.eval_model`
     )
     .bind(...hnIds)
     .all<{ hn_id: number; eval_model: string; prompt_mode: string | null }>();
@@ -225,13 +229,14 @@ export async function getRaterSummaryStats(db: D1Database): Promise<{
   try {
     const { results } = await db
       .prepare(
-        `SELECT eval_model AS model,
+        `SELECT re.eval_model AS model,
                 COUNT(*) AS eval_count,
-                AVG(hcb_weighted_mean) AS avg_score,
-                AVG(hcb_confidence) AS avg_confidence
-         FROM rater_evals
-         WHERE eval_status = 'done'
-         GROUP BY eval_model
+                AVG(re.hcb_weighted_mean) AS avg_score,
+                AVG(re.hcb_confidence) AS avg_confidence
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+         GROUP BY re.eval_model
          ORDER BY eval_count DESC`
       )
       .all<{ model: string; eval_count: number; avg_score: number | null; avg_confidence: number | null }>();
@@ -257,13 +262,14 @@ export async function getRaterStatusBreakdown(db: D1Database): Promise<{
       .prepare(
         `SELECT
            re.eval_model AS model,
-           SUM(CASE WHEN re.eval_status = 'done' THEN 1 ELSE 0 END) AS done,
-           SUM(CASE WHEN re.eval_status = 'queued' THEN 1 ELSE 0 END) AS queued,
-           SUM(CASE WHEN re.eval_status = 'failed' THEN 1 ELSE 0 END) AS failed,
-           SUM(CASE WHEN re.eval_status = 'pending' THEN 1 ELSE 0 END) AS pending,
-           SUM(CASE WHEN re.eval_status = 'evaluating' THEN 1 ELSE 0 END) AS evaluating,
-           (SELECT COUNT(*) FROM stories WHERE eval_status = 'done') AS total_primary
+           SUM(CASE WHEN re.eval_status = 'done'       AND re.hn_id > 0 THEN 1 ELSE 0 END) AS done,
+           SUM(CASE WHEN re.eval_status = 'queued'     AND re.hn_id > 0 THEN 1 ELSE 0 END) AS queued,
+           SUM(CASE WHEN re.eval_status = 'failed'     AND re.hn_id > 0 THEN 1 ELSE 0 END) AS failed,
+           SUM(CASE WHEN re.eval_status = 'pending'    AND re.hn_id > 0 THEN 1 ELSE 0 END) AS pending,
+           SUM(CASE WHEN re.eval_status = 'evaluating' AND re.hn_id > 0 THEN 1 ELSE 0 END) AS evaluating,
+           (SELECT COUNT(*) FROM stories WHERE hn_id > 0) AS total_primary
          FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
          GROUP BY re.eval_model
          ORDER BY re.eval_model`
       )
@@ -289,9 +295,10 @@ export async function getMultiModelStories(db: D1Database, limit = 500): Promise
   const { results: rows } = await db
     .prepare(
       `WITH shared AS (
-         SELECT hn_id FROM rater_evals
-         WHERE eval_status = 'done'
-         GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+         SELECT re.hn_id FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+         GROUP BY re.hn_id HAVING COUNT(DISTINCT re.eval_model) >= 2
        )
        SELECT re.hn_id, re.eval_model, re.hcb_weighted_mean, re.hcb_classification,
               re.hcb_confidence, re.hcb_setl, re.hcb_theme_tag,
@@ -299,6 +306,7 @@ export async function getMultiModelStories(db: D1Database, limit = 500): Promise
        FROM rater_evals re
        JOIN shared sh ON sh.hn_id = re.hn_id
        JOIN stories s ON s.hn_id = re.hn_id
+       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
        WHERE re.eval_status = 'done'
        ORDER BY s.hn_time DESC, re.eval_model
        LIMIT ?`
@@ -344,9 +352,10 @@ export async function getModelComparisonAggregates(db: D1Database): Promise<{
   const { results } = await db
     .prepare(
       `WITH shared AS (
-         SELECT hn_id FROM rater_evals
-         WHERE eval_status = 'done'
-         GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+         SELECT re.hn_id FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+         GROUP BY re.hn_id HAVING COUNT(DISTINCT re.eval_model) >= 2
        )
        SELECT
          re.eval_model AS model,
@@ -358,6 +367,7 @@ export async function getModelComparisonAggregates(db: D1Database): Promise<{
          ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS neutral_pct
        FROM rater_evals re
        JOIN shared sh ON sh.hn_id = re.hn_id
+       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
        WHERE re.eval_status = 'done'
        GROUP BY re.eval_model
        ORDER BY re.eval_model`
@@ -376,9 +386,10 @@ export async function getModelSectionAverages(db: D1Database): Promise<{
   const { results } = await db
     .prepare(
       `WITH shared AS (
-         SELECT hn_id FROM rater_evals
-         WHERE eval_status = 'done'
-         GROUP BY hn_id HAVING COUNT(DISTINCT eval_model) >= 2
+         SELECT re.hn_id FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+         GROUP BY re.hn_id HAVING COUNT(DISTINCT re.eval_model) >= 2
        )
        SELECT
          rs.eval_model AS model,
@@ -387,6 +398,7 @@ export async function getModelSectionAverages(db: D1Database): Promise<{
          COUNT(*) AS count
        FROM rater_scores rs
        JOIN shared sh ON sh.hn_id = rs.hn_id
+       INNER JOIN model_registry mr ON mr.id = rs.eval_model AND mr.enabled = 1
        WHERE rs.final IS NOT NULL
        GROUP BY rs.eval_model, rs.section
        ORDER BY rs.section, rs.eval_model`

@@ -181,13 +181,15 @@ export interface VelocityStats {
 }
 
 export async function getVelocityStats(db: D1Database, pendingCount: number): Promise<VelocityStats> {
-  // Rolling rate from rater_evals (captures multi-model throughput)
+  // Rolling rate from rater_evals (captures multi-model throughput) — enabled models only
   const recent = await db
     .prepare(
       `SELECT
-         COUNT(CASE WHEN evaluated_at >= datetime('now', '-1 day') THEN 1 END) as evals_24h,
-         COUNT(CASE WHEN evaluated_at >= datetime('now', '-7 days') THEN 1 END) as evals_7d
-       FROM rater_evals WHERE eval_status = 'done' AND evaluated_at IS NOT NULL`
+         COUNT(CASE WHEN re.evaluated_at >= datetime('now', '-1 day') THEN 1 END) as evals_24h,
+         COUNT(CASE WHEN re.evaluated_at >= datetime('now', '-7 days') THEN 1 END) as evals_7d
+       FROM rater_evals re
+       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       WHERE re.eval_status = 'done' AND re.evaluated_at IS NOT NULL`
     )
     .first<{ evals_24h: number; evals_7d: number }>();
 
@@ -634,17 +636,18 @@ export async function getProviderStats(db: D1Database): Promise<ProviderStat[]> 
   const { results } = await db
     .prepare(
       `SELECT
-         eval_provider,
-         COUNT(CASE WHEN eval_status = 'done' THEN 1 END) as evals_total,
-         COUNT(CASE WHEN eval_status = 'done'
-                     AND evaluated_at > datetime('now', '-1 day') THEN 1 END) as evals_24h,
-         COUNT(CASE WHEN eval_status = 'done'
-                     AND evaluated_at > datetime('now', '-7 days') THEN 1 END) as evals_7d,
-         MAX(CASE WHEN eval_status = 'done' THEN evaluated_at END) as last_eval,
-         COUNT(CASE WHEN eval_status = 'failed'
-                     AND evaluated_at > datetime('now', '-1 day') THEN 1 END) as failed_24h
-       FROM rater_evals
-       GROUP BY eval_provider
+         re.eval_provider,
+         COUNT(CASE WHEN re.eval_status = 'done' THEN 1 END) as evals_total,
+         COUNT(CASE WHEN re.eval_status = 'done'
+                     AND re.evaluated_at > datetime('now', '-1 day') THEN 1 END) as evals_24h,
+         COUNT(CASE WHEN re.eval_status = 'done'
+                     AND re.evaluated_at > datetime('now', '-7 days') THEN 1 END) as evals_7d,
+         MAX(CASE WHEN re.eval_status = 'done' THEN re.evaluated_at END) as last_eval,
+         COUNT(CASE WHEN re.eval_status = 'failed'
+                     AND re.evaluated_at > datetime('now', '-1 day') THEN 1 END) as failed_24h
+       FROM rater_evals re
+       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       GROUP BY re.eval_provider
        ORDER BY evals_total DESC`
     )
     .all<ProviderStat>();
@@ -670,16 +673,17 @@ export async function getModelQueueStats(db: D1Database): Promise<ModelQueueStat
   const { results } = await db
     .prepare(
       `SELECT
-         eval_model,
-         eval_provider,
-         COUNT(CASE WHEN eval_status = 'done'
-                     AND evaluated_at > datetime('now', '-1 day') THEN 1 END) as evals_24h,
-         COUNT(CASE WHEN eval_status = 'done'
-                     AND evaluated_at > datetime('now', '-7 days') THEN 1 END) as evals_7d,
-         MAX(CASE WHEN eval_status = 'done' THEN evaluated_at END) as last_eval,
-         COUNT(CASE WHEN eval_status IN ('queued', 'evaluating', 'pending') THEN 1 END) as in_flight
-       FROM rater_evals
-       GROUP BY eval_model, eval_provider
+         re.eval_model,
+         re.eval_provider,
+         COUNT(CASE WHEN re.eval_status = 'done'
+                     AND re.evaluated_at > datetime('now', '-1 day') THEN 1 END) as evals_24h,
+         COUNT(CASE WHEN re.eval_status = 'done'
+                     AND re.evaluated_at > datetime('now', '-7 days') THEN 1 END) as evals_7d,
+         MAX(CASE WHEN re.eval_status = 'done' THEN re.evaluated_at END) as last_eval,
+         COUNT(CASE WHEN re.eval_status IN ('queued', 'evaluating', 'pending') THEN 1 END) as in_flight
+       FROM rater_evals re
+       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       GROUP BY re.eval_model, re.eval_provider
        ORDER BY evals_7d DESC`
     )
     .all<ModelQueueStat>();
@@ -775,7 +779,7 @@ export interface EvalLatencyStat {
 
 export async function getEvalLatencyStats(db: D1Database): Promise<EvalLatencyStat[]> {
   try {
-    // Compute per-model percentiles using NTILE window function (SQLite 3.25+)
+    // Compute per-model percentiles using NTILE window function (SQLite 3.25+) — enabled models only
     const { results } = await db
       .prepare(
         `WITH latencies AS (
@@ -787,6 +791,7 @@ export async function getEvalLatencyStats(db: D1Database): Promise<EvalLatencySt
                   ) as pctile
            FROM rater_evals re
            JOIN stories s ON s.hn_id = re.hn_id
+           INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
            WHERE re.eval_status = 'done'
              AND re.evaluated_at >= datetime('now', '-7 days')
              AND re.evaluated_at IS NOT NULL
@@ -827,16 +832,17 @@ export async function getSignalCompleteness(db: D1Database): Promise<SignalCompl
   try {
     const { results } = await db
       .prepare(
-        `SELECT eval_model,
+        `SELECT re.eval_model,
                 COUNT(*) as total_evals,
-                ROUND(100.0 * COUNT(CASE WHEN eq_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as eq_pct,
-                ROUND(100.0 * COUNT(CASE WHEN so_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as so_pct,
-                ROUND(100.0 * COUNT(CASE WHEN td_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as td_pct,
-                ROUND(100.0 * COUNT(CASE WHEN pt_flag_count IS NOT NULL THEN 1 END) / COUNT(*), 1) as pt_pct,
-                ROUND(100.0 * COUNT(CASE WHEN et_primary_tone IS NOT NULL THEN 1 END) / COUNT(*), 1) as tone_pct
-         FROM rater_evals
-         WHERE eval_status = 'done'
-         GROUP BY eval_model
+                ROUND(100.0 * COUNT(CASE WHEN re.eq_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as eq_pct,
+                ROUND(100.0 * COUNT(CASE WHEN re.so_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as so_pct,
+                ROUND(100.0 * COUNT(CASE WHEN re.td_score IS NOT NULL THEN 1 END) / COUNT(*), 1) as td_pct,
+                ROUND(100.0 * COUNT(CASE WHEN re.pt_flag_count IS NOT NULL THEN 1 END) / COUNT(*), 1) as pt_pct,
+                ROUND(100.0 * COUNT(CASE WHEN re.et_primary_tone IS NOT NULL THEN 1 END) / COUNT(*), 1) as tone_pct
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+         GROUP BY re.eval_model
          ORDER BY total_evals DESC`
       )
       .all<Omit<SignalCompletenessRow, 'any_below_80'>>();
@@ -1030,16 +1036,17 @@ export async function getContentTypeDisagreement(db: D1Database): Promise<Conten
     const { results } = await db
       .prepare(
         `SELECT
-          hn_id,
-          COUNT(DISTINCT content_type) as type_count,
-          GROUP_CONCAT(DISTINCT content_type) as types_seen,
-          GROUP_CONCAT(DISTINCT eval_model) as models
-         FROM rater_evals
-         WHERE eval_status = 'done'
-           AND content_type IS NOT NULL
-           AND hn_id > 0
-         GROUP BY hn_id
-         HAVING COUNT(DISTINCT content_type) > 1
+          re.hn_id,
+          COUNT(DISTINCT re.content_type) as type_count,
+          GROUP_CONCAT(DISTINCT re.content_type) as types_seen,
+          GROUP_CONCAT(DISTINCT re.eval_model) as models
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         WHERE re.eval_status = 'done'
+           AND re.content_type IS NOT NULL
+           AND re.hn_id > 0
+         GROUP BY re.hn_id
+         HAVING COUNT(DISTINCT re.content_type) > 1
          ORDER BY type_count DESC
          LIMIT 20`
       )
@@ -1075,13 +1082,14 @@ export async function getMisclassificationSummary(db: D1Database): Promise<Miscl
     const disagreeRow = await db
       .prepare(
         `SELECT COUNT(*) as cnt FROM (
-          SELECT hn_id
-          FROM rater_evals
-          WHERE eval_status = 'done'
-            AND content_type IS NOT NULL
-            AND hn_id > 0
-          GROUP BY hn_id
-          HAVING COUNT(DISTINCT content_type) > 1
+          SELECT re.hn_id
+          FROM rater_evals re
+          INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+          WHERE re.eval_status = 'done'
+            AND re.content_type IS NOT NULL
+            AND re.hn_id > 0
+          GROUP BY re.hn_id
+          HAVING COUNT(DISTINCT re.content_type) > 1
         )`
       )
       .first<{ cnt: number }>();
@@ -1112,12 +1120,13 @@ export interface DailyEvalVelocity {
 export async function getDailyEvalVelocity(db: D1Database, days = 60): Promise<DailyEvalVelocity[]> {
   const { results } = await db
     .prepare(
-      `SELECT DATE(evaluated_at) as day, prompt_mode, COUNT(*) as count
-       FROM rater_evals
-       WHERE eval_status = 'done'
-         AND evaluated_at IS NOT NULL
-         AND evaluated_at >= datetime('now', '-' || ? || ' days')
-       GROUP BY day, prompt_mode
+      `SELECT DATE(re.evaluated_at) as day, re.prompt_mode, COUNT(*) as count
+       FROM rater_evals re
+       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       WHERE re.eval_status = 'done'
+         AND re.evaluated_at IS NOT NULL
+         AND re.evaluated_at >= datetime('now', '-' || ? || ' days')
+       GROUP BY day, re.prompt_mode
        ORDER BY day ASC`
     )
     .bind(days)
