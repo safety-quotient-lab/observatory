@@ -834,7 +834,7 @@ export async function writeLightRaterEvalResult(
         eq_score, so_score, et_primary_tone, et_valence, et_arousal,
         sr_score, pt_flag_count, td_score,
         input_tokens, output_tokens, content_truncation_pct,
-        eval_batch_id, evaluated_at
+        eval_batch_id, reasoning, evaluated_at
       ) VALUES (
         ?, ?, ?, 'done', 'light',
         ?, ?, ?,
@@ -848,7 +848,7 @@ export async function writeLightRaterEvalResult(
         ?, ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?,
-        ?, datetime('now')
+        ?, ?, datetime('now')
       )
       ON CONFLICT(hn_id, eval_model) DO UPDATE SET
         eval_status = 'done',
@@ -888,6 +888,7 @@ export async function writeLightRaterEvalResult(
         output_tokens = excluded.output_tokens,
         content_truncation_pct = excluded.content_truncation_pct,
         eval_batch_id = excluded.eval_batch_id,
+        reasoning = excluded.reasoning,
         evaluated_at = excluded.evaluated_at`
     )
     .bind(
@@ -921,6 +922,7 @@ export async function writeLightRaterEvalResult(
       light.td_score ?? null,        // TD
       inputTokens, outputTokens, contentTruncationPct,
       batchId,
+      light.reasoning ?? null,       // reasoning (light-1.4+): pre-commit classification string
     )
     .run();
 
