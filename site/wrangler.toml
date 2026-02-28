@@ -3,6 +3,14 @@ compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
+# Fork setup: replace the IDs below with your own Cloudflare resources.
+# These are infrastructure identifiers, not secrets — safe to commit.
+#   D1:    wrangler d1 create hrcb-db        → copy the database_id
+#   KV:    wrangler kv namespace create CONTENT_CACHE → copy the id
+#   R2:    wrangler r2 bucket create hrcb-content-snapshots
+#   Queue: wrangler queues create <name>     (names must match exactly)
+# Secrets stay in .dev.vars (local) or: wrangler secret put --name <worker-name>
+
 [[d1_databases]]
 binding = "DB"
 database_name = "hrcb-db"

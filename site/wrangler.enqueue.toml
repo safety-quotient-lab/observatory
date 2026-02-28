@@ -2,10 +2,18 @@ name = "hrcb-enqueue"
 main = "scripts/enqueue.ts"
 compatibility_date = "2026-02-01"
 
+# Fork setup: replace the IDs below with your own Cloudflare resources.
+# These are infrastructure identifiers, not secrets — safe to commit.
+#   D1:    wrangler d1 create hrcb-db        → copy the database_id
+#   KV:    wrangler kv namespace create CONTENT_CACHE → copy the id
+#   R2:    wrangler r2 bucket create hrcb-content-snapshots
+#   Queue: wrangler queues create <name>     (names must match exactly)
+# Secrets stay in .dev.vars (local) or: wrangler secret put --name <worker-name>
+
 [[d1_databases]]
 binding = "DB"
 database_name = "hrcb-db"
-database_id = "<your-d1-database-id>"  # wrangler d1 list
+database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
 
 [[queues.producers]]
 queue = "hrcb-eval-queue"

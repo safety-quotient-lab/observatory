@@ -1,8 +1,41 @@
 # TODO
 
-Items are organized by execution horizon. Phase 1 is fully unblocked.
+Items are organized by execution horizon. Phase 0 is the current focus.
 Phases 2 and 3 are sequenced prerequisites for commercialization and
 GitHub publishing respectively.
+
+---
+
+## Phase 0 — Data Integrity Deep Dive
+*Current phase. Investigate and fix inconsistencies and red flags in production data before building more features on top.*
+
+- [ ] **Ghost evaluations** — stories with `eval_status='done'` but missing expected data
+  - NULL `eval_model`, NULL `hcb_weighted_mean`, empty `scores` + `rater_scores`
+  - Stories relying entirely on consensus with no traceable primary eval
+  - Quantify scope: how many, which models, what time period
+  - *We already hit this — story 47173121 had done status, null eval_model, zero primary scores*
+
+- [ ] **Model score distribution audit**
+  - Per-model score histograms — are any models systematically biased high/low?
+  - Compare mean/stddev across models for the same stories (multi-model overlap set)
+  - Flag models with suspiciously narrow or uniform distributions
+  - Check if light eval editorial scores correlate with full eval editorial scores on the same stories
+
+- [ ] **Stale pipeline state**
+  - Stories stuck in `evaluating` or `queued` for >24h (dropped queue messages)
+  - `eval_queue` rows with stale `claimed_by` that were never completed
+  - DLQ messages that were never replayed or resolved
+  - Quantify: how much data is trapped in limbo vs flowing through
+
+- [ ] **Domain aggregate drift**
+  - `domain_aggregates` is materialized incrementally — verify it matches a fresh computation from underlying `rater_evals`
+  - Spot-check 10 high-volume domains: does `avg_hcb` in the aggregate match `AVG(hcb_weighted_mean)` from stories?
+  - Check for domains where aggregate `eval_count` doesn't match actual done story count
+
+- [ ] **Content gate accuracy audit**
+  - Sample 20 gated stories (paywall, bot_protection, etc.) — manually verify the gate was correct
+  - Sample 20 non-gated stories with low scores — check if any should have been gated (false negatives)
+  - Check for domains with >50% gate rate — are these legitimate or false-positive patterns?
 
 ---
 
@@ -140,8 +173,7 @@ GitHub publishing respectively.
 *Blocked on license decision. Do before creating the public GitHub repo.*
 
 - [x] **Remove personal eval sample files** from repo root *(done 2026-02-27)*
-
-- [ ] **Scrub Cloudflare resource IDs** from `wrangler.toml` — do as last step before public push (reverted premature scrub that broke every deploy cycle)
+- [x] **Add fork-setup comments to all wrangler configs** *(done 2026-02-27)* — D1/KV IDs are infrastructure identifiers, not secrets; comments guide forks; real IDs committed
 
 - [ ] **Decide on `LICENSE`** — TBD (AGPL-3.0 was considered; not yet decided)
 
