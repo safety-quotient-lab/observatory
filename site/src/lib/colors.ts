@@ -16,8 +16,8 @@ function hslToRgb(h: number, s: number, l: number): string {
 /** Map a score [-1, +1] to a color via HSL interpolation for clean transitions.
  *  -1.0 = red (hue 0°), 0.0 = amber (hue 40°), +1.0 = green (hue 142°).
  *  Interpolates through HSL so mid-tones stay vibrant instead of going muddy brown. */
-export function scoreToColor(score: number | null): string {
-  if (score === null) return '#4b5563'; // ND gray (gray-600)
+export function scoreToColor(score: number | null | undefined): string {
+  if (score == null) return '#4b5563'; // ND gray (gray-600)
 
   const clamped = Math.max(-1, Math.min(1, score));
 
@@ -59,8 +59,8 @@ export function classificationTextColor(classification: string): string {
 }
 
 /** Format a score for display */
-export function formatScore(score: number | null): string {
-  if (score === null) return 'ND';
+export function formatScore(score: number | null | undefined): string {
+  if (score == null) return 'ND';
   const sign = score > 0 ? '+' : '';
   return `${sign}${score.toFixed(2)}`;
 }
@@ -99,15 +99,15 @@ export function computeSetl(structural: number | null, editorial: number | null)
 }
 
 /** Format SETL value for display */
-export function formatSetl(setl: number | null): string {
-  if (setl === null) return 'ND';
+export function formatSetl(setl: number | null | undefined): string {
+  if (setl == null) return 'ND';
   const sign = setl > 0 ? '+' : '';
   return `${sign}${setl.toFixed(2)}`;
 }
 
 /** Map SETL [-1, +1] to a color: green for positive, red for negative */
-export function setlToColor(setl: number | null): string {
-  if (setl === null) return '#6b7280';
+export function setlToColor(setl: number | null | undefined): string {
+  if (setl == null) return '#6b7280';
   return scoreToColor(setl);
 }
 
@@ -125,8 +125,8 @@ export function computeConfidence(
 
 /** Map confidence (0–1) to a color: gray (0) → cyan (1.0)
  *  Uses fg-secondary → color-cyan interpolation (distinct from score red→green) */
-export function confidenceToColor(confidence: number | null): string {
-  if (confidence === null) return '#4b5563';
+export function confidenceToColor(confidence: number | null | undefined): string {
+  if (confidence == null) return '#4b5563';
   const c = Math.max(0, Math.min(1, confidence));
 
   // Gray → Cyan: fg-secondary (#5b7279) at 0 → color-cyan (#259d94) at 1
@@ -139,14 +139,14 @@ export function confidenceToColor(confidence: number | null): string {
 }
 
 /** Format confidence for display */
-export function formatConfidence(confidence: number | null): string {
-  if (confidence === null) return 'ND';
+export function formatConfidence(confidence: number | null | undefined): string {
+  if (confidence == null) return 'ND';
   return Math.round(confidence * 100) + '%';
 }
 
 /** DCP modifier color */
-export function modifierColor(mod: number | null): string {
-  if (mod === null) return '#1a5568';
+export function modifierColor(mod: number | null | undefined): string {
+  if (mod == null) return '#1a5568';
   // Map modifier (typically small, e.g. -0.1 to +0.1) to score scale
   const scaled = Math.max(-1, Math.min(1, mod * 10));
   return scoreToColor(scaled);
@@ -171,8 +171,8 @@ export function gateToColor(category: string): string {
 }
 
 /** Fair Witness ratio color: maps 0–1 to purple(0) → green(1) */
-export function fwRatioColor(ratio: number | null): string {
-  if (ratio === null) return '#4b5563';
+export function fwRatioColor(ratio: number | null | undefined): string {
+  if (ratio == null) return '#4b5563';
   const r = Math.max(0, Math.min(1, ratio));
   // Low ratio (more inference) = purple, high ratio (more observable) = green
   // Shift hue toward 280 (purple) for low r, 142 (green) for high r
@@ -183,7 +183,7 @@ export function fwRatioColor(ratio: number | null): string {
 }
 
 /** Format Fair Witness ratio for display */
-export function formatFwRatio(ratio: number | null): string {
-  if (ratio === null) return 'ND';
+export function formatFwRatio(ratio: number | null | undefined): string {
+  if (ratio == null) return 'ND';
   return Math.round(ratio * 100) + '%';
 }
