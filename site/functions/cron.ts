@@ -18,6 +18,7 @@ import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, LITE_CALIBRATION_SET, LITE_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
 import { shouldAutoDisableFromCalibration, raterHealthKvKey, emptyRaterHealth, type RaterHealthState } from '../src/lib/rater-health';
 import { getPipelineHealth } from '../src/lib/db';
+import { safeBatch } from '../src/lib/db-utils';
 import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions, searchAlgolia, insertAlgoliaHits } from '../src/lib/coverage-crawl';
 import { checkContentDrift } from '../src/lib/content-drift';
 import {
@@ -615,7 +616,7 @@ export default {
       }
 
       if (sweep === 'skipped') {
-        const minScore = parseInt(url.searchParams.get('min_score') || '50', 10) || 50;
+        const minScore = Math.min(parseInt(url.searchParams.get('min_score') || '50', 10) || 50, 100000);
 
         const { meta } = await db
           .prepare(
@@ -711,8 +712,8 @@ export default {
       }
 
       if (sweep === 'algolia_backfill') {
-        const minScore = parseInt(url.searchParams.get('min_score') || '500', 10) || 500;
-        const daysBack = parseInt(url.searchParams.get('days_back') || '365', 10) || 365;
+        const minScore = Math.min(parseInt(url.searchParams.get('min_score') || '500', 10) || 500, 100000);
+        const daysBack = Math.min(parseInt(url.searchParams.get('days_back') || '365', 10) || 365, 3650);
 
         const nowSec = Math.floor(Date.now() / 1000);
         const startSec = nowSec - daysBack * 86400;
@@ -1308,9 +1309,7 @@ export default {
               )
               .bind(s.final, s.combined ?? null, s.context_modifier ?? null, story.hn_id, rescoreModel, s.section);
           });
-          for (let i = 0; i < scoreStmts.length; i += 100) {
-            await db.batch(scoreStmts.slice(i, i + 100));
-          }
+          await safeBatch(db, scoreStmts);
 
           const hcbJson = JSON.stringify({
             schema_version: '3.7',

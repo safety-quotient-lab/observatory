@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   }
 
   const url = new URL(request.url);
-  const rawLimit = parseInt(url.searchParams.get('limit') ?? '50');
+  const rawLimit = parseInt(url.searchParams.get('limit') ?? '50', 10);
   const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 100)) : 50;
 
   const rawSort = url.searchParams.get('sort') ?? 'stories';

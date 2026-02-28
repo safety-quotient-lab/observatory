@@ -97,7 +97,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       if (isCalId && env.CONTENT_CACHE) {
         const runStr = await env.CONTENT_CACHE.get('calibration:lite:current_run').catch(() => null)
           ?? await env.CONTENT_CACHE.get('calibration:light:current_run').catch(() => null); // backward compat
-        const calibrationRun = runStr ? parseInt(runStr) : NaN;
+        const calibrationRun = runStr ? parseInt(runStr, 10) : NaN;
         if (!isNaN(calibrationRun)) {
           await writeCalibrationEval(env.DB, calibrationRun, hn_id, lite, model_id, provider);
         }

@@ -860,6 +860,7 @@ export async function dispatchFreeModelEvals(
     }
 
     const messages: { body: QueueMessage }[] = [];
+    const raterStmts: D1PreparedStatement[] = [];
     for (const story of candidates) {
       messages.push({
         body: {
@@ -874,16 +875,18 @@ export async function dispatchFreeModelEvals(
         },
       });
 
-      // UPSERT rater_evals as queued (include prompt_mode so shell row is accurate)
-      await db
-        .prepare(
-          `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, prompt_mode)
-           VALUES (?, ?, ?, 'queued', ?)
-           ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued', prompt_mode = excluded.prompt_mode`
-        )
-        .bind(story.hn_id, model.id, model.provider, model.prompt_mode ?? 'full')
-        .run();
+      // Collect rater_evals UPSERTs — flushed via safeBatch below (was N+1 individual awaits)
+      raterStmts.push(
+        db
+          .prepare(
+            `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, prompt_mode)
+             VALUES (?, ?, ?, 'queued', ?)
+             ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued', prompt_mode = excluded.prompt_mode`
+          )
+          .bind(story.hn_id, model.id, model.provider, model.prompt_mode ?? 'full')
+      );
     }
+    if (raterStmts.length > 0) await safeBatch(db, raterStmts);
 
     // Insert eval_queue rows for this model (idempotent — INSERT OR IGNORE)
     const evalStmts = candidates.map(story =>

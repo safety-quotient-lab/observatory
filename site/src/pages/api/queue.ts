@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   }
 
   const url = new URL(request.url);
-  const rawLimit = parseInt(url.searchParams.get('limit') ?? '20');
+  const rawLimit = parseInt(url.searchParams.get('limit') ?? '20', 10);
   const limit = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 20;
 
   const provider = url.searchParams.get('provider') ?? 'claude-code-standalone';

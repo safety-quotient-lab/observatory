@@ -16,9 +16,9 @@ export const GET: APIRoute = async ({ locals, request }) => {
   }
 
   const url = new URL(request.url);
-  const rawLimit = parseInt(url.searchParams.get('limit') ?? '20');
+  const rawLimit = parseInt(url.searchParams.get('limit') ?? '20', 10);
   const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(rawLimit, 100)) : 20;
-  const rawOffset = parseInt(url.searchParams.get('offset') ?? '0');
+  const rawOffset = parseInt(url.searchParams.get('offset') ?? '0', 10);
   const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
   const sort = url.searchParams.get('sort') === 'date' ? 'date' : 'score';
   const status = url.searchParams.get('status') === 'all' ? 'all' : 'done';
