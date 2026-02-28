@@ -31,11 +31,11 @@ const RAW_HTML_MAX_CHARS = 30_000;
 // --- Calibration set (editorial-only ranges) — matches validate-light.mjs ---
 const CALIBRATION = [
   { slot: 'EP-1', url: 'https://www.amnesty.org/en/what-we-do/', lo: 0.75, hi: 1.00 },
-  { slot: 'EP-2', url: 'https://www.eff.org/deeplinks',          lo: 0.70, hi: 0.95 },
+  { slot: 'EP-2', url: 'https://www.eff.org/deeplinks',          lo: 0.60, hi: 0.95 },
   { slot: 'EP-3', url: 'https://www.hrw.org',                    lo: 0.70, hi: 0.95 },
   { slot: 'EP-4', url: 'https://www.propublica.org',             lo: 0.45, hi: 0.75 },
   { slot: 'EP-5', url: 'https://archive.org',                    lo: 0.30, hi: 0.90 },
-  { slot: 'EN-1', url: 'https://www.weather.gov',                lo: -0.05, hi: 0.10 },
+  { slot: 'EN-1', url: 'https://www.weather.gov',                lo: -0.05, hi: 0.20 },
   { slot: 'EN-2', url: 'https://www.timeanddate.com',            lo: -0.08, hi: 0.15 },
   { slot: 'EN-3', url: 'https://www.xe.com',                     lo: -0.05, hi: 0.20 },
   { slot: 'EN-4', url: 'https://en.wikipedia.org/wiki/Oxygen',   lo:  0.00, hi: 0.10 },

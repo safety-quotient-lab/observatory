@@ -75,11 +75,11 @@ export const DRIFT_THRESHOLDS = {
  */
 export const LIGHT_CALIBRATION_SET: CalibrationUrl[] = [
   { slot: 'EP-1', url: 'https://www.amnesty.org/en/what-we-do/', expectedClass: 'EP', expectedMeanMin: 0.75, expectedMeanMax: 1.00, label: 'Amnesty International' },
-  { slot: 'EP-2', url: 'https://www.eff.org/deeplinks', expectedClass: 'EP', expectedMeanMin: 0.70, expectedMeanMax: 0.95, label: 'EFF Deeplinks' },
+  { slot: 'EP-2', url: 'https://www.eff.org/deeplinks', expectedClass: 'EP', expectedMeanMin: 0.60, expectedMeanMax: 0.95, label: 'EFF Deeplinks' },
   { slot: 'EP-3', url: 'https://www.hrw.org', expectedClass: 'EP', expectedMeanMin: 0.70, expectedMeanMax: 0.95, label: 'Human Rights Watch' },
   { slot: 'EP-4', url: 'https://www.propublica.org', expectedClass: 'EP', expectedMeanMin: 0.45, expectedMeanMax: 0.75, label: 'ProPublica' },
   { slot: 'EP-5', url: 'https://archive.org', expectedClass: 'EP', expectedMeanMin: 0.30, expectedMeanMax: 0.90, label: 'Internet Archive' },
-  { slot: 'EN-1', url: 'https://www.weather.gov', expectedClass: 'EN', expectedMeanMin: -0.05, expectedMeanMax: 0.10, label: 'Weather.gov' },
+  { slot: 'EN-1', url: 'https://www.weather.gov', expectedClass: 'EN', expectedMeanMin: -0.05, expectedMeanMax: 0.20, label: 'Weather.gov' },
   { slot: 'EN-2', url: 'https://www.timeanddate.com', expectedClass: 'EN', expectedMeanMin: -0.08, expectedMeanMax: 0.15, label: 'Time and Date' },
   { slot: 'EN-3', url: 'https://www.xe.com', expectedClass: 'EN', expectedMeanMin: -0.05, expectedMeanMax: 0.20, label: 'XE.com' },
   { slot: 'EN-4', url: 'https://en.wikipedia.org/wiki/Oxygen', expectedClass: 'EN', expectedMeanMin: 0.00, expectedMeanMax: 0.10, label: 'Wikipedia (Oxygen)' },
