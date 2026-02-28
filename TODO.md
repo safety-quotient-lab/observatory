@@ -52,12 +52,6 @@ rounds. 30/43 items already fixed; remaining items below.
   - *Directly informs Phase 2 pricing tiers*
   - `getCostStats` removed (2026-02-28) — was showing zeros. Rebuild when token data is reliable.
 
-- [ ] **Adaptive daemon parallelism**
-  - Real-time backpressure: adjust `--parallel` between batches based on signals
-  - Rate limited → halve (min 1); all ok → increment by 1 (up to max cap)
-  - >50% failures → decrement; avg claude_ms > 180s → decrement (model under load)
-  - Empty queue → reset to initial. ~20 lines in daemon loop.
-
 ### Round 3.5 — Triage UX Audit
 
 - [ ] **UX audit findings** — 15 remaining of 31 items (16 done)

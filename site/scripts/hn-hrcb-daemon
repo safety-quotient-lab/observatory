@@ -4,16 +4,22 @@
 # Dispatches batches of stories with parallelism (default: 3 at a time).
 # Each story is one claude -p call. Self-launches into a tmux session.
 #
+# Adaptive parallelism: auto-tunes --parallel between batches based on
+# evaluator feedback (success rate, latency, rate limits). Slow ramp-up (+1),
+# fast retreat (/2). Use --fixed to disable.
+#
 # Usage:
-#   ./scripts/hn-hrcb-daemon                     # default: haiku, 3 parallel
+#   ./scripts/hn-hrcb-daemon                     # default: haiku, 3 parallel (adaptive)
 #   ./scripts/hn-hrcb-daemon --model sonnet      # use a different model
-#   ./scripts/hn-hrcb-daemon --parallel 5        # 5 concurrent evals
+#   ./scripts/hn-hrcb-daemon --parallel 5        # start at 5 concurrent evals
+#   ./scripts/hn-hrcb-daemon --fixed             # disable adaptive parallelism
 #   ./scripts/hn-hrcb-daemon --min-score 100     # only high-scoring stories
 #   ./scripts/hn-hrcb-daemon --domain nytimes.com
 #
 # Monitor:
 #   tail -f site/daemon.log
 #   tmux attach -t hrcb-daemon
+#   grep "ADAPTIVE:" site/daemon.log             # parallelism decisions
 #
 # Stop gracefully (finishes current batch first):
 #   touch site/.daemon-stop
@@ -31,6 +37,7 @@ MIN_SCORE=""
 DOMAIN=""
 SLEEP_BETWEEN=5         # seconds between batches
 SLEEP_EMPTY_QUEUE=300   # seconds when nothing to do (5 min)
+ADAPTIVE=true           # auto-tune parallelism between batches
 
 # ── Parse arguments ──
 while [ $# -gt 0 ]; do
@@ -40,6 +47,7 @@ while [ $# -gt 0 ]; do
     --min-score) MIN_SCORE="$2"; shift 2 ;;
     --domain)    DOMAIN="$2"; shift 2 ;;
     --sleep)     SLEEP_BETWEEN="${2:?--sleep requires a number}"; shift 2 ;;
+    --fixed)     ADAPTIVE=false; shift ;;
     -h|--help)
       sed -n '2,/^$/s/^# \?//p' "$0"
       exit 0
@@ -59,6 +67,7 @@ if [ -z "${TMUX:-}" ]; then
   DAEMON_ARGS=("--model" "$MODEL" "--parallel" "$PARALLEL" "--sleep" "$SLEEP_BETWEEN")
   [ -n "$MIN_SCORE" ] && DAEMON_ARGS+=("--min-score" "$MIN_SCORE")
   [ -n "$DOMAIN" ] && DAEMON_ARGS+=("--domain" "$DOMAIN")
+  $ADAPTIVE || DAEMON_ARGS+=("--fixed")
 
   echo "Launching daemon in tmux session 'hrcb-daemon'..."
   tmux new-session -d -s hrcb-daemon bash "$0" "${DAEMON_ARGS[@]}"
@@ -94,7 +103,11 @@ rotate_log() {
 
 log "════════════════════════════════════════"
 log "hn-hrcb-daemon starting"
-log "  Model: $MODEL | Parallel: $PARALLEL | Sleep: ${SLEEP_BETWEEN}s"
+if $ADAPTIVE; then
+  log "  Model: $MODEL | Parallel: $PARALLEL (adaptive, max $MAX_PARALLEL) | Sleep: ${SLEEP_BETWEEN}s"
+else
+  log "  Model: $MODEL | Parallel: $PARALLEL (fixed) | Sleep: ${SLEEP_BETWEEN}s"
+fi
 [ -n "$MIN_SCORE" ] && log "  Min score: $MIN_SCORE"
 [ -n "$DOMAIN" ] && log "  Domain: $DOMAIN"
 log "  Log: $LOG_FILE"
@@ -112,6 +125,110 @@ build_eval_args() {
 consecutive_errors=0
 total_evaluated=0
 daemon_start=$(date +%s)
+
+# ── Adaptive parallelism state ──
+INITIAL_PARALLEL=$PARALLEL
+MAX_PARALLEL=$((PARALLEL * 3))
+[ "$MAX_PARALLEL" -lt 5 ] && MAX_PARALLEL=5
+
+# Parse evaluator stdout for decision signals. All vars prefixed sig_.
+# Every extraction has || true — parse failure = hold steady.
+parse_batch_signals() {
+  local output="$1"
+
+  sig_empty=false
+  sig_rate_limited=false
+  sig_ok=0
+  sig_failed=0
+  sig_total=0
+  sig_avg_claude_ms=0
+  sig_evals_per_min=""
+
+  # Queue empty?
+  if echo "$output" | grep -q "Nothing to do"; then
+    sig_empty=true
+    return
+  fi
+
+  # Rate limited?
+  if echo "$output" | grep -q "RATE_LIMITED"; then
+    sig_rate_limited=true
+  fi
+
+  # Results: X ok, Y failed (Z total)
+  local results_line
+  results_line=$(echo "$output" | grep -oP 'Results:\s+\K\d+ ok, \d+ failed' || true)
+  if [ -n "$results_line" ]; then
+    sig_ok=$(echo "$results_line" | grep -oP '^\d+' || echo 0)
+    sig_failed=$(echo "$results_line" | grep -oP '\d+(?= failed)' || echo 0)
+    sig_total=$((sig_ok + sig_failed))
+  fi
+
+  # Claude avg latency: parse "Claude    12.3s" or "Claude    123ms" from summary table
+  local claude_avg_raw
+  claude_avg_raw=$(echo "$output" | grep -oP 'Claude\s+\K[\d.]+[ms]+' | head -1 || true)
+  if [ -n "$claude_avg_raw" ]; then
+    if echo "$claude_avg_raw" | grep -q 'ms$'; then
+      # milliseconds — strip "ms" suffix
+      sig_avg_claude_ms=$(echo "$claude_avg_raw" | sed 's/ms$//' || echo 0)
+    else
+      # seconds — strip "s" suffix, convert to ms
+      local secs
+      secs=$(echo "$claude_avg_raw" | sed 's/s$//')
+      sig_avg_claude_ms=$(echo "$secs" | awk '{printf "%d", $1 * 1000}' || echo 0)
+    fi
+  fi
+
+  # Rate: ~N evals/min
+  sig_evals_per_min=$(echo "$output" | grep -oP 'Rate: ~\K\d+' || true)
+}
+
+# Adjust PARALLEL based on parsed signals. First match wins.
+adjust_parallelism() {
+  local old=$PARALLEL
+  local reason=""
+  local rate_suffix=""
+
+  [ -n "$sig_evals_per_min" ] && rate_suffix=" [${sig_evals_per_min} evals/min]"
+
+  # 1. Rate limited → halve (min 1)
+  if $sig_rate_limited; then
+    PARALLEL=$(( PARALLEL / 2 ))
+    [ "$PARALLEL" -lt 1 ] && PARALLEL=1
+    reason="rate limited → halve"
+
+  # 2. Queue empty → reset to initial
+  elif $sig_empty; then
+    PARALLEL=$INITIAL_PARALLEL
+    reason="queue empty → reset"
+
+  # 3. >50% failures → decrement (min 1)
+  elif [ "$sig_total" -gt 0 ] && [ $((sig_failed * 2)) -gt "$sig_total" ]; then
+    PARALLEL=$((PARALLEL - 1))
+    [ "$PARALLEL" -lt 1 ] && PARALLEL=1
+    reason=">50% failures → decrement"
+
+  # 4. Avg claude_ms > 180s → decrement (min 1)
+  elif [ "$sig_avg_claude_ms" -gt 180000 ]; then
+    PARALLEL=$((PARALLEL - 1))
+    [ "$PARALLEL" -lt 1 ] && PARALLEL=1
+    reason="high latency (${sig_avg_claude_ms}ms) → decrement"
+
+  # 5. All ok, zero failures → increment (max MAX_PARALLEL)
+  elif [ "$sig_total" -gt 0 ] && [ "$sig_failed" -eq 0 ]; then
+    PARALLEL=$((PARALLEL + 1))
+    [ "$PARALLEL" -gt "$MAX_PARALLEL" ] && PARALLEL=$MAX_PARALLEL
+    reason="all ok → increment"
+
+  # 6. Mixed / no data → hold
+  else
+    return
+  fi
+
+  if [ "$PARALLEL" -ne "$old" ]; then
+    log "ADAPTIVE: parallel $old → $PARALLEL ($reason)$rate_suffix"
+  fi
+}
 
 # Self-heal: reset stories stuck as 'evaluating' for > 10 minutes (crashed prior batch)
 log "Self-heal: checking for stuck 'evaluating' stories..."
@@ -150,17 +267,21 @@ while true; do
     fi
   fi
 
-  log "── batch (total so far: $total_evaluated) ──"
+  # Dynamic batch timeout: PARALLEL × 300s + 300s buffer, capped at 1800s
+  batch_timeout=$((PARALLEL * 300 + 300))
+  [ "$batch_timeout" -gt 1800 ] && batch_timeout=1800
 
-  # Run evaluator (20 min timeout — 3 parallel × 5 min each + overhead)
+  log "── batch (parallel=$PARALLEL, timeout=${batch_timeout}s, total so far: $total_evaluated) ──"
+
+  # Run evaluator
   set +e
   eval_args=$(build_eval_args)
-  output=$(timeout 1200 "$EVALUATOR" $eval_args 2>&1)
+  output=$(timeout "$batch_timeout" "$EVALUATOR" $eval_args 2>&1)
   exit_code=$?
   set -e
 
   if [ $exit_code -eq 124 ]; then
-    log "BATCH TIMEOUT (20 min) — evaluator hung. Will self-heal stuck stories next cycle."
+    log "BATCH TIMEOUT (${batch_timeout}s) — evaluator hung. Will self-heal stuck stories next cycle."
   fi
 
   # Log output (timestamped)
@@ -168,9 +289,13 @@ while true; do
     echo "[$(date '+%H:%M:%S')]   $line" | tee -a "$LOG_FILE"
   done
 
+  # Parse signals from evaluator output (used by adaptive and below)
+  parse_batch_signals "$output"
+
   if [ $exit_code -ne 0 ]; then
     consecutive_errors=$((consecutive_errors + 1))
     log "Batch failed (exit $exit_code). Consecutive errors: $consecutive_errors"
+    $ADAPTIVE && adjust_parallelism
     if [ $consecutive_errors -ge 5 ]; then
       log "5 consecutive errors — stopping to prevent hammering."
       break
@@ -183,21 +308,22 @@ while true; do
   consecutive_errors=0
 
   # Check if rate limited — pause 30 min instead of stopping
-  if echo "$output" | grep -q "RATE_LIMITED"; then
-    log "⚠ Rate limited — pausing 30 minutes before retrying..."
+  if $sig_rate_limited; then
+    $ADAPTIVE && adjust_parallelism
+    log "Rate limited — pausing 30 minutes before retrying..."
     sleep 1800
     continue
   fi
 
   # Check if queue was empty
-  if echo "$output" | grep -q "Nothing to do"; then
+  if $sig_empty; then
+    $ADAPTIVE && adjust_parallelism
     log "Queue empty — sleeping ${SLEEP_EMPTY_QUEUE}s..."
     sleep "$SLEEP_EMPTY_QUEUE"
   else
-    # Count successes from output
-    ok_count=$(echo "$output" | grep -c "→ done" || true)
-    total_evaluated=$((total_evaluated + ok_count))
-    log "Batch done (+${ok_count}). Sleeping ${SLEEP_BETWEEN}s..."
+    total_evaluated=$((total_evaluated + sig_ok))
+    $ADAPTIVE && adjust_parallelism
+    log "Batch done (+${sig_ok}). Sleeping ${SLEEP_BETWEEN}s..."
     sleep "$SLEEP_BETWEEN"
   fi
 done
