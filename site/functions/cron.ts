@@ -753,7 +753,7 @@ export default {
             .prepare(
               `INSERT INTO stories (hn_id, title, url, domain, hn_score, hn_comments, hn_time, hn_type, eval_status)
                VALUES (?, ?, ?, ?, 0, 0, ?, 'calibration', 'pending')
-               ON CONFLICT(hn_id) DO UPDATE SET eval_status = 'pending', evaluated_at = NULL`,
+               ON CONFLICT(hn_id) DO UPDATE SET url = excluded.url, domain = excluded.domain, title = excluded.title, eval_status = 'pending', evaluated_at = NULL`,
             )
             .bind(syntheticId, `[CAL-LIGHT] ${cal.label} (${cal.slot})`, cal.url, domain, Math.floor(Date.now() / 1000))
             .run();
