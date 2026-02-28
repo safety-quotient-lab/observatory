@@ -58,10 +58,12 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Round 3.5 — Triage UX Audit
 
-- [ ] **UX audit findings** — 31 items across navigation, accessibility, visual design, mobile
+- [ ] **UX audit findings** — 24 remaining of 31 items (7 done)
   - Full plan: `.claude/plans/ux-audit-2026-02-28.md`
-  - 5 critical, 9 high, 11 medium, 6 low
-  - Key items: sub-page sibling nav, lite-only eval display, touch targets, jargon scaffolding
+  - Done: NAV-02, NAV-03, NAV-04, NAV-05, MOB-02, VIS-02, VIS-07
+  - Remaining critical: NAV-01 (sibling nav), MOB-01 (touch targets); VIS-01 deferred (color redesign)
+  - Remaining high: A11Y-01, A11Y-02, A11Y-03, MOB-03, VIS-03, VIS-04
+  - Key next: NAV-01 (SubNav.astro + 8 sub-pages), MOB-01 (global.css 2 lines)
 
 - [ ] **Semantic color system** — replace 1,400+ hardcoded hex values with CSS variables
   - Heading colors + text-shadows moved to global CSS *(done 2026-02-28)*
