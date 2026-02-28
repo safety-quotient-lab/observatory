@@ -85,7 +85,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 - `site/src/lib/content-drift.ts` — Content change detection: `computeContentHash()` + `checkContentDrift()` for re-evaluating stories whose content changed since last eval
 - `site/src/lib/colors.ts` — Score/SETL/confidence/gate color mapping
 - `site/src/lib/db-utils.ts` — `SETL_CASE_SQL(alias)` SQL fragment helper, `cachedQuery<T>(kv, key, fn, ttl)` KV-backed query cache, `safeBatch()` D1 batch chunker (≤100 statements)
-- `site/src/components/` — Reusable Astro components (Breadcrumb, EvalCard, DcpTable, etc.)
+- `site/src/components/` — Reusable Astro components (Breadcrumb, SubNav, EvalCard, DcpTable, etc.). `SubNav.astro` renders pipe-separated sibling nav links (takes `items[]` + `current` string); used on Status/Rights/Trends sub-pages.
 - `site/functions/rate-limit.ts` — Rate limit state, capacity checks, credit pause (KV TTL: 600s)
 - `site/functions/providers.ts` — API call adapters (Anthropic, OpenRouter, Workers AI) with 15s AbortController timeout
 
