@@ -86,16 +86,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Round 6 — User-Facing Features
 
-- [ ] **Surface write-only supplementary signal columns** *(data model finding DM-2)*
-  - 16 columns written but never displayed: eq_uncertainty_handling,
-    eq_purpose_transparency, eq_claim_density, so_framing, so_reader_agency,
-    td_author_identified, td_conflicts_disclosed, td_funding_disclosed,
-    sr_voice_balance, sr_perspective_count, tf_primary_focus, tf_time_horizon,
-    cl_jargon_density, cl_assumed_knowledge, gs_regions_json, so_framing
-  - Option A: surface high-value ones on `/item/[id]` detail panel
-  - Option B: mark as "available via API, not displayed in UI"
-  - `eq_source_quality` and `eq_evidence_reasoning` are already surfaced
-
 - [ ] **Article deep dive enhancements** (`/article/[n]`)
   - Stddev distribution, evidence strength breakdown
   - Top 3 positive/negative stories per article (wire up orphaned
