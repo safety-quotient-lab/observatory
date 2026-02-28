@@ -140,42 +140,41 @@ const jsonLd = {
 <Base title="Domains">
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'sources', href: '/sources' }, { label: 'domains' }]} />
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
-    <tr>
-      <td>
-        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Domains</span>
-        <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-base);">
-          {safeClassify !== 'all' ? `(${safeClassify})` : ''}{page > 1 ? ` · page ${page}` : ''}
-        </span>
-        <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
-          <span style="color: var(--fg-secondary);">sort:</span>
-          {(['count', 'score', 'setl', 'conf'] as const).map((opt, i) => {
-            const labels = { count: 'stories', score: 'hrcb', setl: 'setl', conf: 'confidence' } as any;
-            return (
-              <>
-                {i > 0 && <span style="color: var(--color-border);"> | </span>}
-                {safeSort === opt
-                  ? <span style="color: var(--color-orange); font-weight: bold;">{labels[opt]}</span>
-                  : <a href={buildDomainUrl({ sort: opt })}>{labels[opt]}</a>
-                }
-              </>
-            );
-          })}
-          <br />
-          <span style="color: var(--fg-secondary);">show:</span>
-          {(['all', 'positive', 'negative', 'neutral', 'contested'] as const).map((opt, i) => (
+  <div class="filter-bar" style="padding-bottom: 10px;">
+    <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Domains</span>
+    <span class="filter-stats" style="margin-left: 8px; font-size: var(--font-base);">
+      {safeClassify !== 'all' ? `(${safeClassify})` : ''}{page > 1 ? ` · page ${page}` : ''}
+    </span>
+    <div class="subtext" style="margin-top: 4px;">
+      <div class="filter-row">
+        <span class="filter-label">sort:</span>
+        {(['count', 'score', 'setl', 'conf'] as const).map((opt, i) => {
+          const labels = { count: 'stories', score: 'hrcb', setl: 'setl', conf: 'confidence' } as any;
+          return (
             <>
-              {i > 0 && <span style="color: var(--color-border);"> | </span>}
-              {safeClassify === opt
-                ? <span style="color: var(--color-orange); font-weight: bold;">{opt}</span>
-                : <a href={buildDomainUrl({ class: opt })}>{opt}</a>
+              {i > 0 && <span class="filter-sep"> | </span>}
+              {safeSort === opt
+                ? <span class="filter-active">{labels[opt]}</span>
+                : <a href={buildDomainUrl({ sort: opt })} class="filter-link">{labels[opt]}</a>
               }
             </>
-          ))}
-        </div>
-      </td>
-    </tr>
-  </table>
+          );
+        })}
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">show:</span>
+        {(['all', 'positive', 'negative', 'neutral', 'contested'] as const).map((opt, i) => (
+          <>
+            {i > 0 && <span class="filter-sep"> | </span>}
+            {safeClassify === opt
+              ? <span class="filter-active">{opt}</span>
+              : <a href={buildDomainUrl({ class: opt })} class="filter-link">{opt}</a>
+            }
+          </>
+        ))}
+      </div>
+    </div>
+  </div>
 
   {/* Domain insight cards (page 1 only) */}
   {isFirstPage && hrcbDomains.length > 0 && (

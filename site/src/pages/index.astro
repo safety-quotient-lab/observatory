@@ -119,76 +119,74 @@ function isLiteModel(id: string): boolean {
 <Base title={pageTitle} canonicalUrl={canonicalUrl}>
   {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
   {/* Filter/sort bar */}
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
-    <tr>
-      <td style="padding: 4px 0;">
-        <span class="subtext" style="font-size: var(--font-sm);">
-          <span style="color: var(--fg-secondary);">sort:</span>
-          {SORT_OPTIONS.map((opt, i) => (
-            <>
-              {i > 0 && <span style="color: var(--color-border);"> | </span>}
-              {safeSort === opt.value
-                ? <span style="color: var(--color-orange); font-weight: bold;">{opt.label}</span>
-                : <a href={buildUrl({ sort: opt.value, p: '1' })}>{opt.label}</a>
-              }
-            </>
-          ))}
-          <br />
-          <span style="color: var(--fg-secondary);">show:</span>
-          {FILTER_OPTIONS.map((opt, i) => (
-            <>
-              {i > 0 && <span style="color: var(--color-border);"> | </span>}
-              {safeFilter === opt.value
-                ? <span style="color: var(--color-orange); font-weight: bold;">{opt.label}</span>
-                : <a href={buildUrl({ filter: opt.value, p: '1' })}>{opt.label}</a>
-              }
-            </>
-          ))}
-          {distinctModels.length > 1 && (
-            <>
-              <br />
-              <span style="color: var(--fg-secondary);">model:</span>
-              {safeModel === 'any'
-                ? <span style="color: var(--color-orange); font-weight: bold;"> any</span>
-                : <a href={buildUrl({ model: 'any', p: '1' })}> any</a>
-              }
-              <span style="color: var(--color-border);"> | </span>
-              {safeModel === 'all'
-                ? <span style="color: var(--color-orange); font-weight: bold;">all</span>
-                : <a href={buildUrl({ model: 'all', p: '1' })}>all</a>
-              }
-              {distinctModels.map((m) => (
-                <>
-                  <span style="color: var(--color-border);"> | </span>
-                  {safeModel === m
-                    ? <span style="color: var(--color-orange); font-weight: bold;">{modelLabel(m)}{isLiteModel(m) && <a href="/about#eval-modes" class="lite-icon" style="margin-left: 3px; text-decoration: none; color: var(--color-orange);" title="Lite eval — click for details">L</a>}</span>
-                    : <a href={buildUrl({ model: m, p: '1' })}>{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}</a>
-                  }
-                </>
-              ))}
-            </>
-          )}
-          <br />
-          <span style="color: var(--fg-secondary);">score:</span>
-          <button class="score-mode-btn" data-mode="hrcb" aria-label="Show HRCB composite scores">HRCB</button>
-          <span style="color: var(--color-border);"> | </span>
-          <button class="score-mode-btn" data-mode="editorial" aria-label="Show Editorial channel scores">E</button>
-          <span style="color: var(--color-border);"> | </span>
-          <button class="score-mode-btn" data-mode="structural" aria-label="Show Structural channel scores">S</button>
-          <br />
-          <span style="color: var(--fg-secondary);">{displayStories.length}{hasMore ? '+' : ''} stories</span>
-          {evaluatedCount > 0 && <span style="color: var(--fg-secondary);"> ({evaluatedCount} evaluated)</span>}
-          <span style="color: var(--fg-secondary);"> · page {page}{hasMore ? '' : ' (last)'}</span>
-          <span style="color: var(--fg-secondary);"> · </span>
-          <a href="/past">past</a>
-          <span style="color: var(--fg-secondary);"> · </span>
-          <a href="/velocity">velocity</a>
-          <span style="color: var(--fg-secondary);"> · </span>
-          <a href="/dynamics">dynamics</a>
-        </span>
-      </td>
-    </tr>
-  </table>
+  <div class="filter-bar subtext">
+    <div class="filter-row">
+      <span class="filter-label">sort:</span>
+      {SORT_OPTIONS.map((opt, i) => (
+        <>
+          {i > 0 && <span class="filter-sep"> | </span>}
+          {safeSort === opt.value
+            ? <span class="filter-active">{opt.label}</span>
+            : <a href={buildUrl({ sort: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
+          }
+        </>
+      ))}
+    </div>
+    <div class="filter-row">
+      <span class="filter-label">show:</span>
+      {FILTER_OPTIONS.map((opt, i) => (
+        <>
+          {i > 0 && <span class="filter-sep"> | </span>}
+          {safeFilter === opt.value
+            ? <span class="filter-active">{opt.label}</span>
+            : <a href={buildUrl({ filter: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
+          }
+        </>
+      ))}
+    </div>
+    {distinctModels.length > 1 && (
+      <div class="filter-row">
+        <span class="filter-label">model:</span>
+        {safeModel === 'any'
+          ? <span class="filter-active"> any</span>
+          : <a href={buildUrl({ model: 'any', p: '1' })} class="filter-link"> any</a>
+        }
+        <span class="filter-sep"> | </span>
+        {safeModel === 'all'
+          ? <span class="filter-active">all</span>
+          : <a href={buildUrl({ model: 'all', p: '1' })} class="filter-link">all</a>
+        }
+        {distinctModels.map((m) => (
+          <>
+            <span class="filter-sep"> | </span>
+            {safeModel === m
+              ? <span class="filter-active">{modelLabel(m)}{isLiteModel(m) && <a href="/about#eval-modes" class="lite-icon" style="margin-left: 3px; text-decoration: none; color: var(--color-orange);" title="Lite eval — click for details">L</a>}</span>
+              : <a href={buildUrl({ model: m, p: '1' })} class="filter-link">{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}</a>
+            }
+          </>
+        ))}
+      </div>
+    )}
+    <div class="filter-row">
+      <span class="filter-label">score:</span>
+      <button class="score-mode-btn" data-mode="hrcb" aria-label="Show HRCB composite scores">HRCB</button>
+      <span class="filter-sep"> | </span>
+      <button class="score-mode-btn" data-mode="editorial" aria-label="Show Editorial channel scores">E</button>
+      <span class="filter-sep"> | </span>
+      <button class="score-mode-btn" data-mode="structural" aria-label="Show Structural channel scores">S</button>
+    </div>
+    <div class="filter-row">
+      <span class="filter-stats">{displayStories.length}{hasMore ? '+' : ''} stories</span>
+      {evaluatedCount > 0 && <span class="filter-stats"> ({evaluatedCount} evaluated)</span>}
+      <span class="filter-stats"> · page {page}{hasMore ? '' : ' (last)'}</span>
+      <span class="filter-stats"> · </span>
+      <a href="/past" class="filter-link">past</a>
+      <span class="filter-stats"> · </span>
+      <a href="/velocity" class="filter-link">velocity</a>
+      <span class="filter-stats"> · </span>
+      <a href="/dynamics" class="filter-link">dynamics</a>
+    </div>
+  </div>
 
   <div class="table-wrap">
   <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">

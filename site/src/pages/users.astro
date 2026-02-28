@@ -86,39 +86,38 @@ function thStyle(col: string): string {
 
 <Base title="User Profiles — HN HRCB">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'sources', href: '/sources' }, { label: 'users' }]} />
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 10px 0;">
-    <tr>
-      <td>
-        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">User Profiles</span>
-        <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-base);">
-          {totalUsers} users, {totalStories} stories
-        </span>
-        <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
-          <span style="color: var(--fg-secondary);">sort:</span>
-          {Object.entries(sortLabels).map(([key, label], i) => (
-            <>
-              {i > 0 && <span style="color: var(--color-border);"> | </span>}
-              {safeSort === key
-                ? <span style="color: var(--color-orange); font-weight: bold;">{label}</span>
-                : <a href={sortUrl(key)}>{label}</a>
-              }
-            </>
-          ))}
-          <br />
-          <span style="color: var(--fg-secondary);">min stories:</span>
-          {[2, 3, 5, 10].map((m, i) => (
-            <>
-              {i > 0 && <span style="color: var(--color-border);"> | </span>}
-              {minStories === m
-                ? <span style="color: var(--color-orange); font-weight: bold;">{m}</span>
-                : <a href={minUrl(m)}>{m}</a>
-              }
-            </>
-          ))}
-        </div>
-      </td>
-    </tr>
-  </table>
+  <div class="filter-bar" style="padding-bottom: 10px;">
+    <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">User Profiles</span>
+    <span class="filter-stats" style="margin-left: 8px; font-size: var(--font-base);">
+      {totalUsers} users, {totalStories} stories
+    </span>
+    <div class="subtext" style="margin-top: 4px;">
+      <div class="filter-row">
+        <span class="filter-label">sort:</span>
+        {Object.entries(sortLabels).map(([key, label], i) => (
+          <>
+            {i > 0 && <span class="filter-sep"> | </span>}
+            {safeSort === key
+              ? <span class="filter-active">{label}</span>
+              : <a href={sortUrl(key)} class="filter-link">{label}</a>
+            }
+          </>
+        ))}
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">min stories:</span>
+        {[2, 3, 5, 10].map((m, i) => (
+          <>
+            {i > 0 && <span class="filter-sep"> | </span>}
+            {minStories === m
+              ? <span class="filter-active">{m}</span>
+              : <a href={minUrl(m)} class="filter-link">{m}</a>
+            }
+          </>
+        ))}
+      </div>
+    </div>
+  </div>
 
   {/* --- Insight cards --- */}
   <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; margin-bottom: 10px;">

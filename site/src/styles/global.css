@@ -364,6 +364,45 @@
     margin-top: 10px;
   }
 
+  /* Filter bar — sort/show/model selectors */
+  .filter-bar {
+    padding: 5px 0;
+    font-size: var(--font-sm);
+  }
+
+  .filter-bar .filter-row {
+    margin-bottom: 2px;
+  }
+
+  .filter-label {
+    color: var(--fg-secondary);
+  }
+
+  .filter-sep {
+    color: var(--color-border);
+  }
+
+  .filter-active {
+    color: var(--color-orange);
+    font-weight: bold;
+  }
+
+  .filter-link {
+    color: var(--fg-secondary);
+  }
+
+  .filter-link:visited {
+    color: var(--fg-secondary);
+  }
+
+  .filter-link:hover {
+    text-decoration: underline;
+  }
+
+  .filter-stats {
+    color: var(--fg-secondary);
+  }
+
   /* Semantic badge variants (replaces inline rgba+color pattern) */
   .badge-positive   { background: rgba(22, 163, 74, 0.15);  color: var(--color-positive); }
   .badge-negative   { background: rgba(220, 38, 38, 0.15);  color: var(--color-negative); }

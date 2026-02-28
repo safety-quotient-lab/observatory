@@ -44,27 +44,25 @@ const displayDate = dayDate.toLocaleDateString('en-US', { weekday: 'long', year:
 
 <Base title={`${displayDate} — HN HRCB`}>
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'past' }]} />
-  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
-    <tr>
-      <td style="padding: 4px 0;">
-        <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">{displayDate}</span>
-        <div class="subtext" style="font-size: var(--font-sm); margin-top: 4px;">
-          <a href={`/past?day=${prevDay}`}>&larr; {prevDay}</a>
-          {!isFuture && !isToday && (
-            <>
-              <span style="color: var(--color-border);"> | </span>
-              <a href={`/past?day=${nextDay}`}>{nextDay} &rarr;</a>
-            </>
-          )}
-          <span style="color: var(--color-border);"> | </span>
-          <a href="/past">yesterday</a>
-          <span style="color: var(--color-border);"> | </span>
-          <span style="color: var(--fg-secondary);">{displayStories.length}{hasMore ? '+' : ''} stories</span>
-          <span style="color: var(--fg-secondary);"> · page {page}{hasMore ? '' : ' (last)'}</span>
-        </div>
-      </td>
-    </tr>
-  </table>
+  <div class="filter-bar">
+    <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">{displayDate}</span>
+    <div class="subtext" style="margin-top: 4px;">
+      <div class="filter-row">
+        <a href={`/past?day=${prevDay}`} class="filter-link">&larr; {prevDay}</a>
+        {!isFuture && !isToday && (
+          <>
+            <span class="filter-sep"> | </span>
+            <a href={`/past?day=${nextDay}`} class="filter-link">{nextDay} &rarr;</a>
+          </>
+        )}
+        <span class="filter-sep"> | </span>
+        <a href="/past" class="filter-link">yesterday</a>
+        <span class="filter-sep"> | </span>
+        <span class="filter-stats">{displayStories.length}{hasMore ? '+' : ''} stories</span>
+        <span class="filter-stats"> · page {page}{hasMore ? '' : ' (last)'}</span>
+      </div>
+    </div>
+  </div>
 
   <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
     {displayStories.map((story, i) => (
