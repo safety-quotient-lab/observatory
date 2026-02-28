@@ -69,7 +69,7 @@ function timeAgo(unixTime: number): string {
       <a href={`/item/${story.hn_id}`} style="text-decoration: none;" title={`Editorial: ${formatScore(displayScore)} — ${classLabel} | Conf: ${formatConfidence(confidence)} | Structural: ${structuralScore !== null ? formatScore(structuralScore) : 'ND'} | SETL: ${formatSetl(aggSetl)}`}>
         <div class="tripartite-score">
           <div class="score-row" data-channel="hrcb">
-            <span class="score-font score-label">HRCB</span>
+            <abbr class="score-font score-label" style="text-decoration: none;" title="Human Rights Compatibility Bias: directional lean of content relative to UDHR provisions, from −1.0 to +1.0">HRCB</abbr>
             <span class="score-font score-value" style={`color: ${isLiteOnly ? '#5b7279' : displayColor};`}>
               {isLiteOnly ? '--' : formatScore(displayScore)}
             </span>

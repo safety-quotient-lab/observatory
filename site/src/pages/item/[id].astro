@@ -634,7 +634,7 @@ function timeAgo(unixTime: number): string {
               <td class="score-font" style="color: #5b7279;">{aggregates.nd_count}</td>
             </tr>
             <tr>
-              <td style="color: #5b7279;">Confidence</td>
+              <td style="color: #5b7279;"><abbr title="Proportion of UDHR articles with scoreable evidence — scored sections ÷ total sections">Confidence</abbr> <a href="/about#confidence" style="color: #5b7279; text-decoration: none; font-size: var(--font-xs);" title="About Confidence">ℹ</a></td>
               <td class="score-font" style={`color: ${confidenceToColor(confidence)};`} title={`${aggregates.signal_sections}/${aggregates.signal_sections + aggregates.nd_count} articles scored`}>{formatConfidence(confidence)}</td>
               <td style="color: #5b7279;">Volatility</td>
               <td class="score-font" style="color: #98a8a8;">{aggregates.volatility.value.toFixed(2)} ({aggregates.volatility.label})</td>
@@ -649,13 +649,13 @@ function timeAgo(unixTime: number): string {
               </td>
             </tr>
             <tr>
-              <td style="color: #5b7279;" title="Structural-Editorial Tension Level: normalized difference between S and E channels">SETL</td>
+              <td style="color: #5b7279;"><abbr title="Structural-Editorial Tension Level: how much a site's actions (S channel) diverge from what its content says (E channel)">SETL</abbr> <a href="/about#setl" style="color: #5b7279; text-decoration: none; font-size: var(--font-xs);" title="About SETL">ℹ</a></td>
               <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
               <td style="color: #5b7279; font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
             </tr>
             {hasFairWitness && (
               <tr>
-                <td style="color: #5b7279;" title="Fair Witness ratio: proportion of observable facts to total evidence items">FW Ratio</td>
+                <td style="color: #5b7279;"><abbr title="Fair Witness ratio: share of evidence items that are directly observable facts vs. inferences">FW Ratio</abbr> <a href="/about#fair-witness" style="color: #5b7279; text-decoration: none; font-size: var(--font-xs);" title="About Fair Witness">ℹ</a></td>
                 <td class="score-font" style={`color: ${fwRatioColor(fwRatio)};`}>{formatFwRatio(fwRatio)}</td>
                 <td style="color: #5b7279; font-size: var(--font-xs);" title="Observable facts / Inferences" colspan="2">
                   <span style="color: #22c55e;">{fwObservableCount} facts</span> · <span style="color: #a855f7;">{fwInferenceCount} inferences</span>
@@ -745,7 +745,7 @@ function timeAgo(unixTime: number): string {
         </div>
         {dcpElements && (
           <div style="margin-bottom: 12px; padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;">
-            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Domain Context Profile</div>
+            <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;"><a href="/about#dcp" style="color: #5b7279; text-decoration: none;" title="Domain-level modifiers inherited from site policies (privacy, ToS, accessibility, ownership)">Domain Context Profile</a></div>
             <DcpTable elements={dcpElements} />
           </div>
         )}
@@ -1044,20 +1044,20 @@ function timeAgo(unixTime: number): string {
               <div style="display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid #0d4655; padding-top: 8px; margin-top: 4px;">
                 {liteEval.eq_score !== null && (
                   <div>
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">EQ</span>
-                    <span class="score-font" style={`color: ${liteEval.eq_score >= 0.7 ? '#16a34a' : liteEval.eq_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm); margin-left: 4px;`} title="Epistemic Quality">{liteEval.eq_score.toFixed(2)}</span>
+                    <abbr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Epistemic Quality: source credibility, evidence reasoning, and uncertainty handling">EQ</abbr>
+                    <span class="score-font" style={`color: ${liteEval.eq_score >= 0.7 ? '#16a34a' : liteEval.eq_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.eq_score.toFixed(2)}</span>
                   </div>
                 )}
                 {liteEval.so_score !== null && (
                   <div>
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">SO</span>
-                    <span class="score-font" style={`color: ${liteEval.so_score >= 0.6 ? '#16a34a' : '#5b7279'}; font-size: var(--font-sm); margin-left: 4px;`} title="Solution Orientation">{liteEval.so_score.toFixed(2)}</span>
+                    <abbr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Solution Orientation: degree to which content frames problems constructively and offers reader agency">SO</abbr>
+                    <span class="score-font" style={`color: ${liteEval.so_score >= 0.6 ? '#16a34a' : '#5b7279'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.so_score.toFixed(2)}</span>
                   </div>
                 )}
                 {liteEval.td_score !== null && (
                   <div>
-                    <span style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">TD</span>
-                    <span class="score-font" style={`color: ${liteEval.td_score >= 0.7 ? '#16a34a' : liteEval.td_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm); margin-left: 4px;`} title="Transparency & Disclosure">{liteEval.td_score.toFixed(2)}</span>
+                    <abbr style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none;" title="Transparency & Disclosure: author identification and conflict-of-interest disclosure">TD</abbr>
+                    <span class="score-font" style={`color: ${liteEval.td_score >= 0.7 ? '#16a34a' : liteEval.td_score >= 0.4 ? '#eab308' : '#dc2626'}; font-size: var(--font-sm); margin-left: 4px;`}>{liteEval.td_score.toFixed(2)}</span>
                   </div>
                 )}
               </div>
