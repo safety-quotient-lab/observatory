@@ -188,7 +188,7 @@ export async function getVelocityStats(db: D1Database, pendingCount: number): Pr
          COUNT(CASE WHEN re.evaluated_at >= datetime('now', '-1 day') THEN 1 END) as evals_24h,
          COUNT(CASE WHEN re.evaluated_at >= datetime('now', '-7 days') THEN 1 END) as evals_7d
        FROM rater_evals re
-       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
        WHERE re.eval_status = 'done' AND re.evaluated_at IS NOT NULL`
     )
     .first<{ evals_24h: number; evals_7d: number }>();
@@ -646,7 +646,7 @@ export async function getProviderStats(db: D1Database): Promise<ProviderStat[]> 
          COUNT(CASE WHEN re.eval_status = 'failed'
                      AND re.evaluated_at > datetime('now', '-1 day') THEN 1 END) as failed_24h
        FROM rater_evals re
-       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
        GROUP BY re.eval_provider
        ORDER BY evals_total DESC`
     )
@@ -682,7 +682,7 @@ export async function getModelQueueStats(db: D1Database): Promise<ModelQueueStat
          MAX(CASE WHEN re.eval_status = 'done' THEN re.evaluated_at END) as last_eval,
          COUNT(CASE WHEN re.eval_status IN ('queued', 'evaluating', 'pending') THEN 1 END) as in_flight
        FROM rater_evals re
-       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
        GROUP BY re.eval_model, re.eval_provider
        ORDER BY evals_7d DESC`
     )
@@ -791,7 +791,7 @@ export async function getEvalLatencyStats(db: D1Database): Promise<EvalLatencySt
                   ) as pctile
            FROM rater_evals re
            JOIN stories s ON s.hn_id = re.hn_id
-           INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+           INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
            WHERE re.eval_status = 'done'
              AND re.evaluated_at >= datetime('now', '-7 days')
              AND re.evaluated_at IS NOT NULL
@@ -840,7 +840,7 @@ export async function getSignalCompleteness(db: D1Database): Promise<SignalCompl
                 ROUND(100.0 * COUNT(CASE WHEN re.pt_flag_count IS NOT NULL THEN 1 END) / COUNT(*), 1) as pt_pct,
                 ROUND(100.0 * COUNT(CASE WHEN re.et_primary_tone IS NOT NULL THEN 1 END) / COUNT(*), 1) as tone_pct
          FROM rater_evals re
-         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.eval_status = 'done'
          GROUP BY re.eval_model
          ORDER BY total_evals DESC`
@@ -1041,7 +1041,7 @@ export async function getContentTypeDisagreement(db: D1Database): Promise<Conten
           GROUP_CONCAT(DISTINCT re.content_type) as types_seen,
           GROUP_CONCAT(DISTINCT re.eval_model) as models
          FROM rater_evals re
-         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.eval_status = 'done'
            AND re.content_type IS NOT NULL
            AND re.hn_id > 0
@@ -1084,7 +1084,7 @@ export async function getMisclassificationSummary(db: D1Database): Promise<Miscl
         `SELECT COUNT(*) as cnt FROM (
           SELECT re.hn_id
           FROM rater_evals re
-          INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+          INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
           WHERE re.eval_status = 'done'
             AND re.content_type IS NOT NULL
             AND re.hn_id > 0
@@ -1122,7 +1122,7 @@ export async function getDailyEvalVelocity(db: D1Database, days = 60): Promise<D
     .prepare(
       `SELECT DATE(re.evaluated_at) as day, re.prompt_mode, COUNT(*) as count
        FROM rater_evals re
-       INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+       INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
        WHERE re.eval_status = 'done'
          AND re.evaluated_at IS NOT NULL
          AND re.evaluated_at >= datetime('now', '-' || ? || ' days')
@@ -1154,7 +1154,7 @@ export async function getModelChannelAverages(db: D1Database): Promise<ModelChan
          AVG(re.hcb_editorial_mean) as avg_e,
          AVG(re.hcb_structural_mean) as avg_s
        FROM rater_evals re
-       INNER JOIN model_registry mr ON mr.id = re.eval_model
+       INNER JOIN model_registry mr ON mr.model_id = re.eval_model
        WHERE re.eval_status = 'done'
          AND re.hcb_editorial_mean IS NOT NULL
          AND re.hn_id > 0

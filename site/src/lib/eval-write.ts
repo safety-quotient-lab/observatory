@@ -276,7 +276,7 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
       .prepare(
         `SELECT re.eval_model, re.hcb_weighted_mean, re.hcb_editorial_mean, re.prompt_mode, re.content_truncation_pct
          FROM rater_evals re
-         INNER JOIN model_registry mr ON mr.id = re.eval_model AND mr.enabled = 1
+         INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.hn_id = ? AND re.eval_status = 'done'
            AND (re.hcb_weighted_mean IS NOT NULL OR re.hcb_editorial_mean IS NOT NULL)`
       )

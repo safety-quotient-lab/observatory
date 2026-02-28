@@ -131,6 +131,13 @@ rounds. 30/43 items already fixed; remaining items below.
   - Re-enqueue by domain, date range, model, methodology_hash
   - Rate-limited to prevent queue flooding
 
+### Round 8 — Infrastructure Optimization
+
+- [ ] **Prerender static pages** — add `export const prerender = true` to `/about`, `/data` (need to refactor `Astro.request.url` → `Astro.site` first). `/support` already done.
+- [ ] **Cloudflare Analytics Engine** — write data points per eval in consumers (model, score, latency, prompt_mode). Replace D1 scans (`getDailyEvalVelocity`, `getEvalLatencyStats`) with AE queries. Free: 100K writes/day.
+- [ ] **D1 Read Replication** — enable via dashboard (free). Reduces read latency globally. Add Sessions API bookmarks for read-after-write pages.
+- [ ] **Investigate Pages → Workers migration** — get 30s CPU (vs 10ms free Pages). Would eliminate KV pre-computation workaround. Needs `compat_date 2024-09-23` testing.
+
 ### Housekeeping (no urgency)
 
 - [ ] **Remaining `i += 100` literals in hn-bot.ts** *(code quality, CQ-02 partial)*
