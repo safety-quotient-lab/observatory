@@ -224,7 +224,7 @@ export async function getVelocityStats(db: D1Database, pendingCount: number): Pr
       `SELECT
          COUNT(CASE WHEN evaluated_at >= datetime('now', '-1 day') THEN 1 END) as evals_24h,
          COUNT(CASE WHEN evaluated_at >= datetime('now', '-7 days') THEN 1 END) as evals_7d
-       FROM rater_evals WHERE status = 'done' AND evaluated_at IS NOT NULL`
+       FROM rater_evals WHERE eval_status = 'done' AND evaluated_at IS NOT NULL`
     )
     .first<{ evals_24h: number; evals_7d: number }>();
 
