@@ -83,7 +83,6 @@ Work through each step. Skip any that don't apply to the changes described in $A
   - `npx wrangler deploy --config wrangler.consumer-workers-ai.toml` (Workers AI consumer)
   - `npx wrangler deploy --config wrangler.dlq.toml` (DLQ worker)
 - If new migrations were added, apply them first: `npx wrangler d1 migrations apply hrcb-db --remote`
-- **Note:** `wrangler.toml` has scrubbed resource IDs for open-source prep. Before deploying, temporarily restore real IDs from the deploy environment (do NOT commit real IDs). After deploy, revert: `git checkout -- wrangler.toml`
 - Report the deployment URL
 
 ### 10. Cleanup
