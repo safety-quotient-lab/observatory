@@ -161,6 +161,18 @@ function isLiteModel(id: string): boolean {
       ))}
     </div>
     <div class="filter-row">
+      <span class="filter-label">type:</span>
+      {(['all', 'ask', 'show', 'job'] as const).map((t, i) => (
+        <>
+          {i > 0 && <span class="filter-sep"> | </span>}
+          {safeType === t
+            ? <span class="filter-active">{t}</span>
+            : <a href={buildUrl({ type: t, p: '1' })} class="filter-link">{t}</a>
+          }
+        </>
+      ))}
+    </div>
+    <div class="filter-row">
       <span class="filter-label">content:</span>
       {CTYPE_OPTIONS.map((opt, i) => (
         <>
