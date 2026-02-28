@@ -2,7 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { getStoriesByUser, getUserSetl, getUserDetailStats, getHnUser, getUserFingerprint, getUserSetlHistory } from '../../lib/db';
+import { getStoriesByUser, getUserSetl, getUserDetailStats, getHnUser, getUserFingerprint, getUserSetlHistory, getUserAggregate } from '../../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
 import { sanitizeHtml } from '../../lib/sanitize';
 import { readDb } from '../../lib/db-utils';
@@ -19,28 +19,38 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
-const [{ stories, total, avgScore }, userSetl, detail, hnUser, fingerprint, setlHistory] = await Promise.all([
+const [{ stories, total, avgScore }, userSetl, detail, hnUser, fingerprint, setlHistory, agg] = await Promise.all([
   getStoriesByUser(db, username, PER_PAGE + 1, offset),
   getUserSetl(db, username),
   getUserDetailStats(db, username),
   getHnUser(db, username),
   getUserFingerprint(db, username),
   getUserSetlHistory(db, username),
+  getUserAggregate(db, username),
 ]);
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
 // Get all pending story IDs for "evaluate all" button
-const pendingCount = total - detail.evaluatedCount;
 const pendingRow = await db
   .prepare(`SELECT hn_id FROM stories WHERE hn_by = ? AND eval_status IN ('pending', 'failed') ORDER BY hn_time DESC LIMIT 200`)
   .bind(username)
   .all<{ hn_id: number }>();
 const pendingIds = pendingRow.results.map(r => r.hn_id);
 
-const accountAgeDays = hnUser?.created
-  ? Math.floor((Date.now() / 1000 - hnUser.created) / 86400)
-  : null;
+// Coverage info
+const aggAccountAgeDays = agg?.account_age_days ?? (hnUser?.created ? Math.floor((Date.now() / 1000 - hnUser.created) / 86400) : null);
+const karma = agg?.karma ?? hnUser?.karma ?? null;
+const submittedCount = agg?.submitted_count ?? null;
+const fullEvaluated = agg?.full_evaluated ?? detail.evaluatedCount;
+const liteEvaluated = agg?.lite_evaluated ?? 0;
+const storiesInDb = agg?.stories ?? total;
+
+// Divergence callout: full editorial vs lite editorial (only when both lenses available)
+const eFull = agg?.avg_editorial_full ?? null;
+const eLite = agg?.avg_editorial_lite ?? null;
+const divergence = eFull !== null && eLite !== null ? Math.abs(eFull - eLite) : null;
+const showDivergence = divergence !== null && divergence > 0.15;
 ---
 
 <Base title={`${username} — HN HRCB`} canonicalUrl={`${url.origin}/user/${username}`}>
@@ -57,16 +67,16 @@ const accountAgeDays = hnUser?.created
         <div style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
           <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
             <span style="font-size: var(--font-md); color: #98a8a8; font-weight: bold;">{username}</span>
-            {hnUser?.karma !== null && hnUser?.karma !== undefined && (
+            {karma != null && (
               <span class="badge" style="background: rgba(255,102,0,0.15); color: #d56500; font-size: var(--font-xs);">
-                {hnUser.karma.toLocaleString()} karma
+                {karma.toLocaleString()} karma
               </span>
             )}
-            {accountAgeDays !== null && (
+            {aggAccountAgeDays !== null && (
               <span style="color: #5b7279; font-size: var(--font-sm);">
-                {accountAgeDays >= 365
-                  ? `${Math.floor(accountAgeDays / 365)}y ${Math.floor((accountAgeDays % 365) / 30)}m`
-                  : `${accountAgeDays}d`} on HN
+                {aggAccountAgeDays >= 365
+                  ? `${Math.floor(aggAccountAgeDays / 365)}y ${Math.floor((aggAccountAgeDays % 365) / 30)}m`
+                  : `${aggAccountAgeDays}d`} on HN
               </span>
             )}
             <a href={`https://news.ycombinator.com/user?id=${username}`} target="_blank" rel="noopener" style="color: #d56500; font-size: var(--font-sm);">HN profile &rarr;</a>
@@ -86,45 +96,94 @@ const accountAgeDays = hnUser?.created
           {hnUser?.about && (
             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655; color: #5b7279; font-size: var(--font-sm); line-height: 1.5;" set:html={sanitizeHtml(hnUser.about)} />
           )}
+        </div>
+      </td>
+    </tr>
+  </table>
 
-          {/* Stats row */}
-          <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-top: 8px;">
+  {/* --- Coverage section --- */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
+    <tr>
+      <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+        <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Coverage</div>
+        <div style="font-size: var(--font-sm); color: #98a8a8;">
+          We've seen <strong class="score-font" style="color: #60a5fa;">{storiesInDb}</strong> of
+          {submittedCount != null
+            ? <span> ~<strong class="score-font" style="color: #5b7279;">{submittedCount.toLocaleString()}</strong> submissions</span>
+            : <span style="color: #5b7279;"> an unknown number of submissions</span>
+          }
+        </div>
+        <div style="margin-top: 6px; display: flex; gap: 16px; font-size: var(--font-xs);">
+          <span>
+            <span style="color: #5b7279;">Full eval: </span>
+            <span class="score-font" style="color: #98a8a8;">{fullEvaluated}</span>
+          </span>
+          <span>
+            <span style="color: #5b7279;">Lite-only: </span>
+            <span class="score-font" style="color: #5b7279;">{liteEvaluated}</span>
+          </span>
+          <span>
+            <span style="color: #5b7279;">Unevaluated: </span>
+            <span class="score-font" style="color: #5b7279;">{Math.max(0, storiesInDb - fullEvaluated - liteEvaluated)}</span>
+          </span>
+        </div>
+        {/* Coverage bar */}
+        {storiesInDb > 0 && (
+          <div style="margin-top: 6px; background: #0d4655; border-radius: 3px; height: 5px; overflow: hidden; max-width: 400px;">
+            <div style={`width: ${Math.min(100, fullEvaluated / storiesInDb * 100)}%; height: 100%; background: #60a5fa; border-radius: 3px; float: left;`}></div>
+            <div style={`width: ${Math.min(100, liteEvaluated / storiesInDb * 100)}%; height: 100%; background: #1a5568; float: left;`}></div>
+          </div>
+        )}
+      </td>
+    </tr>
+  </table>
+
+  {/* --- Deep Read (full evaluation results) --- */}
+  {fullEvaluated > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
+      <tr>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Deep Read
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+              section-level analysis · {fullEvaluated} full evaluation{fullEvaluated !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
             <tr>
-              <td style="color: #5b7279; width: 85px;">Stories</td>
-              <td class="score-font" style="color: #5b7279;">{total} <span style="color: #5b7279;">({detail.evaluatedCount} evaluated)</span></td>
-              <td style="color: #5b7279; width: 85px;">Avg HRCB</td>
-              <td class="score-font" style={`color: ${scoreToColor(avgScore)};`}>{formatScore(avgScore)}</td>
-            </tr>
-            <tr>
-              <td style="color: #5b7279;">Avg SETL</td>
-              <td class="score-font" style={`color: ${setlToColor(userSetl)};`}>{formatSetl(userSetl)}</td>
-              <td style="color: #5b7279;">Avg Conf</td>
-              <td class="score-font" style={`color: ${confidenceToColor(detail.avgConf)};`}>{formatConfidence(detail.avgConf)}</td>
+              <td style="color: #5b7279; width: 100px;">HRCB</td>
+              <td class="score-font" style={`color: ${scoreToColor(avgScore)}; font-weight: bold; font-size: var(--font-base);`}>
+                {formatScore(avgScore)}
+                {agg?.avg_hrcb != null && (
+                  <span style="color: #5b7279; font-size: var(--font-xs); font-weight: normal; margin-left: 6px;">
+                    range {agg.hrcb_range?.toFixed(2) ?? '—'}
+                    {agg.positive_pct != null && ` · +${agg.positive_pct}% / ${agg.neutral_pct}% / ${agg.negative_pct}%−`}
+                  </span>
+                )}
+              </td>
             </tr>
             {detail.avgEditorial !== null && (
               <tr>
-                <td style="color: #5b7279;">Avg Editorial</td>
-                <td class="score-font" style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</td>
-                <td style="color: #5b7279;">Avg Structural</td>
-                <td class="score-font" style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</td>
+                <td style="color: #5b7279;">E-full / S</td>
+                <td class="score-font">
+                  <span style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</span>
+                  <span style="color: #5b7279;"> / </span>
+                  <span style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</span>
+                  <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 6px;">SETL {formatSetl(userSetl)}</span>
+                </td>
+              </tr>
+            )}
+            {(agg?.avg_eq != null || agg?.avg_so != null || agg?.avg_td != null) && (
+              <tr>
+                <td style="color: #5b7279;">Signals</td>
+                <td class="score-font" style="font-size: var(--font-xs);">
+                  {agg.avg_eq != null && <span style={`color: ${scoreToColor(agg.avg_eq)};`}>EQ {agg.avg_eq.toFixed(2)}</span>}
+                  {agg.avg_so != null && <span style={`color: ${scoreToColor(agg.avg_so)}; margin-left: 8px;`}>SO {agg.avg_so.toFixed(2)}</span>}
+                  {agg.avg_td != null && <span style={`color: ${scoreToColor(agg.avg_td)}; margin-left: 8px;`}>TD {agg.avg_td.toFixed(2)}</span>}
+                </td>
               </tr>
             )}
           </table>
-
-          {/* UDHR Fingerprint */}
-          {fingerprint.some((s: number | null) => s !== null) && (
-            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655;">
-              <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
-              <svg width="186" height="14" viewBox="0 0 186 14" style="vertical-align: middle;">
-                {fingerprint.map((score: number | null, i: number) => (
-                  <rect x={i * 6} y="0" width="5" height="14" rx="1"
-                        fill={scoreToColor(score)}>
-                    <title>{i === 0 ? 'Preamble' : `Article ${i}`}: {score !== null ? formatScore(score) : 'ND'}</title>
-                  </rect>
-                ))}
-              </svg>
-            </div>
-          )}
 
           {/* Top/bottom stories */}
           {detail.topStory && detail.bottomStory && detail.topStory.hn_id !== detail.bottomStory.hn_id && (
@@ -143,10 +202,70 @@ const accountAgeDays = hnUser?.created
               </div>
             </div>
           )}
-        </div>
-      </td>
-    </tr>
-  </table>
+
+          {/* UDHR Fingerprint */}
+          {fingerprint.some((s: number | null) => s !== null) && (
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #0d4655;">
+              <span style="color: #5b7279; font-size: var(--font-xs); margin-right: 8px;">UDHR Fingerprint</span>
+              <svg width="186" height="14" viewBox="0 0 186 14" style="vertical-align: middle;">
+                {fingerprint.map((score: number | null, i: number) => (
+                  <rect x={i * 6} y="0" width="5" height="14" rx="1"
+                        fill={scoreToColor(score)}>
+                    <title>{i === 0 ? 'Preamble' : `Article ${i}`}: {score !== null ? formatScore(score) : 'ND'}</title>
+                  </rect>
+                ))}
+              </svg>
+            </div>
+          )}
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* --- Quick Scan (lite-only editorial) --- */}
+  {liteEvaluated > 0 && eLite !== null && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
+      <tr>
+        <td style="padding: 10px; background: #093946; border: 1px solid #0d4655; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+            Quick Scan
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">
+              holistic editorial estimate · {liteEvaluated} lite evaluation{liteEvaluated !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div style="font-size: var(--font-sm);">
+            <span style="color: #5b7279;">Editorial [E]: </span>
+            <span class="score-font" style={`color: ${scoreToColor(eLite)}; font-weight: bold;`}>{formatScore(eLite)}</span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 8px;">
+              Llama · truncated content · holistic (not section-level)
+            </span>
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* --- Divergence callout --- */}
+  {showDivergence && eFull !== null && eLite !== null && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 8px;">
+      <tr>
+        <td style="padding: 10px; background: rgba(167,139,250,0.08); border: 1px solid rgba(167,139,250,0.3); border-radius: 6px;">
+          <div style="font-size: var(--font-sm); color: #a78bfa;">
+            Lens divergence detected
+            <span style="color: #5b7279; margin-left: 8px; font-size: var(--font-xs);">
+              Quick scan (<span class="score-font">{formatScore(eLite)}</span>)
+              vs full evaluation (<span class="score-font">{formatScore(eFull)}</span>)
+              · Δ <span class="score-font">{divergence?.toFixed(2)}</span>
+            </span>
+          </div>
+          <div style="color: #5b7279; font-size: var(--font-xs); margin-top: 4px;">
+            The holistic Llama estimate and section-level Claude evaluation disagree by more than 0.15.
+            The full evaluation is more reliable for individual story analysis.
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
 
   {/* SETL History */}
   {setlHistory.length > 1 && (

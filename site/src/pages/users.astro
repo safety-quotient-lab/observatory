@@ -11,12 +11,12 @@ const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 const url = new URL(Astro.request.url);
 const sort = (url.searchParams.get('sort') || 'stories') as UserIntelSortOption;
-const validSorts: UserIntelSortOption[] = ['stories', 'score', 'comments', 'avg_comments', 'hrcb', 'domains', 'avg_score', 'controversy', 'evaluated', 'editorial', 'structural', 'positive', 'negative'];
+const validSorts: UserIntelSortOption[] = ['stories', 'score', 'comments', 'avg_comments', 'hrcb', 'domains', 'avg_score', 'controversy', 'full_evaluated', 'lite_evaluated', 'editorial_full', 'editorial_lite', 'structural', 'positive', 'negative', 'karma', 'eq'];
 const safeSort = validSorts.includes(sort) ? sort : 'stories';
 const minStories = Math.max(2, Math.min(20, parseInt(url.searchParams.get('min') || '3', 10) || 3));
 
 const [users, hourly, daily, karmaCorr] = await Promise.all([
-  getUserIntelligence(db, safeSort, minStories, 200).catch(() => []),
+  cachedQuery(kv, `sys:users:${safeSort}:${minStories}`, () => getUserIntelligence(db, safeSort, minStories, 200), 60).catch(() => []),
   getHourlyPatterns(db).catch(() => []),
   getDayOfWeekPatterns(db).catch(() => []),
   cachedQuery(kv, 'karmaHrcbCorrelation', () => getKarmaHrcbCorrelation(db), 600).catch(() => ({ points: [], pearson_r: null, pearson_p: null, n: 0 })),
@@ -30,7 +30,7 @@ const avgHrcb = usersWithHrcb.length > 0 ? usersWithHrcb.reduce((s, u) => s + (u
 
 // Insight card data: top submitters, highest HRCB, lowest HRCB, most diverse, most controversial
 const topSubmitters = [...users].sort((a, b) => b.stories - a.stories).slice(0, 5);
-const hrcbUsers = users.filter(u => u.evaluated >= 3 && u.avg_hrcb !== null);
+const hrcbUsers = users.filter(u => u.full_evaluated >= 3 && u.avg_hrcb !== null);
 const topHrcb = [...hrcbUsers].sort((a, b) => (b.avg_hrcb || 0) - (a.avg_hrcb || 0)).slice(0, 5);
 const bottomHrcb = [...hrcbUsers].sort((a, b) => (a.avg_hrcb || 0) - (b.avg_hrcb || 0)).slice(0, 5);
 const mostDiverse = [...users].filter(u => u.stories >= 3).sort((a, b) => b.unique_domains - a.unique_domains).slice(0, 5);
@@ -74,7 +74,8 @@ function minUrl(m: number): string {
 type SortLabels = Record<string, string>;
 const sortLabels: SortLabels = {
   stories: 'stories', score: 'total pts', avg_score: 'avg pts', comments: 'comments',
-  hrcb: 'hrcb', domains: 'domains', controversy: 'controversy'
+  hrcb: 'hrcb', domains: 'domains', controversy: 'range', karma: 'karma',
+  full_evaluated: 'full eval', eq: 'eq',
 };
 
 function thStyle(col: string): string {
@@ -140,7 +141,7 @@ function thStyle(col: string): string {
           <div style="margin-bottom: 3px;">
             <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
             <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.evaluated})</span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.full_evaluated})</span>
           </div>
         ))}
       </div>
@@ -151,7 +152,7 @@ function thStyle(col: string): string {
           <div style="margin-bottom: 3px;">
             <a href={`/user/${u.username}`} style="color: #98a8a8; font-size: var(--font-sm);">{u.username}</a>
             <span class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(u.avg_hrcb)}</span>
-            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.evaluated})</span>
+            <span style="color: #5b7279; font-size: var(--font-xs); margin-left: 2px;">({u.full_evaluated})</span>
           </div>
         ))}
       </div>
@@ -266,12 +267,15 @@ function thStyle(col: string): string {
     <tr>
       <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px; overflow-x: auto;">
         <div style="overflow-x: auto;">
-          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm); min-width: 950px;">
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm); min-width: 1050px;">
             <tr style="font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
               <td width="20" style="color: #5b7279;">#</td>
               <td style="color: #5b7279;">User</td>
-              <td width="55" align="center" title="Total stories submitted">
+              <td width="55" align="center" title="Stories seen in our crawl">
                 <a href={sortUrl('stories')} style={thStyle('stories')}>Stories</a>
+              </td>
+              <td width="55" align="center" title="HN account karma">
+                <a href={sortUrl('karma')} style={thStyle('karma')}>Karma</a>
               </td>
               <td width="55" align="center" title="Unique domains submitted">
                 <a href={sortUrl('domains')} style={thStyle('domains')}>Domains</a>
@@ -280,14 +284,11 @@ function thStyle(col: string): string {
               <td width="65" align="center" title="Average HN score per story">
                 <a href={sortUrl('avg_score')} style={thStyle('avg_score')}>Avg Pts</a>
               </td>
-              <td width="65" align="center" title="Average comments per story">
-                <a href={sortUrl('avg_comments')} style={thStyle('avg_comments')}>Avg Cmt</a>
-              </td>
-              <td width="65" align="center" title="Average HRCB score">
+              <td width="65" align="center" title="Composite HRCB (full eval) — sort by HRCB">
                 <a href={sortUrl('hrcb')} style={thStyle('hrcb')}>HRCB</a>
               </td>
-              <td width="130" align="center" title="Sort by Editorial / Structural">
-                <a href={sortUrl('editorial')} style={thStyle('editorial')}>E</a>
+              <td width="130" align="center" title="Full editorial (Claude, section-aggregate) / Structural. [E] = lite-only estimate.">
+                <a href={sortUrl('editorial_full')} style={thStyle('editorial_full')}>E-full</a>
                 <span style="color: #1a5568;">/</span>
                 <a href={sortUrl('structural')} style={thStyle('structural')}>S</a>
               </td>
@@ -298,17 +299,21 @@ function thStyle(col: string): string {
                 <span style="color: #1a5568;">/</span>
                 <a href={sortUrl('negative')} style={thStyle('negative')}>-</a>
               </td>
-              <td width="55" align="center" title="HRCB score range across user submissions">
-                <a href={sortUrl('controversy')} style={thStyle('controversy')}>Range</a>
+              <td width="50" align="center" title="Epistemic Quality score (full evals)">
+                <a href={sortUrl('eq')} style={thStyle('eq')}>EQ</a>
+              </td>
+              <td width="55" align="center" title="Full evaluations / lite-only evaluations">
+                <a href={sortUrl('full_evaluated')} style={thStyle('full_evaluated')}>Evals</a>
               </td>
             </tr>
             {users.map((u, i) => {
               const eBarW = 50;
               const sBarW = 50;
-              const ePct = u.avg_editorial !== null ? Math.abs(u.avg_editorial) * 50 : 0;
+              const ePct = u.avg_editorial_full !== null ? Math.abs(u.avg_editorial_full) * 50 : 0;
               const sPct = u.avg_structural !== null ? Math.abs(u.avg_structural) * 50 : 0;
-              const eColor = u.avg_editorial !== null ? scoreToColor(u.avg_editorial) : '#0d4655';
+              const eColor = u.avg_editorial_full !== null ? scoreToColor(u.avg_editorial_full) : '#0d4655';
               const sColor = u.avg_structural !== null ? scoreToColor(u.avg_structural) : '#0d4655';
+              const isLiteOnly = u.full_evaluated === 0 && u.lite_evaluated > 0;
               return (
                 <tr style="border-top: 1px solid #0d4655;">
                   <td style="color: #5b7279;" class="score-font">{i + 1}</td>
@@ -316,6 +321,9 @@ function thStyle(col: string): string {
                     <a href={`/user/${u.username}`} style="color: #98a8a8;">{u.username}</a>
                   </td>
                   <td align="center" class="score-font" style="color: #5b7279;">{u.stories}</td>
+                  <td align="center" class="score-font" style="color: #5b7279;">
+                    {u.karma != null ? u.karma.toLocaleString() : <span style="color: #1a5568;">—</span>}
+                  </td>
                   <td align="center" class="score-font" style="color: #5b7279;">{u.unique_domains}</td>
                   <td align="center" style="font-size: var(--font-xs);">
                     {u.top_domain
@@ -324,16 +332,20 @@ function thStyle(col: string): string {
                     }
                   </td>
                   <td align="center" class="score-font" style="color: #5b7279;">{u.avg_hn_score}</td>
-                  <td align="center" class="score-font" style="color: #5b7279;">{u.avg_comments}</td>
                   <td align="center" class="score-font" style={`color: ${scoreToColor(u.avg_hrcb)}; font-weight: bold;`}>
-                    {u.avg_hrcb !== null ? formatScore(u.avg_hrcb) : <span style="color: #5b7279;">—</span>}
+                    {u.avg_hrcb !== null
+                      ? formatScore(u.avg_hrcb)
+                      : u.avg_editorial_lite !== null
+                        ? <span style="color: #5b7279; font-size: var(--font-xs);">[E] {formatScore(u.avg_editorial_lite)}</span>
+                        : <span style="color: #1a5568;">—</span>
+                    }
                   </td>
                   <td align="center">
-                    {u.avg_editorial !== null && u.avg_structural !== null ? (
-                      <div style="display: inline-flex; gap: 4px; align-items: center;" title={`E: ${formatScore(u.avg_editorial)} | S: ${formatScore(u.avg_structural)}`}>
+                    {u.avg_editorial_full !== null && u.avg_structural !== null ? (
+                      <div style="display: inline-flex; gap: 4px; align-items: center;" title={`E-full: ${formatScore(u.avg_editorial_full)} | S: ${formatScore(u.avg_structural)}`}>
                         <span style="color: #5b7279; font-size: 8px;">E</span>
                         <div style={`width: ${eBarW}px; height: 6px; background: #0d4655; border-radius: 2px; position: relative; overflow: hidden;`}>
-                          <div style={`position: absolute; ${(u.avg_editorial || 0) >= 0 ? 'left: 50%' : `left: ${50 - ePct}%`}; width: ${ePct}%; height: 100%; background: ${eColor}; border-radius: 1px;`}></div>
+                          <div style={`position: absolute; ${(u.avg_editorial_full || 0) >= 0 ? 'left: 50%' : `left: ${50 - ePct}%`}; width: ${ePct}%; height: 100%; background: ${eColor}; border-radius: 1px;`}></div>
                           <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #0d4655;"></div>
                         </div>
                         <span style="color: #5b7279; font-size: 8px;">S</span>
@@ -342,7 +354,7 @@ function thStyle(col: string): string {
                           <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: #0d4655;"></div>
                         </div>
                       </div>
-                    ) : <span style="color: #5b7279;">—</span>}
+                    ) : <span style="color: #1a5568;">—</span>}
                   </td>
                   <td align="center">
                     {u.positive_pct !== null ? (
@@ -351,10 +363,18 @@ function thStyle(col: string): string {
                         <div style={`width: ${u.neutral_pct || 0}%; background: #5b7279;`}></div>
                         <div style={`width: ${u.negative_pct || 0}%; background: #ef4444;`}></div>
                       </div>
-                    ) : <span style="color: #5b7279;">—</span>}
+                    ) : <span style="color: #1a5568;">—</span>}
                   </td>
-                  <td align="center" class="score-font" style={`color: ${u.hrcb_range !== null && u.hrcb_range > 0.5 ? '#e2b340' : '#5b7279'};`}>
-                    {u.hrcb_range !== null ? u.hrcb_range.toFixed(2) : '—'}
+                  <td align="center" class="score-font" style={`color: ${u.avg_eq !== null && u.avg_eq > 0.5 ? '#a78bfa' : '#5b7279'};`}>
+                    {u.avg_eq !== null ? u.avg_eq.toFixed(2) : '—'}
+                  </td>
+                  <td align="center" class="score-font" style="color: #5b7279;">
+                    {u.full_evaluated > 0
+                      ? <span>{u.full_evaluated}{isLiteOnly ? '' : (u.lite_evaluated > 0 ? <span style="color: #1a5568;">+{u.lite_evaluated}L</span> : '')}</span>
+                      : u.lite_evaluated > 0
+                        ? <span style="color: #5b7279; font-size: var(--font-xs);">{u.lite_evaluated}<span style="color: #1a5568;">L</span></span>
+                        : <span style="color: #1a5568;">—</span>
+                    }
                   </td>
                 </tr>
               );

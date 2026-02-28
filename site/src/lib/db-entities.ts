@@ -896,7 +896,9 @@ export async function getGlobalGateStats(db: D1Database): Promise<GlobalGateStat
 export interface UserIntelligence {
   username: string;
   stories: number;
-  evaluated: number;
+  full_evaluated: number;
+  lite_evaluated: number;
+  submitted_count: number | null;
   unique_domains: number;
   total_hn_score: number;
   avg_hn_score: number;
@@ -909,12 +911,20 @@ export interface UserIntelligence {
   positive_pct: number | null;
   negative_pct: number | null;
   neutral_pct: number | null;
-  avg_editorial: number | null;
+  avg_editorial_full: number | null;
+  avg_editorial_lite: number | null;
   avg_structural: number | null;
+  avg_setl: number | null;
+  avg_eq: number | null;
+  avg_so: number | null;
+  avg_td: number | null;
   top_domain: string | null;
+  dominant_tone: string | null;
+  karma: number | null;
+  account_age_days: number | null;
 }
 
-export type UserIntelSortOption = 'stories' | 'score' | 'comments' | 'hrcb' | 'domains' | 'avg_score' | 'avg_comments' | 'controversy' | 'evaluated' | 'editorial' | 'structural' | 'positive' | 'negative';
+export type UserIntelSortOption = 'stories' | 'score' | 'comments' | 'avg_comments' | 'hrcb' | 'domains' | 'avg_score' | 'controversy' | 'full_evaluated' | 'lite_evaluated' | 'editorial_full' | 'editorial_lite' | 'structural' | 'positive' | 'negative' | 'karma' | 'eq';
 
 export async function getUserIntelligence(
   db: D1Database,
@@ -923,74 +933,70 @@ export async function getUserIntelligence(
   limit = 150
 ): Promise<UserIntelligence[]> {
   try {
-  const t0 = Date.now();
-  let orderBy: string;
-  switch (sort) {
-    case 'score': orderBy = 'total_hn_score DESC'; break;
-    case 'comments': orderBy = 'total_comments DESC'; break;
-    case 'avg_comments': orderBy = 'avg_comments DESC'; break;
-    case 'hrcb': orderBy = 'avg_hrcb DESC'; break;
-    case 'domains': orderBy = 'unique_domains DESC'; break;
-    case 'avg_score': orderBy = 'avg_hn_score DESC'; break;
-    case 'controversy': orderBy = 'hrcb_range DESC'; break;
-    case 'evaluated': orderBy = 'evaluated DESC'; break;
-    case 'editorial': orderBy = 'avg_editorial DESC'; break;
-    case 'structural': orderBy = 'avg_structural DESC'; break;
-    case 'positive': orderBy = 'positive_pct DESC'; break;
-    case 'negative': orderBy = 'negative_pct DESC'; break;
-    default: orderBy = 'stories DESC';
-  }
+    const t0 = Date.now();
+    let orderBy: string;
+    switch (sort) {
+      case 'score': orderBy = 'total_hn_score DESC'; break;
+      case 'comments': orderBy = 'total_comments DESC'; break;
+      case 'avg_comments': orderBy = 'avg_comments DESC'; break;
+      case 'hrcb': orderBy = 'avg_hrcb DESC NULLS LAST'; break;
+      case 'domains': orderBy = 'unique_domains DESC'; break;
+      case 'avg_score': orderBy = 'avg_hn_score DESC'; break;
+      case 'controversy': orderBy = 'hrcb_range DESC NULLS LAST'; break;
+      case 'full_evaluated': orderBy = 'full_evaluated DESC'; break;
+      case 'lite_evaluated': orderBy = 'lite_evaluated DESC'; break;
+      case 'editorial_full': orderBy = 'avg_editorial_full DESC NULLS LAST'; break;
+      case 'editorial_lite': orderBy = 'avg_editorial_lite DESC NULLS LAST'; break;
+      case 'structural': orderBy = 'avg_structural DESC NULLS LAST'; break;
+      case 'positive': orderBy = 'positive_pct DESC NULLS LAST'; break;
+      case 'negative': orderBy = 'negative_pct DESC NULLS LAST'; break;
+      case 'karma': orderBy = 'karma DESC NULLS LAST'; break;
+      case 'eq': orderBy = 'avg_eq DESC NULLS LAST'; break;
+      default: orderBy = 'stories DESC';
+    }
 
-  const { results } = await db
-    .prepare(
-      `WITH user_stats AS (
-        SELECT
-          s.hn_by AS username,
-          COUNT(*) AS stories,
-          SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) AS evaluated,
-          COUNT(DISTINCT s.domain) AS unique_domains,
-          COALESCE(SUM(s.hn_score), 0) AS total_hn_score,
-          ROUND(AVG(s.hn_score), 1) AS avg_hn_score,
-          COALESCE(SUM(s.hn_comments), 0) AS total_comments,
-          ROUND(AVG(s.hn_comments), 1) AS avg_comments,
-          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) AS avg_hrcb,
-          MIN(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) AS min_hrcb,
-          MAX(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) AS max_hrcb,
-          ROUND(MAX(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) -
-                MIN(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END), 4) AS hrcb_range,
-          ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean > 0.05 THEN 1 ELSE 0 END) /
-                NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) AS positive_pct,
-          ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean < -0.05 THEN 1 ELSE 0 END) /
-                NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) AS negative_pct,
-          ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END) /
-                NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) AS neutral_pct,
-          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_editorial_mean END), 4) AS avg_editorial,
-          ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_structural_mean END), 4) AS avg_structural
-        FROM stories s
-        WHERE s.hn_by IS NOT NULL AND s.hn_id > 0
-        GROUP BY s.hn_by
-        HAVING stories >= ?
-      ),
-      user_top_domain AS (
-        SELECT s.hn_by AS username, s.domain AS top_domain,
-               ROW_NUMBER() OVER (PARTITION BY s.hn_by ORDER BY COUNT(*) DESC) AS rn
-        FROM stories s
-        WHERE s.hn_by IS NOT NULL AND s.domain IS NOT NULL AND s.hn_id > 0
-        GROUP BY s.hn_by, s.domain
+    const { results } = await db
+      .prepare(
+        `SELECT username, stories, full_evaluated, lite_evaluated, submitted_count,
+                unique_domains, total_hn_score, avg_hn_score, total_comments, avg_comments,
+                avg_hrcb, min_hrcb, max_hrcb, hrcb_range,
+                positive_pct, negative_pct, neutral_pct,
+                avg_editorial_full, avg_editorial_lite, avg_structural, avg_setl,
+                avg_eq, avg_so, avg_td,
+                top_domain, dominant_tone, karma, account_age_days
+         FROM user_aggregates
+         WHERE stories >= ?
+         ORDER BY ${orderBy}
+         LIMIT ?`
       )
-      SELECT u.*, COALESCE(d.top_domain, NULL) AS top_domain
-      FROM user_stats u
-      LEFT JOIN user_top_domain d ON d.username = u.username AND d.rn = 1
-      ORDER BY ${orderBy}
-      LIMIT ?`
-    )
-    .bind(minStories, limit)
-    .all<UserIntelligence>();
-  const ms = Date.now() - t0;
-  if (ms > 200) console.warn(`[getUserIntelligence] slow query: ${ms}ms, ${results.length} rows`);
-  return results;
+      .bind(minStories, limit)
+      .all<UserIntelligence>();
+    const ms = Date.now() - t0;
+    if (ms > 200) console.warn(`[getUserIntelligence] slow query: ${ms}ms, ${results.length} rows`);
+    return results;
   } catch (err) {
     console.error('[getUserIntelligence] DB error:', err);
     return [];
+  }
+}
+
+/** Single-user aggregate lookup for /user/[username] page. */
+export async function getUserAggregate(db: D1Database, username: string): Promise<UserIntelligence | null> {
+  try {
+    return await db
+      .prepare(
+        `SELECT username, stories, full_evaluated, lite_evaluated, submitted_count,
+                unique_domains, total_hn_score, avg_hn_score, total_comments, avg_comments,
+                avg_hrcb, min_hrcb, max_hrcb, hrcb_range,
+                positive_pct, negative_pct, neutral_pct,
+                avg_editorial_full, avg_editorial_lite, avg_structural, avg_setl,
+                avg_eq, avg_so, avg_td,
+                top_domain, dominant_tone, karma, account_age_days
+         FROM user_aggregates WHERE username = ?`
+      )
+      .bind(username)
+      .first<UserIntelligence>();
+  } catch {
+    return null;
   }
 }

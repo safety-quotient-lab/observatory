@@ -16,7 +16,7 @@ import {
   searchAlgolia,
   insertAlgoliaHits,
 } from '../src/lib/coverage-crawl';
-import { refreshAllDomainAggregates, backfillPtScores } from '../src/lib/eval-write';
+import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates } from '../src/lib/eval-write';
 import type { Env } from './cron';
 
 export interface SweepContext {
@@ -343,4 +343,139 @@ export async function sweepBackfillPtScore({ db, ctx, url }: SweepContext): Prom
     limit,
     description: 'Backfilling pt_score from pt_flags_json for stories without it.',
   }, 202);
+}
+
+// ─── Sweep: refresh_user_aggregates ─────────────────────────────────────────
+
+/**
+ * Bulk-refresh all user_aggregates rows from current stories table state.
+ * Required after migration 0054 or after bulk data corrections.
+ * Returns 202 immediately; runs in background via waitUntil.
+ */
+export async function sweepRefreshUserAggregates({ db, env, ctx }: SweepContext): Promise<Response> {
+  const kvKey = 'sweep:refresh_user_aggregates:running';
+  const kv = env.CONTENT_CACHE;
+
+  const running = await kv.get(kvKey);
+  if (running) {
+    return json({ sweep: 'refresh_user_aggregates', status: 'already_running' }, 409);
+  }
+  await kv.put(kvKey, '1', { expirationTtl: 600 });
+
+  ctx.waitUntil(
+    (async () => {
+      try {
+        const result = await refreshAllUserAggregates(db, { chunkSize: 50 });
+        await logEvent(db, {
+          event_type: 'trigger',
+          severity: 'info',
+          message: `Sweep refresh_user_aggregates: ${result.refreshed} refreshed, ${result.errors} errors in ${result.durationMs}ms`,
+          details: { sweep: 'refresh_user_aggregates', ...result },
+        });
+      } catch (err) {
+        await logEvent(db, {
+          event_type: 'cron_error',
+          severity: 'error',
+          message: `Sweep refresh_user_aggregates failed: ${String(err).slice(0, 300)}`,
+          details: { sweep: 'refresh_user_aggregates', error: String(err) },
+        }).catch(() => {});
+      } finally {
+        await kv.delete(kvKey);
+      }
+    })(),
+  );
+
+  return json({ sweep: 'refresh_user_aggregates', status: 'started' }, 202);
+}
+
+// ─── Sweep: expand_from_submitted ───────────────────────────────────────────
+
+/**
+ * For top-karma users, fetch their HN-API submitted array and insert unknown
+ * story-type items as pending. Expands coverage without a full Algolia crawl.
+ * Rate-limited: max 5 users per run, max 10 unknown IDs checked per user.
+ */
+export async function sweepExpandFromSubmitted({ db, env }: SweepContext): Promise<Response> {
+  const limit = 5;
+
+  const { results: topUsers } = await db
+    .prepare(
+      `SELECT username FROM hn_users
+       WHERE submitted_count IS NOT NULL AND submitted_count > 0 AND karma IS NOT NULL
+       ORDER BY karma DESC LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ username: string }>();
+
+  if (topUsers.length === 0) {
+    return json({ sweep: 'expand_from_submitted', inserted: 0, note: 'No users with submitted_count' });
+  }
+
+  let totalInserted = 0;
+
+  for (const { username } of topUsers) {
+    try {
+      const data = await fetch(
+        `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(username)}.json`,
+        { headers: { 'User-Agent': 'HRCB-Crawler/1.0' } }
+      ).then(r => r.json<{ submitted?: number[] }>());
+
+      const submittedIds: number[] = data?.submitted?.slice(0, 50) ?? [];
+      if (submittedIds.length === 0) continue;
+
+      // Find which IDs are already in stories
+      const placeholders = submittedIds.map(() => '?').join(',');
+      const { results: existing } = await db
+        .prepare(`SELECT hn_id FROM stories WHERE hn_id IN (${placeholders})`)
+        .bind(...submittedIds)
+        .all<{ hn_id: number }>();
+      const existingSet = new Set(existing.map(r => r.hn_id));
+
+      const unknownIds = submittedIds.filter(id => !existingSet.has(id)).slice(0, 10);
+      if (unknownIds.length === 0) continue;
+
+      // Fetch and insert unknown items
+      const items = await Promise.all(
+        unknownIds.map(id =>
+          fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`, {
+            headers: { 'User-Agent': 'HRCB-Crawler/1.0' },
+          })
+            .then(r => r.json<{ id: number; type: string; title?: string; url?: string; by?: string; score?: number; descendants?: number; time?: number }>())
+            .catch(() => null)
+        )
+      );
+
+      const storyItems = items.filter(
+        (item): item is NonNullable<typeof item> =>
+          item !== null && item.type === 'story' && !!item.title
+      );
+
+      if (storyItems.length === 0) continue;
+
+      const stmts = storyItems.map(item =>
+        db
+          .prepare(
+            `INSERT OR IGNORE INTO stories (hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, hn_type, eval_status)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'story', 'pending')`
+          )
+          .bind(
+            item.id,
+            item.url || null,
+            item.title || 'Untitled',
+            item.url ? item.url.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, '') : null,
+            item.score || null,
+            item.descendants || null,
+            item.by || null,
+            item.time || Math.floor(Date.now() / 1000),
+          )
+      );
+
+      const { meta } = await db.batch(stmts).then(results => ({ meta: { changes: results.filter(r => r.meta.changes > 0).length } }));
+      totalInserted += meta.changes;
+    } catch {
+      // Non-fatal per user
+    }
+  }
+
+  return json({ sweep: 'expand_from_submitted', users_checked: topUsers.length, inserted: totalInserted });
 }

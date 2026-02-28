@@ -219,9 +219,16 @@ export async function writeEvalResult(
   // Legacy scores/fair_witness tables removed — all per-section data
   // lives in rater_scores/rater_witness (written by writeRaterEvalResult)
 
-  // Refresh materialized domain aggregate (best-effort)
+  // Refresh materialized aggregates (best-effort)
   const domain = result.evaluation?.domain;
   if (domain) await refreshDomainAggregate(db, domain);
+
+  // Refresh user aggregate — get hn_by from stories (already written above)
+  const authorRow = await db
+    .prepare('SELECT hn_by FROM stories WHERE hn_id = ?')
+    .bind(hnId)
+    .first<{ hn_by: string | null }>();
+  if (authorRow?.hn_by) await refreshUserAggregate(db, authorRow.hn_by);
 
   await refreshDailySectionStats(db, result.scores);
 }
@@ -449,6 +456,154 @@ export async function refreshAllDomainAggregates(
       } catch (err) {
         errors++;
         console.error(`[refreshAllDomainAggregates] Failed for ${domain}:`, err);
+      }
+    }
+
+    offset += results.length;
+    if (results.length < chunkSize) break;
+  }
+
+  return { refreshed, errors, durationMs: Date.now() - t0 };
+}
+
+// --- User aggregates (materialized per-user signal summary) ---
+
+/**
+ * Upsert user_aggregates for a single username from current stories state.
+ * Same pattern as refreshDomainAggregate. Called at eval write time and
+ * from crawlUserProfiles after each user batch.
+ *
+ * karma/submitted_count/account_age_days come from hn_users (crawled separately).
+ * COALESCE on conflict preserves existing values when subqueries return NULL.
+ */
+export async function refreshUserAggregate(db: D1Database, username: string): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `INSERT INTO user_aggregates (
+           username, stories, full_evaluated, lite_evaluated,
+           avg_hrcb, min_hrcb, max_hrcb, hrcb_range,
+           positive_pct, negative_pct, neutral_pct,
+           avg_structural, avg_setl,
+           avg_editorial_full, avg_editorial_lite,
+           avg_eq, avg_so, avg_td,
+           total_hn_score, avg_hn_score,
+           total_comments, avg_comments,
+           unique_domains, top_domain, dominant_tone,
+           karma, submitted_count, account_age_days,
+           last_updated_at
+         )
+         SELECT
+           hn_by,
+           COUNT(*),
+           SUM(CASE WHEN eval_status = 'done' THEN 1 ELSE 0 END),
+           SUM(CASE WHEN hcb_editorial_mean IS NOT NULL AND eval_status != 'done' THEN 1 ELSE 0 END),
+           ROUND(AVG(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END), 4),
+           MIN(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END),
+           MAX(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END),
+           ROUND(MAX(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END) -
+                 MIN(CASE WHEN eval_status = 'done' THEN hcb_weighted_mean END), 4),
+           ROUND(100.0 * SUM(CASE WHEN eval_status = 'done' AND hcb_weighted_mean > 0.05 THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN eval_status = 'done' THEN 1 ELSE 0 END), 0), 1),
+           ROUND(100.0 * SUM(CASE WHEN eval_status = 'done' AND hcb_weighted_mean < -0.05 THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN eval_status = 'done' THEN 1 ELSE 0 END), 0), 1),
+           ROUND(100.0 * SUM(CASE WHEN eval_status = 'done' AND hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN eval_status = 'done' THEN 1 ELSE 0 END), 0), 1),
+           ROUND(AVG(CASE WHEN eval_status = 'done' THEN hcb_structural_mean END), 4),
+           ROUND(AVG(CASE WHEN eval_status = 'done' THEN hcb_setl END), 4),
+           ROUND(AVG(CASE WHEN eval_status = 'done' THEN hcb_editorial_mean END), 4),
+           ROUND(AVG(CASE WHEN hcb_editorial_mean IS NOT NULL AND eval_status != 'done' THEN hcb_editorial_mean END), 4),
+           ROUND(AVG(CASE WHEN eval_status = 'done' THEN eq_score END), 4),
+           ROUND(AVG(CASE WHEN eval_status = 'done' THEN so_score END), 4),
+           ROUND(AVG(CASE WHEN eval_status = 'done' THEN td_score END), 4),
+           COALESCE(SUM(hn_score), 0),
+           ROUND(AVG(hn_score), 1),
+           COALESCE(SUM(hn_comments), 0),
+           ROUND(AVG(hn_comments), 1),
+           COUNT(DISTINCT domain),
+           (SELECT domain FROM stories
+            WHERE hn_by = ? AND hn_id > 0 AND domain IS NOT NULL
+            GROUP BY domain ORDER BY COUNT(*) DESC LIMIT 1),
+           (SELECT et_primary_tone FROM stories
+            WHERE hn_by = ? AND hn_id > 0 AND eval_status = 'done' AND et_primary_tone IS NOT NULL
+            GROUP BY et_primary_tone ORDER BY COUNT(*) DESC LIMIT 1),
+           (SELECT karma FROM hn_users WHERE username = ?),
+           (SELECT submitted_count FROM hn_users WHERE username = ?),
+           (SELECT CAST((julianday('now') - julianday(datetime(created, 'unixepoch'))) AS INTEGER)
+            FROM hn_users WHERE username = ?),
+           datetime('now')
+         FROM stories WHERE hn_by = ? AND hn_id > 0
+         ON CONFLICT(username) DO UPDATE SET
+           stories = excluded.stories,
+           full_evaluated = excluded.full_evaluated,
+           lite_evaluated = excluded.lite_evaluated,
+           avg_hrcb = excluded.avg_hrcb,
+           min_hrcb = excluded.min_hrcb,
+           max_hrcb = excluded.max_hrcb,
+           hrcb_range = excluded.hrcb_range,
+           positive_pct = excluded.positive_pct,
+           negative_pct = excluded.negative_pct,
+           neutral_pct = excluded.neutral_pct,
+           avg_structural = excluded.avg_structural,
+           avg_setl = excluded.avg_setl,
+           avg_editorial_full = excluded.avg_editorial_full,
+           avg_editorial_lite = excluded.avg_editorial_lite,
+           avg_eq = excluded.avg_eq,
+           avg_so = excluded.avg_so,
+           avg_td = excluded.avg_td,
+           total_hn_score = excluded.total_hn_score,
+           avg_hn_score = excluded.avg_hn_score,
+           total_comments = excluded.total_comments,
+           avg_comments = excluded.avg_comments,
+           unique_domains = excluded.unique_domains,
+           top_domain = excluded.top_domain,
+           dominant_tone = excluded.dominant_tone,
+           karma = COALESCE(excluded.karma, user_aggregates.karma),
+           submitted_count = COALESCE(excluded.submitted_count, user_aggregates.submitted_count),
+           account_age_days = COALESCE(excluded.account_age_days, user_aggregates.account_age_days),
+           last_updated_at = excluded.last_updated_at`
+      )
+      .bind(username, username, username, username, username, username)
+      .run();
+  } catch (err) {
+    console.error(`[eval-write] refreshUserAggregate failed for ${username}:`, err);
+  }
+}
+
+/**
+ * Refresh all user_aggregates from the current stories table state.
+ * Used for bulk backfill after migration or data corrections.
+ */
+export async function refreshAllUserAggregates(
+  db: D1Database,
+  opts: { chunkSize?: number } = {},
+): Promise<{ refreshed: number; errors: number; durationMs: number }> {
+  const { chunkSize = 50 } = opts;
+  const t0 = Date.now();
+  let refreshed = 0;
+  let errors = 0;
+  let offset = 0;
+
+  while (true) {
+    const { results } = await db
+      .prepare(
+        `SELECT DISTINCT hn_by FROM stories
+         WHERE hn_by IS NOT NULL AND hn_id > 0
+         ORDER BY hn_by
+         LIMIT ? OFFSET ?`,
+      )
+      .bind(chunkSize, offset)
+      .all<{ hn_by: string }>();
+
+    if (results.length === 0) break;
+
+    for (const { hn_by } of results) {
+      try {
+        await refreshUserAggregate(db, hn_by);
+        refreshed++;
+      } catch (err) {
+        errors++;
+        console.error(`[refreshAllUserAggregates] Failed for ${hn_by}:`, err);
       }
     }
 
@@ -857,9 +1012,17 @@ export async function writeRaterEvalResult(
   // Update ensemble consensus score (best-effort, non-blocking)
   await updateConsensusScore(db, hnId);
 
-  // Refresh materialized domain aggregate (skip if writeEvalResult already did it above)
+  // Refresh materialized aggregates (skip if writeEvalResult already did them above)
   const domain = result.evaluation?.domain;
   if (!promoted && domain) await refreshDomainAggregate(db, domain);
+  if (!promoted) {
+    // writeEvalResult already called refreshUserAggregate if promoted
+    const authorRow2 = await db
+      .prepare('SELECT hn_by FROM stories WHERE hn_id = ?')
+      .bind(hnId)
+      .first<{ hn_by: string | null }>();
+    if (authorRow2?.hn_by) await refreshUserAggregate(db, authorRow2.hn_by);
+  }
 }
 
 export async function markRaterFailed(
@@ -1099,6 +1262,13 @@ export async function writeLiteRaterEvalResult(
   if (lite.evaluation.domain) {
     await refreshDomainAggregate(db, lite.evaluation.domain);
   }
+
+  // Refresh user aggregate (lite evals contribute to lite_evaluated + avg_editorial_lite)
+  const liteAuthorRow = await db
+    .prepare('SELECT hn_by FROM stories WHERE hn_id = ?')
+    .bind(hnId)
+    .first<{ hn_by: string | null }>();
+  if (liteAuthorRow?.hn_by) await refreshUserAggregate(db, liteAuthorRow.hn_by);
 
   // No rater_scores or rater_witness writes for lite evals
 

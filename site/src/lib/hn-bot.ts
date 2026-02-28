@@ -21,6 +21,7 @@ import { classifyContent } from './content-gate';
 import { logEvent } from './events';
 import { checkCreditPause } from '../../functions/rate-limit';
 import { safeBatch, D1_BATCH_SIZE } from './db-utils';
+import { refreshUserAggregate } from './eval-write';
 
 // ─── Types ───
 
@@ -373,9 +374,9 @@ export async function crawlUserProfiles(db: D1Database): Promise<number> {
   if (users.length === 0) return 0;
 
   const profiles = await Promise.all(
-    users.map(async (u): Promise<{ username: string; karma: number | null; created: number | null; about: string | null } | null> => {
+    users.map(async (u): Promise<{ username: string; karma: number | null; created: number | null; about: string | null; submitted_count: number | null } | null> => {
       try {
-        const data = await fetchJson<{ id: string; karma?: number; created?: number; about?: string }>(
+        const data = await fetchJson<{ id: string; karma?: number; created?: number; about?: string; submitted?: number[] }>(
           `https://hacker-news.firebaseio.com/v0/user/${encodeURIComponent(u.hn_by)}.json`
         );
         if (!data) return null;
@@ -384,6 +385,7 @@ export async function crawlUserProfiles(db: D1Database): Promise<number> {
           karma: data.karma ?? null,
           created: data.created ?? null,
           about: data.about?.slice(0, 2000) ?? null,
+          submitted_count: data.submitted?.length ?? null,
         };
       } catch {
         return null;
@@ -391,21 +393,28 @@ export async function crawlUserProfiles(db: D1Database): Promise<number> {
     })
   );
 
-  const stmts = profiles
-    .filter((p): p is NonNullable<typeof p> => p !== null)
-    .map(p =>
-      db
-        .prepare(
-          `INSERT INTO hn_users (username, karma, created, about, cached_at)
-           VALUES (?, ?, ?, ?, datetime('now'))
-           ON CONFLICT(username) DO UPDATE SET karma = ?, created = ?, about = ?, cached_at = datetime('now')`
-        )
-        .bind(p.username, p.karma, p.created, p.about, p.karma, p.created, p.about)
-    );
+  const validProfiles = profiles.filter((p): p is NonNullable<typeof p> => p !== null);
+
+  const stmts = validProfiles.map(p =>
+    db
+      .prepare(
+        `INSERT INTO hn_users (username, karma, created, about, submitted_count, cached_at)
+         VALUES (?, ?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(username) DO UPDATE SET
+           karma = ?, created = ?, about = ?,
+           submitted_count = ?, cached_at = datetime('now')`
+      )
+      .bind(p.username, p.karma, p.created, p.about, p.submitted_count,
+            p.karma, p.created, p.about, p.submitted_count)
+  );
 
   if (stmts.length > 0) {
     for (let i = 0; i < stmts.length; i += D1_BATCH_SIZE) {
       await db.batch(stmts.slice(i, i + D1_BATCH_SIZE));
+    }
+    // Refresh user_aggregates to pick up new karma/submitted_count
+    for (const p of validProfiles) {
+      await refreshUserAggregate(db, p.username).catch(() => {});
     }
   }
 
@@ -1246,6 +1255,13 @@ export async function runCrawlCycle(
     if (stmts.length > 0) {
       await db.batch(stmts);
       insertedCount += stmts.length;
+      // Crawl-path hook: refresh user_aggregates for authors of newly inserted stories.
+      // Required so stories count is accurate before eval runs (story count lags
+      // by hours/days if we only refresh at eval time).
+      const newAuthors = [...new Set(validItems.map(item => item.by).filter((b): b is string => !!b))];
+      for (const author of newAuthors) {
+        await refreshUserAggregate(db, author).catch(() => {});
+      }
     }
     for (const item of validItems) existingIds.add(item.id);
   }
