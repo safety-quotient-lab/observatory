@@ -1,5 +1,21 @@
 # TODO
 
+## Security & Open Source Readiness
+
+- [ ] **Revoke live credentials** *(do this now — independently of any GitHub plans)*
+  - `claude.key` contains a live Anthropic API key (`sk-ant-api03-xhnH...`). If this file were
+    accidentally committed or copied, it would give full API access to your Anthropic account.
+    Revoke at [console.anthropic.com](https://console.anthropic.com) → API Keys → delete the key,
+    then generate a new one and update `ANTHROPIC_API_KEY` in your wrangler secrets.
+  - `site/.dev.vars` contains a live OpenRouter key (`sk-or-v1-e606...`) and `TRIGGER_SECRET`.
+    Revoke the OpenRouter key at openrouter.ai → Keys. Rotate `TRIGGER_SECRET` by running
+    `openssl rand -base64 32` and updating both `site/.dev.vars` and your wrangler secrets.
+  - `site/.cron-secret` contains the bearer token for your admin endpoints (`/trigger`, `/calibrate`,
+    `/replay`). Anyone with this token can fire arbitrary cron cycles against production.
+    Rotate it: `openssl rand -base64 32 > site/.cron-secret`, then `wrangler secret put TRIGGER_SECRET`.
+  - **Verified clean:** `git log --all --full-history` confirms none of these were ever committed.
+    Root `.gitignore` covers `*.key`, `.dev.vars`, `.cron-secret`. Safe — but revoke anyway.
+
 ## Data Model / Taxonomy
 
 - [ ] **Comprehensive data model audit** *(big effort — needs separate plan)*
