@@ -7,9 +7,9 @@ import ArticleDetail from '../../components/ArticleDetail.astro';
 import ModelCompareTable from '../../components/ModelCompareTable.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
-import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getEvalHistoryForStory, getRaterEvalsForStory, getRaterScores } from '../../lib/db';
+import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getEvalHistoryForStory, getRaterEvalsForStory, getRaterScores, getFairWitnessForStory } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
-import type { Evaluation } from '../../lib/types';
+import { computeAggregates, type Aggregates } from '../../lib/compute-aggregates';
 import { modelDisplayName, PRIMARY_MODEL_ID, isLightMode } from '../../lib/shared-eval';
 import { sanitizeHtml } from '../../lib/sanitize';
 
@@ -57,62 +57,64 @@ if (viewParam === 'compare' && raterEvals.length >= 2) {
 
 // Handle statuses
 const isFailed = storyData.eval_status === 'failed';
-const isDone = storyData.eval_status === 'done' && !!storyData.hcb_json;
+const isDone = storyData.eval_status === 'done' && storyData.hcb_weighted_mean !== null;
 const isPending = storyData.eval_status === 'pending' || storyData.eval_status === 'evaluating';
-// Light-only: done status but no full hcb_json — has rater_evals with lite models
+// Light-only: done status but no full weighted_mean — has rater_evals with lite models
 const isLightOnlyEval = !isDone && storyData.eval_status === 'done' && raterEvals.some(re => isLightMode(re.prompt_mode));
 const lightEval = isLightOnlyEval ? (raterEvals.find(re => isLightMode(re.prompt_mode)) ?? null) : null;
 
-let evalData: Evaluation | null = null;
-let cachedDcp: string | null = null;
-if (isDone) {
-  try {
-    evalData = JSON.parse(storyData.hcb_json!) as Evaluation;
-  } catch (_e) {
-    return Astro.redirect('/');
-  }
-}
-let cachedDcpElements: any[] | null = null;
-if (isFailed && storyData.domain) {
-  cachedDcp = await getDomainDcp(db, storyData.domain);
+// DCP: fetch from D1 table (for both done and failed states)
+let dcpElements: any[] | null = null;
+if (storyData.domain) {
+  const cachedDcp = await getDomainDcp(db, storyData.domain);
   if (cachedDcp) {
     try {
       const dcpData = JSON.parse(cachedDcp);
-      cachedDcpElements = dcpData.elements || dcpData;
-    } catch (_e) { /* ignore parse errors */ }
+      dcpElements = dcpData.elements || dcpData;
+    } catch { /* ignore parse errors */ }
   }
 }
-const evaluation = evalData?.evaluation;
-const domain_context_profile = evalData?.domain_context_profile;
-const aggregates = evalData?.aggregates;
-const scores = isDone ? (storyData.scores.length > 0 ? storyData.scores : evalData!.scores) : [];
 
-const classColor = aggregates ? classificationColor(aggregates.classification) : '#5b7279';
-const classText = aggregates ? classificationTextColor(aggregates.classification) : '#98a8a8';
+// Scores from the scores table (already fetched by getStory)
+const scores = isDone ? storyData.scores : [];
 
-// Fair Witness: detect if any score has FW data (from evalData JSON, not DB scores)
-const fwScores = evalData?.scores ?? [];
-const hasFairWitness = fwScores.some(s =>
-  (s.witness_facts && s.witness_facts.length > 0) || (s.witness_inferences && s.witness_inferences.length > 0)
-);
-// Merge FW data + split notes from evalData into display scores
-const displayScores = isDone ? scores.map(s => {
-  const fwMatch = fwScores.find(fs => fs.section === s.section);
-  const merged: typeof s = { ...s };
-  if (fwMatch) {
-    merged.witness_facts = fwMatch.witness_facts;
-    merged.witness_inferences = fwMatch.witness_inferences;
-    merged.witness_ratio = fwMatch.witness_ratio;
-    // Merge split notes from evalData JSON if not already in DB row
-    if (!merged.editorial_note && (fwMatch as any).editorial_note) {
-      merged.editorial_note = (fwMatch as any).editorial_note;
-    }
-    if (!merged.structural_note && (fwMatch as any).structural_note) {
-      merged.structural_note = (fwMatch as any).structural_note;
-    }
+// Compute aggregates from scores (replaces hcb_json parsing)
+const channelWeights = { editorial: 0.6, structural: 0.4 }; // default ED weights
+let aggregates: Aggregates | null = null;
+if (isDone && scores.length > 0) {
+  aggregates = computeAggregates(scores, channelWeights);
+}
+
+const classColor = storyData.hcb_classification ? classificationColor(storyData.hcb_classification) : '#5b7279';
+const classText = storyData.hcb_classification ? classificationTextColor(storyData.hcb_classification) : '#98a8a8';
+
+// Fair Witness: fetch from fair_witness table (fallback to rater_witness for non-primary model evals)
+const fwEvalModel = storyData.eval_model || raterEvals.find(re => re.prompt_mode === 'full')?.eval_model || null;
+const fwFacts = isDone ? await getFairWitnessForStory(db, hnId, fwEvalModel) : [];
+const hasFairWitness = fwFacts.length > 0;
+
+// Group FW facts by section and merge into display scores
+const fwBySection = new Map<string, { facts: string[]; inferences: string[] }>();
+for (const fw of fwFacts) {
+  let entry = fwBySection.get(fw.section);
+  if (!entry) {
+    entry = { facts: [], inferences: [] };
+    fwBySection.set(fw.section, entry);
   }
-  return merged;
+  if (fw.fact_type === 'observable') entry.facts.push(fw.fact_text);
+  else entry.inferences.push(fw.fact_text);
+}
+
+const displayScores = isDone ? scores.map(s => {
+  const fw = fwBySection.get(s.section);
+  return {
+    ...s,
+    witness_facts: fw?.facts,
+    witness_inferences: fw?.inferences,
+    witness_ratio: fw ? (fw.facts.length / (fw.facts.length + fw.inferences.length)) : undefined,
+  };
 }) : [];
+
 // Power-ranked: sort by channel score descending, ND articles last
 const editorialRanked = [...displayScores].sort((a, b) => {
   if (a.editorial === null && b.editorial === null) return 0;
@@ -129,44 +131,81 @@ const structuralRanked = [...displayScores].sort((a, b) => {
 // FW aggregate metrics
 const fwRatio = storyData.fw_ratio ?? (hasFairWitness ? (() => {
   let facts = 0, inferences = 0;
-  for (const s of fwScores) {
-    facts += s.witness_facts?.length ?? 0;
-    inferences += s.witness_inferences?.length ?? 0;
+  for (const [, fw] of fwBySection) {
+    facts += fw.facts.length;
+    inferences += fw.inferences.length;
   }
   const total = facts + inferences;
   return total > 0 ? facts / total : null;
 })() : null);
-const fwObservableCount = storyData.fw_observable_count ?? fwScores.reduce((n, s) => n + (s.witness_facts?.length ?? 0), 0);
-const fwInferenceCount = storyData.fw_inference_count ?? fwScores.reduce((n, s) => n + (s.witness_inferences?.length ?? 0), 0);
+const fwObservableCount = storyData.fw_observable_count ?? Array.from(fwBySection.values()).reduce((n, fw) => n + fw.facts.length, 0);
+const fwInferenceCount = storyData.fw_inference_count ?? Array.from(fwBySection.values()).reduce((n, fw) => n + fw.inferences.length, 0);
 
 // Compute aggregate SETL from scores
 const setlValues = scores
   .map(s => computeSetl(s.structural, s.editorial))
   .filter((v): v is number => v !== null);
-const aggSetl = setlValues.length > 0
+const aggSetl = storyData.hcb_setl ?? (setlValues.length > 0
   ? setlValues.reduce((a, b) => a + b, 0) / setlValues.length
-  : null;
+  : null);
 
 // Confidence (evidence-weighted)
 const confidence = computeConfidence(storyData.hcb_evidence_h, storyData.hcb_evidence_m, storyData.hcb_evidence_l, storyData.hcb_nd_count);
 
-// Story-level labels (v3.6+)
-const themeTag = evalData?.theme_tag || storyData.hcb_theme_tag || null;
-const sentimentTag = evalData?.sentiment_tag || storyData.hcb_sentiment_tag || null;
-const executiveSummary = evalData?.executive_summary || storyData.hcb_executive_summary || null;
+// Story-level labels
+const themeTag = storyData.hcb_theme_tag || null;
+const sentimentTag = storyData.hcb_sentiment_tag || null;
+const executiveSummary = storyData.hcb_executive_summary || null;
 
-// Supplementary signals (from evalData JSON with fallback to materialized columns)
-const eqData = evalData?.epistemic_quality ?? null;
-const eqScore = eqData?.eq_score ?? storyData.eq_score ?? null;
-const ptFlags = evalData?.propaganda_flags ?? (storyData.pt_flags_json ? JSON.parse(storyData.pt_flags_json) : null);
+// Supplementary signals (from materialized columns — source of truth)
+const eqData = storyData.eq_score != null ? {
+  eq_score: storyData.eq_score,
+  source_quality: storyData.eq_source_quality ?? 0,
+  evidence_reasoning: storyData.eq_evidence_reasoning ?? 0,
+  uncertainty_handling: storyData.eq_uncertainty_handling ?? 0,
+  purpose_transparency: storyData.eq_purpose_transparency ?? 0,
+  claim_density: storyData.eq_claim_density ?? 'medium',
+} : null;
+const eqScore = storyData.eq_score ?? null;
+const ptFlags = storyData.pt_flags_json ? (() => { try { return JSON.parse(storyData.pt_flags_json); } catch { return null; } })() : null;
 const ptFlagCount = ptFlags?.length ?? storyData.pt_flag_count ?? 0;
-const soData = evalData?.solution_orientation ?? null;
-const etData = evalData?.emotional_tone ?? null;
-const srData = evalData?.stakeholder_representation ?? null;
-const tfData = evalData?.temporal_framing ?? null;
-const gsData = evalData?.geographic_scope ?? null;
-const clData = evalData?.complexity_level ?? null;
-const tdData = evalData?.transparency_disclosure ?? null;
+const soData = storyData.so_score != null ? {
+  so_score: storyData.so_score,
+  framing: storyData.so_framing ?? 'mixed',
+  reader_agency: storyData.so_reader_agency ?? 0,
+} : null;
+const etData = storyData.et_primary_tone != null ? {
+  primary_tone: storyData.et_primary_tone,
+  valence: storyData.et_valence ?? 0,
+  arousal: storyData.et_arousal ?? 0,
+  dominance: storyData.et_dominance ?? 0.5,
+} : null;
+const srData = storyData.sr_score != null ? {
+  sr_score: storyData.sr_score,
+  perspective_count: storyData.sr_perspective_count ?? 0,
+  voice_balance: storyData.sr_voice_balance ?? 0,
+  who_speaks: storyData.sr_who_speaks ? (() => { try { return JSON.parse(storyData.sr_who_speaks); } catch { return []; } })() : [],
+  who_is_spoken_about: storyData.sr_who_spoken_about ? (() => { try { return JSON.parse(storyData.sr_who_spoken_about); } catch { return []; } })() : [],
+} : null;
+const tfData = storyData.tf_primary_focus != null ? {
+  primary_focus: storyData.tf_primary_focus,
+  time_horizon: storyData.tf_time_horizon ?? 'unspecified',
+} : null;
+const gsData = storyData.gs_scope != null ? {
+  scope: storyData.gs_scope,
+  regions_mentioned: storyData.gs_regions_json ? (() => { try { return JSON.parse(storyData.gs_regions_json); } catch { return []; } })() : [],
+} : null;
+const clData = storyData.cl_reading_level != null ? {
+  reading_level: storyData.cl_reading_level,
+  jargon_density: storyData.cl_jargon_density ?? 'low',
+  assumed_knowledge: storyData.cl_assumed_knowledge ?? 'general_audience',
+} : null;
+const tdData = storyData.td_score != null ? {
+  td_score: storyData.td_score,
+  author_identified: !!storyData.td_author_identified,
+  conflicts_disclosed: storyData.td_conflicts_disclosed != null ? !!storyData.td_conflicts_disclosed : null,
+  funding_disclosed: storyData.td_funding_disclosed != null ? !!storyData.td_funding_disclosed : null,
+} : null;
 const hasSignals = eqScore !== null || ptFlagCount > 0 || soData !== null || etData !== null || srData !== null || tfData !== null || gsData !== null || clData !== null || tdData !== null;
 
 let comments: Awaited<ReturnType<typeof getStoryComments>> = [];
@@ -249,7 +288,7 @@ function getDriftForEval(model: string, score: number): number | null {
 
 const siteUrl = Astro.url.origin;
 
-const jsonLd = isDone && aggregates && evaluation ? {
+const jsonLd = isDone && aggregates ? {
   '@context': 'https://schema.org',
   '@type': 'Review',
   name: `HRCB Evaluation: ${storyData.title}`,
@@ -274,9 +313,9 @@ const jsonLd = isDone && aggregates && evaluation ? {
     ratingValue: aggregates.weighted_mean,
     bestRating: 1.0,
     worstRating: -1.0,
-    ratingExplanation: `HRCB ${aggregates.classification} — evaluated against ${aggregates.signal_sections} of 31 UDHR provisions using methodology v${evaluation.methodology}`,
+    ratingExplanation: `HRCB ${aggregates.classification} — evaluated against ${aggregates.signal_sections} of 31 UDHR provisions${storyData.schema_version ? ` using schema v${storyData.schema_version}` : ''}`,
   },
-  reviewBody: executiveSummary || `Content type: ${CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}. ${aggregates.signal_sections} sections scored, ${aggregates.nd_count} with no data. Volatility: ${aggregates.volatility.label} (${aggregates.volatility.value.toFixed(2)}).`,
+  reviewBody: executiveSummary || `Content type: ${CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}. ${aggregates.signal_sections} sections scored, ${aggregates.nd_count} with no data. Volatility: ${aggregates.volatility.label} (${aggregates.volatility.value.toFixed(2)}).`,
   about: {
     '@type': 'Legislation',
     name: 'Universal Declaration of Human Rights',
@@ -430,7 +469,7 @@ function timeAgo(unixTime: number): string {
         </tr>
       </table>
 
-      {cachedDcpElements && (
+      {dcpElements && (
         <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
           <tr>
             <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
@@ -438,13 +477,13 @@ function timeAgo(unixTime: number): string {
                 Cached Domain Context Profile
                 <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">from previous evaluation</span>
               </div>
-              <DcpTable elements={cachedDcpElements} />
+              <DcpTable elements={dcpElements} />
             </td>
           </tr>
         </table>
       )}
     </>
-  ) : isDone && aggregates && evaluation ? (
+  ) : isDone && aggregates ? (
     <>
   {/* Story header - HN style */}
   <table cellpadding="0" cellspacing="0" width="100%">
@@ -498,10 +537,11 @@ function timeAgo(unixTime: number): string {
           {aggregates.classification}
         </span>
         <span style="color: #5b7279; margin-left: 4px;">
-          <span title={`Content type: ${CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}`} style="cursor: help;">
-            {CONTENT_TYPE_LABELS[evaluation.content_type.primary] || evaluation.content_type.primary}
+          <span title={`Content type: ${CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}`} style="cursor: help;">
+            {CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}
           </span>
-          · {storyData.schema_version ? `v${storyData.schema_version}` : evaluation.methodology} · {evaluation.date}
+          {storyData.schema_version && <span>· v{storyData.schema_version}</span>}
+          {storyData.evaluated_at && <span>· {storyData.evaluated_at.split('T')[0]}</span>}
         </span>
         {hasFairWitness && (
           <button
@@ -603,8 +643,8 @@ function timeAgo(unixTime: number): string {
               <td class="score-font" style="color: #ef4444;">{aggregates.negative_count}</td>
               <td style="color: #5b7279;">Channels</td>
               <td class="score-font">
-                <span style="color: #60a5fa;" title="What the content says">E: {evaluation.channel_weights.editorial}</span>
-                <span style="color: #22d3ee; margin-left: 6px;" title="What the site does">S: {evaluation.channel_weights.structural}</span>
+                <span style="color: #60a5fa;" title="What the content says">E: {channelWeights.editorial}</span>
+                <span style="color: #22d3ee; margin-left: 6px;" title="What the site does">S: {channelWeights.structural}</span>
               </td>
             </tr>
             <tr>
@@ -702,10 +742,10 @@ function timeAgo(unixTime: number): string {
           <div style="color: #22d3ee; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Structural Channel</div>
           <div style="color: #5b7279; font-size: var(--font-xs);">What the site does</div>
         </div>
-        {domain_context_profile && (
+        {dcpElements && (
           <div style="margin-bottom: 12px; padding: 8px; background: #0d4655; border: 1px solid #1a5568; border-radius: 4px;">
             <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Domain Context Profile</div>
-            <DcpTable elements={domain_context_profile.elements} />
+            <DcpTable elements={dcpElements} />
           </div>
         )}
         {structuralRanked.map((score, i) => (

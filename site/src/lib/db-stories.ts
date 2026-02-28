@@ -23,7 +23,6 @@ export interface Story {
   hcb_evidence_h: number | null;
   hcb_evidence_m: number | null;
   hcb_evidence_l: number | null;
-  hcb_json: string | null;
   eval_model: string | null;
   eval_prompt_hash: string | null;
   eval_status: string;
@@ -78,9 +77,17 @@ export interface Story {
   // Content drift
   content_hash: string | null;
   content_last_fetched: string | null;
+  // Detail-only columns (not in STORY_LIST_COLS)
+  hcb_setl: number | null;
+  hcb_confidence: number | null;
+  methodology_hash: string | null;
+  gate_category: string | null;
+  gate_confidence: number | null;
+  archive_url: string | null;
+  archive_used: number | null;
 }
 
-// Explicit column list for list-view queries — omits hcb_json and hn_text (large blobs not needed for cards)
+// Explicit column list for list-view queries — omits hcb_json, hn_text, eval_system_prompt, eval_user_prompt (large blobs)
 const STORY_LIST_COLS = `hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, hn_type,
   content_type, hcb_weighted_mean, hcb_editorial_mean, hcb_structural_mean, hcb_classification,
   hcb_signal_sections, hcb_nd_count, hcb_evidence_h, hcb_evidence_m, hcb_evidence_l,
@@ -94,7 +101,13 @@ const STORY_LIST_COLS = `hn_id, url, title, domain, hn_score, hn_comments, hn_by
   tf_primary_focus, tf_time_horizon, gs_scope, gs_regions_json,
   cl_reading_level, cl_jargon_density, cl_assumed_knowledge,
   td_score, td_author_identified, td_conflicts_disclosed, td_funding_disclosed,
-  consensus_score, consensus_model_count, consensus_spread, consensus_updated_at`;
+  consensus_score, consensus_model_count, consensus_spread, consensus_updated_at,
+  content_hash, content_last_fetched`;
+
+// Detail-view columns — adds hn_text for self-post display, gate columns, archive. Still omits hcb_json (~12-15KB blob).
+const STORY_DETAIL_COLS = `${STORY_LIST_COLS},
+  hn_text, hcb_setl, hcb_confidence, methodology_hash,
+  gate_category, gate_confidence, archive_url, archive_used`;
 
 export interface ScoreRow {
   hn_id: number;
@@ -310,8 +323,8 @@ export async function getFilteredStoriesWithScores(
        FROM stories s ${joinClause} WHERE ${where} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
     )
     .bind(...setlBindParams, ...bindParams, limit, offset)
-    .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>()
-    .catch((err) => { console.error('[getFilteredStoriesWithScores] DB error:', err); return { results: [] as (Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null })[] }; });
+    .all<Omit<Story, 'hn_text'> & { hn_text_preview: string | null }>()
+    .catch((err) => { console.error('[getFilteredStoriesWithScores] DB error:', err); return { results: [] as (Omit<Story, 'hn_text'> & { hn_text_preview: string | null })[] }; });
   const { results: storyRows } = storyQueryResult;
 
   // Fetch mini scores (final only) for evaluated stories
@@ -349,7 +362,6 @@ export async function getFilteredStoriesWithScores(
   return storyRows.map(story => ({
     ...story,
     hn_text: null,
-    hcb_json: null,
     miniScores: scoresByHnId.get(story.hn_id) || [],
     hn_text_preview: story.hn_text_preview || null,
   }));
@@ -360,24 +372,76 @@ export async function getFilteredStoriesWithScores(
 export async function getStory(db: D1Database, hnId: number): Promise<StoryWithScores | null> {
   try {
     const story = await db
-      .prepare(`SELECT * FROM stories WHERE hn_id = ?`)
+      .prepare(`SELECT ${STORY_DETAIL_COLS} FROM stories WHERE hn_id = ?`)
       .bind(hnId)
       .first<Story>();
 
     if (!story) return null;
 
+    // Primary scores table (written by PRIMARY_MODEL_ID evals)
     const { results: scoreRows } = await db
       .prepare(`SELECT * FROM scores WHERE hn_id = ? ORDER BY sort_order`)
       .bind(hnId)
       .all<ScoreRow>();
 
+    let scores = scoreRows.map(scoreRowToScore);
+
+    // Fallback: if no primary scores but story is done (evaluated by non-primary model),
+    // use rater_scores from the best available full-mode rater eval
+    if (scores.length === 0 && story.eval_status === 'done') {
+      // Find the eval_model to use: story.eval_model, or first full-mode rater_eval
+      let fallbackModel = story.eval_model;
+      if (!fallbackModel) {
+        const best = await db
+          .prepare(`SELECT eval_model FROM rater_evals WHERE hn_id = ? AND eval_status = 'done' AND prompt_mode = 'full' ORDER BY evaluated_at DESC LIMIT 1`)
+          .bind(hnId)
+          .first<{ eval_model: string }>();
+        fallbackModel = best?.eval_model ?? null;
+      }
+      if (fallbackModel) {
+        const { results: raterRows } = await db
+          .prepare(`SELECT * FROM rater_scores WHERE hn_id = ? AND eval_model = ? ORDER BY sort_order`)
+          .bind(hnId, fallbackModel)
+          .all<ScoreRow>();
+        scores = raterRows.map(scoreRowToScore);
+      }
+    }
+
     return {
       ...story,
-      scores: scoreRows.map(scoreRowToScore),
+      scores,
     };
   } catch (err) {
     console.error('[getStory] DB error:', err);
     return null;
+  }
+}
+
+export interface FairWitnessFact {
+  section: string;
+  fact_type: 'observable' | 'inference';
+  fact_text: string;
+}
+
+export async function getFairWitnessForStory(db: D1Database, hnId: number, evalModel?: string | null): Promise<FairWitnessFact[]> {
+  try {
+    const { results } = await db
+      .prepare(`SELECT section, fact_type, fact_text FROM fair_witness WHERE hn_id = ? ORDER BY section, fact_type`)
+      .bind(hnId)
+      .all<FairWitnessFact>();
+
+    // Fallback: if no primary fair_witness but rater_witness exists (non-primary model eval)
+    if (results.length === 0 && evalModel) {
+      const { results: raterResults } = await db
+        .prepare(`SELECT section, fact_type, fact_text FROM rater_witness WHERE hn_id = ? AND eval_model = ? ORDER BY section, fact_type`)
+        .bind(hnId, evalModel)
+        .all<FairWitnessFact>();
+      return raterResults;
+    }
+
+    return results;
+  } catch {
+    return [];
   }
 }
 
@@ -743,7 +807,7 @@ export async function getStoriesByEntity(
        FROM stories WHERE ${col} = ? ORDER BY hn_time DESC LIMIT ? OFFSET ?`
     )
     .bind(value, limit, offset)
-    .all<Omit<Story, 'hcb_json' | 'hn_text'> & { hn_text_preview: string | null }>();
+    .all<Omit<Story, 'hn_text'> & { hn_text_preview: string | null }>();
 
   const evaluatedIds = storyRows
     .filter(s => s.eval_status === 'done')
@@ -776,7 +840,6 @@ export async function getStoriesByEntity(
     stories: storyRows.map(story => ({
       ...story,
       hn_text: null,
-      hcb_json: null,
       miniScores: scoresByHnId.get(story.hn_id) || [],
       hn_text_preview: story.hn_text_preview || null,
     })),
