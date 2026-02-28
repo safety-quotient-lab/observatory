@@ -40,13 +40,15 @@ rounds. 30/43 items already fixed; remaining items below.
 ### Round 3.5 — Triage UX Audit
 
 - [x] **UX audit findings** — 29/31 done *(2026-02-28)*
-  - Full plan: `.claude/plans/ux-audit-2026-02-28.md`
+  - Full plan: `.claude/plans/archive/ux-audit-2026-02-28.md`
   - Deferred (2): NAV-07 (back-to-top), NAV-08 (Phase 2 FTS)
 
 - [ ] **Semantic color system — per-file migration**
   - Foundation done *(2026-02-28)*: 30+ CSS vars, 9 badge classes, 6 text classes, paywall→red, unused vars removed
-  - Remaining: ~1,395 inline `color: #hex` across 48 .astro files → `var(--color-*)` / utility class refs
-  - Top 10 files = 82% of instances: about (242), item/[id] (170), status/models (152), signals (114), factions (107), rights/observatory (89), status (84), users (70), status/events (70), dynamics (53)
+  - Full plan: `.claude/plans/semantic-colors-2026-02-28.md`
+  - ~1,489 inline `color: #hex` across 32 files → `var(--color-*)`. 97% mechanical, 2.5% manual review.
+  - 7 new CSS vars needed (Phase 0). Two substitutions (`#5b7279` + `#98a8a8`) cover 77% of all instances.
+  - 4 batches: tiny (9 files) → medium (9) → mid (6) → heavy (8 files, top 10)
   - **Assigned to a separate agent** — do not interleave with feature work
 
 ### Round 4 — Analytics *(done 2026-02-28)*
@@ -78,6 +80,13 @@ rounds. 30/43 items already fixed; remaining items below.
 - [x] **Link section scores to `/article/[n]`** *(done 2026-02-28)* — ArticleDetail section labels now clickable
 - [x] **Render `dominant_sentiment` on HTML pages** *(done 2026-02-28)* — 4th distribution chart on /sources
 - [x] **Link observatory propaganda table domain column** *(done 2026-02-28)* — domain text → `/domain/[domain]` link
+
+### Round 4.7 — Data Model Cleanup
+*Open items from data-model audit (2026-02-28). Full plan: `.claude/plans/data-model-audit-2026-02-28.md`*
+
+- [ ] **Drop orphaned `batches` table** — zero code references; decide if `eval_batch_id` column stays (it flows from `eval_queue.batch_id`, not from `batches`)
+- [ ] **Surface write-only sub-fields on item page** — `td_author_identified`, `td_conflicts_disclosed`, `td_funding_disclosed`, `eq_source_quality`, `eq_evidence_reasoning`, `eq_purpose_transparency` (all written, never displayed)
+- [ ] **Enrich `domain_profile_snapshots`** — missing ~8 fields (`avg_confidence`, `avg_sr`, `avg_pt_count`, `avg_dominance`, `avg_fw_ratio`, `dominant_scope`, `dominant_reading_level`, `dominant_sentiment`)
 
 ### Round 5 — Data Expansion
 
