@@ -9,11 +9,11 @@ GitHub publishing respectively.
 ## Phase 0 — Data Integrity Deep Dive
 *Current phase. Investigate and fix inconsistencies and red flags in production data before building more features on top.*
 
-- [ ] **Ghost evaluations** — stories with `eval_status='done'` but missing expected data
-  - NULL `eval_model`, NULL `hcb_weighted_mean`, empty `scores` + `rater_scores`
-  - Stories relying entirely on consensus with no traceable primary eval
-  - Quantify scope: how many, which models, what time period
-  - *We already hit this — story 47173121 had done status, null eval_model, zero primary scores*
+- [x] **Ghost evaluations** *(fixed 2026-02-27)*
+  - 129 stories (28% of done) had `eval_status='done'` but `hcb_weighted_mean IS NULL`
+  - Root cause: historical bug — light-mode Workers AI + haiku evals called `writeEvalResult` as primary. Now fixed in current consumer code.
+  - Fix applied: `UPDATE stories SET eval_status='pending', eval_model=NULL WHERE eval_status='done' AND hcb_weighted_mean IS NULL` — 81 stories reset to pending for proper re-eval
+  - 48 stories with `eval_model IS NULL` but valid `hcb_weighted_mean` left as-is (cosmetic, scores correct)
 
 - [ ] **Model score distribution audit**
   - Per-model score histograms — are any models systematically biased high/low?
@@ -21,11 +21,11 @@ GitHub publishing respectively.
   - Flag models with suspiciously narrow or uniform distributions
   - Check if light eval editorial scores correlate with full eval editorial scores on the same stories
 
-- [ ] **Stale pipeline state**
-  - Stories stuck in `evaluating` or `queued` for >24h (dropped queue messages)
-  - `eval_queue` rows with stale `claimed_by` that were never completed
-  - DLQ messages that were never replayed or resolved
-  - Quantify: how much data is trapped in limbo vs flowing through
+- [x] **Stale pipeline state** *(investigated + partially fixed 2026-02-27)*
+  - `eval_queue`: 0 stale claims, 8 active in-flight — clean ✅
+  - 100 stories in `queued` status — transient, handled by cron stuck-queue recovery
+  - DLQ: 113 dead `llama-3.3-70b` (disabled model) discarded; 39 replayable remain (Workers AI + deepseek)
+  - Fix applied: `UPDATE dlq_messages SET status='discarded' WHERE status='pending' AND eval_model='llama-3.3-70b'`
 
 - [ ] **Domain aggregate drift**
   - `domain_aggregates` is materialized incrementally — verify it matches a fresh computation from underlying `rater_evals`
