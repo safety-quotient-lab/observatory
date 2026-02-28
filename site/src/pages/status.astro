@@ -184,7 +184,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
 
           {/* Cron worker */}
           {(() => {
-            const lastActive = cronRuns[0]?.cycle_start ?? null;
+            const lastActive = cronRuns[0]?.created_at ?? null;
             const dot = workerDot(lastActive);
             return (
               <tr style="border-top: 1px solid #0d4655;">
