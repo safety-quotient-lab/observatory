@@ -21,8 +21,8 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 /** Score [-1, +1] to hex color — same algorithm as scoreToColor in colors.ts */
-function scoreToHex(score: number | null): string {
-  if (score === null) return '#4b5563';
+function scoreToHex(score: number | null | undefined): string {
+  if (score == null) return '#4b5563';
   const clamped = Math.max(-1, Math.min(1, score));
   const hue = clamped < 0 ? 40 * (1 + clamped) : 40 + 102 * clamped;
   const sat = 0.75 + 0.15 * Math.abs(clamped);
