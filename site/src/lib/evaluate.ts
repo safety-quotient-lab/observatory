@@ -44,26 +44,39 @@ export async function callClaude(
 ): Promise<EvalCallResult> {
   const userPrompt = buildUserMessage(url, pageContent, isSelfPost);
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: PRIMARY_MODEL_ID,
-      max_tokens: 10240,
-      system: [
-        {
-          type: 'text',
-          text: METHODOLOGY_SYSTEM_PROMPT,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 90_000);
+  let res: Response;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: PRIMARY_MODEL_ID,
+        max_tokens: 10240,
+        system: [
+          {
+            type: 'text',
+            text: METHODOLOGY_SYSTEM_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        messages: [{ role: 'user', content: userPrompt }],
+      }),
+      signal: controller.signal,
+    });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Anthropic API timeout after 90s');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const body = await res.text();

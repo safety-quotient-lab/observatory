@@ -19,8 +19,7 @@ import { CALIBRATION_SET, LITE_CALIBRATION_SET, LITE_DRIFT_THRESHOLDS, runCalibr
 import { shouldAutoDisableFromCalibration, raterHealthKvKey, emptyRaterHealth, type RaterHealthState } from '../src/lib/rater-health';
 import { getPipelineHealth } from '../src/lib/db';
 import { safeBatch } from '../src/lib/db-utils';
-import { runScheduledCoverageStrategy, runCoverageStrategy, STRATEGY_NAMES, type StrategyName, type StrategyOptions, searchAlgolia, insertAlgoliaHits } from '../src/lib/coverage-crawl';
-import { checkContentDrift } from '../src/lib/content-drift';
+import { runScheduledCoverageStrategy } from '../src/lib/coverage-crawl';
 import {
   computeAggregates,
   computeDerivedScoreFields,
@@ -28,11 +27,16 @@ import {
   computeFairWitnessAggregates,
   type DcpElement,
 } from '../src/lib/compute-aggregates';
-import { runCrawlCycle, enqueueForEvaluation, dispatchFreeModelEvals, preloadContentCache } from '../src/lib/hn-bot';
-import { refreshDomainAggregate, refreshAllDomainAggregates, backfillPtScores } from '../src/lib/eval-write';
+import { runCrawlCycle, dispatchFreeModelEvals, preloadContentCache } from '../src/lib/hn-bot';
+import { refreshDomainAggregate } from '../src/lib/eval-write';
 import { getModelQueue, PRIMARY_MODEL_ID } from '../src/lib/shared-eval';
+import {
+  sweepFailed, sweepSkipped, sweepCoverage, sweepContentDrift,
+  sweepAlgoliaBackfill, sweepRefreshDomainAggregates, sweepBackfillPtScore,
+  type SweepContext,
+} from './sweeps';
 
-interface Env {
+export interface Env {
   DB: D1Database;
   EVAL_QUEUE: Queue;
   DEEPSEEK_QUEUE: Queue;
@@ -580,256 +584,24 @@ export default {
         return new Response('Cron triggered', { status: 200 });
       }
 
-      const db = env.DB;
-      const rawLimit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 200);
+      const SWEEP_HANDLERS: Record<string, (ctx: SweepContext) => Promise<Response>> = {
+        failed: sweepFailed,
+        skipped: sweepSkipped,
+        coverage: sweepCoverage,
+        content_drift: sweepContentDrift,
+        algolia_backfill: sweepAlgoliaBackfill,
+        refresh_domain_aggregates: sweepRefreshDomainAggregates,
+        backfill_pt_score: sweepBackfillPtScore,
+      };
 
-      if (sweep === 'failed') {
-        const { meta } = await db
-          .prepare(
-            `UPDATE stories SET eval_status = 'pending', eval_error = NULL
-             WHERE hn_id IN (
-               SELECT hn_id FROM stories
-               WHERE eval_status = 'failed'
-               ORDER BY hn_time DESC
-               LIMIT ?
-             )`
-          )
-          .bind(rawLimit)
-          .run();
-        const promoted = meta?.changes ?? 0;
-
-        if (promoted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
-        }
-
-        await logEvent(db, {
-          event_type: 'trigger',
-          severity: 'info',
-          message: `Sweep: reset ${promoted} failed stories to pending`,
-          details: { sweep: 'failed', promoted, limit: rawLimit },
-        });
-
-        return new Response(JSON.stringify({ sweep: 'failed', promoted, description: `Reset ${promoted} failed stories to pending` }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
+      const handler = SWEEP_HANDLERS[sweep];
+      if (!handler) {
+        return new Response(JSON.stringify({
+          error: `Unknown sweep type: ${sweep}`,
+          valid_types: Object.keys(SWEEP_HANDLERS),
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
-
-      if (sweep === 'skipped') {
-        const minScore = Math.min(parseInt(url.searchParams.get('min_score') || '50', 10) || 50, 100000);
-
-        const { meta } = await db
-          .prepare(
-            `UPDATE stories SET eval_status = 'pending', eval_error = NULL
-             WHERE hn_id IN (
-               SELECT hn_id FROM stories
-               WHERE eval_status = 'skipped'
-                 AND eval_error LIKE 'Not in top%pages'
-                 AND url IS NOT NULL
-                 AND hn_score >= ?
-               ORDER BY hn_score DESC
-               LIMIT ?
-             )`
-          )
-          .bind(minScore, rawLimit)
-          .run();
-        const promoted = meta?.changes ?? 0;
-
-        if (promoted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
-        }
-
-        await logEvent(db, {
-          event_type: 'trigger',
-          severity: 'info',
-          message: `Sweep: promoted ${promoted} skipped stories to pending (min_score=${minScore})`,
-          details: { sweep: 'skipped', promoted, limit: rawLimit, min_score: minScore },
-        });
-
-        return new Response(JSON.stringify({ sweep: 'skipped', promoted, description: `Promoted ${promoted} skipped stories with hn_score >= ${minScore} to pending` }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      if (sweep === 'coverage') {
-        const strategyParam = url.searchParams.get('strategy') || 'all';
-
-        if (strategyParam !== 'all' && !STRATEGY_NAMES.includes(strategyParam as StrategyName)) {
-          return new Response(JSON.stringify({
-            error: `Unknown strategy: ${strategyParam}`,
-            valid_strategies: ['all', ...STRATEGY_NAMES],
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-        }
-
-        const articleParam = url.searchParams.get('article');
-        const strategyOptions: StrategyOptions = {};
-        if (articleParam) strategyOptions.article = articleParam;
-
-        const results = await runCoverageStrategy(
-          strategyParam as StrategyName | 'all',
-          db,
-          strategyOptions,
-        );
-
-        const totalInserted = results.reduce((sum, r) => sum + r.inserted, 0);
-
-        if (totalInserted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
-        }
-
-        await logEvent(db, {
-          event_type: 'coverage_crawl',
-          severity: 'info',
-          message: `Coverage sweep: ${strategyParam}, ${totalInserted} stories inserted`,
-          details: { sweep: 'coverage', strategy: strategyParam, total_inserted: totalInserted, results },
-        });
-
-        return new Response(JSON.stringify({ sweep: 'coverage', strategy: strategyParam, results }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      if (sweep === 'content_drift') {
-        const result = await checkContentDrift(db, rawLimit);
-
-        if (result.drifted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
-        }
-
-        await logEvent(db, {
-          event_type: 'trigger',
-          severity: 'info',
-          message: `Content drift: checked ${result.checked}, drifted ${result.drifted}, errors ${result.errors}`,
-          details: { sweep: 'content_drift', ...result, limit: rawLimit },
-        });
-
-        return new Response(JSON.stringify({ sweep: 'content_drift', ...result }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      if (sweep === 'algolia_backfill') {
-        const minScore = Math.min(parseInt(url.searchParams.get('min_score') || '500', 10) || 500, 100000);
-        const daysBack = Math.min(parseInt(url.searchParams.get('days_back') || '365', 10) || 365, 3650);
-
-        const nowSec = Math.floor(Date.now() / 1000);
-        const startSec = nowSec - daysBack * 86400;
-
-        const hits = await searchAlgolia({
-          tags: 'story',
-          numericFilters: `points>=${minScore},created_at_i>=${startSec}`,
-          hitsPerPage: rawLimit,
-          byDate: true,
-        });
-
-        const { inserted, skipped } = await insertAlgoliaHits(db, hits, 'story', 'algolia_backfill');
-
-        if (inserted > 0) {
-          await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
-        }
-
-        await logEvent(db, {
-          event_type: 'trigger',
-          severity: 'info',
-          message: `Algolia backfill: ${inserted} inserted, ${skipped} skipped (min_score=${minScore}, days_back=${daysBack})`,
-          details: { sweep: 'algolia_backfill', inserted, skipped, min_score: minScore, days_back: daysBack, limit: rawLimit },
-        });
-
-        return new Response(JSON.stringify({ sweep: 'algolia_backfill', inserted, skipped, hits_fetched: hits.length }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        });
-      }
-
-      if (sweep === 'refresh_domain_aggregates') {
-        const guardKey = 'sweep:refresh_domain_aggregates:running';
-        const isRunning = await env.CONTENT_CACHE.get(guardKey).catch(() => null);
-        if (isRunning) {
-          return new Response(
-            JSON.stringify({ error: 'Refresh already in progress', retry_after_seconds: 60 }),
-            { status: 429, headers: { 'Content-Type': 'application/json' } },
-          );
-        }
-        await env.CONTENT_CACHE.put(guardKey, new Date().toISOString(), { expirationTtl: 300 });
-
-        const chunkSize = Math.min(200, Math.max(10, parseInt(url.searchParams.get('chunk_size') || '100', 10)));
-        const minEvaluated = Math.max(0, parseInt(url.searchParams.get('min_evaluated') || '1', 10));
-
-        ctx.waitUntil(
-          (async () => {
-            try {
-              const result = await refreshAllDomainAggregates(db, { chunkSize, minEvaluated });
-              // Invalidate domain KV caches so next request gets fresh data
-              const cacheKeys = [
-                'q:domainSignalProfiles', 'q:allDomainStats:count:50', 'q:allDomainStats:count:200',
-                'q:allDomainStats:score:200', 'q:allDomainStats:setl:200', 'q:allDomainStats:conf:200',
-                'q:domainIntelligence', 'q:mostGatekeptDomains',
-              ];
-              await Promise.all(cacheKeys.map(k => env.CONTENT_CACHE.delete(k).catch(() => {})));
-              await logEvent(db, {
-                event_type: 'trigger',
-                severity: 'info',
-                message: `Sweep refresh_domain_aggregates: ${result.refreshed} refreshed, ${result.errors} errors in ${result.durationMs}ms`,
-                details: { sweep: 'refresh_domain_aggregates', ...result, chunk_size: chunkSize, min_evaluated: minEvaluated },
-              });
-            } catch (err) {
-              await logEvent(db, {
-                event_type: 'cron_error',
-                severity: 'error',
-                message: `Sweep refresh_domain_aggregates failed: ${String(err).slice(0, 300)}`,
-                details: { sweep: 'refresh_domain_aggregates', error: String(err) },
-              }).catch(() => {});
-            } finally {
-              env.CONTENT_CACHE.delete(guardKey).catch(() => {});
-            }
-          })(),
-        );
-
-        return new Response(
-          JSON.stringify({
-            sweep: 'refresh_domain_aggregates',
-            status: 'started',
-            description: 'Refreshing all domain_aggregates from stories table. Check /status/events for completion.',
-          }),
-          { status: 202, headers: { 'Content-Type': 'application/json' } },
-        );
-      }
-
-      if (sweep === 'backfill_pt_score') {
-        const limit = Math.min(2000, Math.max(1, parseInt(url.searchParams.get('limit') || '500', 10)));
-        ctx.waitUntil(
-          (async () => {
-            try {
-              const result = await backfillPtScores(db, { limit });
-              await logEvent(db, {
-                event_type: 'trigger',
-                severity: 'info',
-                message: `Sweep backfill_pt_score: ${result.updated} updated, ${result.errors} errors`,
-                details: { sweep: 'backfill_pt_score', ...result },
-              });
-            } catch (err) {
-              await logEvent(db, {
-                event_type: 'cron_error',
-                severity: 'error',
-                message: `Sweep backfill_pt_score failed: ${String(err).slice(0, 300)}`,
-                details: { sweep: 'backfill_pt_score', error: String(err) },
-              }).catch(() => {});
-            }
-          })(),
-        );
-        return new Response(
-          JSON.stringify({ sweep: 'backfill_pt_score', status: 'started', limit, description: 'Backfilling pt_score from pt_flags_json for stories without it.' }),
-          { status: 202, headers: { 'Content-Type': 'application/json' } },
-        );
-      }
-
-      return new Response(JSON.stringify({ error: `Unknown sweep type: ${sweep}`, valid_types: ['failed', 'skipped', 'coverage', 'algolia_backfill', 'content_drift', 'refresh_domain_aggregates', 'backfill_pt_score'] }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return handler({ db: env.DB, env, ctx, url });
     }
 
     // POST /calibrate — enqueue 15 calibration URLs for evaluation (all enabled models)
