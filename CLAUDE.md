@@ -135,6 +135,10 @@ curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut
 curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=content_drift&limit=20"
 
+# Sweep: bulk refresh all domain_aggregates materialized rows (202 Accepted, runs in waitUntil)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=refresh_domain_aggregates"
+
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health
 
