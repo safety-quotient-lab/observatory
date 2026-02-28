@@ -600,7 +600,7 @@ export async function computeModelComparisonBlob(db: D1Database): Promise<ModelC
     const vals = modelIds.map(m => sectionByModelMap.get(m)?.get(section) ?? null);
     const validVals = vals.filter((v): v is number => v !== null);
     const delta = validVals.length >= 2 ? Math.max(...validVals) - Math.min(...validVals) : 0;
-    const title = idx > 0 && idx <= 30 ? (ARTICLE_TITLES[idx - 1] ?? 'Preamble') : 'Preamble';
+    const title = ARTICLE_TITLES[section] ?? section;
     return { section, idx, vals, delta, title };
   }).sort((a, b) => b.delta - a.delta);
 
