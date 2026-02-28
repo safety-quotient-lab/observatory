@@ -27,3 +27,4 @@ backfill.log
 
 # lock files (local dev)
 package-lock.json
+.claude/
