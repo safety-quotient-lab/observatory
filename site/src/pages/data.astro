@@ -2,8 +2,9 @@
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 
-const url = new URL(Astro.request.url);
-const siteUrl = url.origin;
+export const prerender = true;
+
+const siteUrl = Astro.site?.origin ?? 'https://hn-hrcb.pages.dev';
 ---
 
 <Base title="Data — HN HRCB" canonicalUrl={`${siteUrl}/data`}>

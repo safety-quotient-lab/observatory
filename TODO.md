@@ -61,41 +61,59 @@ rounds. 30/43 items already fixed; remaining items below.
   - Foundation done *(2026-02-28)*: 30+ CSS vars, 9 badge classes, 6 text classes, paywall→red, unused vars removed
   - Remaining: ~1,395 inline `color: #hex` across 48 .astro files → `var(--color-*)` / utility class refs
   - Top 10 files = 82% of instances: about (242), item/[id] (170), status/models (152), signals (114), factions (107), rights/observatory (89), status (84), users (70), status/events (70), dynamics (53)
+  - **Assigned to a separate agent** — do not interleave with feature work
 
 ### Round 4 — Analytics (runs on existing data, no migrations needed)
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
   - [x] **Model channel averages** — HRCB/E/S triple bar per model on `/status/models`. *(done 2026-02-28)*
   - [x] **Eval velocity chart** — stacked bar evals/day (full+lite) on `/status`. *(done 2026-02-28)*
-  - [ ] **Coverage progression** — daily funnel: no-coverage → light → full → multi-model.
-    Needs `daily_coverage_stats` materialized table or query from `stories` + `rater_evals`
+  - [ ] **Coverage progression** — daily funnel: no-coverage → light → full → multi-model. On `/status/models`.
+    Needs `daily_coverage_stats` materialized table or live query from `stories` + `rater_evals`
   - [ ] **Per-content-type eval mix** — which content types (ED, PO, LP, PR, etc.) are
-    getting evaluated vs skipped
+    getting evaluated vs skipped. On `/status/models`.
   - [ ] **Truncation impact dashboard** — distribution of `content_truncation_pct` across
-    models, correlation with score divergence. Data from migration 0040.
-  - **Placement:** `/status` (velocity) and `/status/models` (channel averages). Remaining items: `/status/metrics` sub-page or Seldon tabs.
+    models, correlation with score divergence. Data from migration 0040. On `/status/models`.
 
-- [ ] **SETL spike alerting**
-  - Alert system for sudden SETL spikes across a domain or story cluster
+- [ ] **Cost attribution widget** — cost/eval by model + daily burn rate on `/status/models`
+  - Token count data reliable since 2026-02-28. Needs pricing table (Anthropic/OpenRouter rates hardcoded).
+  - Workers AI = $0 (CF doesn't expose usage). Rate limit forecasting deferred to Phase 2.
+
+- [ ] **SETL spike alerting** — emit `event_type='setl_spike'` when domain avg |SETL| crosses threshold.
+  Visible on `/status/events`. No new UI.
 
 - [ ] **Velocity enhancements**
   - Velocity alerts (stories hitting score threshold)
   - Velocity decay analysis
 
+### Round 4.5 — Search + Longitudinal
+
+- [ ] **Passthrough FTS** — Algolia-backed search with mirror + eval integration
+  - UI: nav "search" link → `/search?q=...` page (HN-style: simple input, results below)
+  - Scope: stories (Algolia) + domains + users (D1)
+  - Results: all hits — evaluated with HRCB scores, unevaluated with badges — plus filter controls
+  - **Eager consumer**: auto-pulls stories matching `(score ≥100 AND age ≤7d) OR (score ≤10 AND comments ≥5 AND age ≤12h)` + readable URL required. The second branch is the **sleeper detector** — a pluggable `SLEEPER_RULES` array (each rule: `{ maxScore, minComments, maxAgeHours, label }`) so rules can be added/removed without code restructuring.
+  - **Play button** (►): donor-only (same 7-day donation cookie as homepage/stories page). Non-donors see locked button.
+  - Donation cookie check: `request.headers.get('cookie')` includes `donated=1` — same as existing support page bypass
+
+- [ ] **Longitudinal item page** — dual sparkline + tightened audit trail
+  - Dual mini-chart on `/item/[id]`: HN score trajectory (area/line from `story_snapshots`) + HRCB dots (from `eval_history`) on shared time axis. Show only when ≥2 eval_history entries OR ≥5 story_snapshots.
+  - Audit trail: type filter chips (eval / pipeline / content drift), model filter dropdown, newest/oldest sort toggle
+
 ### Round 5 — Data Expansion
 
-- [ ] **Add Lobsters (lobste.rs) as a data source**
-  - Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`
-  - Need: `source` column on stories, cron extension, top-N auto-eval logic
-  - *Migration first — enables source-aware analytics downstream*
-
-- [ ] **Enhanced comments** *(consolidates user-facing + crawler items)*
+- [ ] **Enhanced comments** *(deep dive before Lobsters)*
   - Deep comment crawling (recursive depth 2+ for high-engagement stories)
   - Comment refresh for active discussions; comment score tracking over time
-  - Lightweight sentiment on top comments (light prompt mode)
+  - Lightweight sentiment on top comments (lite prompt mode)
   - Per-comment HRCB lean score — compare aggregate comment lean vs story HRCB
   - Flag stories where comments strongly disagree with assessment
   - UI: divergence badge on item page, comment sentiment distribution chart
+
+- [ ] **Add Lobsters (lobste.rs) as a data source** *(after comments)*
+  - Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`
+  - Need: `source` column on stories, cron extension, top-N auto-eval logic
+  - *Migration first — enables source-aware analytics downstream*
 
 ### Round 6 — User-Facing Features
 
