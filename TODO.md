@@ -63,6 +63,19 @@ rounds. 30/43 items already fixed; remaining items below.
   - 5 critical, 9 high, 11 medium, 6 low
   - Key items: sub-page sibling nav, lite-only eval display, touch targets, jargon scaffolding
 
+- [ ] **Semantic color system** — replace 1,400+ hardcoded hex values with CSS variables
+  - Heading colors + text-shadows moved to global CSS *(done 2026-02-28)*
+  - Remaining: ~1,400 inline `color: #hex` across 31 .astro files → `var(--color-*)` refs
+  - **Orange overload** — `#d56500` means paywall gate, lite eval badge, nav accent, and active toggle.
+    Resolve: keep orange for brand/nav; paywall → red family; lite badge already outlined (box style)
+  - **Green fragmentation** — 3 different greens (`#819500`, `#4ade80`, `#22c55e`) for "positive."
+    `--color-green` (#819500) defined in CSS but never used (scores use Tailwind greens)
+  - **Purple fragmentation** — 3 shades (`#7d80d1`, `#a78bfa`, `#c084fc`) for related concepts
+  - **Unused palette vars** — `--color-green` and `--color-red` defined but score coloring uses
+    Tailwind classes instead. Either use the palette vars or drop them.
+  - Approach: create semantic CSS classes (`.text-positive`, `.text-negative`, `.text-neutral`,
+    `.text-muted`, `.text-emphasis`) and migrate inline styles file by file
+
 ### Round 4 — Analytics (runs on existing data, no migrations needed)
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
