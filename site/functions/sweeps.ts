@@ -16,7 +16,7 @@ import {
   searchAlgolia,
   insertAlgoliaHits,
 } from '../src/lib/coverage-crawl';
-import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates } from '../src/lib/eval-write';
+import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate } from '../src/lib/eval-write';
 import type { Env } from './cron';
 
 export interface SweepContext {
@@ -472,6 +472,11 @@ export async function sweepExpandFromSubmitted({ db, env }: SweepContext): Promi
 
       const { meta } = await db.batch(stmts).then(results => ({ meta: { changes: results.filter(r => r.meta.changes > 0).length } }));
       totalInserted += meta.changes;
+
+      // Refresh user_aggregates so stories count stays current (else lags until next eval/crawl)
+      if (meta.changes > 0) {
+        await refreshUserAggregate(db, username).catch(() => {});
+      }
     } catch {
       // Non-fatal per user
     }
