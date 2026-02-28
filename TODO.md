@@ -50,6 +50,12 @@ rounds. 30/43 items already fixed; remaining items below.
   - *Directly informs Phase 2 pricing tiers*
   - Note: `getCostStats` function already exists (orphaned query — wire it up)
 
+- [ ] **Adaptive daemon parallelism**
+  - Real-time backpressure: adjust `--parallel` between batches based on signals
+  - Rate limited → halve (min 1); all ok → increment by 1 (up to max cap)
+  - >50% failures → decrement; avg claude_ms > 180s → decrement (model under load)
+  - Empty queue → reset to initial. ~20 lines in daemon loop.
+
 ### Round 4 — Analytics (runs on existing data, no migrations needed)
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
