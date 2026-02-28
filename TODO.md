@@ -86,8 +86,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 - [x] **Drop orphaned `batches` table** *(already done — migration 0042)*
 - [x] **Surface write-only sub-fields on item page** *(already done — EQ 4-bar chart + TD boolean pills)*
-- [ ] **Enrich `domain_profile_snapshots`** — missing ~8 fields (`avg_confidence`, `avg_sr`, `avg_pt_count`, `avg_dominance`, `avg_fw_ratio`, `dominant_scope`, `dominant_reading_level`, `dominant_sentiment`)
-
 ### Round 5 — Data Expansion
 
 - [ ] **Enhanced comments**
