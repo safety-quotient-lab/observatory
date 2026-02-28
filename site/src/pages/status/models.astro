@@ -2,14 +2,11 @@
 import Base from '../../layouts/Base.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import SubNav from '../../components/SubNav.astro';
-import { scoreToColor, formatScore, classificationColor, confidenceToColor } from '../../lib/colors';
+import { scoreToColor, formatScore, confidenceToColor } from '../../lib/colors';
 import { modelDisplayName, ALL_SECTIONS, isLiteMode, getModelDef, MODEL_REGISTRY } from '../../lib/shared-eval';
 import { ARTICLE_TITLES } from '../../lib/udhr';
 import { CALIBRATION_SET, LITE_CALIBRATION_SET } from '../../lib/calibration';
 import {
-  getMultiModelStories,
-  getModelComparisonAggregates,
-  getModelSectionAverages,
   getRaterStatusBreakdown,
   getModelTrustHistory,
   groupTrustByModel,
@@ -25,7 +22,9 @@ import {
   getModelDriftStats,
   getGlobalGateStats,
   getModelChannelAverages,
+  MODEL_COMPARISON_KV_KEY,
 } from '../../lib/db';
+import type { ModelComparisonBlob, ComparedStory } from '../../lib/db';
 import { cachedQuery } from '../../lib/db-utils';
 
 const db = Astro.locals.runtime.env.DB;
@@ -33,9 +32,7 @@ const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 let _pageError: string | null = null;
 
-let stories: Awaited<ReturnType<typeof getMultiModelStories>> = [];
-let allAggregates: Awaited<ReturnType<typeof getModelComparisonAggregates>> = [];
-let sectionAvgs: Awaited<ReturnType<typeof getModelSectionAverages>> = [];
+// Variable declarations with typed defaults
 let statusBreakdown: Awaited<ReturnType<typeof getRaterStatusBreakdown>> = [];
 let trustHistory: Awaited<ReturnType<typeof getModelTrustHistory>> = [];
 let models: Awaited<ReturnType<typeof getModelStats>> = [];
@@ -65,53 +62,71 @@ async function tq<T>(name: string, key: string, fn: () => Promise<T>, ttl: numbe
   }
 }
 
-// 15 sequential queries — CF Pages worker limit is ~16 D1 round-trips.
-// getModelComparisonAggregates and getModelSectionAverages eliminated:
-// aggregates computed client-side from multiModel stories data instead.
+// --- Phase 1: Lightweight queries (run in Pages worker, KV-cached) ---
 const _t0 = Date.now();
 try {
-  models         = await tq('modelStats',    'sys:modelStats',    () => getModelStats(db), 120, [] as Awaited<ReturnType<typeof getModelStats>>);
-  modelComparison = await tq('modelComp',    'sys:modelComparison', () => getModelComparisonStats(db), 300, [] as Awaited<ReturnType<typeof getModelComparisonStats>>);
-  channelAverages = await tq('channelAvg',   'sys:channelAvg',    () => getModelChannelAverages(db), 120, [] as Awaited<ReturnType<typeof getModelChannelAverages>>);
-  statusBreakdown = await tq('statusBkdn',   'sys:statusBkdn',    () => getRaterStatusBreakdown(db), 60, [] as Awaited<ReturnType<typeof getRaterStatusBreakdown>>);
-  raterSummary    = await tq('raterSum',     'sys:raterSummary',  () => getRaterSummaryStats(db), 120, [] as Awaited<ReturnType<typeof getRaterSummaryStats>>);
-  trustHistory    = await tq('trustHist',    'sys:trustHist',     () => getModelTrustHistory(db, 14), 120, [] as Awaited<ReturnType<typeof getModelTrustHistory>>);
+  models         = await tq('modelStats',    'sys:modelStats',    () => getModelStats(db), 120, [] as typeof models);
+  modelComparison = await tq('modelComp',    'sys:modelComparison', () => getModelComparisonStats(db), 300, [] as typeof modelComparison);
+  channelAverages = await tq('channelAvg',   'sys:channelAvg',    () => getModelChannelAverages(db), 120, [] as typeof channelAverages);
+  statusBreakdown = await tq('statusBkdn',   'sys:statusBkdn',    () => getRaterStatusBreakdown(db), 60, [] as typeof statusBreakdown);
+  raterSummary    = await tq('raterSum',     'sys:raterSummary',  () => getRaterSummaryStats(db), 120, [] as typeof raterSummary);
+  trustHistory    = await tq('trustHist',    'sys:trustHist',     () => getModelTrustHistory(db, 14), 120, [] as typeof trustHistory);
   lastCalibration = await tq('lastCal',      'sys:lastCal',       () => getLatestCalibrationRun(db), 600, null);
   lastLiteCalibration = await tq('lastLiteCal', 'sys:lastLiteCal', () => getLatestLiteCalibrationRun(db), 600, null);
-  signalCompleteness = await tq('sigComplete', 'sys:signalComplete', () => getSignalCompleteness(db), 300, [] as Awaited<ReturnType<typeof getSignalCompleteness>>);
+  signalCompleteness = await tq('sigComplete', 'sys:signalComplete', () => getSignalCompleteness(db), 300, [] as typeof signalCompleteness);
   globalGate      = await tq('globalGate',   'sys:globalGate',    () => getGlobalGateStats(db), 600, { total: 0, gated: 0, gate_pct: 0, breakdown: [] as { gate_category: string; cnt: number }[] });
   driftStats      = await tq('modelDrift',   'sys:modelDrift',    () => getModelDriftStats(db), 300, { models: [] as any[], overlapping: 0, meanDelta: null });
-  ctValidation    = await tq('ctValid',      'sys:ctValidation',  () => getContentTypeValidation(db), 300, [] as Awaited<ReturnType<typeof getContentTypeValidation>>);
-  ctDisagreement  = await tq('ctDisagree',   'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300, [] as Awaited<ReturnType<typeof getContentTypeDisagreement>>);
+  ctValidation    = await tq('ctValid',      'sys:ctValidation',  () => getContentTypeValidation(db), 300, [] as typeof ctValidation);
+  ctDisagreement  = await tq('ctDisagree',   'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300, [] as typeof ctDisagreement);
   ctMisclass      = await tq('ctMisclass',   'sys:ctMisclass',    () => getMisclassificationSummary(db), 300, { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 });
-  stories         = await tq('multiModel',   'sys:multiModel',    () => getMultiModelStories(db, 500), 300, [] as Awaited<ReturnType<typeof getMultiModelStories>>);
 } catch (err: unknown) {
   _pageError = `Query phase: ${err instanceof Error ? err.message : String(err)}`;
 }
 const _queryMs = Date.now() - _t0;
 
-let trustByModel = new Map<string, any[]>();
-let aggregates: typeof allAggregates = [];
-let modelIds: string[] = [];
-let filteredStories: typeof stories = [];
-let storyStats: any[] = [];
-let totalStories = 0;
-let agreeCount = 0;
-let agreePct = 0;
-let classAgreeCount = 0;
-let classAgreePct = 0;
-let avgDelta = 0;
-let medianDelta = 0;
-let mostDisagreed: any[] = [];
-let mostAgreed: any[] = [];
-let pairCorrelations: { modelA: string; modelB: string; r: number | null; n: number }[] = [];
-let histogramByModel = new Map<string, number[]>();
-let histMaxCount = 1;
-let sectionDivergence: any[] = [];
-let topDivergent: any[] = [];
-let biasAnalysis: any[] = [];
-let excludedModels: typeof allAggregates = [];
-let sectionByModelMap = new Map<string, Map<string, number>>();
+// --- Phase 2: Read pre-computed comparison blob from KV (computed by cron worker) ---
+// Heavy multi-model queries + O(n²) compute run in cron (30s CPU budget), not here (10ms limit).
+const _t1 = Date.now();
+
+const emptyBlob: ModelComparisonBlob = {
+  aggregates: [], modelIds: [], totalStories: 0, agreeCount: 0, agreePct: 0,
+  classAgreeCount: 0, classAgreePct: 0, avgDelta: 0, medianDelta: 0,
+  pairCorrelations: [], histograms: [], histMaxCount: 1,
+  sectionDivergence: [], topDivergent: [], biasAnalysis: [],
+  mostDisagreed: [], mostAgreed: [], comparedStories: [],
+  excludedModels: [], sectionAverages: [], computedAt: '',
+};
+
+let cmp: ModelComparisonBlob = emptyBlob;
+try {
+  const raw = await kv.get(MODEL_COMPARISON_KV_KEY, 'json');
+  if (raw) {
+    cmp = raw as ModelComparisonBlob;
+    _timings.push({ name: 'cmpBlob', ms: Date.now() - _t1 });
+  } else {
+    _timings.push({ name: 'cmpBlob!MISS', ms: Date.now() - _t1 });
+  }
+} catch {
+  _timings.push({ name: 'cmpBlob!ERR', ms: Date.now() - _t1 });
+}
+
+// Destructure blob for template use
+const { modelIds, totalStories, agreeCount, agreePct, classAgreeCount, classAgreePct,
+        avgDelta, medianDelta, pairCorrelations, histMaxCount,
+        biasAnalysis, mostDisagreed, mostAgreed, comparedStories, excludedModels,
+        topDivergent, sectionDivergence } = cmp;
+const aggregates = cmp.aggregates;
+const histograms = cmp.histograms;
+
+// Build section averages lookup: model -> section -> avg_final
+const sectionByModelMap = new Map<string, Map<string, number>>();
+for (const row of cmp.sectionAverages) {
+  if (!sectionByModelMap.has(row.model)) sectionByModelMap.set(row.model, new Map());
+  sectionByModelMap.get(row.model)!.set(row.section, row.avg_final);
+}
+
+// Simple compute (no heavy loops — safe for 10ms CPU)
+const trustByModel = groupTrustByModel(trustHistory);
 
 const STRUCTURAL_HEAVY = new Set(['PO', 'LP', 'AD', 'AC', 'CO']);
 const CT_WEIGHTS: Record<string, { e: number; s: number }> = {
@@ -119,132 +134,11 @@ const CT_WEIGHTS: Record<string, { e: number; s: number }> = {
   AD: { e: 0.2, s: 0.8 }, AC: { e: 0.4, s: 0.6 }, CO: { e: 0.5, s: 0.5 },
   RE: { e: 0.7, s: 0.3 }, SA: { e: 0.8, s: 0.2 }, MX: { e: 0.5, s: 0.5 },
 };
-const MIN_STORIES = 10;
-const BINS = 10;
 const BIN_MIN = -0.5;
 const BIN_MAX = 0.5;
-const BIN_WIDTH = (BIN_MAX - BIN_MIN) / BINS;
+const BIN_WIDTH = (BIN_MAX - BIN_MIN) / 10;
+const MIN_STORIES = 10;
 
-function pearsonCorrelation(xs: number[], ys: number[]): number | null {
-  if (xs.length < 3) return null;
-  const n = xs.length;
-  const meanX = xs.reduce((a, b) => a + b, 0) / n;
-  const meanY = ys.reduce((a, b) => a + b, 0) / n;
-  let num = 0, denomX = 0, denomY = 0;
-  for (let i = 0; i < n; i++) {
-    const dx = xs[i] - meanX;
-    const dy = ys[i] - meanY;
-    num += dx * dy;
-    denomX += dx * dx;
-    denomY += dy * dy;
-  }
-  const denom = Math.sqrt(denomX * denomY);
-  return denom === 0 ? null : num / denom;
-}
-
-const _t1 = Date.now();
-try {
-trustByModel = groupTrustByModel(trustHistory);
-
-aggregates = allAggregates.filter(a => a.story_count >= MIN_STORIES);
-modelIds = aggregates.map(a => a.model);
-
-filteredStories = stories.map(s => ({
-  ...s,
-  models: s.models.filter(m => modelIds.includes(m.model)),
-})).filter(s => s.models.length >= 2);
-
-// Build section averages lookup: model -> section -> avg_final
-for (const row of sectionAvgs) {
-  if (!modelIds.includes(row.model)) continue;
-  if (!sectionByModelMap.has(row.model)) sectionByModelMap.set(row.model, new Map());
-  sectionByModelMap.get(row.model)!.set(row.section, row.avg_final);
-}
-
-// Compute per-story sign agreement and score delta
-storyStats = filteredStories.map(s => {
-  const scores = s.models.map(m => m.score);
-  const signs = scores.map(sc => sc >= 0 ? 1 : -1);
-  const allAgree = signs.every(sg => sg === signs[0]);
-  const maxDelta = scores.length >= 2 ? Math.max(...scores) - Math.min(...scores) : 0;
-  const classes = s.models.map(m => m.classification).filter(Boolean);
-  const classAgree = classes.length >= 2 && classes.every(c => c === classes[0]);
-  return { ...s, allAgree, classAgree, maxDelta };
-});
-
-totalStories = storyStats.length;
-agreeCount = storyStats.filter(s => s.allAgree).length;
-agreePct = totalStories > 0 ? Math.round((agreeCount / totalStories) * 100) : 0;
-classAgreeCount = storyStats.filter(s => s.classAgree).length;
-classAgreePct = totalStories > 0 ? Math.round((classAgreeCount / totalStories) * 100) : 0;
-avgDelta = totalStories > 0 ? storyStats.reduce((sum, s) => sum + s.maxDelta, 0) / totalStories : 0;
-medianDelta = (() => {
-  const sorted = [...storyStats].map(s => s.maxDelta).sort((a, b) => a - b);
-  if (sorted.length === 0) return 0;
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-})();
-
-mostDisagreed = [...storyStats].sort((a, b) => b.maxDelta - a.maxDelta).slice(0, 10);
-mostAgreed = [...storyStats].sort((a, b) => a.maxDelta - b.maxDelta).slice(0, 10);
-
-pairCorrelations = (() => {
-  const pairs: { modelA: string; modelB: string; r: number | null; n: number }[] = [];
-  for (let i = 0; i < modelIds.length; i++) {
-    for (let j = i + 1; j < modelIds.length; j++) {
-      const a = modelIds[i], b = modelIds[j];
-      const xs: number[] = [], ys: number[] = [];
-      for (const s of filteredStories) {
-        const sa = s.models.find(m => m.model === a);
-        const sb = s.models.find(m => m.model === b);
-        if (sa && sb) { xs.push(sa.score); ys.push(sb.score); }
-      }
-      pairs.push({ modelA: a, modelB: b, r: pearsonCorrelation(xs, ys), n: xs.length });
-    }
-  }
-  return pairs;
-})();
-
-for (const mid of modelIds) {
-  const counts = new Array(BINS).fill(0);
-  for (const s of filteredStories) {
-    const me = s.models.find(m => m.model === mid);
-    if (!me) continue;
-    const bin = Math.min(BINS - 1, Math.max(0, Math.floor((me.score - BIN_MIN) / BIN_WIDTH)));
-    counts[bin]++;
-  }
-  histogramByModel.set(mid, counts);
-}
-histMaxCount = Math.max(1, ...Array.from(histogramByModel.values()).flat());
-
-sectionDivergence = ALL_SECTIONS.map((section, idx) => {
-  const vals = modelIds.map(m => sectionByModelMap.get(m)?.get(section) ?? null);
-  const validVals = vals.filter((v): v is number => v !== null);
-  const delta = validVals.length >= 2 ? Math.max(...validVals) - Math.min(...validVals) : 0;
-  const title = idx > 0 && idx <= 30 ? ARTICLE_TITLES[idx - 1] : 'Preamble';
-  return { section, idx, vals, delta, title };
-}).sort((a, b) => b.delta - a.delta);
-
-topDivergent = sectionDivergence.slice(0, 5);
-
-biasAnalysis = modelIds.map(mid => {
-  let higher = 0, lower = 0, total = 0;
-  for (const s of storyStats) {
-    const me = s.models.find(m => m.model === mid);
-    if (!me || s.models.length < 2) continue;
-    const otherScores = s.models.filter(m => m.model !== mid).map(m => m.score);
-    const otherMean = otherScores.reduce((a, b) => a + b, 0) / otherScores.length;
-    if (me.score > otherMean + 0.01) higher++;
-    else if (me.score < otherMean - 0.01) lower++;
-    total++;
-  }
-  return { model: mid, higher, lower, total, higherPct: total > 0 ? Math.round((higher / total) * 100) : 0, lowerPct: total > 0 ? Math.round((lower / total) * 100) : 0 };
-});
-
-excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && a.story_count > 0);
-} catch (err: unknown) {
-  _pageError = _pageError ?? `Compute phase: ${err instanceof Error ? err.message : String(err)}`;
-}
 const _computeMs = Date.now() - _t1;
 const _totalMs = Date.now() - _t0;
 ---
@@ -376,12 +270,14 @@ const _totalMs = Date.now() - _t0;
                     {isLite && <span style="color: #d56500; margin-left: 3px; font-size: 8px;">~lite</span>}
                   </div>
                   <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
-                    {/* HRCB bar */}
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                      <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">HRCB</span>
-                      <div style={`width: ${hrcbW}px; height: 7px; background: #259d94; border-radius: 2px;`}></div>
-                      <span class="score-font" style={`color: ${scoreToColor(r.avg_hrcb)}; font-size: var(--font-xs);`}>{r.avg_hrcb != null ? r.avg_hrcb.toFixed(3) : '—'}</span>
-                    </div>
+                    {/* HRCB bar — full models only (lite has no structural channel so no composite) */}
+                    {!isLite && (
+                      <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">HRCB</span>
+                        <div style={`width: ${hrcbW}px; height: 7px; background: #259d94; border-radius: 2px;`}></div>
+                        <span class="score-font" style={`color: ${scoreToColor(r.avg_hrcb)}; font-size: var(--font-xs);`}>{r.avg_hrcb != null ? r.avg_hrcb.toFixed(3) : '—'}</span>
+                      </div>
+                    )}
                     {/* E bar */}
                     <div style="display: flex; align-items: center; gap: 4px;">
                       <span style="color: #5b7279; width: 28px; text-align: right; font-size: 8px;">E</span>
@@ -790,7 +686,7 @@ const _totalMs = Date.now() - _t0;
       <summary>Score Distribution</summary>
       <div style="display: flex; gap: 24px; flex-wrap: wrap;">
         {modelIds.map(mid => {
-          const counts = histogramByModel.get(mid) || [];
+          const counts = histograms.find(h => h.model === mid)?.counts || [];
           return (
             <div style="flex: 1; min-width: 200px;">
               <div style="color: #8faaab; font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">
@@ -985,8 +881,8 @@ const _totalMs = Date.now() - _t0;
                   {modelIds.map(mid => {
                     const me = s.models.find(m => m.model === mid);
                     return (
-                      <td style={`padding: 3px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
-                        {me ? formatScore(me.score) : '---'}
+                      <td style={`padding: 3px 6px; text-align: center; color: ${me ? me.scoreColor : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
+                        {me ? me.scoreFormatted : '---'}
                       </td>
                     );
                   })}
@@ -1022,8 +918,8 @@ const _totalMs = Date.now() - _t0;
                   {modelIds.map(mid => {
                     const me = s.models.find(m => m.model === mid);
                     return (
-                      <td style={`padding: 3px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
-                        {me ? formatScore(me.score) : '---'}
+                      <td style={`padding: 3px 6px; text-align: center; color: ${me ? me.scoreColor : '#5b7279'}; font-size: var(--font-sm); font-weight: bold;`}>
+                        {me ? me.scoreFormatted : '---'}
                       </td>
                     );
                   })}
@@ -1109,7 +1005,7 @@ const _totalMs = Date.now() - _t0;
             ))}
             <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
           </tr>
-          {storyStats.map(s => (
+          {comparedStories.map(s => (
             <tr style={`border-top: 1px solid #0d4655;${!s.allAgree ? ' background: rgba(220, 38, 38, 0.04);' : ''}`}>
               <td style="padding: 2px 6px; font-size: var(--font-xs);">
                 <a href={`/item/${s.hn_id}`} style="color: #8faaab; text-decoration: none;" title={s.title}>
@@ -1124,8 +1020,8 @@ const _totalMs = Date.now() - _t0;
               {modelIds.map(mid => {
                 const me = s.models.find(m => m.model === mid);
                 return (
-                  <td style={`padding: 2px 6px; text-align: center; color: ${me ? scoreToColor(me.score) : '#5b7279'}; font-size: var(--font-sm);`}>
-                    {me ? formatScore(me.score) : '---'}
+                  <td style={`padding: 2px 6px; text-align: center; color: ${me ? me.scoreColor : '#5b7279'}; font-size: var(--font-sm);`}>
+                    {me ? me.scoreFormatted : '---'}
                   </td>
                 );
               })}
@@ -1147,12 +1043,12 @@ const _totalMs = Date.now() - _t0;
         <td style="padding: 8px 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
           <div style="color: #5b7279; font-size: var(--font-xs);">
             <span style="color: #5b7279; text-transform: uppercase; letter-spacing: 0.05em;">Excluded models</span> (fewer than {MIN_STORIES} shared stories):
-            {excludedModels.map((m, i) => (
+            {excludedModels.map((em, i) => (
               <span>
                 {i > 0 ? ', ' : ' '}
-                <span style="color: #5b7279;">{modelDisplayName(m.model)}</span>
-                {isLiteMode(getModelDef(m.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 2px;">lite</span>}
-                <span style="color: #1a5568;"> ({m.story_count})</span>
+                <span style="color: #5b7279;">{modelDisplayName(em.model)}</span>
+                {isLiteMode(getModelDef(em.model)?.prompt_mode ?? null) && <span style="color: #d56500; font-size: var(--font-xs); margin-left: 2px;">lite</span>}
+                <span style="color: #1a5568;"> ({em.story_count})</span>
               </span>
             ))}
           </div>
