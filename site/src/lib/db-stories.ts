@@ -738,6 +738,8 @@ export interface DomainStat {
   count: number;
   evaluated: number;
   avg_score: number;
+  avg_editorial: number | null;
+  avg_structural: number | null;
   avg_setl: number | null;
   avg_conf: number | null;
 }

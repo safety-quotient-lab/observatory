@@ -61,6 +61,8 @@ export async function getAllDomainStats(
         `SELECT s.domain, COUNT(*) as count,
                 SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
                 AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_editorial_mean END) as avg_editorial,
+                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_structural_mean END) as avg_structural,
                 AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_setl END) as avg_setl,
                 AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_confidence END) as avg_conf
          FROM stories s

@@ -261,6 +261,8 @@ const jsonLd = {
               <td width="70" align="center">Stories</td>
               <td width="80" align="center" title="Evaluated / Total (percentage)">Coverage</td>
               <td width="80" align="center">Avg HRCB</td>
+              <td width="60" align="center" title="Average editorial channel score">Avg E</td>
+              <td width="60" align="center" title="Average structural channel score">Avg S</td>
               <td width="60" align="center" title="Evidence-weighted confidence">Avg Conf</td>
               <td width="70" align="center" title="Structural-Editorial Tension Level">Avg SETL</td>
             </tr>
@@ -279,6 +281,12 @@ const jsonLd = {
                 </td>
                 <td align="center" class="score-font" style={`color: ${scoreToColor(d.avg_score)};`}>
                   {d.avg_score !== null ? formatScore(d.avg_score) : <span style="color: #5b7279;">—</span>}
+                </td>
+                <td align="center" class="score-font" style={`color: ${d.avg_editorial !== null ? scoreToColor(d.avg_editorial) : '#5b7279'};`}>
+                  {d.avg_editorial !== null ? formatScore(d.avg_editorial) : <span style="color: #5b7279;">—</span>}
+                </td>
+                <td align="center" class="score-font" style={`color: ${d.avg_structural !== null ? scoreToColor(d.avg_structural) : '#5b7279'};`}>
+                  {d.avg_structural !== null ? formatScore(d.avg_structural) : <span style="color: #5b7279;">—</span>}
                 </td>
                 <td align="center" class="score-font" style={`color: ${confidenceToColor(d.avg_conf)};`}>
                   {d.avg_conf !== null ? formatConfidence(d.avg_conf) : <span style="color: #5b7279;">—</span>}
