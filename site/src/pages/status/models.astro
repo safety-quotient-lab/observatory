@@ -31,32 +31,93 @@ import { cachedQuery } from '../../lib/db-utils';
 const db = Astro.locals.runtime.env.DB;
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
-const [
-  stories, allAggregates, sectionAvgs, statusBreakdown, trustHistory,
+let _pageError: string | null = null;
+
+let stories: Awaited<ReturnType<typeof getMultiModelStories>> = [];
+let allAggregates: Awaited<ReturnType<typeof getModelComparisonAggregates>> = [];
+let sectionAvgs: Awaited<ReturnType<typeof getModelSectionAverages>> = [];
+let statusBreakdown: Awaited<ReturnType<typeof getRaterStatusBreakdown>> = [];
+let trustHistory: Awaited<ReturnType<typeof getModelTrustHistory>> = [];
+let models: Awaited<ReturnType<typeof getModelStats>> = [];
+let modelComparison: Awaited<ReturnType<typeof getModelComparisonStats>> = [];
+let raterSummary: Awaited<ReturnType<typeof getRaterSummaryStats>> = [];
+let lastCalibration: Awaited<ReturnType<typeof getLatestCalibrationRun>> | null = null;
+let lastLiteCalibration: Awaited<ReturnType<typeof getLatestLiteCalibrationRun>> | null = null;
+let signalCompleteness: Awaited<ReturnType<typeof getSignalCompleteness>> = [];
+let ctValidation: Awaited<ReturnType<typeof getContentTypeValidation>> = [];
+let ctDisagreement: Awaited<ReturnType<typeof getContentTypeDisagreement>> = [];
+let ctMisclass: { structural_heavy_total: number; structural_heavy_missing: number; misclassification_pct: number; disagreement_count: number } = { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 };
+let driftStats: { models: any[]; overlapping: number; meanDelta: number | null } = { models: [], overlapping: 0, meanDelta: null };
+let globalGate: { total: number; gated: number; gate_pct: number; breakdown: { gate_category: string; cnt: number }[] } = { total: 0, gated: 0, gate_pct: 0, breakdown: [] };
+let channelAverages: Awaited<ReturnType<typeof getModelChannelAverages>> = [];
+
+try {
+// Batch 1: lightweight/cached queries
+[
   models, modelComparison, raterSummary,
   lastCalibration, lastLiteCalibration,
-  signalCompleteness, ctValidation, ctDisagreement, ctMisclass,
-  driftStats, globalGate, channelAverages,
+  signalCompleteness, globalGate,
 ] = await Promise.all([
-  getMultiModelStories(db, 500).catch(() => [] as Awaited<ReturnType<typeof getMultiModelStories>>),
-  getModelComparisonAggregates(db).catch(() => [] as Awaited<ReturnType<typeof getModelComparisonAggregates>>),
-  getModelSectionAverages(db).catch(() => [] as Awaited<ReturnType<typeof getModelSectionAverages>>),
-  getRaterStatusBreakdown(db).catch(() => [] as Awaited<ReturnType<typeof getRaterStatusBreakdown>>),
-  getModelTrustHistory(db, 14).catch(() => [] as Awaited<ReturnType<typeof getModelTrustHistory>>),
   getModelStats(db).catch(() => [] as Awaited<ReturnType<typeof getModelStats>>),
   cachedQuery(kv, 'sys:modelComparison', () => getModelComparisonStats(db), 300).catch(() => [] as Awaited<ReturnType<typeof getModelComparisonStats>>),
   cachedQuery(kv, 'sys:raterSummary', () => getRaterSummaryStats(db), 120).catch(() => [] as Awaited<ReturnType<typeof getRaterSummaryStats>>),
   cachedQuery(kv, 'sys:lastCal', () => getLatestCalibrationRun(db), 600).catch(() => null),
   cachedQuery(kv, 'sys:lastLiteCal', () => getLatestLiteCalibrationRun(db), 600).catch(() => null),
   cachedQuery(kv, 'sys:signalComplete', () => getSignalCompleteness(db), 300).catch(() => [] as Awaited<ReturnType<typeof getSignalCompleteness>>),
+  cachedQuery(kv, 'sys:globalGate', () => getGlobalGateStats(db), 600).catch(() => ({ total: 0, gated: 0, gate_pct: 0, breakdown: [] as { gate_category: string; cnt: number }[] })),
+]);
+
+// Batch 2: heavier queries
+[
+  stories, allAggregates, sectionAvgs, statusBreakdown, trustHistory,
+  channelAverages,
+] = await Promise.all([
+  getMultiModelStories(db, 500).catch(() => [] as Awaited<ReturnType<typeof getMultiModelStories>>),
+  getModelComparisonAggregates(db).catch(() => [] as Awaited<ReturnType<typeof getModelComparisonAggregates>>),
+  getModelSectionAverages(db).catch(() => [] as Awaited<ReturnType<typeof getModelSectionAverages>>),
+  getRaterStatusBreakdown(db).catch(() => [] as Awaited<ReturnType<typeof getRaterStatusBreakdown>>),
+  getModelTrustHistory(db, 14).catch(() => [] as Awaited<ReturnType<typeof getModelTrustHistory>>),
+  getModelChannelAverages(db).catch(() => [] as Awaited<ReturnType<typeof getModelChannelAverages>>),
+]);
+
+// Batch 3: measurement integrity queries
+[
+  ctValidation, ctDisagreement, ctMisclass, driftStats,
+] = await Promise.all([
   cachedQuery(kv, 'sys:ctValidation', () => getContentTypeValidation(db), 300).catch(() => [] as Awaited<ReturnType<typeof getContentTypeValidation>>),
   cachedQuery(kv, 'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300).catch(() => [] as Awaited<ReturnType<typeof getContentTypeDisagreement>>),
   cachedQuery(kv, 'sys:ctMisclass', () => getMisclassificationSummary(db), 300).catch(() => ({ structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 })),
-  cachedQuery(kv, 'sys:modelDrift', () => getModelDriftStats(db), 300).catch(() => [] as Awaited<ReturnType<typeof getModelDriftStats>>),
-  cachedQuery(kv, 'sys:globalGate', () => getGlobalGateStats(db), 600).catch(() => ({ total_gated: 0, total_stories: 0, gated_pct: 0, categories: [] })),
-  getModelChannelAverages(db).catch(() => [] as Awaited<ReturnType<typeof getModelChannelAverages>>),
+  cachedQuery(kv, 'sys:modelDrift', () => getModelDriftStats(db), 300).catch(() => ({ models: [] as any[], overlapping: 0, meanDelta: null })),
 ]);
-const trustByModel = groupTrustByModel(trustHistory);
+} catch (err: unknown) {
+  _pageError = `Query phase: ${err instanceof Error ? err.message : String(err)}`;
+}
+
+let trustByModel = new Map<string, any[]>();
+let aggregates: typeof allAggregates = [];
+let modelIds: string[] = [];
+let filteredStories: typeof stories = [];
+let storyStats: any[] = [];
+let totalStories = 0;
+let agreeCount = 0;
+let agreePct = 0;
+let classAgreeCount = 0;
+let classAgreePct = 0;
+let avgDelta = 0;
+let medianDelta = 0;
+let mostDisagreed: any[] = [];
+let mostAgreed: any[] = [];
+let pairCorrelations: { modelA: string; modelB: string; r: number | null; n: number }[] = [];
+let histogramByModel = new Map<string, number[]>();
+let histMaxCount = 1;
+let sectionDivergence: any[] = [];
+let topDivergent: any[] = [];
+let biasAnalysis: any[] = [];
+let excludedModels: typeof allAggregates = [];
+let sectionByModelMap = new Map<string, Map<string, number>>();
+
+try {
+trustByModel = groupTrustByModel(trustHistory);
 
 // Content type validation constants (extracted to frontmatter — Astro generics gotcha)
 const STRUCTURAL_HEAVY = new Set(['PO', 'LP', 'AD', 'AC', 'CO']);
@@ -65,52 +126,7 @@ const CT_WEIGHTS: Record<string, { e: number; s: number }> = {
   AD: { e: 0.2, s: 0.8 }, AC: { e: 0.4, s: 0.6 }, CO: { e: 0.5, s: 0.5 },
   RE: { e: 0.7, s: 0.3 }, SA: { e: 0.8, s: 0.2 }, MX: { e: 0.5, s: 0.5 },
 };
-
-// Filter to models with meaningful data (10+ shared stories)
 const MIN_STORIES = 10;
-const aggregates = allAggregates.filter(a => a.story_count >= MIN_STORIES);
-const modelIds = aggregates.map(a => a.model);
-
-// Filter stories to only include models with enough data
-const filteredStories = stories.map(s => ({
-  ...s,
-  models: s.models.filter(m => modelIds.includes(m.model)),
-})).filter(s => s.models.length >= 2);
-
-// Build section averages lookup: model -> section -> avg_final
-const sectionByModelMap = new Map<string, Map<string, number>>();
-for (const row of sectionAvgs) {
-  if (!modelIds.includes(row.model)) continue;
-  if (!sectionByModelMap.has(row.model)) sectionByModelMap.set(row.model, new Map());
-  sectionByModelMap.get(row.model)!.set(row.section, row.avg_final);
-}
-
-// Compute per-story sign agreement and score delta
-const storyStats = filteredStories.map(s => {
-  const scores = s.models.map(m => m.score);
-  const signs = scores.map(sc => sc >= 0 ? 1 : -1);
-  const allAgree = signs.every(sg => sg === signs[0]);
-  const maxDelta = scores.length >= 2 ? Math.max(...scores) - Math.min(...scores) : 0;
-  const classes = s.models.map(m => m.classification).filter(Boolean);
-  const classAgree = classes.length >= 2 && classes.every(c => c === classes[0]);
-  return { ...s, allAgree, classAgree, maxDelta };
-});
-
-const totalStories = storyStats.length;
-const agreeCount = storyStats.filter(s => s.allAgree).length;
-const agreePct = totalStories > 0 ? Math.round((agreeCount / totalStories) * 100) : 0;
-const classAgreeCount = storyStats.filter(s => s.classAgree).length;
-const classAgreePct = totalStories > 0 ? Math.round((classAgreeCount / totalStories) * 100) : 0;
-const avgDelta = totalStories > 0 ? storyStats.reduce((sum, s) => sum + s.maxDelta, 0) / totalStories : 0;
-const medianDelta = (() => {
-  const sorted = [...storyStats].map(s => s.maxDelta).sort((a, b) => a - b);
-  if (sorted.length === 0) return 0;
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-})();
-
-const mostDisagreed = [...storyStats].sort((a, b) => b.maxDelta - a.maxDelta).slice(0, 10);
-const mostAgreed = [...storyStats].sort((a, b) => a.maxDelta - b.maxDelta).slice(0, 10);
 
 function pearsonCorrelation(xs: number[], ys: number[]): number | null {
   if (xs.length < 3) return null;
@@ -129,7 +145,49 @@ function pearsonCorrelation(xs: number[], ys: number[]): number | null {
   return denom === 0 ? null : num / denom;
 }
 
-const pairCorrelations = (() => {
+aggregates = allAggregates.filter(a => a.story_count >= MIN_STORIES);
+modelIds = aggregates.map(a => a.model);
+
+filteredStories = stories.map(s => ({
+  ...s,
+  models: s.models.filter(m => modelIds.includes(m.model)),
+})).filter(s => s.models.length >= 2);
+
+// Build section averages lookup: model -> section -> avg_final
+for (const row of sectionAvgs) {
+  if (!modelIds.includes(row.model)) continue;
+  if (!sectionByModelMap.has(row.model)) sectionByModelMap.set(row.model, new Map());
+  sectionByModelMap.get(row.model)!.set(row.section, row.avg_final);
+}
+
+// Compute per-story sign agreement and score delta
+storyStats = filteredStories.map(s => {
+  const scores = s.models.map(m => m.score);
+  const signs = scores.map(sc => sc >= 0 ? 1 : -1);
+  const allAgree = signs.every(sg => sg === signs[0]);
+  const maxDelta = scores.length >= 2 ? Math.max(...scores) - Math.min(...scores) : 0;
+  const classes = s.models.map(m => m.classification).filter(Boolean);
+  const classAgree = classes.length >= 2 && classes.every(c => c === classes[0]);
+  return { ...s, allAgree, classAgree, maxDelta };
+});
+
+totalStories = storyStats.length;
+agreeCount = storyStats.filter(s => s.allAgree).length;
+agreePct = totalStories > 0 ? Math.round((agreeCount / totalStories) * 100) : 0;
+classAgreeCount = storyStats.filter(s => s.classAgree).length;
+classAgreePct = totalStories > 0 ? Math.round((classAgreeCount / totalStories) * 100) : 0;
+avgDelta = totalStories > 0 ? storyStats.reduce((sum, s) => sum + s.maxDelta, 0) / totalStories : 0;
+medianDelta = (() => {
+  const sorted = [...storyStats].map(s => s.maxDelta).sort((a, b) => a - b);
+  if (sorted.length === 0) return 0;
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+})();
+
+mostDisagreed = [...storyStats].sort((a, b) => b.maxDelta - a.maxDelta).slice(0, 10);
+mostAgreed = [...storyStats].sort((a, b) => a.maxDelta - b.maxDelta).slice(0, 10);
+
+pairCorrelations = (() => {
   const pairs: { modelA: string; modelB: string; r: number | null; n: number }[] = [];
   for (let i = 0; i < modelIds.length; i++) {
     for (let j = i + 1; j < modelIds.length; j++) {
@@ -150,7 +208,6 @@ const BINS = 10;
 const BIN_MIN = -0.5;
 const BIN_MAX = 0.5;
 const BIN_WIDTH = (BIN_MAX - BIN_MIN) / BINS;
-const histogramByModel = new Map<string, number[]>();
 for (const mid of modelIds) {
   const counts = new Array(BINS).fill(0);
   for (const s of filteredStories) {
@@ -161,9 +218,9 @@ for (const mid of modelIds) {
   }
   histogramByModel.set(mid, counts);
 }
-const histMaxCount = Math.max(1, ...Array.from(histogramByModel.values()).flat());
+histMaxCount = Math.max(1, ...Array.from(histogramByModel.values()).flat());
 
-const sectionDivergence = ALL_SECTIONS.map((section, idx) => {
+sectionDivergence = ALL_SECTIONS.map((section, idx) => {
   const vals = modelIds.map(m => sectionByModelMap.get(m)?.get(section) ?? null);
   const validVals = vals.filter((v): v is number => v !== null);
   const delta = validVals.length >= 2 ? Math.max(...validVals) - Math.min(...validVals) : 0;
@@ -171,9 +228,9 @@ const sectionDivergence = ALL_SECTIONS.map((section, idx) => {
   return { section, idx, vals, delta, title };
 }).sort((a, b) => b.delta - a.delta);
 
-const topDivergent = sectionDivergence.slice(0, 5);
+topDivergent = sectionDivergence.slice(0, 5);
 
-const biasAnalysis = modelIds.map(mid => {
+biasAnalysis = modelIds.map(mid => {
   let higher = 0, lower = 0, total = 0;
   for (const s of storyStats) {
     const me = s.models.find(m => m.model === mid);
@@ -187,7 +244,10 @@ const biasAnalysis = modelIds.map(mid => {
   return { model: mid, higher, lower, total, higherPct: total > 0 ? Math.round((higher / total) * 100) : 0, lowerPct: total > 0 ? Math.round((lower / total) * 100) : 0 };
 });
 
-const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && a.story_count > 0);
+excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && a.story_count > 0);
+} catch (err: unknown) {
+  _pageError = _pageError ?? `Compute phase: ${err instanceof Error ? err.message : String(err)}`;
+}
 ---
 
 <Base title="Models">
@@ -203,6 +263,12 @@ const excludedModels = allAggregates.filter(a => a.story_count < MIN_STORIES && 
       </td>
     </tr>
   </table>
+
+  {_pageError && (
+    <div style="padding: 10px; margin-bottom: 10px; background: #2d0000; border: 1px solid #dc2626; border-radius: 6px; color: #f87171; font-size: var(--font-sm); font-family: monospace;">
+      <strong>Page Error:</strong> {_pageError}
+    </div>
+  )}
 
   {/* ═══ Evaluation Models (absorbed from /system) — always visible ═══ */}
   {models.length > 0 && (
