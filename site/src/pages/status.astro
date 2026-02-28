@@ -147,23 +147,10 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
           <span><span class="score-font" style="color: #98a8a8;">{status.total}</span> total</span>
         </div>
 
-        {/* Velocity footer — rolling 7-day rate */}
-        {velocity.evalsPerDay > 0 && (
-          <div style="margin-top: 6px; display: flex; gap: 16px; font-size: var(--font-sm); color: #5b7279;">
-            <span>
-              <span class="score-font" style="color: #60a5fa;">{velocity.evals24h}</span> evals/24h
-            </span>
-            <span>
-              <span class="score-font" style="color: #5b7279;">{velocity.evals7d}</span> evals/7d
-            </span>
-            <span>
-              <span class="score-font" style="color: #5b7279;">{velocity.evalsPerDay.toFixed(0)}</span> avg/day
-            </span>
-            {velocity.daysToClearing !== null && status.pending > 0 && (
-              <span>
-                est. <span class="score-font" style="color: #eab308;">{velocity.daysToClearing < 1 ? '<1' : Math.ceil(velocity.daysToClearing)}</span> {velocity.daysToClearing < 1.5 ? 'day' : 'days'} to clear backlog
-              </span>
-            )}
+        {/* Clearance estimate — aggregate rate across all queues */}
+        {velocity.daysToClearing !== null && status.pending > 0 && (
+          <div style="margin-top: 6px; font-size: var(--font-sm); color: #5b7279;">
+            est. <span class="score-font" style="color: #eab308;">{velocity.daysToClearing < 1 ? '<1' : Math.ceil(velocity.daysToClearing)}</span> {velocity.daysToClearing < 1.5 ? 'day' : 'days'} to clear backlog
           </div>
         )}
       </td>
@@ -270,7 +257,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
             <td style="padding: 2px 6px; text-align: right;">Last Eval</td>
             <td style="padding: 2px 6px; text-align: right; width: 55px;" title="Items in rater_evals with queued/evaluating status">In-flight</td>
             <td style="padding: 2px 6px; text-align: right; width: 40px;">24h</td>
-            <td style="padding: 2px 6px; text-align: right; width: 40px;">7d</td>
+            <td style="padding: 2px 6px; text-align: right; width: 48px;">avg/d</td>
           </tr>
 
           {QUEUE_CONFIG.map(qc => {
@@ -299,7 +286,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLight);
                   {(stat?.evals_24h ?? 0) > 0 ? stat!.evals_24h : '—'}
                 </td>
                 <td style={`padding: 3px 6px; text-align: right; color: ${(stat?.evals_7d ?? 0) > 0 ? '#5b7279' : '#1a5568'};`}>
-                  {(stat?.evals_7d ?? 0) > 0 ? stat!.evals_7d : '—'}
+                  {(stat?.evals_7d ?? 0) > 0 ? (stat!.evals_7d / 7).toFixed(1) : '—'}
                 </td>
               </tr>
             );
