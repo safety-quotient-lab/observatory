@@ -1,66 +1,66 @@
 # TODO
 
-Items are organized by execution horizon. Phase 0 is the current focus.
-Phases 2 and 3 are sequenced prerequisites for commercialization and
-GitHub publishing respectively.
+Items are organized by execution horizon. Phases 2 and 3 are sequenced
+prerequisites for commercialization and GitHub publishing respectively.
 
----
-
-## Phase 0 — Data Integrity Deep Dive
-*Current phase. Investigate and fix inconsistencies and red flags in production data before building more features on top.*
-
-- [x] **Ghost evaluations** *(fixed 2026-02-27)*
-  - 129 stories (28% of done) had `eval_status='done'` but `hcb_weighted_mean IS NULL`
-  - Root cause: historical bug — light-mode Workers AI + haiku evals called `writeEvalResult` as primary. Now fixed in current consumer code.
-  - Fix applied: `UPDATE stories SET eval_status='pending', eval_model=NULL WHERE eval_status='done' AND hcb_weighted_mean IS NULL` — 81 stories reset to pending for proper re-eval
-  - 48 stories with `eval_model IS NULL` but valid `hcb_weighted_mean` left as-is (cosmetic, scores correct)
-
-- [x] **Model score distribution audit** *(done 2026-02-27)*
-  - deepseek-v3.2 full (n=476): mean=0.167, range [-0.85, 0.814] — healthy
-  - claude-haiku full (n=271): mean=0.187, range [-0.629, 0.858] — healthy
-  - llama-4-scout-wai light (n=518): mean=0.086, range [-0.8, 1.0] — wide, expected for editorial-only
-  - llama-3.3-70b-wai light (n=229): mean=0.164, range [-0.2, 0.9] — narrow negative tail (light prompt characteristic)
-  - claude-haiku light (n=160): mean=0.292 — noticeably higher than full models; light prompt may be more generous
-  - **Flag**: llama-4-scout-wai (full, n=14): mean=0.077, min=0, max=0.34 — always non-negative, suspiciously narrow; likely ghost data from when WAI ran as primary in full mode (historical)
-
-- [x] **Stale pipeline state** *(investigated + partially fixed 2026-02-27)*
-  - `eval_queue`: 0 stale claims, 8 active in-flight — clean ✅
-  - 100 stories in `queued` status — transient, handled by cron stuck-queue recovery
-  - DLQ: 113 dead `llama-3.3-70b` (disabled model) discarded; 39 replayable remain (Workers AI + deepseek)
-  - Fix applied: `UPDATE dlq_messages SET status='discarded' WHERE status='pending' AND eval_model='llama-3.3-70b'`
-
-- [x] **Domain aggregate drift** *(done 2026-02-27)*
-  - Score values accurate where data exists: github, twitter, eff, arstechnica, archive all match within rounding ✅
-  - 47 domains have `avg_hrcb=NULL` in aggregate (e.g. www.propublica.org) — caused by ghost stories we reset; will self-correct as they re-evaluate
-  - Counts slightly stale (e.g. github: agg=34 vs real=30) — same cause; self-correcting
-  - No action needed beyond re-evaluation cycle. Column name is `avg_hrcb` (not `avg_hcb`)
-
-- [x] **Content gate accuracy audit** *(done 2026-02-27)*
-  - 116 total gated stories: hn_removed(40), error_page(26), bot_protection(22), js_rendered(11), no_content(5), binary_content(3), captcha(3), age_gate(2), rate_limited(2), paywall(1)
-  - No domains with >50% gate rate ✅
-  - bot_protection (22): all correct — NYT, Bloomberg, science.org, dl.acm.org, bloomberg, researchgate, Lancet — known paywalls/CF-blocked
-  - error_page (10): all correct — defunct/moved URLs (2017-2021 era links)
-  - **age_gate false positive**: 2 stories gated as age_gate are articles ABOUT age verification (theverge.com 0.6 conf, pcgamer.com 0.9 conf) — regex triggers on topic keywords, not actual age gate UI. Low priority (2 stories). Consider tightening regex to require form elements or specific UI phrases.
+Production readiness audit findings (2026-02-27) merged into appropriate
+rounds. 30/43 items already fixed; remaining items below.
 
 ---
 
 ## Phase 1 — Active Engineering
-*Fully unblocked. Ordered by dependency and value.*
+*Ordered by dependency and value.*
 
-### Round 1 — Foundational (unlock the rest)
+### Round 1 — Foundational (done)
 
 - [x] **Eval batch tracking** *(done 2026-02-27)*
-  - `eval_batch_id` to link related evals from same cron cycle
-  - Useful for isolating regressions to a specific run
-  - *Small migration + cron change — cheap to add now*
-
 - [x] **Story priority scoring** *(done 2026-02-27)*
-  - Composite score: HN score + comment count + time-decay + feed membership
-    + `log10(submitter_karma) * 0.1` + score acceleration from rank snapshots
-  - `eval_priority_score` computed by cron, factored into eval dispatch order
-  - *Prerequisite for meaningful eval queue prioritization*
+- [x] **Unified primary model** *(done 2026-02-27)*
+  - `model_registry.is_primary` DB flag, single write path, 22+ read queries
+    migrated from `scores`/`fair_witness` to `rater_scores`/`rater_witness`
 
-### Round 2 — Ops Visibility
+### Round 2 — Hardening
+*Production readiness fixes. Merged from audit (2026-02-27). Items marked with audit step ID.*
+
+- [ ] **Add try/catch to unguarded DB query functions** *(audit step 10, HIGH)*
+  - ~8 functions lack error handling: `getFilteredStoriesWithScores` (score subquery),
+    `getDomainIntelligence`, `getAllDomainStats`, `getUserIntelligence`,
+    `getArticleCoverage`, `getArticleRanking`, `getArticleDetailedStats`, `getQueueStories`
+  - Pattern: wrap in try/catch, log `console.error`, return safe default ([] or null)
+
+- [ ] **Log silent catch blocks** *(audit step 24, MED)*
+  - `getFairWitnessForStory`, `getEvalHistoryForStory` (db-stories.ts),
+    `getDlqTrend`, `getSelfThrottleImpact` (db-analytics.ts) — bare `catch { return ...; }`
+  - Add `console.error('[fnName]', err)` before the return
+
+- [ ] **Wrap KV writes in try/catch in consumer-shared.ts** *(audit step 33, MED)*
+  - Rater health KV puts (4 locations) propagate on failure
+  - KV reads are already guarded; writes should match
+
+- [ ] **Fix diverged `CONTENT_MAX_CHARS` in content-drift.ts** *(audit step 38, MED)*
+  - `content-drift.ts` defines `CONTENT_MAX_CHARS = 50000` locally
+  - `shared-eval.ts` canonical value is `20_000`
+  - Either import from shared-eval or rename the local to `DRIFT_FETCH_MAX_CHARS`
+
+- [ ] **Cap `getRegionDistribution` LIMIT** *(audit step 21, MED)*
+  - Currently `LIMIT 50000` — reduce to a reasonable cap (e.g., 5000)
+  - `getStakeholderOverview` has `LIMIT 10000` — review if that's also too high
+
+- [ ] **Guard Promise.all on users.astro and domains.astro** *(audit steps 42+43, LOW)*
+  - Add `.catch(() => [])` on individual promises to prevent full page crash
+
+- [ ] **Clean up `as any` casts** *(audit steps 2+7, LOW)*
+  - `eval-parse.ts`: `parsed: any` params in validators — add proper type
+  - `ingest.ts` line 128: `...(slim as any)` spread — type the conversion
+  - `ingest.ts`: redundant `UPDATE stories SET eval_status = 'done'` after
+    `writeRaterEvalResult` (which already handles promotion)
+
+- [ ] **Replace `SELECT *` with explicit columns** *(audit step 13, LOW)*
+  - `getStory()`: `SELECT * FROM rater_scores` → named columns
+  - `getHnUser()`: `SELECT * FROM hn_users` → named columns
+  - `getTopSetlStories`/`getBottomSetlStories`: `s.*` → `STORY_LIST_COLS`
+
+### Round 3 — Ops Visibility
 
 - [ ] **Rate limit exhaustion forecasting**
   - Project time-to-exhaustion from rolling 1h token usage window
@@ -71,8 +71,9 @@ GitHub publishing respectively.
   - Daily cost per model from eval_history token counts + pricing table
   - Dashboard widget: cost/eval by model, daily burn rate
   - *Directly informs Phase 2 pricing tiers*
+  - Note: `getCostStats` function already exists (orphaned query — wire it up)
 
-### Round 3 — Analytics (runs on existing data, no migrations needed)
+### Round 4 — Analytics (runs on existing data, no migrations needed)
 
 - [ ] **Temporal trend analysis** *(Seldon has daily HRCB + rolling avg; gaps below)*
   - [ ] **Model mix over time** — stacked bar: which models did evals each day.
@@ -98,7 +99,7 @@ GitHub publishing respectively.
   - Velocity alerts (stories hitting score threshold)
   - Velocity decay analysis
 
-### Round 4 — Data Expansion
+### Round 5 — Data Expansion
 
 - [ ] **Add Lobsters (lobste.rs) as a data source**
   - Free JSON API, no auth: `/hottest.json`, `/newest.json`, `/active.json`
@@ -113,11 +114,22 @@ GitHub publishing respectively.
   - Flag stories where comments strongly disagree with assessment
   - UI: divergence badge on item page, comment sentiment distribution chart
 
-### Round 5 — User-Facing Features
+### Round 6 — User-Facing Features
+
+- [ ] **Surface write-only supplementary signal columns** *(data model finding DM-2)*
+  - 16 columns written but never displayed: eq_uncertainty_handling,
+    eq_purpose_transparency, eq_claim_density, so_framing, so_reader_agency,
+    td_author_identified, td_conflicts_disclosed, td_funding_disclosed,
+    sr_voice_balance, sr_perspective_count, tf_primary_focus, tf_time_horizon,
+    cl_jargon_density, cl_assumed_knowledge, gs_regions_json, so_framing
+  - Option A: surface high-value ones on `/item/[id]` detail panel
+  - Option B: mark as "available via API, not displayed in UI"
+  - `eq_source_quality` and `eq_evidence_reasoning` are already surfaced
 
 - [ ] **Article deep dive enhancements** (`/article/[n]`)
   - Stddev distribution, evidence strength breakdown
-  - Top 3 positive/negative stories per article
+  - Top 3 positive/negative stories per article (wire up orphaned
+    `getTopPositiveStories`/`getTopNegativeStories` from db-stories.ts)
   - Directionality marker distribution, theme tag word cloud
 
 - [ ] **Domain factions enhancements**
@@ -137,7 +149,7 @@ GitHub publishing respectively.
   - Cluster detection (community finding algorithm)
   - Temporal network evolution (how correlations shift)
 
-### Round 6 — Platform
+### Round 7 — Platform
 
 - [ ] **A/B testing framework for methodology**
   - `eval_variant` column, dashboard comparing outcome distributions across variants
@@ -145,6 +157,30 @@ GitHub publishing respectively.
 - [ ] **Bulk re-evaluation endpoint**
   - Re-enqueue by domain, date range, model, methodology_hash
   - Rate-limited to prevent queue flooding
+
+### Housekeeping (no urgency)
+
+- [ ] **Drop orphaned `batches` table** *(data model DM-1+12)*
+  - Table has zero code references. `eval_batch_id` column on stories is
+    actively written (links to cron cycle) but the `batches` table itself
+    is dead. Either drop table, or repurpose it to store batch metadata.
+
+- [ ] **Prune orphaned query functions** *(data model DM-3)*
+  - ~16 exported functions never called — keep as future dashboard candidates
+    but consider marking with `/** @internal future use */` JSDoc
+  - `getCostStats` already wired to status page; `getTopPositiveStories`/
+    `getTopNegativeStories` useful for article deep dive (Round 6)
+
+- [ ] **Materialize `getUserIntelligence`** *(audit step 14, LOW)*
+  - Currently a live CTE scan over full stories table
+  - Create `user_aggregates` materialized table (like `domain_aggregates`)
+  - Update on eval write, query from materialized data
+
+- [ ] **Drop legacy `scores`/`fair_witness` tables** *(deferred from unify work)*
+  - All reads already migrated to `rater_scores`/`rater_witness`
+  - Writes still go to both (rollback safety)
+  - After confirming production stability for 2+ weeks, remove legacy writes
+    and drop tables via migration
 
 ---
 
@@ -178,7 +214,7 @@ GitHub publishing respectively.
 *Blocked on license decision. Do before creating the public GitHub repo.*
 
 - [x] **Remove personal eval sample files** from repo root *(done 2026-02-27)*
-- [x] **Add fork-setup comments to all wrangler configs** *(done 2026-02-27)* — D1/KV IDs are infrastructure identifiers, not secrets; comments guide forks; real IDs committed
+- [x] **Add fork-setup comments to all wrangler configs** *(done 2026-02-27)*
 
 - [ ] **Decide on `LICENSE`** — TBD (AGPL-3.0 was considered; not yet decided)
 
