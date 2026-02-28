@@ -2,9 +2,9 @@
 """Generate SQL statements from an HRCB eval JSON file.
 
 Usage:
-  python3 eval-to-sql.py <eval.json> <hn_id> scores    > scores.sql
-  python3 eval-to-sql.py <eval.json> <hn_id> witness   > witness.sql
-  python3 eval-to-sql.py <eval.json> <hn_id> signals   > signals.sql
+  python3 eval-to-sql.py <eval.json> <hn_id> <eval_model> scores    > scores.sql
+  python3 eval-to-sql.py <eval.json> <hn_id> <eval_model> witness   > witness.sql
+  python3 eval-to-sql.py <eval.json> <hn_id> <eval_model> signals   > signals.sql
 """
 import json, sys
 
@@ -29,7 +29,8 @@ def sql_bool(v):
         return "0"
     return "NULL"
 
-def gen_scores(data, hn_id):
+def gen_scores(data, hn_id, eval_model):
+    print(f"DELETE FROM rater_scores WHERE hn_id = {hn_id} AND eval_model = {sql_esc(eval_model)};")
     for s in data.get("scores", []):
         sec = s.get("section", "")
         so = ALL_SECTIONS.index(sec) if sec in ALL_SECTIONS else 0
@@ -41,27 +42,27 @@ def gen_scores(data, hn_id):
         sn = s.get("structural_note", "") or ""
         note = en or sn
         print(
-            f"INSERT OR REPLACE INTO scores "
-            f"(hn_id, section, sort_order, editorial, structural, evidence, directionality, note, editorial_note, structural_note) "
-            f"VALUES ({hn_id}, {sql_esc(sec)}, {so}, {ed}, {st}, {ev}, {dr}, {sql_esc(note)}, {sql_esc(en)}, {sql_esc(sn)});"
+            f"INSERT INTO rater_scores "
+            f"(hn_id, section, eval_model, sort_order, final, editorial, structural, evidence, directionality, note, editorial_note, structural_note) "
+            f"VALUES ({hn_id}, {sql_esc(sec)}, {sql_esc(eval_model)}, {so}, {sql_num(s.get('final'))}, {ed}, {st}, {ev}, {dr}, {sql_esc(note)}, {sql_esc(en)}, {sql_esc(sn)});"
         )
 
-def gen_witness(data, hn_id):
-    print(f"DELETE FROM fair_witness WHERE hn_id = {hn_id};")
+def gen_witness(data, hn_id, eval_model):
+    print(f"DELETE FROM rater_witness WHERE hn_id = {hn_id} AND eval_model = {sql_esc(eval_model)};")
     for s in data.get("scores", []):
         sec = s.get("section", "")
         for fact in s.get("witness_facts", []):
             print(
-                f"INSERT INTO fair_witness (hn_id, section, fact_type, fact_text) "
-                f"VALUES ({hn_id}, {sql_esc(sec)}, 'observable', {sql_esc(fact)});"
+                f"INSERT INTO rater_witness (hn_id, eval_model, section, fact_type, fact_text) "
+                f"VALUES ({hn_id}, {sql_esc(eval_model)}, {sql_esc(sec)}, 'observable', {sql_esc(fact)});"
             )
         for inf in s.get("witness_inferences", []):
             print(
-                f"INSERT INTO fair_witness (hn_id, section, fact_type, fact_text) "
-                f"VALUES ({hn_id}, {sql_esc(sec)}, 'inference', {sql_esc(inf)});"
+                f"INSERT INTO rater_witness (hn_id, eval_model, section, fact_type, fact_text) "
+                f"VALUES ({hn_id}, {sql_esc(eval_model)}, {sql_esc(sec)}, 'inference', {sql_esc(inf)});"
             )
 
-def gen_signals(data, hn_id):
+def gen_signals(data, hn_id, eval_model):
     ct = (data.get("evaluation", {}).get("content_type", {}).get("primary") or "MX")
     sv = data.get("schema_version")
     tt = data.get("theme_tag")
@@ -153,20 +154,20 @@ def gen_signals(data, hn_id):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 5:
         print(__doc__, file=sys.stderr)
         sys.exit(1)
 
-    eval_file, hn_id, mode = sys.argv[1], sys.argv[2], sys.argv[3]
+    eval_file, hn_id, eval_model, mode = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
     with open(eval_file) as f:
         data = json.load(f)
 
     if mode == "scores":
-        gen_scores(data, hn_id)
+        gen_scores(data, hn_id, eval_model)
     elif mode == "witness":
-        gen_witness(data, hn_id)
+        gen_witness(data, hn_id, eval_model)
     elif mode == "signals":
-        gen_signals(data, hn_id)
+        gen_signals(data, hn_id, eval_model)
     else:
         print(f"Unknown mode: {mode}", file=sys.stderr)
         sys.exit(1)

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
-import { fetchUrlContent, callClaude, writeEvalResult } from '../../../lib/evaluate';
+import { fetchUrlContent, callClaude } from '../../../lib/evaluate';
+import { writeRaterEvalResult } from '../../../lib/eval-write';
 import { logEvent } from '../../../lib/events';
 
 export const POST: APIRoute = async ({ params, locals, request }) => {
@@ -116,8 +117,11 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
 
         send('status', { step: 'writing', message: 'Writing results...' });
 
-        // Write results to D1
-        await writeEvalResult(db, hnId, evalCall.result, evalCall.model, evalCall.promptHash);
+        // Write results to D1 (rater tables + stories promotion)
+        await writeRaterEvalResult(
+          db, hnId, evalCall.result, evalCall.model, 'anthropic',
+          evalCall.promptHash, null, 0, 0,
+        );
 
         await logEvent(db, { hn_id: hnId, event_type: 'eval_success', severity: 'info', message: `Trigger eval done: ${evalCall.result.aggregates.classification} (${evalCall.result.aggregates.weighted_mean.toFixed(2)})`, details: { classification: evalCall.result.aggregates.classification, weighted_mean: evalCall.result.aggregates.weighted_mean, model: evalCall.model, duration_ms: evalDurationMs } });
 

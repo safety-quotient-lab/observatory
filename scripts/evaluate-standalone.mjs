@@ -53,15 +53,20 @@ const PROVIDER = 'claude-code-standalone';
 const CLAUDE_BIN = join(dirname(process.execPath), 'claude');
 const RAW_HTML_MAX_CHARS = 30_000;
 
-// Light prompt — inlined from prompts.ts METHODOLOGY_SYSTEM_PROMPT_LIGHT
+// Light prompt — inlined from prompts.ts METHODOLOGY_SYSTEM_PROMPT_LIGHT (light-1.4)
 const LIGHT_SYSTEM_PROMPT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score the AUTHOR'S EDITORIAL STANCE toward human rights, not the subject matter.
 
-Score scale: [-1.0, +1.0]. Key rules:
-- Exposing abuses → positive; promoting/justifying abuses → negative
-- 0.0 ONLY for content with zero UDHR relevance (pure tech tutorial, math paper, product changelog)
-- Use the full range; most content scores non-zero
+Score: integer 0-100 where 50 = neutral. Use the full range.
+Tier anchors:
+  90-100: Active rights advocacy — NGO missions, rights organization content, explicit UDHR promotion
+  70-89: Implicitly supportive — investigative journalism exposing abuses, rights-aware policy advocacy
+  55-69: Slight positive lean — acknowledges rights concerns, balanced reporting on abuses
+  50: Neutral — pure tech tutorials, math papers, product changelogs, utility sites, encyclopedic facts
+  31-49: Slight negative lean — dismisses relevant rights concerns, normalizes restrictions
+  11-30: Implicitly hostile — justifies surveillance/censorship, dehumanizing framing
+  0-10: Dehumanizing propaganda — active rights violations advocacy, hate content
 
-Anchors: −1.0 dehumanizing propaganda | 0.0 zero rights relevance | +1.0 NGO rights advocacy
+Key rules: Exposing abuses → above 50. Promoting/justifying abuses → below 50. Only use 50 for zero UDHR relevance.
 
 Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)
 
@@ -70,12 +75,13 @@ Evidence strength: H=explicit rights discussion | M=implicit | L=tangential
 Output ONLY a JSON object. No markdown, no explanation.
 
 {
-  "schema_version": "light-1.3",
+  "schema_version": "light-1.4",
+  "reasoning": "<content type and rights stance in max 10 words>",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
     "content_type": "<CODE>",
-    "editorial": <-1.0 to +1.0>,
+    "editorial": <0 to 100>,
     "evidence_strength": "<H|M|L>",
     "confidence": <0.0 to 1.0>
   },
@@ -179,7 +185,7 @@ function callClaudeCode(userMessage) {
       '--output-format', 'text',
     ], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, CLAUDECODE: undefined },
+      env: { ...process.env, CLAUDECODE: undefined, ANTHROPIC_API_KEY: undefined },
     });
 
     let stdout = '';

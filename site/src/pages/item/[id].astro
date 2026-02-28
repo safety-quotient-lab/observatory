@@ -88,7 +88,7 @@ if (isDone && scores.length > 0) {
 const classColor = storyData.hcb_classification ? classificationColor(storyData.hcb_classification) : '#5b7279';
 const classText = storyData.hcb_classification ? classificationTextColor(storyData.hcb_classification) : '#98a8a8';
 
-// Fair Witness: fetch from fair_witness table (fallback to rater_witness for non-primary model evals)
+// Fair Witness: fetch from rater_witness table
 const fwEvalModel = storyData.eval_model || raterEvals.find(re => re.prompt_mode === 'full')?.eval_model || null;
 const fwFacts = isDone ? await getFairWitnessForStory(db, hnId, fwEvalModel) : [];
 const hasFairWitness = fwFacts.length > 0;

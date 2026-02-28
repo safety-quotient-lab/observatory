@@ -222,7 +222,6 @@ export default {
           const placeholders = calIds.map(() => '?').join(',');
           await db.batch([
             db.prepare(`DELETE FROM eval_history WHERE hn_id IN (${placeholders})`).bind(...calIds),
-            db.prepare(`DELETE FROM fair_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
             db.prepare(`DELETE FROM rater_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
             db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${placeholders})`).bind(...calIds),
             db.prepare(`DELETE FROM calibration_runs WHERE created_at < datetime('now', '-30 days')`),
@@ -780,7 +779,6 @@ export default {
         const placeholders = calIds.map(() => '?').join(',');
         await db.batch([
           db.prepare(`DELETE FROM eval_history WHERE hn_id IN (${placeholders})`).bind(...calIds),
-          db.prepare(`DELETE FROM fair_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
           db.prepare(`DELETE FROM rater_witness WHERE hn_id IN (${placeholders})`).bind(...calIds),
           db.prepare(`DELETE FROM rater_evals WHERE hn_id IN (${placeholders})`).bind(...calIds),
           db.prepare(`DELETE FROM calibration_runs WHERE created_at < datetime('now', '-30 days')`),

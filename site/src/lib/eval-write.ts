@@ -195,72 +195,8 @@ export async function writeEvalResult(
     )
     .run();
 
-  const stmts = result.scores.map((score) => {
-    const sortOrder = ALL_SECTIONS.indexOf(score.section);
-    const editorialNote = score.editorial_note || '';
-    const structuralNote = score.structural_note || '';
-    const note = score.note || editorialNote || structuralNote || '';
-    return db
-      .prepare(
-        `INSERT OR REPLACE INTO scores (hn_id, section, sort_order, final, editorial, structural, evidence, directionality, note, editorial_note, structural_note, combined, context_modifier)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(
-        hnId,
-        score.section,
-        sortOrder >= 0 ? sortOrder : 0,
-        score.final,
-        score.editorial,
-        score.structural,
-        score.evidence,
-        JSON.stringify(score.directionality || []),
-        note,
-        editorialNote,
-        structuralNote,
-        score.combined ?? null,
-        score.context_modifier ?? null
-      );
-  });
-
-  if (stmts.length > 0) {
-    await db.batch(stmts);
-  }
-
-  // Write Fair Witness facts/inferences to normalized table
-  const fwRows: { section: string; factType: string; factText: string }[] = [];
-  for (const score of result.scores) {
-    if (score.witness_facts) {
-      for (const fact of score.witness_facts) {
-        fwRows.push({ section: score.section, factType: 'observable', factText: fact });
-      }
-    }
-    if (score.witness_inferences) {
-      for (const inference of score.witness_inferences) {
-        fwRows.push({ section: score.section, factType: 'inference', factText: inference });
-      }
-    }
-  }
-
-  if (fwRows.length > 0) {
-    // Clear previous FW data for this story
-    await db
-      .prepare(`DELETE FROM fair_witness WHERE hn_id = ?`)
-      .bind(hnId)
-      .run();
-
-    // Insert in chunks of 100 (D1 batch limit)
-    for (let i = 0; i < fwRows.length; i += 100) {
-      const chunk = fwRows.slice(i, i + 100);
-      const fwStmts = chunk.map((row) =>
-        db
-          .prepare(
-            `INSERT INTO fair_witness (hn_id, section, fact_type, fact_text) VALUES (?, ?, ?, ?)`
-          )
-          .bind(hnId, row.section, row.factType, row.factText)
-      );
-      await db.batch(fwStmts);
-    }
-  }
+  // Legacy scores/fair_witness tables removed — all per-section data
+  // lives in rater_scores/rater_witness (written by writeRaterEvalResult)
 
   // Refresh materialized domain aggregate (best-effort)
   const domain = result.evaluation?.domain;

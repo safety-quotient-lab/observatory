@@ -88,13 +88,14 @@ for (const file of files) {
     `INSERT OR IGNORE INTO stories (hn_id, url, title, domain, hn_score, hn_comments, hn_by, hn_time, content_type, hcb_weighted_mean, hcb_classification, hcb_signal_sections, hcb_nd_count, hcb_json, eval_status, evaluated_at) VALUES (${hnId}, ${esc(ev.url)}, ${esc(file.replace('.json', '').replace(/-/g, ' '))}, ${esc(domain)}, 100, 50, 'seed', ${Math.floor(Date.now() / 1000)}, ${esc(ev.content_type.primary)}, ${numOrNull(agg.weighted_mean)}, ${esc(agg.classification)}, ${numOrNull(agg.signal_sections)}, ${numOrNull(agg.nd_count)}, '${jsonBlob}', 'done', datetime('now'));`
   );
 
-  // Insert score rows
+  // Insert score rows into rater_scores
+  const evalModel = 'claude-haiku-4-5-20251001';
   for (const score of data.scores) {
     // Normalize section names: "Art. N" → "Article N"
     const normalizedSection = score.section.replace(/^Art\. /, 'Article ');
     const sortOrder = ALL_SECTIONS.indexOf(normalizedSection);
     statements.push(
-      `INSERT OR IGNORE INTO scores (hn_id, section, sort_order, final, editorial, structural, evidence, directionality, note) VALUES (${hnId}, ${esc(normalizedSection)}, ${sortOrder}, ${numOrNull(score.final)}, ${numOrNull(score.editorial)}, ${numOrNull(score.structural)}, ${esc(score.evidence)}, ${esc(JSON.stringify(score.directionality))}, ${esc(score.note)});`
+      `INSERT OR IGNORE INTO rater_scores (hn_id, section, eval_model, sort_order, final, editorial, structural, evidence, directionality, note) VALUES (${hnId}, ${esc(normalizedSection)}, ${esc(evalModel)}, ${sortOrder}, ${numOrNull(score.final)}, ${numOrNull(score.editorial)}, ${numOrNull(score.structural)}, ${esc(score.evidence)}, ${esc(JSON.stringify(score.directionality))}, ${esc(score.note)});`
     );
   }
 }

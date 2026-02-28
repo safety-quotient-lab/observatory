@@ -30,17 +30,6 @@ rounds. 30/43 items already fixed; remaining items below.
 - [x] **Guard Promise.all on users.astro and domains.astro** *(done 2026-02-27)*
 - [x] **Replace `SELECT *` with explicit columns** *(done 2026-02-27)*
 
-- [ ] **Clean up `as any` casts** *(audit steps 2+7, LOW)*
-  - `eval-parse.ts`: `parsed: any` params in validators — add proper type
-  - `ingest.ts` line 128: `...(slim as any)` spread — type the conversion
-  - `ingest.ts`: redundant `UPDATE stories SET eval_status = 'done'` after
-    `writeRaterEvalResult` (which already handles promotion)
-
-- [ ] **Replace `SELECT *` with explicit columns** *(audit step 13, LOW)*
-  - `getStory()`: `SELECT * FROM rater_scores` → named columns
-  - `getHnUser()`: `SELECT * FROM hn_users` → named columns
-  - `getTopSetlStories`/`getBottomSetlStories`: `s.*` → `STORY_LIST_COLS`
-
 ### Round 3 — Ops Visibility
 
 - [ ] **Rate limit exhaustion forecasting**
@@ -141,11 +130,6 @@ rounds. 30/43 items already fixed; remaining items below.
 
 ### Housekeeping (no urgency)
 
-- [ ] **Drop orphaned `batches` table** *(data model DM-1+12)*
-  - Table has zero code references. `eval_batch_id` column on stories is
-    actively written (links to cron cycle) but the `batches` table itself
-    is dead. Either drop table, or repurpose it to store batch metadata.
-
 - [ ] **Prune orphaned query functions** *(data model DM-3)*
   - ~16 exported functions never called — keep as future dashboard candidates
     but consider marking with `/** @internal future use */` JSDoc
@@ -156,12 +140,6 @@ rounds. 30/43 items already fixed; remaining items below.
   - Currently a live CTE scan over full stories table
   - Create `user_aggregates` materialized table (like `domain_aggregates`)
   - Update on eval write, query from materialized data
-
-- [ ] **Drop legacy `scores`/`fair_witness` tables** *(deferred from unify work)*
-  - All reads already migrated to `rater_scores`/`rater_witness`
-  - Writes still go to both (rollback safety)
-  - After confirming production stability for 2+ weeks, remove legacy writes
-    and drop tables via migration
 
 ---
 
