@@ -82,6 +82,16 @@ log() {
   echo "$msg" | tee -a "$LOG_FILE"
 }
 
+# Rotate log if > 5MB
+rotate_log() {
+  local size
+  size=$(stat -f%z "$LOG_FILE" 2>/dev/null || stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+  if [ "$size" -gt 5242880 ]; then
+    mv "$LOG_FILE" "${LOG_FILE}.1"
+    log "Log rotated (was ${size} bytes)"
+  fi
+}
+
 log "════════════════════════════════════════"
 log "hn-hrcb-daemon starting"
 log "  Model: $MODEL | Parallel: $PARALLEL | Sleep: ${SLEEP_BETWEEN}s"
@@ -103,6 +113,20 @@ consecutive_errors=0
 total_evaluated=0
 daemon_start=$(date +%s)
 
+# Self-heal: reset stories stuck as 'evaluating' for > 10 minutes (crashed prior batch)
+log "Self-heal: checking for stuck 'evaluating' stories..."
+stuck_count=$(npx wrangler d1 execute hrcb-db --remote --json --command \
+  "SELECT COUNT(*) AS cnt FROM stories WHERE eval_status = 'evaluating' AND evaluated_at < datetime('now', '-10 minutes')" \
+  2>/dev/null | jq -r '.[0].results[0].cnt // 0' 2>/dev/null || echo 0)
+if [ "$stuck_count" -gt 0 ]; then
+  log "  Found $stuck_count stuck stories — resetting to pending"
+  npx wrangler d1 execute hrcb-db --remote --command \
+    "UPDATE stories SET eval_status = 'pending', eval_error = 'daemon self-heal: stuck evaluating' WHERE eval_status = 'evaluating' AND evaluated_at < datetime('now', '-10 minutes')" \
+    2>/dev/null >/dev/null || true
+else
+  log "  None found"
+fi
+
 while true; do
   # Check stop sentinel
   if [ -f "$STOP_FILE" ]; then
@@ -111,14 +135,34 @@ while true; do
     break
   fi
 
+  rotate_log
+
+  # Periodic self-heal: every 20 batches, reset stuck evaluating stories
+  if [ $((total_evaluated % 20)) -eq 0 ] && [ "$total_evaluated" -gt 0 ]; then
+    local stuck
+    stuck=$(npx wrangler d1 execute hrcb-db --remote --json --command \
+      "SELECT COUNT(*) AS cnt FROM stories WHERE eval_status = 'evaluating' AND evaluated_at < datetime('now', '-10 minutes')" \
+      2>/dev/null | jq -r '.[0].results[0].cnt // 0' 2>/dev/null || echo 0)
+    if [ "$stuck" -gt 0 ]; then
+      log "Self-heal: resetting $stuck stuck stories to pending"
+      npx wrangler d1 execute hrcb-db --remote --command \
+        "UPDATE stories SET eval_status = 'pending', eval_error = 'daemon self-heal: stuck evaluating' WHERE eval_status = 'evaluating' AND evaluated_at < datetime('now', '-10 minutes')" \
+        2>/dev/null >/dev/null || true
+    fi
+  fi
+
   log "── batch (total so far: $total_evaluated) ──"
 
-  # Run evaluator
+  # Run evaluator (20 min timeout — 3 parallel × 5 min each + overhead)
   set +e
   eval_args=$(build_eval_args)
-  output=$("$EVALUATOR" $eval_args 2>&1)
+  output=$(timeout 1200 "$EVALUATOR" $eval_args 2>&1)
   exit_code=$?
   set -e
+
+  if [ $exit_code -eq 124 ]; then
+    log "BATCH TIMEOUT (20 min) — evaluator hung. Will self-heal stuck stories next cycle."
+  fi
 
   # Log output (timestamped)
   echo "$output" | while IFS= read -r line; do
@@ -138,6 +182,13 @@ while true; do
   fi
 
   consecutive_errors=0
+
+  # Check if rate limited — pause 30 min instead of stopping
+  if echo "$output" | grep -q "RATE_LIMITED"; then
+    log "⚠ Rate limited — pausing 30 minutes before retrying..."
+    sleep 1800
+    continue
+  fi
 
   # Check if queue was empty
   if echo "$output" | grep -q "Nothing to do"; then
