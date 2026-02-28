@@ -276,6 +276,12 @@ run_d1_silent() {
   npx wrangler d1 execute hrcb-db --remote --command "$1" 2>/dev/null >/dev/null || true
 }
 
+# Write a rater_evals row for failures/skips so they appear in status page metrics
+write_failed_rater_eval() {
+  local hn_id="$1" error="$2" status="${3:-failed}"
+  run_d1_silent "INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, eval_error, prompt_mode, input_tokens, output_tokens, evaluated_at) VALUES ($hn_id, '$MODEL', 'claude-code-standalone', '$status', '$(echo "$error" | sed "s/'/''/g")', 'full', 0, 0, datetime('now'))"
+}
+
 fmt_ms() {
   local ms=$1
   if [ "$ms" -lt 1000 ]; then
@@ -353,8 +359,8 @@ eval_story() {
     CONTENT=$(echo "$RAW_HTML" \
       | perl -0777 -pe 's/<script[^>]*>.*?<\/script>//gsi; s/<style[^>]*>.*?<\/style>//gsi' \
       | sed 's/<[^>]*>//g' \
-      | tr -s '[:space:]' ' ' \
-      | head -c 20000)
+      | tr -s '[:space:]' ' ')
+    CONTENT="${CONTENT:0:20000}"
   fi
 
   FETCH_END=$(date +%s%3N)
@@ -374,6 +380,7 @@ eval_story() {
   if [ "$EFFECTIVE_LEN" -lt "$MIN_CONTENT_CHARS" ]; then
     echo "  SKIP: content too short (${EFFECTIVE_LEN} chars < ${MIN_CONTENT_CHARS} min)"
     run_d1_silent "UPDATE stories SET eval_status = 'skipped', eval_error = 'content too short (${EFFECTIVE_LEN} chars)', gate_category = 'no_content', gate_confidence = 1.0 WHERE hn_id = $HN_ID"
+    write_failed_rater_eval "$HN_ID" "content too short (${EFFECTIVE_LEN} chars)" "skipped"
     SKIP_TOTAL=$(( $(date +%s%3N) - STORY_START ))
     emit_metric "$HN_ID" "skip" "$FETCH_MS" 0 0 0 "$SKIP_TOTAL" 0 "" "none" "$DOMAIN_VAL" "content too short (${EFFECTIVE_LEN} chars)"
     echo "skip	$FETCH_MS	0	0	0	none" > "$RESULT"
@@ -392,6 +399,7 @@ eval_story() {
   if [ "$WORD_COUNT" -lt "$MIN_WORD_COUNT" ]; then
     echo "  SKIP: insufficient prose (${WORD_COUNT} words < ${MIN_WORD_COUNT} min, likely JS-rendered)"
     run_d1_silent "UPDATE stories SET eval_status = 'skipped', eval_error = 'insufficient prose (${WORD_COUNT} words)', gate_category = 'js_rendered', gate_confidence = 0.8 WHERE hn_id = $HN_ID"
+    write_failed_rater_eval "$HN_ID" "insufficient prose (${WORD_COUNT} words)" "skipped"
     SKIP_TOTAL=$(( $(date +%s%3N) - STORY_START ))
     emit_metric "$HN_ID" "skip" "$FETCH_MS" 0 0 0 "$SKIP_TOTAL" 0 "" "none" "$DOMAIN_VAL" "insufficient prose (${WORD_COUNT} words)"
     echo "skip	$FETCH_MS	0	0	0	none" > "$RESULT"
@@ -499,6 +507,7 @@ USERMSG
       touch "$WORK_DIR/.rate_limited"
     else
       run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = '$CLAUDE_ERR' WHERE hn_id = $HN_ID"
+      write_failed_rater_eval "$HN_ID" "$CLAUDE_ERR" "failed"
     fi
 
     rm -f "$TMPFILE" "$RESULT_FILE"
@@ -520,6 +529,7 @@ USERMSG
   if [ -z "$EVAL_JSON" ]; then
     echo "  claude: $(fmt_ms $CLAUDE_MS) FAILED (no .result)"
     run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'no result in claude-p output' WHERE hn_id = $HN_ID"
+    write_failed_rater_eval "$HN_ID" "no result in claude-p output" "failed"
     local FAIL_TOTAL=$(( $(date +%s%3N) - STORY_START ))
     emit_metric "$HN_ID" "fail" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" 0 "$FAIL_TOTAL" 0 "" "$DCP_STATUS" "$DOMAIN_VAL" "no result"
     echo "fail	$FETCH_MS	$DCP_MS	$CLAUDE_MS	0	$DCP_STATUS" > "$RESULT"
@@ -536,6 +546,7 @@ USERMSG
     if ! jq -e '.scores' "$EVAL_FILE" >/dev/null 2>&1; then
       echo "  claude: $(fmt_ms $CLAUDE_MS) FAILED (invalid JSON)"
       run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'invalid eval JSON from claude-p' WHERE hn_id = $HN_ID"
+      write_failed_rater_eval "$HN_ID" "invalid eval JSON from claude-p" "failed"
       rm -f "$EVAL_FILE"
       local FAIL_TOTAL=$(( $(date +%s%3N) - STORY_START ))
       emit_metric "$HN_ID" "fail" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" 0 "$FAIL_TOTAL" 0 "" "$DCP_STATUS" "$DOMAIN_VAL" "invalid JSON"
@@ -548,6 +559,7 @@ USERMSG
   if [ "$SCORE_COUNT" -lt 1 ]; then
     echo "  claude: $(fmt_ms $CLAUDE_MS) FAILED (empty scores)"
     run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'empty scores array' WHERE hn_id = $HN_ID"
+    write_failed_rater_eval "$HN_ID" "empty scores array" "failed"
     rm -f "$EVAL_FILE"
     local FAIL_TOTAL=$(( $(date +%s%3N) - STORY_START ))
     emit_metric "$HN_ID" "fail" "$FETCH_MS" "$DCP_MS" "$CLAUDE_MS" 0 "$FAIL_TOTAL" 0 "" "$DCP_STATUS" "$DOMAIN_VAL" "empty scores"
@@ -626,6 +638,7 @@ USERMSG
     [ -z "$ERR_MSG" ] && ERR_MSG="HTTP $HTTP_CODE"
     echo "  ingest: $(fmt_ms $DB_MS) FAILED ($ERR_MSG)"
     run_d1_silent "UPDATE stories SET eval_status = 'failed', eval_error = 'ingest failed: $ERR_MSG' WHERE hn_id = $HN_ID"
+    write_failed_rater_eval "$HN_ID" "ingest failed: $ERR_MSG" "failed"
     rm -f "$EVAL_FILE"
     STORY_END=$(date +%s%3N)
     STORY_MS=$((STORY_END - STORY_START))
