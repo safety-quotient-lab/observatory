@@ -20,7 +20,7 @@ import { cleanHtml, hasReadableText } from './html-clean';
 import { classifyContent } from './content-gate';
 import { logEvent } from './events';
 import { checkCreditPause } from '../../functions/rate-limit';
-import { safeBatch } from './db-utils';
+import { safeBatch, D1_BATCH_SIZE } from './db-utils';
 
 // ─── Types ───
 
@@ -153,8 +153,8 @@ export async function refreshFromUpdates(db: D1Database): Promise<number> {
 
   // Find which of these items we have in our DB (batched for D1 100-param limit)
   const ourIds: number[] = [];
-  for (let i = 0; i < updates.items.length; i += 100) {
-    const chunk = updates.items.slice(i, i + 100);
+  for (let i = 0; i < updates.items.length; i += D1_BATCH_SIZE) {
+    const chunk = updates.items.slice(i, i + D1_BATCH_SIZE);
     const { results } = await db
       .prepare(
         `SELECT hn_id FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`
@@ -211,8 +211,8 @@ export async function refreshFromUpdates(db: D1Database): Promise<number> {
   }
 
   if (stmts.length > 0) {
-    for (let i = 0; i < stmts.length; i += 100) {
-      await db.batch(stmts.slice(i, i + 100));
+    for (let i = 0; i < stmts.length; i += D1_BATCH_SIZE) {
+      await db.batch(stmts.slice(i, i + D1_BATCH_SIZE));
     }
   }
 
@@ -243,8 +243,8 @@ export async function refreshRecentStories(db: D1Database): Promise<number> {
     );
 
   if (stmts.length > 0) {
-    for (let i = 0; i < stmts.length; i += 100) {
-      await db.batch(stmts.slice(i, i + 100));
+    for (let i = 0; i < stmts.length; i += D1_BATCH_SIZE) {
+      await db.batch(stmts.slice(i, i + D1_BATCH_SIZE));
     }
   }
 
@@ -342,8 +342,8 @@ export async function crawlComments(db: D1Database): Promise<number> {
       }
 
       if (stmts.length > 0) {
-        for (let i = 0; i < stmts.length; i += 100) {
-          await db.batch(stmts.slice(i, i + 100));
+        for (let i = 0; i < stmts.length; i += D1_BATCH_SIZE) {
+          await db.batch(stmts.slice(i, i + D1_BATCH_SIZE));
         }
         totalCrawled += stmts.length;
       }
@@ -404,8 +404,8 @@ export async function crawlUserProfiles(db: D1Database): Promise<number> {
     );
 
   if (stmts.length > 0) {
-    for (let i = 0; i < stmts.length; i += 100) {
-      await db.batch(stmts.slice(i, i + 100));
+    for (let i = 0; i < stmts.length; i += D1_BATCH_SIZE) {
+      await db.batch(stmts.slice(i, i + D1_BATCH_SIZE));
     }
   }
 
@@ -923,8 +923,8 @@ async function recordFeedSnapshots(
 
   // Filter to IDs we're tracking in DB
   const trackedInDb: number[] = [];
-  for (let i = 0; i < sliced.length; i += 100) {
-    const chunk = sliced.slice(i, i + 100);
+  for (let i = 0; i < sliced.length; i += D1_BATCH_SIZE) {
+    const chunk = sliced.slice(i, i + D1_BATCH_SIZE);
     const { results } = await db
       .prepare(`SELECT hn_id FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`)
       .bind(...chunk)
@@ -936,8 +936,8 @@ async function recordFeedSnapshots(
 
   // Fetch current scores from DB
   const scoreMap = new Map<number, { score: number | null; comments: number | null }>();
-  for (let i = 0; i < trackedInDb.length; i += 100) {
-    const chunk = trackedInDb.slice(i, i + 100);
+  for (let i = 0; i < trackedInDb.length; i += D1_BATCH_SIZE) {
+    const chunk = trackedInDb.slice(i, i + D1_BATCH_SIZE);
     const { results } = await db
       .prepare(`SELECT hn_id, hn_score, hn_comments FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`)
       .bind(...chunk)
@@ -956,8 +956,8 @@ async function recordFeedSnapshots(
       .bind(hnId, rank > 0 ? rank : null, data?.score ?? null, data?.comments ?? null, feedName);
   });
 
-  for (let i = 0; i < snapshotStmts.length; i += 100) {
-    await db.batch(snapshotStmts.slice(i, i + 100));
+  for (let i = 0; i < snapshotStmts.length; i += D1_BATCH_SIZE) {
+    await db.batch(snapshotStmts.slice(i, i + D1_BATCH_SIZE));
   }
 
   return trackedInDb.length;
@@ -1012,8 +1012,8 @@ export async function checkFlaggedStories(db: D1Database): Promise<{ checked: nu
     ).bind(i.id)),
   ];
 
-  for (let i = 0; i < stmts.length; i += 100) {
-    await db.batch(stmts.slice(i, i + 100));
+  for (let i = 0; i < stmts.length; i += D1_BATCH_SIZE) {
+    await db.batch(stmts.slice(i, i + D1_BATCH_SIZE));
   }
 
   console.log(`[flagged-check] Checked ${candidates.length}, found ${totalFlagged} (${removedIds.length} removed, ${flaggedItems.length} flagged, ${deletedItems.length} deleted)`);
@@ -1186,8 +1186,8 @@ export async function runCrawlCycle(
   // ─── STEP 2: Diff against DB — find genuinely new IDs ───
 
   const existingIds = new Set<number>();
-  for (let i = 0; i < allIds.length; i += 100) {
-    const chunk = allIds.slice(i, i + 100);
+  for (let i = 0; i < allIds.length; i += D1_BATCH_SIZE) {
+    const chunk = allIds.slice(i, i + D1_BATCH_SIZE);
     const { results: existingRows } = await db
       .prepare(
         `SELECT hn_id FROM stories WHERE hn_id IN (${chunk.map(() => '?').join(',')})`,
@@ -1264,8 +1264,8 @@ export async function runCrawlCycle(
         );
       }
     }
-    for (let i = 0; i < feedStmts.length; i += 100) {
-      await db.batch(feedStmts.slice(i, i + 100));
+    for (let i = 0; i < feedStmts.length; i += D1_BATCH_SIZE) {
+      await db.batch(feedStmts.slice(i, i + D1_BATCH_SIZE));
     }
     console.log(`[feeds] Recorded feed memberships for ${feedMap.size} stories`);
   } catch (err) {
@@ -1282,16 +1282,16 @@ export async function runCrawlCycle(
     const rankStmts = topToRank.map((hnId, idx) =>
       db.prepare(`UPDATE stories SET hn_rank = ? WHERE hn_id = ?`).bind(idx + 1, hnId)
     );
-    for (let i = 0; i < rankStmts.length; i += 100) {
-      await db.batch(rankStmts.slice(i, i + 100));
+    for (let i = 0; i < rankStmts.length; i += D1_BATCH_SIZE) {
+      await db.batch(rankStmts.slice(i, i + D1_BATCH_SIZE));
     }
     console.log(`[rank] Updated hn_rank for ${topToRank.length} top stories`);
 
     // Promote skipped stories that have risen into top 5 pages
     const autoEvalList = [...autoEvalIds];
     let promoted = 0;
-    for (let i = 0; i < autoEvalList.length; i += 100) {
-      const chunk = autoEvalList.slice(i, i + 100);
+    for (let i = 0; i < autoEvalList.length; i += D1_BATCH_SIZE) {
+      const chunk = autoEvalList.slice(i, i + D1_BATCH_SIZE);
       const { meta } = await db
         .prepare(
           `UPDATE stories SET eval_status = 'pending', eval_error = NULL
