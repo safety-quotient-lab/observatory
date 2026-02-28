@@ -7,14 +7,15 @@ import ArticleDetail from '../../components/ArticleDetail.astro';
 import ModelCompareTable from '../../components/ModelCompareTable.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
-import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getEvalHistoryForStory, getRaterEvalsForStory, getRaterScores, getFairWitnessForStory } from '../../lib/db';
+import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getEvalHistoryForStory, getRaterEvalsForStory, getRaterScores, getFairWitnessForStory, getStoryTimeline } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import { computeAggregates, type Aggregates } from '../../lib/compute-aggregates';
 import { modelDisplayName, isLiteMode } from '../../lib/shared-eval';
 import { sanitizeHtml } from '../../lib/sanitize';
+import { readDb } from '../../lib/db-utils';
 
 const { id } = Astro.params;
-const db = Astro.locals.runtime.env.DB;
+const db = readDb(Astro.locals.runtime.env.DB);
 const url = new URL(Astro.request.url);
 const modelParam = url.searchParams.get('model');
 const viewParam = url.searchParams.get('view');
@@ -235,10 +236,16 @@ try {
   // eval_history table may not exist yet
 }
 
+let storyTimeline: Awaited<ReturnType<typeof getStoryTimeline>> = [];
+try {
+  storyTimeline = await getStoryTimeline(db, hnId);
+} catch { /* story_snapshots table may not exist yet */ }
+
 // Merge events and eval_history into a unified audit trail, sorted newest first
 interface AuditEntry {
   timestamp: string;
   type: 'event' | 'eval';
+  trailCategory: 'eval' | 'pipeline' | 'content_drift';
   // event fields
   event_type?: string;
   severity?: string;
@@ -252,10 +259,19 @@ interface AuditEntry {
   total_tokens?: number | null;
 }
 
+const CONTENT_DRIFT_EVENT_TYPES = new Set(['content_drift']);
+
+function trailCategory(type: 'event' | 'eval', event_type?: string): 'eval' | 'pipeline' | 'content_drift' {
+  if (type === 'eval') return 'eval';
+  if (event_type && CONTENT_DRIFT_EVENT_TYPES.has(event_type)) return 'content_drift';
+  return 'pipeline';
+}
+
 const auditTrail: AuditEntry[] = [
   ...storyEvents.map(ev => ({
     timestamp: ev.created_at,
     type: 'event' as const,
+    trailCategory: trailCategory('event', ev.event_type),
     event_type: ev.event_type,
     severity: ev.severity,
     message: ev.message,
@@ -265,6 +281,7 @@ const auditTrail: AuditEntry[] = [
   ...evalHistory.map(eh => ({
     timestamp: eh.evaluated_at,
     type: 'eval' as const,
+    trailCategory: trailCategory('eval'),
     eval_model: eh.eval_model,
     hcb_weighted_mean: eh.hcb_weighted_mean,
     hcb_classification: eh.hcb_classification,
@@ -291,6 +308,59 @@ function getDriftForEval(model: string, score: number): number | null {
   if (idx + 1 < scores.length) return score - scores[idx + 1];
   return null;
 }
+
+// Longitudinal sparkline: show when ≥2 eval_history entries OR ≥5 story_snapshots
+const showSparkline = evalHistory.length >= 2 || storyTimeline.length >= 5;
+
+// Compute sparkline geometry (server-side SVG)
+const SPARK_W = 560, SPARK_H = 64, SPARK_PAD_X = 2, SPARK_PAD_Y = 4;
+const SPARK_HN_H = 28, SPARK_HRCB_H = 28; // heights of each sub-chart area
+// Gather all timestamps to establish shared time axis
+const allTimestamps: number[] = [
+  ...storyTimeline.map(p => new Date(p.snapshot_at).getTime()),
+  ...evalHistory.map(eh => new Date(eh.evaluated_at).getTime()),
+].filter(t => !isNaN(t));
+const tMin = allTimestamps.length > 0 ? Math.min(...allTimestamps) : 0;
+const tMax = allTimestamps.length > 0 ? Math.max(...allTimestamps) : 1;
+const tRange = tMax - tMin || 1;
+
+function txToX(ts: number): number {
+  return SPARK_PAD_X + ((ts - tMin) / tRange) * (SPARK_W - SPARK_PAD_X * 2);
+}
+
+// HN score area path (bottom sub-chart: y from SPARK_HRCB_H+SPARK_PAD_Y to SPARK_H-SPARK_PAD_Y)
+const hnScores = storyTimeline.map(p => p.hn_score ?? 0).filter(s => s > 0);
+const hnMax = hnScores.length > 0 ? Math.max(...hnScores) : 1;
+const hnY0 = SPARK_HRCB_H + SPARK_PAD_Y;
+const hnY1 = SPARK_H - SPARK_PAD_Y;
+function hnScoreToY(s: number): number {
+  return hnY1 - ((s / hnMax) * (hnY1 - hnY0));
+}
+const hnPoints = storyTimeline
+  .filter(p => p.hn_score != null && p.hn_score > 0)
+  .map(p => ({ x: txToX(new Date(p.snapshot_at).getTime()), y: hnScoreToY(p.hn_score!) }));
+let hnPath = '';
+if (hnPoints.length >= 2) {
+  hnPath = hnPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const firstX = hnPoints[0].x.toFixed(1);
+  const lastX = hnPoints[hnPoints.length - 1].x.toFixed(1);
+  hnPath += ` L${lastX},${hnY1} L${firstX},${hnY1} Z`;
+}
+
+// HRCB dots (top sub-chart: y from SPARK_PAD_Y to SPARK_HRCB_H)
+const hrcbY0 = SPARK_PAD_Y, hrcbY1 = SPARK_HRCB_H;
+function hrcbScoreToY(score: number): number {
+  // [-1, 1] → [hrcbY1, hrcbY0] (high score = top)
+  return hrcbY1 - ((score + 1) / 2) * (hrcbY1 - hrcbY0);
+}
+const hrcbDots = evalHistory
+  .filter(eh => eh.hcb_weighted_mean != null)
+  .map(eh => ({
+    x: txToX(new Date(eh.evaluated_at).getTime()),
+    y: hrcbScoreToY(eh.hrcb_weighted_mean!),
+    score: eh.hrcb_weighted_mean!,
+    model: eh.eval_model,
+  }));
 
 const siteUrl = Astro.url.origin;
 
@@ -333,6 +403,10 @@ const jsonLd = isDone && aggregates ? {
     },
   },
 } : null;
+
+const distinctAuditModels = [...new Set(
+  auditTrail.filter(e => e.type === 'eval' && e.eval_model).map(e => e.eval_model!)
+)];
 
 const EVIDENCE_LABELS: Record<string, string> = {H: 'High', M: 'Medium', L: 'Low', ND: 'No Data'};
 
@@ -1164,17 +1238,77 @@ function timeAgo(unixTime: number): string {
     </>
   ) : null}
 
+  {/* Longitudinal sparkline (shown when ≥2 eval entries or ≥5 HN snapshots) */}
+  {showSparkline && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 0 0;">
+      <tr>
+        <td style="padding: 8px 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+            Longitudinal
+            {storyTimeline.length > 0 && <span style="text-transform: none; letter-spacing: 0; margin-left: 6px;">{storyTimeline.length} HN snapshots</span>}
+            {evalHistory.length > 0 && <span style="text-transform: none; letter-spacing: 0; margin-left: 6px;">· {evalHistory.length} evals</span>}
+          </div>
+          <div style="overflow-x: auto;">
+            <svg width={SPARK_W} height={SPARK_H} style="display: block; overflow: visible;">
+              {/* HRCB band labels */}
+              <text x="2" y={hrcbY0 + 2} fill="#5b7279" font-size="8" dominant-baseline="hanging">+1</text>
+              <text x="2" y={(hrcbY0 + hrcbY1) / 2} fill="#5b7279" font-size="8" dominant-baseline="middle">0</text>
+              <text x="2" y={hrcbY1 - 1} fill="#5b7279" font-size="8" dominant-baseline="auto">−1</text>
+              {/* HRCB zero line */}
+              <line x1={SPARK_PAD_X + 14} y1={(hrcbY0 + hrcbY1) / 2} x2={SPARK_W - SPARK_PAD_X} y2={(hrcbY0 + hrcbY1) / 2} stroke="#1a5568" stroke-width="0.5" stroke-dasharray="2,3" />
+              {/* Divider */}
+              <line x1={SPARK_PAD_X} y1={SPARK_HRCB_H + SPARK_PAD_Y / 2} x2={SPARK_W} y2={SPARK_HRCB_H + SPARK_PAD_Y / 2} stroke="#1a5568" stroke-width="0.5" />
+              {/* HN score label */}
+              <text x="2" y={hnY0 + 2} fill="#5b7279" font-size="8" dominant-baseline="hanging">HN</text>
+              {/* HN score area */}
+              {hnPath && <path d={hnPath} fill="#3b82f620" stroke="#3b82f6" stroke-width="1" />}
+              {/* HRCB eval dots */}
+              {hrcbDots.map((dot, i) => (
+                <circle key={i} cx={dot.x} cy={dot.y} r="3"
+                  fill={scoreToColor(dot.score)}
+                  stroke="#093946" stroke-width="1"
+                  title={`${dot.model}: ${formatScore(dot.score)}`} />
+              ))}
+            </svg>
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+
   {/* Audit Trail — merged eval_history + events, sorted by timestamp */}
   {auditTrail.length > 0 && (
     <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
       <tr>
         <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
-          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
-            Audit Trail
-            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">{auditTrail.length} entries</span>
+          <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+            <span style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">
+              Audit Trail
+            </span>
+            <span id="trail-count" style="color: #5b7279; font-size: var(--font-xs);">{auditTrail.length} entries</span>
+            {/* Type filter chips */}
+            <span style="display: flex; gap: 4px; margin-left: 4px; flex-wrap: wrap;">
+              <button class="trail-filter" data-filter="all" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid #1a5568; background: #0d4655; color: #98a8a8; cursor: pointer;">all</button>
+              <button class="trail-filter" data-filter="eval" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid #1a5568; background: none; color: #5b7279; cursor: pointer;">eval</button>
+              <button class="trail-filter" data-filter="pipeline" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid #1a5568; background: none; color: #5b7279; cursor: pointer;">pipeline</button>
+              {auditTrail.some(e => e.trailCategory === 'content_drift') && (
+                <button class="trail-filter" data-filter="content_drift" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 10px; border: 1px solid #1a5568; background: none; color: #5b7279; cursor: pointer;">drift</button>
+              )}
+            </span>
+            {/* Model filter */}
+            {distinctAuditModels.length > 1 && (
+              <select id="trail-model-filter" style="font-size: var(--font-xs); background: #0d4655; color: #5b7279; border: 1px solid #1a5568; border-radius: 4px; padding: 1px 4px; cursor: pointer;">
+                <option value="">all models</option>
+                {distinctAuditModels.map(m => <option value={m}>{m}</option>)}
+              </select>
+            )}
+            {/* Sort toggle */}
+            <button id="trail-sort-toggle" style="padding: 1px 8px; font-size: var(--font-xs); border-radius: 4px; border: 1px solid #1a5568; background: none; color: #5b7279; cursor: pointer; margin-left: auto;">
+              newest first
+            </button>
           </div>
           <div class="table-wrap">
-          <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+          <table id="audit-trail-table" cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
             {auditTrail.map((entry) => {
               if (entry.type === 'eval') {
                 const drift = entry.eval_model && entry.hcb_weighted_mean != null
@@ -1184,7 +1318,7 @@ function timeAgo(unixTime: number): string {
                 const driftStr = drift != null ? (drift > 0 ? `+${drift.toFixed(2)}` : drift.toFixed(2)) : '';
                 const driftColor = drift != null ? (drift > 0 ? '#16a34a' : drift < 0 ? '#dc2626' : '#5b7279') : '';
                 return (
-                  <tr style="border-top: 1px solid #0d4655;">
+                  <tr style="border-top: 1px solid #0d4655;" data-category="eval" data-model={entry.eval_model || ''} data-ts={entry.timestamp}>
                     <td style="color: #5b7279; white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
                     <td style="width: 90px;">
                       <span class="badge" style="background: #16a34a20; color: #16a34a; font-size: var(--font-xs);">
@@ -1205,7 +1339,7 @@ function timeAgo(unixTime: number): string {
               const sevColor = entry.severity === 'error' ? '#dc2626' : entry.severity === 'warn' ? '#eab308' : '#5b7279';
               const typeColor = EVENT_TYPE_COLORS[entry.event_type || ''] || '#5b7279';
               return (
-                <tr style="border-top: 1px solid #0d4655;">
+                <tr style="border-top: 1px solid #0d4655;" data-category={entry.trailCategory} data-model="" data-ts={entry.timestamp}>
                   <td style="color: #5b7279; white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
                   <td style="width: 90px;">
                     <span class="badge" style={`background: ${typeColor}20; color: ${typeColor}; font-size: var(--font-xs);`}>
@@ -1333,6 +1467,74 @@ function timeAgo(unixTime: number): string {
         fwHide[j].style.display = fwOn ? 'none' : '';
       }
     });
+  })();
+  </script>
+
+  <script is:inline>
+  // Audit trail filter + sort
+  (function() {
+    var table = document.getElementById('audit-trail-table');
+    if (!table) return;
+    var countEl = document.getElementById('trail-count');
+    var modelSel = document.getElementById('trail-model-filter');
+    var sortBtn = document.getElementById('trail-sort-toggle');
+    var filterBtns = document.querySelectorAll('.trail-filter');
+    var activeFilter = 'all';
+    var activeModel = '';
+    var sortDesc = true; // newest first
+
+    function applyFilters() {
+      var rows = table.querySelectorAll('tr[data-category]');
+      var visible = 0;
+      // Collect and sort
+      var arr = Array.prototype.slice.call(rows);
+      arr.sort(function(a, b) {
+        var ta = a.getAttribute('data-ts') || '';
+        var tb = b.getAttribute('data-ts') || '';
+        return sortDesc ? tb.localeCompare(ta) : ta.localeCompare(tb);
+      });
+      arr.forEach(function(row) {
+        table.appendChild(row);
+      });
+      rows = table.querySelectorAll('tr[data-category]');
+      rows.forEach(function(row) {
+        var cat = row.getAttribute('data-category') || '';
+        var model = row.getAttribute('data-model') || '';
+        var show = (activeFilter === 'all' || cat === activeFilter)
+                && (activeModel === '' || model === activeModel);
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      if (countEl) countEl.textContent = visible + ' of ' + rows.length + ' entries';
+    }
+
+    filterBtns.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        activeFilter = this.getAttribute('data-filter') || 'all';
+        filterBtns.forEach(function(b) {
+          b.style.background = 'none';
+          b.style.color = '#5b7279';
+        });
+        this.style.background = '#0d4655';
+        this.style.color = '#98a8a8';
+        applyFilters();
+      });
+    });
+
+    if (modelSel) {
+      modelSel.addEventListener('change', function() {
+        activeModel = this.value;
+        applyFilters();
+      });
+    }
+
+    if (sortBtn) {
+      sortBtn.addEventListener('click', function() {
+        sortDesc = !sortDesc;
+        this.textContent = sortDesc ? 'newest first' : 'oldest first';
+        applyFilters();
+      });
+    }
   })();
   </script>
 </Base>

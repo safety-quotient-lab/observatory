@@ -57,6 +57,31 @@ export interface StrategyOptions {
   article?: string;
 }
 
+// --- Eager consumer: sleeper detector rules ---
+
+export interface SleeperRule {
+  /** Short identifier for this rule (used in eval_error tagging). */
+  label: string;
+  /** Maximum HN score (points) to qualify. Omit = no upper bound. */
+  maxScore?: number;
+  /** Minimum HN score (points) to qualify. Omit = no lower bound. */
+  minScore?: number;
+  /** Minimum comment count to qualify. Omit = no requirement. */
+  minComments?: number;
+  /** Maximum age in hours to qualify. Omit = no age limit. */
+  maxAgeHours?: number;
+}
+
+/**
+ * Pluggable rules for the eager search consumer.
+ * Add/remove rules here without touching search.astro logic.
+ * Each rule independently queries Algolia and inserts matching stories as pending.
+ */
+export const SLEEPER_RULES: SleeperRule[] = [
+  { label: 'high_engagement', minScore: 100, maxAgeHours: 7 * 24 },
+  { label: 'sleeper', maxScore: 10, minComments: 5, maxAgeHours: 12 },
+];
+
 /** Minute → strategy mapping (1x/hour each, staggered) */
 export const STRATEGY_SCHEDULE: Record<number, StrategyName> = {
   3: 'domain_min_coverage',

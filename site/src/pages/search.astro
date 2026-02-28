@@ -1,0 +1,434 @@
+---
+import Base from '../layouts/Base.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { scoreToColor, formatScore } from '../lib/colors';
+import { searchAlgolia, insertAlgoliaHits, SLEEPER_RULES } from '../lib/coverage-crawl';
+import { readDb } from '../lib/db-utils';
+
+const db = readDb(Astro.locals.runtime.env.DB);
+const reqUrl = new URL(Astro.request.url);
+const q = (reqUrl.searchParams.get('q') || '').trim().slice(0, 200);
+
+interface DbStory {
+  hn_id: number;
+  eval_status: string;
+  hcb_weighted_mean: number | null;
+  hcb_editorial_mean: number | null;
+  hcb_classification: string | null;
+  gate_category: string | null;
+}
+
+interface StoryResult {
+  hn_id: number;
+  title: string;
+  url: string | null;
+  domain: string | null;
+  hn_score: number | null;
+  hn_comments: number | null;
+  hn_by: string;
+  hn_time: number;
+  eval_status: string;
+  hcb_weighted_mean: number | null;
+  hcb_editorial_mean: number | null;
+  hcb_classification: string | null;
+  gate_category: string | null;
+  isNew: boolean;
+}
+
+interface DomainResult {
+  domain: string;
+  avg_hrcb: number | null;
+  evaluated_count: number;
+  story_count: number;
+}
+
+interface UserResult {
+  hn_by: string;
+  story_count: number;
+  avg_hrcb: number | null;
+}
+
+function safeDomain(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+function timeAgo(unixTime: number): string {
+  const seconds = Math.floor(Date.now() / 1000 - unixTime);
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+let storyResults: StoryResult[] = [];
+let domainResults: DomainResult[] = [];
+let userResults: UserResult[] = [];
+let algoliaError: string | null = null;
+let sleeperInserted = 0;
+
+if (q) {
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  // Build sleeper consumer promises (independent of search query — runs every search)
+  const sleeperPromises = SLEEPER_RULES.map(async (rule) => {
+    const filters: string[] = [];
+    if (rule.minScore != null) filters.push(`points>=${rule.minScore}`);
+    if (rule.maxScore != null) filters.push(`points<=${rule.maxScore}`);
+    if (rule.minComments != null) filters.push(`num_comments>=${rule.minComments}`);
+    if (rule.maxAgeHours != null) filters.push(`created_at_i>=${nowSec - rule.maxAgeHours * 3600}`);
+    try {
+      const hits = await searchAlgolia({
+        tags: 'story',
+        numericFilters: filters.join(','),
+        hitsPerPage: 20,
+      });
+      const urlHits = hits.filter((h) => h.url != null);
+      const r = await insertAlgoliaHits(db, urlHits, 'story', `sleeper:${rule.label}`);
+      return r.inserted;
+    } catch {
+      return 0;
+    }
+  });
+
+  // Run everything in parallel
+  const [algoRes, domainRes, userRes, ...sleeperRes] = await Promise.allSettled([
+    searchAlgolia({ query: q, tags: 'story', hitsPerPage: 30 }),
+    db
+      .prepare(
+        `SELECT domain, avg_hrcb, evaluated_count, story_count
+         FROM domain_aggregates WHERE domain LIKE ? LIMIT 8`
+      )
+      .bind(`%${q}%`)
+      .all<DomainResult>(),
+    db
+      .prepare(
+        `SELECT hn_by, COUNT(*) as story_count,
+                AVG(COALESCE(hcb_weighted_mean, hcb_editorial_mean)) as avg_hrcb
+         FROM stories WHERE hn_by LIKE ? AND eval_status = 'done'
+         GROUP BY hn_by ORDER BY story_count DESC LIMIT 8`
+      )
+      .bind(`%${q}%`)
+      .all<UserResult>(),
+    ...sleeperPromises,
+  ]);
+
+  sleeperInserted = sleeperRes.reduce(
+    (sum, r) => sum + (r.status === 'fulfilled' ? r.value : 0),
+    0,
+  );
+
+  if (algoRes.status === 'rejected') {
+    algoliaError = String(algoRes.reason).slice(0, 200);
+  } else {
+    const hits = algoRes.value;
+    const hnIds = hits
+      .map((h) => parseInt(h.objectID, 10))
+      .filter((n) => !isNaN(n));
+
+    // Look up existing DB data BEFORE inserting (to determine isNew)
+    const dbMap = new Map<number, DbStory>();
+    if (hnIds.length > 0) {
+      try {
+        const placeholders = hnIds.map(() => '?').join(',');
+        const { results: dbRows } = await db
+          .prepare(
+            `SELECT hn_id, eval_status, hcb_weighted_mean, hcb_editorial_mean,
+                    hcb_classification, gate_category
+             FROM stories WHERE hn_id IN (${placeholders})`
+          )
+          .bind(...hnIds)
+          .all<DbStory>();
+        for (const row of dbRows) dbMap.set(row.hn_id, row);
+      } catch { /* ignore */ }
+    }
+
+    // Mirror new stories to DB as pending (INSERT OR IGNORE)
+    if (hits.length > 0) {
+      await insertAlgoliaHits(db, hits, 'story', 'search').catch(() => {});
+    }
+
+    storyResults = hits
+      .map((h) => {
+        const hnId = parseInt(h.objectID, 10);
+        if (isNaN(hnId)) return null;
+        const existing = dbMap.get(hnId);
+        return {
+          hn_id: hnId,
+          title: h.title,
+          url: h.url,
+          domain: safeDomain(h.url),
+          hn_score: h.points,
+          hn_comments: h.num_comments,
+          hn_by: h.author,
+          hn_time: h.created_at_i,
+          eval_status: existing?.eval_status ?? 'pending',
+          hcb_weighted_mean: existing?.hcb_weighted_mean ?? null,
+          hcb_editorial_mean: existing?.hcb_editorial_mean ?? null,
+          hcb_classification: existing?.hcb_classification ?? null,
+          gate_category: existing?.gate_category ?? null,
+          isNew: !dbMap.has(hnId),
+        };
+      })
+      .filter((r): r is StoryResult => r !== null);
+  }
+
+  if (domainRes.status === 'fulfilled') domainResults = domainRes.value.results;
+  if (userRes.status === 'fulfilled') userResults = userRes.value.results;
+}
+---
+
+<Base title={q ? `Search: ${q} — HN HRCB` : 'Search — HN HRCB'}>
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'search' }]} />
+
+  {/* Search form */}
+  <form method="get" style="padding: 10px 0 14px 0;">
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <input
+        type="text"
+        name="q"
+        value={q}
+        placeholder="Search stories, domains, users..."
+        autofocus={!q || undefined}
+        style="flex: 1; min-width: 180px; padding: 6px 10px; background: #093946; color: #98a8a8; border: 1px solid #1a5568; border-radius: 4px; font-size: var(--font-sm); outline: none;"
+      />
+      <button
+        type="submit"
+        style="padding: 6px 16px; background: #d56500; color: white; border: none; border-radius: 4px; font-size: var(--font-sm); cursor: pointer;"
+      >
+        Search
+      </button>
+    </div>
+  </form>
+
+  {algoliaError && (
+    <div style="color: #dc2626; font-size: var(--font-sm); margin-bottom: 10px;">
+      Search error: {algoliaError}
+    </div>
+  )}
+
+  {q && !algoliaError && storyResults.length === 0 && domainResults.length === 0 && userResults.length === 0 && (
+    <div style="color: #5b7279; font-size: var(--font-sm); padding: 20px 0;">
+      No results for "{q}"
+    </div>
+  )}
+
+  {/* Story results */}
+  {storyResults.length > 0 && (
+    <div id="section-stories">
+      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin: 4px 0 6px 0;">
+        Stories · {storyResults.length} results
+        {sleeperInserted > 0 && (
+          <span style="color: #d56500; margin-left: 8px; text-transform: none; letter-spacing: 0;">
+            +{sleeperInserted} queued via eager consumer
+          </span>
+        )}
+      </div>
+      <table cellpadding="0" cellspacing="0" width="100%">
+        {storyResults.map((s, i) => {
+          const score = s.hcb_weighted_mean ?? s.hcb_editorial_mean;
+          const hasFull = s.hcb_weighted_mean !== null;
+          const hasLite = !hasFull && s.hcb_editorial_mean !== null;
+          const isDone = s.eval_status === 'done' && hasFull;
+          const isPending = ['pending', 'queued', 'evaluating'].includes(s.eval_status);
+          const isFailed = s.eval_status === 'failed';
+          const isGated = s.gate_category != null;
+          const isEvaluable = (isPending || isFailed) && s.url != null && !isGated;
+          return (
+            <>
+              <tr class="athing">
+                <td valign="top" style="padding: 5px var(--space-lg) 0 0; text-align: right; width: 44px; color: #5b7279; font-size: var(--font-xs);">
+                  {i + 1}.
+                </td>
+                <td>
+                  <span class="titleline" style="font-size: var(--font-md);">
+                    <a href={s.url || `https://news.ycombinator.com/item?id=${s.hn_id}`} target="_blank" rel="noopener">
+                      {s.title}
+                    </a>
+                    {s.domain && (
+                      <span class="sitebit" style="font-size: var(--font-xs); color: #5b7279; margin-left: 6px;">({s.domain})</span>
+                    )}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td style="padding-bottom: 6px;">
+                  <span class="subline" style="font-size: var(--font-xs); color: #5b7279;">
+                    {s.hn_score != null && <>{s.hn_score} pts</>}
+                    {s.hn_comments != null && <> · {s.hn_comments} comments</>}
+                    {s.hn_by && <> · by {s.hn_by}</>}
+                    {' · '}{timeAgo(s.hn_time)}
+                    {' · '}<a href={`/item/${s.hn_id}`} style="color: #5b7279;">item</a>
+                  </span>
+                  {' '}
+                  {/* Score / status */}
+                  {(isDone || hasLite) && score != null ? (
+                    <a href={`/item/${s.hn_id}`} style={`color: ${scoreToColor(score)}; font-size: var(--font-xs); font-weight: bold; text-decoration: none;`}>
+                      {!hasFull && '~'}{formatScore(score)}{hasLite && <span style="color: #5b7279; margin-left: 2px;">[L]</span>}
+                    </a>
+                  ) : isGated ? (
+                    <span style="color: #5b7279; font-size: var(--font-xs);" title={`Gated: ${s.gate_category}`}>gated</span>
+                  ) : isFailed ? (
+                    <span style="color: #dc2626; font-size: var(--font-xs);">failed</span>
+                  ) : s.isNew ? (
+                    <span style="color: #d56500; font-size: var(--font-xs);">queued ✦</span>
+                  ) : isPending ? (
+                    <span style="color: #5b7279; font-size: var(--font-xs);">queued</span>
+                  ) : null}
+                  {' '}
+                  {/* Play button (donor-gated, for pending/failed stories with URLs) */}
+                  {isEvaluable && (
+                    <button
+                      class="play-btn"
+                      data-hn-id={s.hn_id}
+                      style="background: none; border: 1px solid #1a5568; border-radius: 3px; color: #5b7279; padding: 1px 7px; font-size: var(--font-xs); cursor: pointer; line-height: 1.4; vertical-align: middle;"
+                      title="Evaluate now (donors only)"
+                    >
+                      ► eval
+                    </button>
+                  )}
+                </td>
+              </tr>
+            </>
+          );
+        })}
+      </table>
+    </div>
+  )}
+
+  {/* Domain results */}
+  {domainResults.length > 0 && (
+    <div id="section-domains" style="margin-top: 16px;">
+      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin: 4px 0 6px 0;">
+        Domains · {domainResults.length} results
+      </div>
+      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+        {domainResults.map((d) => (
+          <tr style="border-top: 1px solid #0d4655;">
+            <td style="color: #98a8a8;">
+              <a href={`/domain/${d.domain}`} style="color: #98a8a8;">{d.domain}</a>
+            </td>
+            <td style="width: 80px; text-align: right;">
+              {d.avg_hrcb != null
+                ? <span style={`color: ${scoreToColor(d.avg_hrcb)};`}>{formatScore(d.avg_hrcb)}</span>
+                : <span style="color: #5b7279;">—</span>}
+            </td>
+            <td style="width: 110px; text-align: right; color: #5b7279;">
+              {d.evaluated_count} eval / {d.story_count} total
+            </td>
+          </tr>
+        ))}
+      </table>
+    </div>
+  )}
+
+  {/* User results */}
+  {userResults.length > 0 && (
+    <div id="section-users" style="margin-top: 16px;">
+      <div style="color: #5b7279; font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin: 4px 0 6px 0;">
+        Users · {userResults.length} results
+      </div>
+      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+        {userResults.map((u) => (
+          <tr style="border-top: 1px solid #0d4655;">
+            <td style="color: #98a8a8;">
+              <a href={`/user/${u.hn_by}`} style="color: #98a8a8;">{u.hn_by}</a>
+            </td>
+            <td style="width: 80px; text-align: right;">
+              {u.avg_hrcb != null
+                ? <span style={`color: ${scoreToColor(u.avg_hrcb)};`}>{formatScore(u.avg_hrcb)}</span>
+                : <span style="color: #5b7279;">—</span>}
+            </td>
+            <td style="width: 80px; text-align: right; color: #5b7279;">
+              {u.story_count} stories
+            </td>
+          </tr>
+        ))}
+      </table>
+    </div>
+  )}
+
+  {!q && (
+    <div style="color: #5b7279; font-size: var(--font-sm); padding: 10px 0;">
+      Search HN stories by title, domain, or username. Matching stories are mirrored and queued for HRCB evaluation if not already present.
+    </div>
+  )}
+
+  {q && (
+    <script is:inline>
+    // Play button: donor-gated eval trigger (same pattern as item page)
+    document.querySelectorAll('.play-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var _dt = localStorage.getItem('hrcb_donated');
+        if (!_dt || (Date.now() - new Date(_dt).getTime()) >= 604800000) {
+          var modal = document.getElementById('donate-modal');
+          if (modal) {
+            window.__pendingPlayBtn = btn;
+            modal.style.display = 'flex';
+          } else {
+            window.open('/support', '_blank');
+          }
+          return;
+        }
+        var hnId = this.getAttribute('data-hn-id');
+        var self = this;
+        self.disabled = true;
+        self.textContent = '…';
+        fetch('/api/trigger/' + hnId, { method: 'POST' })
+          .then(function(r) {
+            if (!r.ok) { self.textContent = '✗'; self.disabled = false; return; }
+            var ct = r.headers.get('content-type') || '';
+            if (ct.indexOf('text/event-stream') === -1) { self.textContent = '✓'; return; }
+            var reader = r.body.getReader();
+            var decoder = new TextDecoder();
+            var buffer = '';
+            function read() {
+              reader.read().then(function(chunk) {
+                if (chunk.done) { self.textContent = '✓'; return; }
+                buffer += decoder.decode(chunk.value, { stream: true });
+                var parts = buffer.split('\n\n');
+                buffer = parts.pop() || '';
+                for (var i = 0; i < parts.length; i++) {
+                  var lines = parts[i].split('\n');
+                  var evType = '', evData = '';
+                  for (var l = 0; l < lines.length; l++) {
+                    if (lines[l].indexOf('event: ') === 0) evType = lines[l].slice(7);
+                    if (lines[l].indexOf('data: ') === 0) evData = lines[l].slice(6);
+                  }
+                  if (!evData) continue;
+                  try {
+                    var d = JSON.parse(evData);
+                    if (evType === 'done' || d.status === 'done') {
+                      self.textContent = '✓'; self.style.color = '#16a34a'; return;
+                    }
+                    if (d.status === 'error') {
+                      self.textContent = '✗'; self.style.color = '#dc2626'; self.disabled = false; return;
+                    }
+                  } catch {}
+                }
+                read();
+              }).catch(function() { self.textContent = '✗'; self.disabled = false; });
+            }
+            read();
+          })
+          .catch(function() { self.textContent = '✗'; self.disabled = false; });
+      });
+    });
+    // Resume pending button after donation
+    document.addEventListener('hrcb:donated', function() {
+      if (window.__pendingPlayBtn) {
+        window.__pendingPlayBtn.click();
+        window.__pendingPlayBtn = null;
+      }
+    });
+    </script>
+  )}
+</Base>
