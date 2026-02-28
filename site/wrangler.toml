@@ -6,11 +6,11 @@ pages_build_output_dir = "dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "hrcb-db"
-database_id = "<your-d1-database-id>"  # wrangler d1 list
+database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
 
 [[kv_namespaces]]
 binding = "CONTENT_CACHE"
-id = "<your-kv-namespace-id>"  # wrangler kv namespace list
+id = "ffe31e8bd21f43169e81f6d6137772bf"
 
 # Cron trigger lives in a separate Worker (functions/cron.ts)
 # Deploy cron separately: wrangler deploy functions/cron.ts --name hn-hrcb-cron

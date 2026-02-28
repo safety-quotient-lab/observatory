@@ -11,12 +11,12 @@ GitHub publishing respectively.
 
 ### Round 1 — Foundational (unlock the rest)
 
-- [ ] **Eval batch tracking**
+- [x] **Eval batch tracking** *(done 2026-02-27)*
   - `eval_batch_id` to link related evals from same cron cycle
   - Useful for isolating regressions to a specific run
   - *Small migration + cron change — cheap to add now*
 
-- [ ] **Story priority scoring**
+- [x] **Story priority scoring** *(done 2026-02-27)*
   - Composite score: HN score + comment count + time-decay + feed membership
     + `log10(submitter_karma) * 0.1` + score acceleration from rank snapshots
   - `eval_priority_score` computed by cron, factored into eval dispatch order
@@ -139,8 +139,9 @@ GitHub publishing respectively.
 ## Phase 3 — Open Source Prep
 *Blocked on license decision. Do before creating the public GitHub repo.*
 
-- [x] **Replace real Cloudflare resource IDs** in committed code *(done 2026-02-27)*
 - [x] **Remove personal eval sample files** from repo root *(done 2026-02-27)*
+
+- [ ] **Scrub Cloudflare resource IDs** from `wrangler.toml` — do as last step before public push (reverted premature scrub that broke every deploy cycle)
 
 - [ ] **Decide on `LICENSE`** — TBD (AGPL-3.0 was considered; not yet decided)
 
