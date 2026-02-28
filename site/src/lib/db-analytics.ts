@@ -1139,3 +1139,51 @@ export async function getMisclassificationSummary(db: D1Database): Promise<Miscl
     return { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 };
   }
 }
+
+// --- Eval velocity over time (light vs full by day) ---
+
+export interface DailyEvalVelocity {
+  day: string;
+  prompt_mode: string;
+  count: number;
+}
+
+export async function getDailyEvalVelocity(db: D1Database, days = 60): Promise<DailyEvalVelocity[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT DATE(evaluated_at) as day, prompt_mode, COUNT(*) as count
+       FROM rater_evals
+       WHERE eval_status = 'done'
+         AND evaluated_at IS NOT NULL
+         AND evaluated_at >= datetime('now', '-' || ? || ' days')
+       GROUP BY day, prompt_mode
+       ORDER BY day ASC`
+    )
+    .bind(days)
+    .all<DailyEvalVelocity>();
+  return results;
+}
+
+// --- Model mix over time (evals per model per day) ---
+
+export interface DailyModelMix {
+  day: string;
+  eval_model: string;
+  count: number;
+}
+
+export async function getDailyModelMix(db: D1Database, days = 30): Promise<DailyModelMix[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT DATE(evaluated_at) as day, eval_model, COUNT(*) as count
+       FROM rater_evals
+       WHERE eval_status = 'done'
+         AND evaluated_at IS NOT NULL
+         AND evaluated_at >= datetime('now', '-' || ? || ' days')
+       GROUP BY day, eval_model
+       ORDER BY day ASC`
+    )
+    .bind(days)
+    .all<DailyModelMix>();
+  return results;
+}

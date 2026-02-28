@@ -1,17 +1,20 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getDailyHrcb, getDailyContentTypeHrcb, getFeedDailyHrcb, getGlobalSetlHistory } from '../lib/db';
+import { getDailyHrcb, getDailyContentTypeHrcb, getFeedDailyHrcb, getGlobalSetlHistory, getDailyEvalVelocity, getDailyModelMix } from '../lib/db';
+import { modelShortName } from '../lib/shared-eval';
 import { scoreToColor, formatScore } from '../lib/colors';
 import { CONTENT_TYPE_LABELS } from '../lib/types';
 
 const db = Astro.locals.runtime.env.DB;
 
-const [dailyHrcb, dailyContentType, dailyFeed, globalSetl] = await Promise.all([
+const [dailyHrcb, dailyContentType, dailyFeed, globalSetl, evalVelocity, modelMixRaw] = await Promise.all([
   getDailyHrcb(db, 90),
   getDailyContentTypeHrcb(db, 90),
   getFeedDailyHrcb(db, 90),
   getGlobalSetlHistory(db, 90),
+  getDailyEvalVelocity(db, 60),
+  getDailyModelMix(db, 30),
 ]);
 
 // Compute rolling averages (7-day, 30-day)
@@ -96,6 +99,50 @@ function makeLine(points: { day: string; avg: number }[]): string {
 
 // Serialized data for regime change rendering
 const regimeData = JSON.stringify(regimeChanges);
+
+// --- Eval velocity: group by day, split full vs light ---
+const velDays = [...new Set(evalVelocity.map(r => r.day))].sort();
+const velFull = new Map<string, number>();
+const velLight = new Map<string, number>();
+for (const r of evalVelocity) {
+  if (r.prompt_mode === 'full') velFull.set(r.day, r.count);
+  else velLight.set(r.day, r.count);
+}
+const velMaxCount = velDays.length > 0
+  ? Math.max(...velDays.map(d => (velFull.get(d) ?? 0) + (velLight.get(d) ?? 0)), 1)
+  : 1;
+const velChartW = Math.max(velDays.length * 12, 300);
+const velChartH = 100;
+function velY(count: number): number { return velChartH - (count / velMaxCount) * velChartH; }
+function velX(i: number): number { return (i / Math.max(velDays.length - 1, 1)) * velChartW; }
+
+// --- Model mix: group by day, per model stacked bars ---
+const mixDays = [...new Set(modelMixRaw.map(r => r.day))].sort();
+const mixModels = [...new Set(modelMixRaw.map(r => r.eval_model))];
+// Sort models by total eval count descending (dominant models first in stack)
+const mixModelTotals = new Map<string, number>();
+for (const r of modelMixRaw) mixModelTotals.set(r.eval_model, (mixModelTotals.get(r.eval_model) ?? 0) + r.count);
+mixModels.sort((a, b) => (mixModelTotals.get(b) ?? 0) - (mixModelTotals.get(a) ?? 0));
+
+const mixData = new Map<string, Map<string, number>>(); // day → model → count
+for (const r of modelMixRaw) {
+  let m = mixData.get(r.day);
+  if (!m) { m = new Map(); mixData.set(r.day, m); }
+  m.set(r.eval_model, r.count);
+}
+const mixMaxDay = mixDays.length > 0
+  ? Math.max(...mixDays.map(d => [...(mixData.get(d)?.values() ?? [0])].reduce((a, b) => a + b, 0)), 1)
+  : 1;
+const mixChartW = Math.max(mixDays.length * 14, 300);
+const mixChartH = 100;
+const mixBarW = mixDays.length > 0 ? Math.max(mixChartW / mixDays.length - 2, 4) : 12;
+const MODEL_COLORS: Record<string, string> = {
+  'claude-haiku-4-5': '#60a5fa',
+  'claude-haiku-4-5-20251001': '#60a5fa',
+  'deepseek-v3.2': '#a78bfa',
+  'llama-4-scout-wai': '#34d399',
+  'llama-3.3-70b-wai': '#22d3ee',
+};
 ---
 
 <Base title="Seldon Dashboard — HN HRCB">
@@ -322,6 +369,80 @@ const regimeData = JSON.stringify(regimeChanges);
                 return <polyline fill="none" stroke={ctColors[ct] || '#5b7279'} stroke-width="1.5" points={points.join(' ')} />;
               })}
             </svg>
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Eval Velocity — light vs full evals per day */}
+  {velDays.length > 1 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+      <tr>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Eval Velocity
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">evals/day · light vs full · {velDays.length} days</span>
+          </div>
+          <div style="display: flex; gap: 12px; font-size: var(--font-xs); margin-bottom: 4px;">
+            <span style="color: #d56500;">light</span>
+            <span style="color: #60a5fa;">full</span>
+          </div>
+          <div style="overflow-x: auto;">
+            <svg width={velChartW} height={velChartH} viewBox={`0 0 ${velChartW} ${velChartH}`} style="min-width: 300px;">
+              {/* Light line */}
+              <polyline
+                fill="none" stroke="#d56500" stroke-width="1.5"
+                points={velDays.map((d, i) => `${velX(i)},${velY(velLight.get(d) ?? 0)}`).join(' ')}
+              />
+              {/* Full line */}
+              <polyline
+                fill="none" stroke="#60a5fa" stroke-width="1.5"
+                points={velDays.map((d, i) => `${velX(i)},${velY(velFull.get(d) ?? 0)}`).join(' ')}
+              />
+            </svg>
+          </div>
+          <div style="font-size: var(--font-xs); color: #1a5568; margin-top: 4px;">
+            {velDays[0]} → {velDays[velDays.length - 1]} · peak {velMaxCount} evals/day
+          </div>
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {/* Model Mix — stacked bars per day */}
+  {mixDays.length > 1 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
+      <tr>
+        <td style="padding: 10px; background: #093946; border: 1px solid #1a5568; border-radius: 6px;">
+          <div style="color: #5b7279; font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+            Model Mix
+            <span style="text-transform: none; letter-spacing: 0; color: #5b7279; margin-left: 6px;">evals/day by model · {mixDays.length} days</span>
+          </div>
+          <div style="display: flex; gap: 12px; font-size: var(--font-xs); margin-bottom: 4px; flex-wrap: wrap;">
+            {mixModels.map(m => (
+              <span style={`color: ${MODEL_COLORS[m] || '#5b7279'};`}>{modelShortName(m)}</span>
+            ))}
+          </div>
+          <div style="overflow-x: auto;">
+            <svg width={mixChartW} height={mixChartH} viewBox={`0 0 ${mixChartW} ${mixChartH}`} style="min-width: 300px;">
+              {mixDays.map((day, i) => {
+                const dayMap = mixData.get(day);
+                if (!dayMap) return null;
+                const x = (i / Math.max(mixDays.length - 1, 1)) * mixChartW - mixBarW / 2;
+                let yOffset = mixChartH;
+                return mixModels.map(model => {
+                  const count = dayMap.get(model) ?? 0;
+                  if (count === 0) return null;
+                  const barH = (count / mixMaxDay) * mixChartH;
+                  yOffset -= barH;
+                  return <rect x={x} y={yOffset} width={mixBarW} height={barH} fill={MODEL_COLORS[model] || '#5b7279'} opacity="0.85" />;
+                });
+              })}
+            </svg>
+          </div>
+          <div style="font-size: var(--font-xs); color: #1a5568; margin-top: 4px;">
+            {mixDays[0]} → {mixDays[mixDays.length - 1]} · peak {mixMaxDay} evals/day
           </div>
         </td>
       </tr>
