@@ -52,6 +52,64 @@ Network page shows static correlations. Extensions:
 `/compare/[id1]/[id2]` — side-by-side scores, classification, sentiment.
 Section-by-section score differences, E vs S channel divergence.
 
+### Structured Knowledge Graph *(rough sketch — uncertain feasibility)*
+
+A cross-entity graph where stories, users, domains, and UDHR articles are **nodes**
+and relationships between them are **edges**. Clustered by rights-category engagement
+rather than editorial signal. Different from factions (domains clustered by 8D editorial
+character) — this would connect *across* entity types.
+
+**Entities (nodes):**
+- Stories — HRCB fingerprint = 31-dimensional vector (one score per UDHR article section)
+- Users — aggregate fingerprint = mean of their submitted stories' section scores
+- Domains — aggregate fingerprint = from `domain_aggregates` (already materialized)
+- UDHR Articles (1–30) — fixed nodes; become hubs for clustering
+
+**Edges:**
+- `user → story` (posted)
+- `story → article` (weighted by that section's score magnitude)
+- `domain → article` (avg score for that provision, already in `domain_aggregates`)
+- `user → article` (derived: mean section score across all user's evaluated stories)
+- `story ↔ story` (similar provision fingerprint — cosine similarity on 31D vector)
+
+**Clustering dimension:**
+Not HRCB lean (+/-) but **which articles a user/domain/story engages with most** —
+a "rights fingerprint" showing that @pg mostly submits content touching Articles 17
+(property) and 19 (expression) but rarely 12 (privacy) or 23 (labor). This is
+orthogonal to whether they score positive or negative on those articles.
+
+**Open questions (feasibility unknowns):**
+- Do we have enough per-section data? `rater_scores` has section scores for full evals
+  only (~5K stories). Lite evals have no section scores. Coverage may be too sparse.
+- 31D fingerprint similarity is expensive at scale — may need dimensionality reduction
+  (PCA already implemented for factions, could reuse). Or cap to top-N provisions only.
+- User-level fingerprints depend on how many of a user's stories got *full* evals.
+  Most users have 1-3 full evals — too sparse for a meaningful fingerprint.
+- Graph storage: D1 can hold an edge table, but traversal queries are slow without
+  dedicated graph DB. May need to precompute clusters and store as KV blobs.
+- Incremental update path unclear — rebuilding the full graph on every eval write
+  is expensive; batching via cron is feasible but introduces staleness.
+
+**What it could produce (if feasible):**
+- "Users who post privacy content" cluster — see which domains they read, which
+  other rights their content touches, who else is in the cluster
+- Per-UDHR-article hub page: "Article 12 ecosystem — top domains, top posters,
+  most-linked companion articles"
+- Story-to-story "similar rights fingerprint" recommendations on item page
+- Cross-entity search: "show me users whose posting history most resembles
+  the rights profile of nytimes.com"
+
+**Relationship to existing features:**
+- Factions page already does 8D clustering of domains — this extends to 31D + adds
+  users and stories as node types
+- Rights network already shows article-to-article correlations — this adds the
+  entity layer (who/what activates those correlations)
+- Primer vision (above) produces claims *from* the graph; the graph is the substrate
+
+**Verdict: Needs feasibility study before committing.** Key gating questions:
+section score coverage, user fingerprint sparsity, and graph traversal architecture
+within D1/KV constraints. Worth an Opus analysis before any implementation.
+
 ---
 
 ## Architectural Options (researched, not actionable yet)
@@ -94,19 +152,16 @@ Stories hitting score threshold → alert event. Velocity decay analysis
 `eval_variant` column, dashboard comparing outcome distributions across variants.
 Far-future platform feature — useful when methodology changes need controlled rollout.
 
-### Materialize getUserIntelligence
-Currently a live CTE scan over full stories table. Could create `user_aggregates`
-materialized table (like `domain_aggregates`). Deferred because the query depends
-on user-controlled sort/filter params — simple cachedQuery won't work,
-full materialization adds a write-path step for marginal gain.
+### Materialize getUserIntelligence *(done 2026-02-28)*
+`user_aggregates` table built (migration 0054). 4 refresh triggers. KV-cached per sort+minStories. `/users` and `/user/[username]` fully migrated.
 
 ### Dark Data Surfacing
 
-- **Transparency disclosure rates** — `td_author_identified`, `td_conflicts_disclosed`, `td_funding_disclosed` have no corpus/domain aggregate view. "Only 34% of stories identify their author."
-- **Temporal framing aggregate** — `tf_primary_focus` (retrospective/present/prospective) collected per-story but never aggregated. Distribution chart on `/signals`.
-- **Jargon/knowledge-level aggregate** — `cl_jargon_density`, `cl_assumed_knowledge` have no aggregate view beyond reading level tier.
-- **Lite reasoning viewer** — `rater_evals.reasoning` stored but invisible. Surface on item page audit trail.
-- **Methodology drift detector** — `getMethodologyDistribution()` implemented, never called. Show % of evals on current vs old methodology hash on `/status/models`.
+- **Transparency disclosure rates** ✅ *(done 2026-02-28)* — `getTdSignalAggregates()` + Transparency Observatory on `/signals`. Non-null denominators per field.
+- **Temporal framing aggregate** ✅ *(done 2026-02-28)* — `getTemporalFramingAggregates()` + Temporal Framing Observatory on `/signals`. Retrospective/present/prospective/mixed distribution + backward/forward ratio.
+- **Jargon/knowledge-level aggregate** ✅ *(done 2026-02-28)* — `getComplexityAggregates()` + Content Accessibility section on `/signals`. Jargon density + assumed knowledge distributions, Article 26 framing.
+- **Lite reasoning viewer** ✅ *(done 2026-02-28)* — Expandable reasoning in item page audit trail, matched by model from `rater_evals.reasoning`.
+- **Methodology drift detector** ✅ *(done 2026-02-28)* — `getMethodologyDistribution()` wired to `/status/models` Measurement Integrity section. Hash, count, % on current, stale count.
 - **Batch regression isolation** — `eval_batch_id` links evals to cron cycles. Per-batch quality view: avg HRCB, failure rate, latency.
 
 ### Structural Extensions
@@ -115,7 +170,7 @@ full materialization adds a write-path step for marginal gain.
 - **User API endpoints** — `/api/v1/users` + `/api/v1/user/[username]`. DB functions exist, no API surface.
 - **Signals API endpoint** — `/api/v1/signals`. `getSignalOverview` exists, no API route.
 - **Domain → factions cross-link** — domain page has no "See in factions" link.
-- **Filtered RSS feeds** — `/feed.xml?filter=negative&domain=example.com`. Currently global-only.
+- **Filtered RSS feeds** ✅ *(done 2026-02-28)* — `/feed.xml?filter=positive|negative|neutral&article=N&domain=...&limit=N`. OPML at `/feed/opml.xml`.
 - **Date-range filter** in feed and API — only single-day (`/past?day=`) exists, no from/to range.
 
 ### Methodology Improvements
@@ -149,12 +204,12 @@ Ideas that aggregate invisible patterns into visible statements about rights. Hi
 
 | Idea | Why it teaches |
 |---|---|
-| **Transparency disclosure rates** | "Only 34% of stories identify their author" — makes Article 19's relationship to accountability visible at corpus scale. TD is a core UDHR dimension; surfacing corpus-wide rates makes the invisible visible. **This is the mission distilled.** |
+| **Transparency disclosure rates** ✅ *(done 2026-02-28)* | Transparency Observatory on `/signals`. "Only 34% of stories identify their author" — **shipped.** |
 | **Comment sentiment divergence** | "The article scored +0.4 on Article 19 but commenters disagree" — directly exposes tension between editorial assessment and community perception. That's a human rights discussion happening naturally. |
 | **Rights network temporal evolution** | Shows users that UDHR articles aren't independent — privacy and expression are in tension in tech. Temporal shifts reveal how discourse changes. This is rights-relationship pedagogy. |
 | **Story comparison view** | "Why did this story score differently on Article 19 vs Article 12?" — the comparison forces engagement with specific provisions. The comparison *is* the pedagogy. |
-| **Filtered RSS feeds** | A "rights-negative stories" RSS feed is a daily rights awareness tool. Per-article feeds ("new content affecting Article 12") are even stronger — ongoing passive pedagogy. |
-| **Jargon/knowledge-level aggregate** | Directly relates to Article 26 (right to education). "Average jargon density of HN content is X" exposes who rights discourse is for — if it's all expert-level, that's exclusionary. |
+| **Filtered RSS feeds** ✅ *(done 2026-02-28)* | Filter+article+domain params on `/feed.xml`, OPML index. Per-provision feeds live. |
+| **Jargon/knowledge-level aggregate** ✅ *(done 2026-02-28)* | Content Accessibility on `/signals`. Jargon density + assumed knowledge distributions. Article 26 framing — **shipped.** |
 | **Content type browse page** | "How do editorial articles differ from policy documents on Article 12?" — browsing by content type teaches that the medium shapes the rights message. Policy docs have high structural weight (0.7) for a reason. |
 
 ### Tier 2 — Mission-Supportive
@@ -163,17 +218,17 @@ Ideas that improve accuracy, trust, or reach — don't teach directly but make t
 - **Seldon event annotations** — regime changes teach that rights-alignment is dynamic; event annotations ("EU AI Act passed → Article 12 content shifted") directly connect rights to real events
 - **Faction drift** — pedagogical only if framed as "this outlet's relationship with privacy rights is shifting"
 - **Lobsters** — cross-community comparison ("Lobsters cares more about privacy, HN more about expression") is pedagogically interesting *if framed*
-- **Temporal framing aggregate** — "80% of privacy content is retrospective (analyzing breaches) vs 5% prospective (preventing them)" — powerful with the right framing
+- **Temporal framing aggregate** ✅ *(done 2026-02-28)* — Temporal Framing Observatory on `/signals` — **shipped**
 - **Confidence-weighted consensus** / **Outlier rejection** / **Cross-model PT agreement** / **Calibration negative site** — accuracy serves the mission; better propaganda detection = better pedagogy about information manipulation (Article 19)
 - **Signals API** — enables researchers and educators to programmatically access rights data; "build your own UDHR dashboard" is meta-pedagogical
 
 ### Tier 3 — Infrastructure
 No direct mission connection — serve the tool, not the mission.
 
-Analytics Engine, rate limit forecasting, velocity alerts, A/B testing, getUserIntelligence materialization, lite reasoning viewer, methodology drift detector, batch regression isolation, date-range filter, DCP staleness fix.
+Analytics Engine, rate limit forecasting, velocity alerts, A/B testing, batch regression isolation, date-range filter, DCP staleness fix.
 
 ### Implication
-Tier 1 ideas should be prioritized when they become feasible. Tier 3 should stay in IDEAS but deprioritized — they serve the tool, not the reason the tool exists. The highest-leverage single feature is **Transparency Disclosure Rates** — requires no new data collection, just aggregating existing `td_*` fields into a visible dashboard section.
+Tier 1 ideas should be prioritized when they become feasible. Tier 3 should stay in IDEAS but deprioritized — they serve the tool, not the reason the tool exists. Of the remaining unshipped Tier 1 items, **Story comparison view** is highest mission alignment per interaction but higher effort. **Content type browse page** is moderate effort and extends browsing pedagogy.
 
 ---
 

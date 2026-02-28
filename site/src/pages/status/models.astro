@@ -21,6 +21,7 @@ import {
   getMisclassificationSummary,
   getModelDriftStats,
   getGlobalGateStats,
+  getMethodologyDistribution,
   getModelChannelAverages,
   getCoverageProgression,
   getContentTypeEvalMix,
@@ -50,6 +51,7 @@ let ctValidation: Awaited<ReturnType<typeof getContentTypeValidation>> = [];
 let ctDisagreement: Awaited<ReturnType<typeof getContentTypeDisagreement>> = [];
 let ctMisclass: { structural_heavy_total: number; structural_heavy_missing: number; misclassification_pct: number; disagreement_count: number } = { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 };
 let driftStats: { models: any[]; overlapping: number; meanDelta: number | null } = { models: [], overlapping: 0, meanDelta: null };
+let methodologyDist: Awaited<ReturnType<typeof getMethodologyDistribution>> = [];
 let globalGate: { total: number; gated: number; gate_pct: number; breakdown: { gate_category: string; cnt: number }[] } = { total: 0, gated: 0, gate_pct: 0, breakdown: [] };
 let channelAverages: Awaited<ReturnType<typeof getModelChannelAverages>> = [];
 let coverageProgression: Awaited<ReturnType<typeof getCoverageProgression>> = [];
@@ -86,6 +88,7 @@ try {
   signalCompleteness = await tq('sigComplete', 'sys:signalComplete', () => getSignalCompleteness(db), 300, [] as typeof signalCompleteness);
   globalGate      = await tq('globalGate',   'sys:globalGate',    () => getGlobalGateStats(db), 600, { total: 0, gated: 0, gate_pct: 0, breakdown: [] as { gate_category: string; cnt: number }[] });
   driftStats      = await tq('modelDrift',   'sys:modelDrift',    () => getModelDriftStats(db), 300, { models: [] as any[], overlapping: 0, meanDelta: null });
+  methodologyDist = await tq('methDist',     'sys:methDist',      () => getMethodologyDistribution(db), 600, [] as typeof methodologyDist);
   ctValidation    = await tq('ctValid',      'sys:ctValidation',  () => getContentTypeValidation(db), 300, [] as typeof ctValidation);
   ctDisagreement  = await tq('ctDisagree',   'sys:ctDisagreement', () => getContentTypeDisagreement(db), 300, [] as typeof ctDisagreement);
   ctMisclass      = await tq('ctMisclass',   'sys:ctMisclass',    () => getMisclassificationSummary(db), 300, { structural_heavy_total: 0, structural_heavy_missing: 0, misclassification_pct: 0, disagreement_count: 0 });
@@ -614,6 +617,35 @@ const dcMax = Math.max(0.001, ...dcTotals);
           </div>
         )}
       </div>
+
+      {/* Methodology Drift */}
+      {methodologyDist.length > 0 && (() => {
+        const total = methodologyDist.reduce((s, r) => s + r.count, 0);
+        const current = methodologyDist[0];
+        const currentPct = total > 0 ? Math.round((current.count / total) * 100) : 0;
+        const stale = total - current.count;
+        return (
+          <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${stale > 0 ? 'var(--color-warning)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+            <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Methodology Drift</div>
+            <div style="font-size: var(--font-xs);">
+              <span style={`color: ${currentPct < 90 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-weight: bold;`}>{currentPct}%</span>
+              <span style="color: var(--fg-secondary);"> on current hash</span>
+              {stale > 0 && (
+                <span style="color: var(--color-warning);"> · {stale} stale</span>
+              )}
+            </div>
+            {methodologyDist.map((r) => (
+              <div style="color: var(--fg-secondary); font-size: 9px; margin-top: 1px;">
+                <span style="font-family: monospace;">{r.methodology_hash ? r.methodology_hash.slice(0, 8) : 'null'}</span>
+                <span style="color: var(--fg-secondary);"> · {r.count} stories</span>
+                {r.latest_eval && (
+                  <span style="color: var(--color-border);"> · {r.latest_eval.slice(0, 10)}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Content Gates */}
       <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${globalGate.gate_pct > 20 ? 'var(--color-warning)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>

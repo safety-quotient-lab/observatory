@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getStatusCounts, getSignalOverview, getTdSignalAggregates } from '../lib/db';
+import { getStatusCounts, getSignalOverview, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates } from '../lib/db';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -71,6 +71,39 @@ const tdRows = tdData ? [
   { label: 'Conflicts disclosed', pct: tdData.conflicts_disclosed_pct },
   { label: 'Funding disclosed',   pct: tdData.funding_disclosed_pct },
 ] : [];
+
+let complexityData: Awaited<ReturnType<typeof getComplexityAggregates>> | null = null;
+try {
+  complexityData = await cachedQuery(kv, 'sys:complexityAggregates', () => getComplexityAggregates(db), 600);
+} catch {}
+
+let temporalData: Awaited<ReturnType<typeof getTemporalFramingAggregates>> | null = null;
+try {
+  temporalData = await cachedQuery(kv, 'sys:temporalFramingAggregates', () => getTemporalFramingAggregates(db), 600);
+} catch {}
+
+const jargonRows = complexityData ? [
+  { label: 'Plain language',    count: complexityData.jargon_low },
+  { label: 'Some jargon',       count: complexityData.jargon_medium },
+  { label: 'Heavy jargon',      count: complexityData.jargon_high },
+] : [];
+const maxJargon = jargonRows.length > 0 ? Math.max(...jargonRows.map(r => r.count), 1) : 1;
+
+const knowledgeRows = complexityData ? [
+  { label: 'Self-contained',    count: complexityData.knowledge_none },
+  { label: 'General audience',  count: complexityData.knowledge_general },
+  { label: 'Domain knowledge',  count: complexityData.knowledge_domain_specific },
+  { label: 'Expert only',       count: complexityData.knowledge_expert },
+] : [];
+const maxKnowledge = knowledgeRows.length > 0 ? Math.max(...knowledgeRows.map(r => r.count), 1) : 1;
+
+const focusRows = temporalData ? [
+  { label: 'Retrospective', count: temporalData.retrospective, pct: temporalData.retrospective_pct, color: 'var(--color-amber)' },
+  { label: 'Present',       count: temporalData.present,       pct: temporalData.present_pct,       color: 'var(--channel-editorial)' },
+  { label: 'Prospective',   count: temporalData.prospective,   pct: temporalData.prospective_pct,   color: 'var(--color-positive)' },
+  { label: 'Mixed',         count: temporalData.mixed,         pct: temporalData.mixed_pct,         color: 'var(--fg-secondary)' },
+] : [];
+const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count), 1) : 1;
 ---
 
 <Base title="Signal Dashboard">
@@ -355,6 +388,107 @@ const tdRows = tdData ? [
                 {tdData.low_td_pct !== null && (
                   <> · <span style="color: var(--color-negative);">{tdData.low_td_pct.toFixed(0)}%</span> low (≤ −0.3)</>
                 )}.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ Content Accessibility Observatory ═══ */}
+
+        {complexityData && complexityData.total_measured > 0 && (
+          <div style="margin-bottom: 20px;">
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">
+              Content Accessibility
+              <span style="color: var(--fg-secondary); font-weight: normal; margin-left: 4px;">
+                ({complexityData.total_measured.toLocaleString()} of {complexityData.total_evaluated.toLocaleString()} stories measured)
+              </span>
+            </p>
+            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Jargon Density</p>
+                  <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+                    {jargonRows.map(({ label, count }) => (
+                      <tr>
+                        <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
+                        <td style="padding: 0 6px;">
+                          <div style="background: var(--bg-primary); border-radius: 3px; height: 12px; width: 100%; position: relative;">
+                            <div style={`background: var(--color-amber); opacity: 0.5; border-radius: 3px; height: 12px; width: ${Math.round((count / maxJargon) * 100)}%;`}></div>
+                          </div>
+                        </td>
+                        <td style="width: 40px; text-align: right; color: var(--fg-secondary);" class="score-font">
+                          {count.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </table>
+                </div>
+                <div>
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Assumed Knowledge</p>
+                  <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+                    {knowledgeRows.map(({ label, count }) => (
+                      <tr>
+                        <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
+                        <td style="padding: 0 6px;">
+                          <div style="background: var(--bg-primary); border-radius: 3px; height: 12px; width: 100%; position: relative;">
+                            <div style={`background: var(--channel-hrcb); opacity: 0.5; border-radius: 3px; height: 12px; width: ${Math.round((count / maxKnowledge) * 100)}%;`}></div>
+                          </div>
+                        </td>
+                        <td style="width: 40px; text-align: right; color: var(--fg-secondary);" class="score-font">
+                          {count.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </table>
+                </div>
+              </div>
+              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+                {complexityData.expert_pct !== null && (
+                  <><span style="color: var(--color-negative);">{complexityData.expert_pct.toFixed(0)}%</span> of stories assume expert-level knowledge. </>
+                )}
+                {complexityData.accessible_pct !== null && (
+                  <><span style="color: var(--color-positive);">{complexityData.accessible_pct.toFixed(0)}%</span> are plain-language + self-contained (fully accessible). </>
+                )}
+                <a href="/about#supplementary" style="color: var(--channel-hrcb);">Article 26 &rarr;</a>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ Temporal Framing Observatory ═══ */}
+
+        {temporalData && temporalData.total_measured > 0 && (
+          <div style="margin-bottom: 20px;">
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">
+              Temporal Framing
+              <span style="color: var(--fg-secondary); font-weight: normal; margin-left: 4px;">
+                ({temporalData.total_measured.toLocaleString()} of {temporalData.total_evaluated.toLocaleString()} stories measured)
+              </span>
+            </p>
+            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+              <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+                {focusRows.map(({ label, count, pct, color }) => (
+                  <tr>
+                    <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
+                    <td style="padding: 0 8px;">
+                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+                        <div style={`background: ${color}; opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((count / maxFocus) * 100)}%;`}></div>
+                      </div>
+                    </td>
+                    <td style="width: 40px; text-align: right; color: var(--fg-primary);" class="score-font">
+                      {pct !== null ? `${pct.toFixed(0)}%` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </table>
+              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+                {temporalData.retrospective_pct !== null && temporalData.prospective_pct !== null && temporalData.prospective_pct > 0 && (
+                  <>Tech coverage looks backward <span class="score-font">{(temporalData.retrospective_pct / temporalData.prospective_pct).toFixed(1)}×</span> more than forward. </>
+                )}
+                {temporalData.prospective_pct !== null && temporalData.prospective_pct === 0 && (
+                  <>No prospective (forward-looking) coverage measured yet. </>
+                )}
+                Temporal framing shapes how rights issues are understood: retrospective analysis vs prospective advocacy signal different relationships to change.
               </p>
             </div>
           </div>

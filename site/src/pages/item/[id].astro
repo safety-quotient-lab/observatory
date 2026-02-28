@@ -309,6 +309,12 @@ function getDriftForEval(model: string, score: number): number | null {
   return null;
 }
 
+// Build reasoning lookup from rater_evals (lite evals have pre-commit reasoning text)
+const reasoningByModel = new Map<string, string>();
+for (const re of raterEvals) {
+  if (re.reasoning) reasoningByModel.set(re.eval_model, re.reasoning);
+}
+
 // Longitudinal sparkline: show when ≥2 eval_history entries OR ≥5 story_snapshots
 const showSparkline = evalHistory.length >= 2 || storyTimeline.length >= 5;
 
@@ -1328,7 +1334,9 @@ function timeAgo(unixTime: number): string {
                 const scoreStr = entry.hcb_weighted_mean != null ? formatScore(entry.hcb_weighted_mean) : '?';
                 const driftStr = drift != null ? (drift > 0 ? `+${drift.toFixed(2)}` : drift.toFixed(2)) : '';
                 const driftColor = drift != null ? (drift > 0 ? 'var(--color-positive)' : drift < 0 ? 'var(--color-negative)' : 'var(--fg-secondary)') : '';
+                const reasoning = entry.eval_model ? reasoningByModel.get(entry.eval_model) : null;
                 return (
+                  <>
                   <tr style="border-top: 1px solid var(--bg-surface);" data-category="eval" data-model={entry.eval_model || ''} data-ts={entry.timestamp}>
                     <td style="color: var(--fg-secondary); white-space: nowrap; width: 140px;">{entry.timestamp.slice(0, 16)}</td>
                     <td style="width: 90px;">
@@ -1344,6 +1352,18 @@ function timeAgo(unixTime: number): string {
                     </td>
                     <td style="width: 60px;"></td>
                   </tr>
+                  {reasoning && (
+                    <tr data-category="eval" data-model={entry.eval_model || ''} data-ts={entry.timestamp}>
+                      <td></td>
+                      <td colspan="3" style="padding: 2px 0 6px 0;">
+                        <details style="font-size: var(--font-xs);">
+                          <summary style="color: var(--fg-secondary); cursor: pointer;">reasoning</summary>
+                          <div style="margin-top: 4px; padding: 6px 8px; background: var(--bg-surface); border-radius: 4px; color: var(--fg-secondary); white-space: pre-wrap; line-height: 1.4;">{reasoning}</div>
+                        </details>
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 );
               }
               // Event entry

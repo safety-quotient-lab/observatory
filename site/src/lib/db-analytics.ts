@@ -1457,6 +1457,140 @@ export async function getArticleThemeBreakdown(
   }
 }
 
+// --- Content accessibility aggregates (Tier 1 mission: Article 26 — right to education) ---
+
+/**
+ * Corpus-wide complexity and accessibility distributions.
+ *
+ * Surfaces the invisible: "X% of tech news assumes expert knowledge" — makes
+ * Article 26's relationship to exclusionary discourse visible at corpus scale.
+ *
+ * cl_jargon_density and cl_assumed_knowledge are TEXT columns on the stories
+ * table, written by writeEvalResult. NULL = field not measured (lite evals).
+ */
+export interface ComplexityAggregates {
+  total_evaluated: number;      // done stories, hn_id > 0
+  total_measured: number;       // stories with cl_jargon_density IS NOT NULL
+  // jargon density counts
+  jargon_low: number;
+  jargon_medium: number;
+  jargon_high: number;
+  // assumed knowledge counts
+  knowledge_none: number;
+  knowledge_general: number;
+  knowledge_domain_specific: number;
+  knowledge_expert: number;
+  // derived percentages (of total_measured)
+  high_jargon_pct: number | null;    // % where jargon is high
+  expert_pct: number | null;         // % where assumed_knowledge is expert
+  accessible_pct: number | null;     // % where jargon=low AND knowledge in (none, general)
+}
+
+export async function getComplexityAggregates(db: D1Database): Promise<ComplexityAggregates | null> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT
+           COUNT(*)                                                                         AS total_evaluated,
+           SUM(CASE WHEN cl_jargon_density IS NOT NULL THEN 1 ELSE 0 END)                 AS total_measured,
+           SUM(CASE WHEN cl_jargon_density = 'low'    THEN 1 ELSE 0 END)                  AS jargon_low,
+           SUM(CASE WHEN cl_jargon_density = 'medium' THEN 1 ELSE 0 END)                  AS jargon_medium,
+           SUM(CASE WHEN cl_jargon_density = 'high'   THEN 1 ELSE 0 END)                  AS jargon_high,
+           SUM(CASE WHEN cl_assumed_knowledge = 'none'           THEN 1 ELSE 0 END)        AS knowledge_none,
+           SUM(CASE WHEN cl_assumed_knowledge = 'general'        THEN 1 ELSE 0 END)        AS knowledge_general,
+           SUM(CASE WHEN cl_assumed_knowledge = 'domain_specific' THEN 1 ELSE 0 END)       AS knowledge_domain_specific,
+           SUM(CASE WHEN cl_assumed_knowledge = 'expert'         THEN 1 ELSE 0 END)        AS knowledge_expert,
+           ROUND(100.0 * SUM(CASE WHEN cl_jargon_density = 'high' THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN cl_jargon_density IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                                           AS high_jargon_pct,
+           ROUND(100.0 * SUM(CASE WHEN cl_assumed_knowledge = 'expert' THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN cl_assumed_knowledge IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                                           AS expert_pct,
+           ROUND(100.0 * SUM(CASE WHEN cl_jargon_density = 'low'
+                                    AND cl_assumed_knowledge IN ('none', 'general')
+                                   THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN cl_jargon_density IS NOT NULL
+                                   AND cl_assumed_knowledge IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                                           AS accessible_pct
+         FROM stories
+         WHERE eval_status = 'done' AND hn_id > 0`
+      )
+      .first<ComplexityAggregates>();
+    return row ?? null;
+  } catch (err) {
+    console.error('[getComplexityAggregates]', err);
+    return null;
+  }
+}
+
+// --- Temporal framing aggregates (Tier 2 mission: how tech news frames time) ---
+
+/**
+ * Corpus-wide temporal framing distributions.
+ *
+ * Surfaces the invisible: "X% of tech content is retrospective (analyzing
+ * breaches/failures) vs Y% prospective (solutions/prevention)" — reveals
+ * the reactive vs proactive character of the discourse.
+ *
+ * tf_primary_focus is a TEXT column, written by writeEvalResult.
+ * NULL = not measured (lite evals).
+ */
+export interface TemporalFramingAggregates {
+  total_evaluated: number;     // done stories, hn_id > 0
+  total_measured: number;      // stories with tf_primary_focus IS NOT NULL
+  retrospective: number;
+  present: number;
+  prospective: number;
+  mixed: number;
+  retrospective_pct: number | null;
+  present_pct: number | null;
+  prospective_pct: number | null;
+  mixed_pct: number | null;
+  // time horizon sub-distribution
+  horizon_immediate: number;
+  horizon_short_term: number;
+  horizon_medium_term: number;
+  horizon_long_term: number;
+  horizon_historical: number;
+  horizon_unspecified: number;
+}
+
+export async function getTemporalFramingAggregates(db: D1Database): Promise<TemporalFramingAggregates | null> {
+  try {
+    const row = await db
+      .prepare(
+        `SELECT
+           COUNT(*)                                                                           AS total_evaluated,
+           SUM(CASE WHEN tf_primary_focus IS NOT NULL THEN 1 ELSE 0 END)                    AS total_measured,
+           SUM(CASE WHEN tf_primary_focus = 'retrospective' THEN 1 ELSE 0 END)              AS retrospective,
+           SUM(CASE WHEN tf_primary_focus = 'present'       THEN 1 ELSE 0 END)              AS present,
+           SUM(CASE WHEN tf_primary_focus = 'prospective'   THEN 1 ELSE 0 END)              AS prospective,
+           SUM(CASE WHEN tf_primary_focus = 'mixed'         THEN 1 ELSE 0 END)              AS mixed,
+           ROUND(100.0 * SUM(CASE WHEN tf_primary_focus = 'retrospective' THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN tf_primary_focus IS NOT NULL THEN 1 ELSE 0 END), 0), 1) AS retrospective_pct,
+           ROUND(100.0 * SUM(CASE WHEN tf_primary_focus = 'present' THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN tf_primary_focus IS NOT NULL THEN 1 ELSE 0 END), 0), 1) AS present_pct,
+           ROUND(100.0 * SUM(CASE WHEN tf_primary_focus = 'prospective' THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN tf_primary_focus IS NOT NULL THEN 1 ELSE 0 END), 0), 1) AS prospective_pct,
+           ROUND(100.0 * SUM(CASE WHEN tf_primary_focus = 'mixed' THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN tf_primary_focus IS NOT NULL THEN 1 ELSE 0 END), 0), 1) AS mixed_pct,
+           SUM(CASE WHEN tf_time_horizon = 'immediate'   THEN 1 ELSE 0 END)                 AS horizon_immediate,
+           SUM(CASE WHEN tf_time_horizon = 'short_term'  THEN 1 ELSE 0 END)                 AS horizon_short_term,
+           SUM(CASE WHEN tf_time_horizon = 'medium_term' THEN 1 ELSE 0 END)                 AS horizon_medium_term,
+           SUM(CASE WHEN tf_time_horizon = 'long_term'   THEN 1 ELSE 0 END)                 AS horizon_long_term,
+           SUM(CASE WHEN tf_time_horizon = 'historical'  THEN 1 ELSE 0 END)                 AS horizon_historical,
+           SUM(CASE WHEN tf_time_horizon = 'unspecified' THEN 1 ELSE 0 END)                 AS horizon_unspecified
+         FROM stories
+         WHERE eval_status = 'done' AND hn_id > 0`
+      )
+      .first<TemporalFramingAggregates>();
+    return row ?? null;
+  } catch (err) {
+    console.error('[getTemporalFramingAggregates]', err);
+    return null;
+  }
+}
+
 // --- Transparency disclosure rates (Tier 1 mission: Article 19 accountability) ---
 
 /**
