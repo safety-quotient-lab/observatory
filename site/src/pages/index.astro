@@ -98,17 +98,20 @@ const dailyReversed = [...dailyHrcb]; // already chronological from getDailyHrcb
 const maxDailyCount = dailyReversed.length > 0 ? Math.max(...dailyReversed.map(d => d.count)) : 1;
 const latestDailyScore = dailyReversed.length > 0 ? dailyReversed[dailyReversed.length - 1].avg : 0;
 
-// Group colors
+// Group colors — mapped to UDHR rights generations (pedagogical taxonomy)
+// 1st gen (civil/political, "freedom FROM"): cool blues → teals
+// 2nd gen (economic/social/cultural, "entitlement TO"): warm ambers
+// 3rd gen (solidarity/collective): violet
 const groupColors: Record<string, string> = {
-  'Foundation': 'var(--channel-structural)',
-  'Security': 'var(--color-negative-light)',
-  'Legal': 'var(--color-sentiment)',
-  'Privacy & Movement': 'var(--color-positive-medium)',
-  'Personal': 'var(--channel-editorial)',
-  'Expression': 'var(--color-warning-light)',
-  'Economic & Social': 'var(--color-amber-light)',
-  'Cultural': '#e879f9',
-  'Order & Duties': 'var(--color-violet)',
+  'Foundation': '#94a3b8',      // slate-400 — meta-principles, neutral
+  'Security': '#60a5fa',        // blue-400 — 1st gen: bodily integrity
+  'Legal': '#38bdf8',           // sky-400 — 1st gen: due process
+  'Privacy & Movement': '#22d3ee', // cyan-400 — 1st gen: personal autonomy
+  'Personal': '#2dd4bf',        // teal-400 — 1st gen: intimate sphere
+  'Expression': '#34d399',      // emerald-400 — 1st gen: political voice
+  'Economic & Social': '#fbbf24', // amber-400 — 2nd gen: material welfare
+  'Cultural': '#fb923c',        // orange-400 — 2nd gen: intellectual development
+  'Order & Duties': '#a78bfa',  // violet-400 — 3rd gen: collective framework
 };
 ---
 
@@ -159,7 +162,6 @@ const groupColors: Record<string, string> = {
                 const section = SECTIONS.find(s => s.id === sid);
                 const label = sid === 'Preamble' ? 'P' : String(section?.number ?? '?');
                 const title = ARTICLE_TITLES[sid] ?? sid;
-                const barWidth = score !== null ? Math.abs(score) * 100 : 0;
                 const barColor = scoreToColor(score);
                 const spark = sparklines.get(sid) || [];
                 let sparkPath = '';
@@ -184,8 +186,13 @@ const groupColors: Record<string, string> = {
                     <td style="width: 140px; padding: 3px 4px;">
                       {score !== null ? (
                         <div style="display: flex; align-items: center; gap: 4px;">
-                          <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
-                            <div style={`width: ${barWidth}%; height: 100%; background: ${barColor}; border-radius: 3px;`}></div>
+                          <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative;">
+                            <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.3;"></div>
+                            {score < 0 ? (
+                              <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(score) * 50}%; height: 100%; background: ${barColor}; border-radius: 3px 0 0 3px;`}></div>
+                            ) : (
+                              <div style={`position: absolute; left: 50%; top: 0; width: ${score * 50}%; height: 100%; background: ${barColor}; border-radius: 0 3px 3px 0;`}></div>
+                            )}
                           </div>
                           <span style={`color: ${barColor}; font-size: var(--font-xs); min-width: 36px; text-align: right;`} class="score-font">{formatScore(score)}</span>
                         </div>
