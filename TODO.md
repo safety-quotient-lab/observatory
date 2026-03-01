@@ -3,24 +3,12 @@
 Items are organized by execution horizon. Phases 2 and 3 are sequenced
 prerequisites for commercialization and GitHub publishing respectively.
 
-Completed rounds (1–4.7, 5.5, 8) archived in git history.
+Completed rounds (1–4.7, 4.9, 5.5, 8) archived in git history.
 
 ---
 
 ## Phase 1 — Active Engineering
 *Ordered by dependency and value.*
-
-### Round 4.9 — Model Hygiene
-
-- [ ] **Disable or remediate deepseek-v3.2** *(investigation complete, decision pending)*
-  - 25% of "done" evals have at least one channel missing (14.7% no editorial, 9.2% no structural)
-  - Avg confidence 0.141 vs haiku 0.208 — 32% lower across 317 shared stories
-  - Score divergence vs haiku: delta >0.5 on ~6 stories, worst case 1.191 — far above 0.25 contested threshold
-  - JSON verbosity causes truncation at ~17,750 chars (hits 15s AbortController); generates ~4× more output than needed
-  - 19 timeout failures; no formal calibration run (has evaluated lite cal IDs -2001..-2015 by mistake, not full cal set)
-  - **To disable:** `wrangler d1 execute hrcb-db --remote --command "UPDATE model_registry SET enabled=0, disabled_reason='...' WHERE model_id='deepseek-v3.2'"` + set `enabled: false` in `models.ts`
-  - **Alternative to disabling:** increase `max_tokens` cap, add a response-length hint to the prompt, run calibration against -1001..-1015, then re-evaluate
-  - 1838 queued eval_queue entries will need cleanup if disabled
 
 ### Round 4.8 — Consensus Quality
 

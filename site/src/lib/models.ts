@@ -42,7 +42,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'deepseek/deepseek-v3.2-20251201',
     is_free: true,
-    enabled: true,
+    enabled: false,
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
