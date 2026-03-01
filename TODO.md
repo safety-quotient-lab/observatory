@@ -7,6 +7,156 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ---
 
+## Phase 0 — Construct Validity
+*Foundational measurement work. Must inform all subsequent engineering.*
+*Full analysis: `construct-validity-analysis.md`*
+
+### Perspective 1 — Psychometric Validity
+
+HRCB is a formative composite (31 LLM-generated section scores in a single
+response). It cannot be validated via factor analysis due to: (a) formative
+measurement model, (b) simultaneous-generation contamination (anchoring/halo),
+(c) single-domain sample (HN tech content only). See analysis doc Sections 1-2.
+
+#### Layer 1 — Objective Foundation (no LLM, fully reproducible)
+
+- [ ] **Transparency Quotient (TQ)** — author disclosed, sources cited, conflicts stated, corrections policy, funding model
+  - Mostly binary/structural indicators; we already collect `td_*` fields
+  - External validation: RDR disclosure indicators (~20 overlapping domains)
+
+- [ ] **Accessibility Compliance (AC)** — reading level, jargon density, assumed knowledge, language availability
+  - We already collect `jargon_density` and `assumed_knowledge_level`
+  - External validation: WCAG conformance evaluation methodology
+
+- [ ] **Consent Architecture Rating (CAR)** — dark pattern count, cookie consent model, ToS readability, data collection scope
+  - External validation: EU DSA compliance, DPAF taxonomy (68 pattern types)
+
+#### Layer 2 — LLM-Holistic (single scores, minimal contamination)
+
+- [ ] **Rights Salience (RS)** — does this content engage with rights at all? Binary per-article, count of provisions touched
+  - Gates HRCB validity: high HRCB + zero RS = suspect score
+  - External validation: correlate with Semiotic Rights Density (Layer 1 text analysis)
+
+- [ ] **Normative Temperature (NT)** — how far from mainstream rights consensus is this content? Low = conventional, high = challenges norms
+  - Reframes evaluator task from "judge" to "thermometer" — reduces bias
+  - Decomposes HRCB into "how far from norm" vs "which direction"
+
+- [ ] **Propaganda Technique Density (PTD)** — already measured as `pt_score`
+  - Multi-model agreement on technique *presence* (binary) is tractable for inter-rater reliability
+  - Validate via Fleiss' kappa across models on shared stories
+
+#### Layer 3 — Aggregate/Temporal (emerge from many evals)
+
+- [ ] **Institutional Capture Index (ICI)** — degree editorial output aligns with funding/ownership interests
+  - Emerges from domain-level patterns across many stories, not per-story
+  - External validation: RDR corporate accountability, Freedom House
+
+- [ ] **Rights Entanglement Map (REM)** — which rights systematically co-vary
+  - Already partially computed (rights network Pearson correlations)
+  - Property of the information ecosystem, not individual stories
+
+- [ ] **Model Consensus Construct (MCC)** — formalize agreement/disagreement patterns
+  - `getModelAgreement()` already computes pairwise Pearson r (`@internal`)
+  - Maps the validity boundary: where models agree = well-defined construct territory
+
+#### External Validation (unblocked, highest priority)
+
+- [ ] **Convergent validity** — correlate TQ with RDR disclosure indicators on ~20 overlapping domains
+- [ ] **Discriminant validity** — correlate HRCB with generic sentiment analysis; r > 0.8 = HRCB is just sentiment
+- [ ] **Known-groups expansion** — expand calibration beyond 15 URLs to 50+ pre-classified domains
+- [ ] **Test-retest reliability** — re-evaluate 50 stable-content stories for temporal consistency
+
+#### HRCB Decomposition Decision
+
+- [ ] **Decide: decompose HRCB into constituent constructs or keep as convenience composite**
+  - Depends on external validation results — if HRCB correlates with sentiment (r > 0.8), decomposition is urgent
+  - If HRCB passes convergent/discriminant checks, may keep as summary with caveats
+
+### Perspective 2 — Pedagogical Effectiveness
+
+Does the construct actually teach? Applies five tests from learning science:
+produces surprise, names the invisible, encountered naturally, provokes a
+rights-specific question, insight is sticky. See analysis doc Section 8.
+
+**Tier A constructs** (pass all five tests):
+- Rights Tension Signature (RTS) — "privacy vs expression, resolved toward expression"
+- Editorial-Structural Coherence (ESC/SETL) — "says one thing, does another"
+- Rights Salience (RS) — "42% of HN stories touch human rights"
+- Rights Entanglement Map (REM) — "privacy and expression anti-correlate in tech"
+
+**Critical finding**: RTS is the most powerful pedagogical construct but
+psychometrically contaminated (Perspective 1). Resolution: restructure from
+31-section scoring to 3-5 tension pair identification (categorical, not scalar).
+See analysis doc Section 8g.
+
+**Combined priority (both perspectives)**:
+- HIGH: TQ, RS, NT, PTD, ESC, REM, ICI
+- CONFLICT (must resolve): RTS
+- Infrastructure only: MCC, SRD, AC
+- Defer: NFI, DEI, HA
+
+### Perspective 3 — Epistemic Warrant
+
+Do we have the right to make these claims? HRCB is a "thick concept" —
+simultaneously descriptive and normative. LLMs lack epistemic authority
+over normative claims but can support justified belief if: transparent,
+traceable (Fair Witness), revisable (multi-model), and provisional.
+
+**Key principle**: Frame claims at the level warranted by evidence.
+- Strong warrant: "34% don't name their author" (factual)
+- Weak warrant: "this domain scores -0.3" (normative judgment)
+- Pattern surfacing, not verdicts. Aggregate insights, not labels.
+
+### Perspective 4 — Consequential Ethics
+
+What happens when scores are published? Goodhart's Law, NewsGuard precedent.
+- PTD and NT are consequentially dangerous (weaponizable as political labels)
+- ICI implies "capture" — invites legal challenge
+- Objective constructs (TQ, AC) resist gaming
+- Presentation framing is critical: descriptive + methodology note = safe;
+  evaluative label = dangerous
+
+### Perspective 5 — Comparative Landscape
+
+No existing system does article-level, UDHR-grounded, provision-specific,
+E/S-dual-channel assessment. RDR is closest (UDHR-grounded) but corporate
+policy only. Don't replicate bias scoring (Ad Fontes), factuality (MBFC),
+or journalism quality (NewsGuard). Build what nobody else measures.
+
+### Perspective 6 — Operational Feasibility
+
+Most constructs are either already computed (PTD, ESC, EQ, SPA) or
+computable without additional LLM cost (TQ, AC, REM, ICI, MCC, RM).
+Only RS, NT, RTS require new LLM prompts. Budget: ~$2.50-4/day at HN scale.
+
+### Perspective 7 — Personas & Jobs-to-Be-Done
+
+Four personas: HN Browser (80%, needs badges), Domain Investigator (15%,
+needs aggregates), Rights Researcher (3%, needs deep analytics), Educator
+(2%, needs examples). Pedagogical funnel: exposure → curiosity → investigation
+→ integration. Theory of change: repeated exposure to RS/ESC badges creates
+permanent mental model shift.
+
+### Synthesis — The Construct Set
+
+Full 7-perspective analysis in `construct-validity-analysis.md` Section 16.
+
+**Primary (survive all 7 perspectives):**
+1. RS — Rights Salience ("does it touch rights?")
+2. ESC — Editorial-Structural Coherence ("does it walk its talk?")
+3. RTS — Rights Tension Signature ("which rights conflict?")
+4. REM — Rights Entanglement Map ("how do rights relate across ecosystem?")
+
+**Supporting:** TQ (objective anchor), ICI (powerful but risky)
+
+**Infrastructure:** MCC (meta-measurement), AC (objective baseline)
+
+**Deprioritized:** NT, PTD (consequentially dangerous), SRD (not pedagogical)
+
+**HRCB fate:** Persists as convenience summary, no longer a standalone construct.
+
+---
+
 ## Phase 1 — Active Engineering
 *Ordered by dependency and value.*
 
