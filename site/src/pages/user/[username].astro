@@ -465,7 +465,7 @@ const showDivergence = divergence !== null && divergence > 0.15;
                   } else if (evType === 'done') {
                     succeeded++;
                     var score = typeof d.score === 'number' ? d.score.toFixed(2) : '?';
-                    addLog('#' + hnId + ': ' + score + ' (' + d.classification + ')', d.score > 0 ? '#16a34a' : d.score < 0 ? '#dc2626' : '#eab308');
+                    addLog('#' + hnId + ': ' + score + ' (' + d.classification + ')', d.score > 0 ? '#16a34a' : d.score < 0 ? '#dc2626' : '#9ca3af');
                   } else if (evType === 'error') {
                     failed++;
                     addLog('#' + hnId + ': ' + (d.error || 'error'), '#dc2626');

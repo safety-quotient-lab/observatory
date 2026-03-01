@@ -20,13 +20,15 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-/** Score [-1, +1] to hex color — same algorithm as scoreToColor in colors.ts */
+/** Score [-1, +1] to hex color — same algorithm as scoreToColor in colors.ts.
+ *  Gray at zero, desaturates near-zero, colored at extremes. */
 function scoreToHex(score: number | null | undefined): string {
   if (score == null) return '#4b5563';
   const clamped = Math.max(-1, Math.min(1, score));
+  const abs = Math.abs(clamped);
   const hue = clamped < 0 ? 40 * (1 + clamped) : 40 + 102 * clamped;
-  const sat = 0.75 + 0.15 * Math.abs(clamped);
-  const lit = 0.42 + 0.08 * Math.abs(clamped);
+  const sat = Math.min(0.9, abs * 2.0) * (0.75 + 0.15 * abs);
+  const lit = 0.53 - 0.11 * abs;
   return hslToHex(hue, sat, lit);
 }
 

@@ -14,28 +14,33 @@ function hslToRgb(h: number, s: number, l: number): string {
 }
 
 /** Map a score [-1, +1] to a color via HSL interpolation for clean transitions.
- *  -1.0 = red (hue 0°), 0.0 = amber (hue 40°), +1.0 = green (hue 142°).
+ *  -1.0 = red (hue 0°), 0.0 = gray (desaturated), +1.0 = green (hue 142°).
+ *  Scores near zero desaturate smoothly toward gray; colors become vivid as magnitude increases.
  *  Interpolates through HSL so mid-tones stay vibrant instead of going muddy brown. */
 export function scoreToColor(score: number | null | undefined): string {
   if (score == null) return '#4b5563'; // ND gray (gray-600)
 
   const clamped = Math.max(-1, Math.min(1, score));
+  const abs = Math.abs(clamped);
 
   // Piecewise-linear hue mapping: -1→0°, 0→40°, +1→142°
+  // (hue is still interpolated but becomes irrelevant at zero saturation)
   let hue: number;
   if (clamped < 0) {
-    // red (0°) to amber (40°)
+    // red (0°) to amber-midpoint (40°)
     hue = 40 * (1 + clamped); // clamped=-1→0°, clamped=0→40°
   } else {
-    // amber (40°) to green (142°)
+    // amber-midpoint (40°) to green (142°)
     hue = 40 + 102 * clamped; // clamped=0→40°, clamped=1→142°
   }
 
-  // Saturation: high throughout, slight dip near zero for a muted amber midpoint
-  const sat = 0.75 + 0.15 * Math.abs(clamped);
+  // Saturation: fully desaturated at zero, ramps up with magnitude.
+  // Near-zero scores (±0.05) stay grayish; full color by ±0.4.
+  const sat = Math.min(0.9, abs * 2.0) * (0.75 + 0.15 * abs);
 
-  // Lightness: brighter at extremes, slightly dimmer at midpoint for depth on dark bg
-  const lit = 0.42 + 0.08 * Math.abs(clamped);
+  // Lightness: gray midpoint at 0.53 (matches #9ca3af on dark bg), brighter at extremes.
+  // Interpolate from neutral-gray (0.53) toward colored-bright (0.50) as magnitude grows.
+  const lit = 0.53 - 0.11 * abs;
 
   return hslToRgb(hue, sat, lit);
 }
