@@ -377,8 +377,9 @@ const jsonLd = {
           <h2 id="consensus" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Consensus (Multi-Model)</h2>
 
           <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
-            When multiple models evaluate the same story, a consensus score is computed as a weighted mean
-            across rater evaluations (full evaluations = 1.0 weight, lite = 0.5 weight).
+            When multiple models evaluate the same story, a consensus score is computed as a weighted mean.
+            Each rater's weight combines three factors: prompt mode (full = 1.0, lite = 0.5),
+            self-reported confidence (floored at 0.2 so no model is silenced), and a content truncation discount.
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">

@@ -3,25 +3,12 @@
 Items are organized by execution horizon. Phases 2 and 3 are sequenced
 prerequisites for commercialization and GitHub publishing respectively.
 
-Completed rounds (1–4.7, 4.9, 5.5, 8) archived in git history.
+Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ---
 
 ## Phase 1 — Active Engineering
 *Ordered by dependency and value.*
-
-### Round 4.8 — Consensus Quality
-
-- [ ] **Confidence-weighted consensus** *(knock-on analysis complete, ready to implement)*
-  - Replace flat `baseWeight = 1.0 | 0.5` in `updateConsensusScore()` with evidence-weighted `hcb_confidence`
-  - Change in `eval-write.ts:280` — add `re.hcb_confidence` to SELECT, use as weight base
-  - Keep `prompt_mode` as separate multiplier: `weight = confidence * liteDiscount * truncDiscount`
-  - Clamp confidence floor at 0.2 (no model fully silenced)
-  - Fallback: `COALESCE(re.hcb_confidence, 0.5)` for NULL rows
-  - **Pre-flight:** query `SELECT AVG(hcb_confidence) FROM rater_evals WHERE prompt_mode='lite'` to verify lite distribution
-  - **Post-deploy:** re-run `POST /calibrate/check` to verify cal scores still in range
-  - **Risk:** lite models systematically deweighted (~30-50% influence loss); cal scores may shift
-  - ~15 lines of code, single function, M effort
 
 ### Round 5 — Data Expansion
 

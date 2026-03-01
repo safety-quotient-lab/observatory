@@ -281,7 +281,8 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
   try {
     const { results } = await db
       .prepare(
-        `SELECT re.eval_model, re.hcb_weighted_mean, re.hcb_editorial_mean, re.prompt_mode, re.content_truncation_pct
+        `SELECT re.eval_model, re.hcb_weighted_mean, re.hcb_editorial_mean, re.prompt_mode,
+                re.content_truncation_pct, COALESCE(re.hcb_confidence, 0.5) as confidence
          FROM rater_evals re
          INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.hn_id = ? AND re.eval_status = 'done'
@@ -289,7 +290,7 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
            AND re.schema_version NOT IN ('lite-1.3', 'light-1.3')`
       )
       .bind(hnId)
-      .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null; content_truncation_pct: number | null }>();
+      .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null; content_truncation_pct: number | null; confidence: number }>();
 
     if (results.length < 2) return;
 
@@ -300,9 +301,12 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
     for (const r of results) {
       const score = r.hcb_weighted_mean ?? r.hcb_editorial_mean;
       if (score == null) continue;
-      const baseWeight = (r.prompt_mode === 'lite' || r.prompt_mode === 'light') ? 0.5 : 1.0;
+      const isLite = r.prompt_mode === 'lite' || r.prompt_mode === 'light';
+      const baseWeight = isLite ? 0.5 : 1.0;
+      // Confidence modulates within prompt mode — floor 0.2 so no model is fully silenced
+      const confidenceFactor = Math.max(0.2, r.confidence);
       const truncPct = r.content_truncation_pct ?? 0;
-      const weight = baseWeight * (1 - truncPct * 0.5);
+      const weight = baseWeight * confidenceFactor * (1 - truncPct * 0.5);
       weightedSum += score * weight;
       totalWeight += weight;
       scores.push(score);
