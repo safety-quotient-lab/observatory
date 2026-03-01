@@ -1,273 +1,628 @@
 ---
 import Base from '../layouts/Base.astro';
-import EvalCard from '../components/EvalCard.astro';
-import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
-import type { SortOption, FilterOption, TypeOption, ContentTypeOption, ModelOption } from '../lib/db';
-import { modelDisplayName, getModelDef, isLiteMode } from '../lib/shared-eval';
+import SubNav from '../components/SubNav.astro';
+import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution } from '../lib/db';
+import { scoreToColor, formatScore, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../lib/colors';
+import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../lib/udhr';
 import { readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
 
-const url = new URL(Astro.request.url);
-const sort = (url.searchParams.get('sort') || 'top') as SortOption;
-const filter = (url.searchParams.get('filter') || 'all') as FilterOption;
-const type = (url.searchParams.get('type') || 'all') as TypeOption;
-const ctype = (url.searchParams.get('ctype') || 'all') as ContentTypeOption;
-const model = (url.searchParams.get('model') || 'any') as ModelOption;
-const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
+const [articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories] = await Promise.all([
+  getArticleDetailedStats(db),
+  getArticleSparklines(db, 60),
+  getStatusCounts(db),
+  getDailyHrcb(db, 60),
+  getDomainStats(db, 10),
+  getTopPropagandaStories(db, 15),
+]);
 
-const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'velocity'];
-const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
-const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
-const validCtypes: ContentTypeOption[] = ['all', 'ED', 'PO', 'LP', 'PR', 'AC', 'MI'];
-const safeSort = validSorts.includes(sort) ? sort : 'top';
-const safeFilter = validFilters.includes(filter) ? filter : 'all';
-const safeType = validTypes.includes(type) ? type : 'all';
-const safeCtype = validCtypes.includes(ctype) ? ctype : 'all';
-
-// Fetch distinct models for the selector — only show enabled models with evaluations
-const allDistinctModels = await getDistinctModels(db);
-const distinctModels = allDistinctModels.filter(m => {
-  const def = getModelDef(m);
-  return def ? def.enabled : false;
-});
-const safeModel = model === 'all' || model === 'any' || allDistinctModels.includes(model) ? model : 'any';
-
-const PER_PAGE = 30;
-const offset = (page - 1) * PER_PAGE;
-
-// Single JOIN query: stories + scores in one round-trip
-const stories = await getFilteredStoriesWithScores(db, safeSort, safeFilter, safeType, PER_PAGE + 1, offset, undefined, safeModel, safeCtype);
-const hasMore = stories.length > PER_PAGE;
-const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
-
-const evaluatedCount = await getEvaluatedCount(db);
-
-function buildUrl(params: Record<string, string>): string {
-  const p = new URLSearchParams();
-  const s = params.sort ?? safeSort;
-  const f = params.filter ?? safeFilter;
-  const t = params.type ?? safeType;
-  const ct = params.ctype ?? safeCtype;
-  const m = params.model ?? safeModel;
-  const pg = params.p ?? '1';
-  if (s !== 'top') p.set('sort', s);
-  if (f !== 'all') p.set('filter', f);
-  if (t !== 'all') p.set('type', t);
-  if (ct !== 'all') p.set('ctype', ct);
-  if (m !== 'any') p.set('model', m);
-  if (pg !== '1') p.set('p', pg);
-  const qs = p.toString();
-  return qs ? `/?${qs}` : '/';
+// Build section → ordered final values map from daily rollup rows
+const sparklines = new Map<string, number[]>();
+for (const row of sparklinesRaw) {
+  let arr = sparklines.get(row.section);
+  if (!arr) { arr = []; sparklines.set(row.section, arr); }
+  arr.push(row.final);
 }
 
-const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN' : safeType === 'job' ? 'Jobs' : 'HN HRCB';
+// Graceful fallback for newer queries
+let signalOverview: Awaited<ReturnType<typeof getSignalOverview>> | null = null;
+let stakeholderData: Awaited<ReturnType<typeof getStakeholderOverview>> | null = null;
+let regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null = null;
+try {
+  [signalOverview, stakeholderData, regionData] = await Promise.all([
+    getSignalOverview(db),
+    getStakeholderOverview(db),
+    getRegionDistribution(db),
+  ]);
+} catch { /* graceful fallback */ }
 
-// JSON-LD: ItemList of evaluated stories (first page, default view only)
-const jsonLd = (safeSort === 'top' && safeFilter === 'all' && safeType === 'all' && safeModel === 'any' && page === 1) ? {
-  '@context': 'https://schema.org',
-  '@type': 'ItemList',
-  name: 'HN HRCB — Latest Evaluated Stories',
-  description: `Hacker News stories evaluated for human rights compatibility bias. ${evaluatedCount} stories evaluated.`,
-  url: `${url.origin}/`,
-  numberOfItems: evaluatedCount,
-  itemListElement: displayStories
-    .filter(s => s.eval_status === 'done')
-    .slice(0, 10)
-    .map((s, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      url: `${url.origin}/item/${s.hn_id}`,
-      name: s.title,
-    })),
-} : null;
+const domainFingerprints = await getDomainFingerprints(db, topDomains.map(d => d.domain));
 
-// Canonical URL: include sort/filter/type/model but exclude pagination
-const canonicalParams = new URLSearchParams();
-if (safeSort !== 'top') canonicalParams.set('sort', safeSort);
-if (safeFilter !== 'all') canonicalParams.set('filter', safeFilter);
-if (safeType !== 'all') canonicalParams.set('type', safeType);
-if (safeCtype !== 'all') canonicalParams.set('ctype', safeCtype);
-if (safeModel !== 'any') canonicalParams.set('model', safeModel);
-const canonicalQs = canonicalParams.toString();
-const canonicalUrl = `${url.origin}${canonicalQs ? `/?${canonicalQs}` : '/'}`;
+// Derived data
+const statsMap = new Map(articleStats.map(a => [a.section, a]));
+const totalEvaluated = statusCounts.done;
+const allScores = articleStats.filter(a => a.avg_final !== null);
+const meanHrcb = allScores.length > 0
+  ? allScores.reduce((sum, a) => sum + (a.avg_final ?? 0), 0) / allScores.length
+  : null;
+const coveragePct = ALL_SECTIONS.length > 0
+  ? Math.round((allScores.length / ALL_SECTIONS.length) * 100)
+  : 0;
 
-const SORT_OPTIONS = [
-  { value: 'top', label: 'top' },
-  { value: 'time', label: 'new' },
-  { value: 'score_desc', label: 'top hrcb' },
-  { value: 'score_asc', label: 'bottom hrcb' },
-  { value: 'hn_points', label: 'points' },
-  { value: 'conf_desc', label: 'top conf' },
-  { value: 'conf_asc', label: 'bottom conf' },
-  { value: 'velocity', label: 'velocity' },
-] as const;
+// Rights Under Pressure
+const sortedByScore = [...articleStats].filter(a => a.avg_final !== null).sort((a, b) => (a.avg_final ?? 0) - (b.avg_final ?? 0));
+const mostNegative = sortedByScore.slice(0, 5);
+const mostTriggered = [...articleStats].filter(a => a.signal_count > 0).sort((a, b) => b.signal_count - a.signal_count).slice(0, 5);
+const lowestCoverage = [...articleStats].filter(a => a.signal_count >= 0).sort((a, b) => a.signal_count - b.signal_count).slice(0, 5);
 
-const FILTER_OPTIONS = [
-  { value: 'all', label: 'all' },
-  { value: 'evaluated', label: 'evaluated' },
-  { value: 'positive', label: 'positive' },
-  { value: 'negative', label: 'negative' },
-  { value: 'neutral', label: 'neutral' },
-  { value: 'pending', label: 'pending' },
-  { value: 'failed', label: 'failed' },
-] as const;
+// Evidence Transparency — sorted by lowest FW ratio
+const articlesWithFwRatio = articleStats
+  .map(a => {
+    const total = (a.evidence_h ?? 0) + (a.evidence_m ?? 0) + (a.evidence_l ?? 0);
+    const ratio = total > 0 ? (a.evidence_h ?? 0) / total : null;
+    return { ...a, fw_ratio: ratio, fw_total: total };
+  })
+  .filter(a => a.fw_ratio !== null && a.fw_total > 0)
+  .sort((a, b) => (a.fw_ratio ?? 0) - (b.fw_ratio ?? 0))
+  .slice(0, 10);
 
-const CTYPE_OPTIONS: { value: ContentTypeOption; label: string }[] = [
-  { value: 'all', label: 'all' },
-  { value: 'ED', label: 'editorial' },
-  { value: 'PO', label: 'opinion' },
-  { value: 'LP', label: 'legal' },
-  { value: 'PR', label: 'press' },
-  { value: 'AC', label: 'academic' },
-  { value: 'MI', label: 'misc' },
-];
+// Propaganda technique distribution
+const techniqueEntries = signalOverview?.technique_distribution
+  ? Object.entries(signalOverview.technique_distribution).sort((a, b) => b[1] - a[1]).slice(0, 10)
+  : [];
+const maxTechniqueCount = techniqueEntries.length > 0 ? techniqueEntries[0][1] : 1;
 
-// Short display label for model IDs
-function modelLabel(id: string): string {
-  return modelDisplayName(id);
-}
-function isLiteModel(id: string): boolean {
-  return getModelDef(id)?.prompt_mode === 'lite';
-}
+// Stakeholder data
+const speaksEntries = stakeholderData?.who_speaks
+  ? Object.entries(stakeholderData.who_speaks).sort((a, b) => b[1] - a[1]).slice(0, 10)
+  : [];
+const aboutEntries = stakeholderData?.who_spoken_about
+  ? Object.entries(stakeholderData.who_spoken_about).sort((a, b) => b[1] - a[1]).slice(0, 10)
+  : [];
+const maxSpeaks = speaksEntries.length > 0 ? speaksEntries[0][1] : 1;
+const maxAbout = aboutEntries.length > 0 ? aboutEntries[0][1] : 1;
+
+// Region data
+const scopeEntries = regionData?.scopes
+  ? Object.entries(regionData.scopes).sort((a, b) => b[1] - a[1])
+  : [];
+const maxScopeCount = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
+const regionEntries = regionData?.regions
+  ? regionData.regions.slice(0, 15)
+  : [];
+const maxRegionCount = regionEntries.length > 0 ? regionEntries[0].count : 1;
+
+// Daily HRCB chart data
+const dailyReversed = [...dailyHrcb]; // already chronological from getDailyHrcb
+const maxDailyCount = dailyReversed.length > 0 ? Math.max(...dailyReversed.map(d => d.count)) : 1;
+const latestDailyScore = dailyReversed.length > 0 ? dailyReversed[dailyReversed.length - 1].avg : 0;
+
+// Group colors
+const groupColors: Record<string, string> = {
+  'Foundation': 'var(--channel-structural)',
+  'Security': 'var(--color-negative-light)',
+  'Legal': 'var(--color-sentiment)',
+  'Privacy & Movement': 'var(--color-positive-medium)',
+  'Personal': 'var(--channel-editorial)',
+  'Expression': 'var(--color-warning-light)',
+  'Economic & Social': 'var(--color-amber-light)',
+  'Cultural': '#e879f9',
+  'Order & Duties': 'var(--color-violet)',
+};
 ---
 
-<Base title={pageTitle} canonicalUrl={canonicalUrl}>
-  {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
-  {/* Filter/sort bar */}
-  <div class="filter-bar subtext">
-    <div class="filter-row">
-      <span class="filter-label">sort:</span>
-      {SORT_OPTIONS.map((opt, i) => (
-        <>
-          {i > 0 && <span class="filter-sep"> | </span>}
-          {safeSort === opt.value
-            ? <span class="filter-active">{opt.label}</span>
-            : <a href={buildUrl({ sort: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
-          }
-        </>
-      ))}
+<Base title="Human Rights Observatory">
+  <SubNav items={[{ label: 'Articles', href: '/rights/articles' }, { label: 'Observatory', href: '/' }, { label: 'Network', href: '/rights/network' }]} current="/" />
+  <div style="padding: 8px 0 16px 0;">
+
+    <!-- 1. Header -->
+    <div style="margin-bottom: 16px;">
+      <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">Human Rights Observatory</span>
+      <span style="color: var(--fg-secondary); margin-left: 8px; font-size: var(--font-sm);">
+        Deep-dive research dashboard
+      </span>
     </div>
-    <div class="filter-row">
-      <span class="filter-label">show:</span>
-      {FILTER_OPTIONS.map((opt, i) => (
-        <>
-          {i > 0 && <span class="filter-sep"> | </span>}
-          {safeFilter === opt.value
-            ? <span class="filter-active">{opt.label}</span>
-            : <a href={buildUrl({ filter: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
-          }
-        </>
-      ))}
+
+    <!-- Stats row -->
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Evaluated</div>
+        <div style="color: var(--fg-primary); font-size: var(--font-md); font-weight: bold;" class="score-font">{totalEvaluated.toLocaleString()}</div>
+      </div>
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Mean HRCB</div>
+        <div style={`font-size: var(--font-md); font-weight: bold; color: ${scoreToColor(meanHrcb)};`} class="score-font">
+          {formatScore(meanHrcb)}
+        </div>
+      </div>
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 16px; min-width: 120px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">Coverage</div>
+        <div style="color: var(--fg-primary); font-size: var(--font-md); font-weight: bold;" class="score-font">{coveragePct}%</div>
+      </div>
     </div>
-    <div class="filter-row">
-      <span class="filter-label">type:</span>
-      {(['all', 'ask', 'show', 'job'] as const).map((t, i) => (
-        <>
-          {i > 0 && <span class="filter-sep"> | </span>}
-          {safeType === t
-            ? <span class="filter-active">{t}</span>
-            : <a href={buildUrl({ type: t, p: '1' })} class="filter-link">{t}</a>
-          }
-        </>
-      ))}
+
+    <!-- 2. UDHR Rights Heatmap -->
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">UDHR Rights Heatmap</div>
+
+      {Object.entries(ARTICLE_GROUPS).map(([group, sectionIds]) => {
+        const color = groupColors[group] || 'var(--fg-secondary)';
+        return (
+          <div style="margin-bottom: 10px;">
+            <div style={`color: ${color}; font-size: var(--font-xs); margin-bottom: 4px; opacity: 0.8;`}>{group}</div>
+            <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+              {sectionIds.map(sid => {
+                const stat = statsMap.get(sid);
+                const score = stat?.avg_final ?? null;
+                const count = stat?.signal_count ?? 0;
+                const section = SECTIONS.find(s => s.id === sid);
+                const label = sid === 'Preamble' ? 'P' : String(section?.number ?? '?');
+                const title = ARTICLE_TITLES[sid] ?? sid;
+                const barWidth = score !== null ? Math.abs(score) * 100 : 0;
+                const barColor = scoreToColor(score);
+                const spark = sparklines.get(sid) || [];
+                let sparkPath = '';
+                if (spark.length > 1) {
+                  const w = 80;
+                  const h = 20;
+                  const step = w / (spark.length - 1);
+                  sparkPath = spark.map((v, i) => {
+                    const x = i * step;
+                    const y = h / 2 - (v * h / 2);
+                    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+                  }).join(' ');
+                }
+                return (
+                  <tr style="border-top: 1px solid var(--bg-surface);">
+                    <td style={`width: 22px; padding: 3px 4px; color: ${score !== null ? color : 'var(--bg-surface)'}; font-weight: bold;`} class="score-font">
+                      <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{label}</a>
+                    </td>
+                    <td title={title} style={`padding: 3px 4px; color: ${score !== null ? 'var(--fg-primary)' : 'var(--fg-secondary)'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
+                      <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{title}</a>
+                    </td>
+                    <td style="width: 140px; padding: 3px 4px;">
+                      {score !== null ? (
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                          <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                            <div style={`width: ${barWidth}%; height: 100%; background: ${barColor}; border-radius: 3px;`}></div>
+                          </div>
+                          <span style={`color: ${barColor}; font-size: var(--font-xs); min-width: 36px; text-align: right;`} class="score-font">{formatScore(score)}</span>
+                        </div>
+                      ) : (
+                        <span style="color: var(--bg-surface);">--</span>
+                      )}
+                    </td>
+                    <td style="width: 50px; padding: 3px 4px; text-align: right; color: var(--fg-secondary);" class="score-font">
+                      {count > 0 ? count : '--'}
+                    </td>
+                    <td style="width: 90px; padding: 3px 4px; text-align: center;">
+                      {spark.length > 1 ? (
+                        <svg width="80" height="20" viewBox="0 0 80 20">
+                          <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
+                          <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
+                        </svg>
+                      ) : (
+                        <span style="color: var(--bg-surface);">--</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </table>
+          </div>
+        );
+      })}
     </div>
-    <div class="filter-row">
-      <span class="filter-label">content:</span>
-      {CTYPE_OPTIONS.map((opt, i) => (
-        <>
-          {i > 0 && <span class="filter-sep"> | </span>}
-          {safeCtype === opt.value
-            ? <span class="filter-active">{opt.label}</span>
-            : <a href={buildUrl({ ctype: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
-          }
-        </>
-      ))}
+
+    <!-- 3. Rights Under Pressure -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px;">
+      <!-- Most Negative -->
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Negative</div>
+        <table cellpadding="0" cellspacing="0" width="100%">
+          {mostNegative.map(a => {
+            const section = SECTIONS.find(s => s.id === a.section);
+            return (
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="padding: 4px 0;">
+                  <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
+                    {ARTICLE_TITLES[a.section] ?? a.section}
+                  </a>
+                </td>
+                <td style="width: 50px; text-align: right; padding: 4px 0;">
+                  <span style={`color: ${scoreToColor(a.avg_final)}; font-size: var(--font-xs);`} class="score-font">{formatScore(a.avg_final)}</span>
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+      </div>
+
+      <!-- Most Triggered -->
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Triggered</div>
+        <table cellpadding="0" cellspacing="0" width="100%">
+          {mostTriggered.map(a => {
+            const section = SECTIONS.find(s => s.id === a.section);
+            return (
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="padding: 4px 0;">
+                  <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
+                    {ARTICLE_TITLES[a.section] ?? a.section}
+                  </a>
+                </td>
+                <td style="width: 50px; text-align: right; padding: 4px 0;">
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{a.signal_count}</span>
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+      </div>
+
+      <!-- Lowest Coverage -->
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Lowest Coverage</div>
+        <table cellpadding="0" cellspacing="0" width="100%">
+          {lowestCoverage.map(a => {
+            const section = SECTIONS.find(s => s.id === a.section);
+            return (
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="padding: 4px 0;">
+                  <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
+                    {ARTICLE_TITLES[a.section] ?? a.section}
+                  </a>
+                </td>
+                <td style="width: 50px; text-align: right; padding: 4px 0;">
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{a.signal_count}</span>
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+      </div>
     </div>
-    {distinctModels.length > 1 && (
-      <div class="filter-row">
-        <span class="filter-label">model:</span>
-        {safeModel === 'any'
-          ? <span class="filter-active"> any</span>
-          : <a href={buildUrl({ model: 'any', p: '1' })} class="filter-link"> any</a>
-        }
-        <span class="filter-sep"> | </span>
-        {safeModel === 'all'
-          ? <span class="filter-active">all</span>
-          : <a href={buildUrl({ model: 'all', p: '1' })} class="filter-link">all</a>
-        }
-        {distinctModels.map((m) => (
-          <>
-            <span class="filter-sep"> | </span>
-            {safeModel === m
-              ? <span class="filter-active">{modelLabel(m)}{isLiteModel(m) && <a href="/about#eval-modes" class="lite-icon" style="margin-left: 3px; text-decoration: none; color: var(--color-orange);" title="Lite eval — click for details">L</a>}</span>
-              : <a href={buildUrl({ model: m, p: '1' })} class="filter-link">{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}</a>
-            }
-          </>
-        ))}
+
+    <!-- 4. Evidence Transparency -->
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Evidence Transparency — Weakest Fair Witness Ratios</div>
+      <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 10px;">
+        FW Ratio = High-evidence signals / total evidence signals. Lower = more inference-heavy.
+      </div>
+      <table cellpadding="0" cellspacing="0" width="100%">
+        <tr style="color: var(--fg-secondary); font-size: var(--font-xs);">
+          <td style="padding: 4px 0;">Article</td>
+          <td style="width: 200px; padding: 4px 0;">Ratio</td>
+          <td style="width: 50px; text-align: right; padding: 4px 0;">%</td>
+        </tr>
+        {articlesWithFwRatio.map(a => {
+          const section = SECTIONS.find(s => s.id === a.section);
+          const pct = a.fw_ratio !== null ? Math.round(a.fw_ratio * 100) : 0;
+          const barColor = fwRatioColor(a.fw_ratio);
+          return (
+            <tr style="border-top: 1px solid var(--bg-surface);">
+              <td style="padding: 4px 0;">
+                <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
+                  {ARTICLE_TITLES[a.section] ?? a.section}
+                </a>
+              </td>
+              <td style="width: 200px; padding: 4px 0;">
+                <div style="height: 8px; background: var(--bg-surface); border-radius: 4px; overflow: hidden;">
+                  <div style={`width: ${pct}%; height: 100%; background: ${barColor}; border-radius: 4px;`}></div>
+                </div>
+              </td>
+              <td style="width: 50px; text-align: right; padding: 4px 0;">
+                <span style={`color: ${barColor}; font-size: var(--font-xs);`} class="score-font">{formatFwRatio(a.fw_ratio)}</span>
+              </td>
+            </tr>
+          );
+        })}
+      </table>
+      {articlesWithFwRatio.length === 0 && (
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); padding: 8px 0;">No evidence data available yet.</div>
+      )}
+    </div>
+
+    <!-- 5. Propaganda Landscape -->
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Propaganda Landscape</div>
+
+      {techniqueEntries.length > 0 && (
+        <div style="margin-bottom: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 6px;">Technique Distribution</div>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            {techniqueEntries.map(([technique, count]) => {
+              const pct = maxTechniqueCount > 0 ? Math.round((count / maxTechniqueCount) * 100) : 0;
+              return (
+                <tr>
+                  <td title={technique} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {technique}
+                  </td>
+                  <td style="padding: 3px 8px;">
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--color-negative-light); border-radius: 3px;`}></div>
+                    </div>
+                  </td>
+                  <td style="width: 40px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
+                    {count}
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+        </div>
+      )}
+
+      {propagandaStories.length > 0 ? (
+        <div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 6px;">Top Flagged Stories</div>
+          <div class="table-wrap">
+          <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
+            <tr style="color: var(--fg-secondary);">
+              <td style="padding: 4px 0;">Title</td>
+              <td style="width: 120px; padding: 4px 0;">Domain</td>
+              <td style="width: 50px; text-align: right; padding: 4px 0;">Flags</td>
+              <td style="width: 60px; text-align: right; padding: 4px 0;">HRCB</td>
+            </tr>
+            {propagandaStories.map(s => (
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td title={s.title} style="padding: 4px 0; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  <a href={`/item/${s.hn_id}`} style="color: var(--fg-primary); text-decoration: none;">{s.title}</a>
+                </td>
+                <td title={s.domain ?? '--'} style="width: 120px; padding: 4px 0; color: var(--fg-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {s.domain ? <a href={`/domain/${s.domain}`} style="color: var(--fg-secondary); text-decoration: none;">{s.domain}</a> : '--'}
+                </td>
+                <td style="width: 50px; text-align: right; padding: 4px 0; color: var(--color-negative-light);" class="score-font">
+                  {s.pt_flag_count}
+                </td>
+                <td style="width: 60px; text-align: right; padding: 4px 0;">
+                  <span style={`color: ${scoreToColor(s.hcb_editorial_mean ?? s.hcb_weighted_mean)};`} class="score-font">{formatScore(s.hcb_editorial_mean ?? s.hcb_weighted_mean)}</span>
+                </td>
+              </tr>
+            ))}
+          </table>
+          </div>
+        </div>
+      ) : (
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); padding: 8px 0;">No propaganda flags detected yet.</div>
+      )}
+    </div>
+
+    <!-- 6. Stakeholder Voice -->
+    {(speaksEntries.length > 0 || aboutEntries.length > 0) && (
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Speaks</div>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            {speaksEntries.map(([name, count]) => {
+              const pct = maxSpeaks > 0 ? Math.round((count / maxSpeaks) * 100) : 0;
+              return (
+                <tr>
+                  <td title={name} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {name}
+                  </td>
+                  <td style="padding: 3px 8px;">
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--channel-structural); border-radius: 3px;`}></div>
+                    </div>
+                  </td>
+                  <td style="width: 30px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
+                    {count}
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+          {speaksEntries.length === 0 && (
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No data.</div>
+          )}
+        </div>
+
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Is Spoken About</div>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            {aboutEntries.map(([name, count]) => {
+              const pct = maxAbout > 0 ? Math.round((count / maxAbout) * 100) : 0;
+              return (
+                <tr>
+                  <td title={name} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {name}
+                  </td>
+                  <td style="padding: 3px 8px;">
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
+                    </div>
+                  </td>
+                  <td style="width: 30px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
+                    {count}
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+          {aboutEntries.length === 0 && (
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No data.</div>
+          )}
+        </div>
       </div>
     )}
-    <div class="filter-row">
-      <span class="filter-label">score:</span>
-      <button class="score-mode-btn" data-mode="hrcb" aria-label="Show HRCB composite scores">HRCB</button>
-      <span class="filter-sep"> | </span>
-      <button class="score-mode-btn" data-mode="editorial" aria-label="Show Editorial channel scores">E</button>
-      <span class="filter-sep"> | </span>
-      <button class="score-mode-btn" data-mode="structural" aria-label="Show Structural channel scores">S</button>
-    </div>
-    <div class="filter-row">
-      <span class="filter-stats">{displayStories.length}{hasMore ? '+' : ''} stories</span>
-      {evaluatedCount > 0 && <span class="filter-stats"> ({evaluatedCount} evaluated)</span>}
-      <span class="filter-stats"> · page {page}{hasMore ? '' : ' (last)'}</span>
-      <span class="filter-stats"> · </span>
-      <a href="/past" class="filter-link">past</a>
-      <span class="filter-stats"> · </span>
-      <a href="/velocity" class="filter-link">velocity</a>
-      <span class="filter-stats"> · </span>
-      <a href="/dynamics" class="filter-link">dynamics</a>
-    </div>
-  </div>
 
-  <div class="table-wrap">
-  <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
-    {displayStories.map((story, i) => (
-      <EvalCard
-        story={story}
-        rank={offset + i + 1}
-      />
-    ))}
-  </table>
-  </div>
-
-  {displayStories.length === 0 && (
-    <table width="100%">
-      <tr>
-        <td style="padding: 40px 20px; text-align: center;">
-          <div style="color: var(--fg-secondary); margin-bottom: 12px;">
-            {safeFilter !== 'all' || safeType !== 'all'
-              ? `No stories match the current filters.`
-              : 'No stories yet.'}
-          </div>
-          {safeFilter !== 'all' || safeType !== 'all' ? (
-            <a href="/" style="color: var(--color-orange);">clear filters</a>
-          ) : (
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">No stories yet. The cron worker will populate them shortly.</span>
+    <!-- 7. Geographic Coverage -->
+    {(scopeEntries.length > 0 || regionEntries.length > 0) && (
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Scope Distribution</div>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            {scopeEntries.map(([scope, count]) => {
+              const pct = maxScopeCount > 0 ? Math.round((count / maxScopeCount) * 100) : 0;
+              return (
+                <tr>
+                  <td style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 100px;">
+                    {scope}
+                  </td>
+                  <td style="padding: 3px 8px;">
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--color-positive-medium); border-radius: 3px;`}></div>
+                    </div>
+                  </td>
+                  <td style="width: 40px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
+                    {count}
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+          {scopeEntries.length === 0 && (
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No scope data.</div>
           )}
-        </td>
-      </tr>
-    </table>
-  )}
+        </div>
 
-  {/* Pagination */}
-  {hasMore && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
-      <tr>
-        <td style="padding-left: 40px;">
-          <a href={buildUrl({ p: String(page + 1) })} class="morelink" style="color: var(--fg-secondary); font-size: var(--font-base);">
-            Next → <span style="color: var(--color-border); font-size: var(--font-sm);">(page {page + 1})</span>
-          </a>
-        </td>
-      </tr>
-    </table>
-  )}
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Region Distribution</div>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            {regionEntries.map(r => {
+              const pct = maxRegionCount > 0 ? Math.round((r.count / maxRegionCount) * 100) : 0;
+              return (
+                <tr>
+                  <td title={r.region} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {r.region}
+                  </td>
+                  <td style="padding: 3px 8px;">
+                    <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${pct}%; height: 100%; background: var(--channel-editorial); border-radius: 3px;`}></div>
+                    </div>
+                  </td>
+                  <td style="width: 30px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
+                    {r.count}
+                  </td>
+                </tr>
+              );
+            })}
+          </table>
+          {regionEntries.length === 0 && (
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No region data.</div>
+          )}
+        </div>
+      </div>
+    )}
+
+    <!-- 8. Temporal Trends -->
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Temporal Trends — 60-Day HRCB</div>
+      {dailyReversed.length > 1 ? (() => {
+        const chartW = 400;
+        const chartH = 100;
+        const barAreaH = 24;
+        const lineAreaH = chartH - barAreaH;
+        const step = chartW / (dailyReversed.length - 1);
+
+        // Score line path
+        const linePath = dailyReversed.map((d, i) => {
+          const x = i * step;
+          const y = lineAreaH / 2 - (d.avg * lineAreaH / 2);
+          return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${Math.max(0, Math.min(lineAreaH, y)).toFixed(1)}`;
+        }).join(' ');
+
+        // Bar width
+        const barW = Math.max(1, step * 0.6);
+
+        return (
+          <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;">
+            {/* Zero reference line */}
+            <line x1="0" y1={lineAreaH / 2} x2={chartW} y2={lineAreaH / 2} stroke="var(--color-border)" stroke-width="0.5" stroke-dasharray="4,4" />
+            {/* Score line */}
+            <path d={linePath} fill="none" stroke={scoreToColor(latestDailyScore)} stroke-width="1.5" />
+            {/* Daily count bars */}
+            {dailyReversed.map((d, i) => {
+              const x = i * step - barW / 2;
+              const barH = maxDailyCount > 0 ? (d.count / maxDailyCount) * barAreaH : 0;
+              const barY = chartH - barH;
+              return (
+                <rect x={x.toFixed(1)} y={barY.toFixed(1)} width={barW.toFixed(1)} height={barH.toFixed(1)} fill="var(--color-border)" rx="1" />
+              );
+            })}
+          </svg>
+        );
+      })() : (
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs);">Not enough data for trend chart.</div>
+      )}
+      <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+        <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+          {dailyReversed.length > 0 ? dailyReversed[0].day : ''}
+        </span>
+        <div style="display: flex; gap: 12px;">
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+            <span style={`display: inline-block; width: 8px; height: 2px; background: ${scoreToColor(latestDailyScore)}; vertical-align: middle; margin-right: 4px;`}></span>
+            avg HRCB
+          </span>
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+            <span style="display: inline-block; width: 8px; height: 6px; background: var(--color-border); vertical-align: middle; margin-right: 4px;"></span>
+            eval count
+          </span>
+        </div>
+        <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+          {dailyReversed.length > 0 ? dailyReversed[dailyReversed.length - 1].day : ''}
+        </span>
+      </div>
+    </div>
+
+    <!-- 9. Domain Rights Profiles -->
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Domain Rights Profiles — Top 10</div>
+      <div class="table-wrap">
+      <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
+        <tr style="color: var(--fg-secondary);">
+          <td style="padding: 4px 0;">Domain</td>
+          <td style="width: 60px; text-align: right; padding: 4px 0;">HRCB</td>
+          <td style="width: 50px; text-align: right; padding: 4px 0;">Stories</td>
+          <td style="padding: 4px 8px;">Fingerprint</td>
+        </tr>
+        {topDomains.map(d => {
+          const fp = domainFingerprints.get(d.domain);
+          return (
+            <tr style="border-top: 1px solid var(--bg-surface);">
+              <td style="padding: 4px 0;">
+                <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); text-decoration: none;">{d.domain}</a>
+              </td>
+              <td style="width: 60px; text-align: right; padding: 4px 0;">
+                <span style={`color: ${scoreToColor(d.avg_score)};`} class="score-font">{formatScore(d.avg_score)}</span>
+              </td>
+              <td style="width: 50px; text-align: right; padding: 4px 0; color: var(--fg-secondary);" class="score-font">
+                {d.count}
+              </td>
+              <td style="padding: 4px 8px;">
+                {fp ? (
+                  <div style="display: flex; gap: 1px; align-items: center;">
+                    {fp.map((val, idx) => {
+                      const bg = val !== null ? scoreToColor(val) : 'var(--bg-surface)';
+                      const opacity = val !== null ? '1' : '0.3';
+                      return (
+                        <div style={`width: 6px; height: 10px; background: ${bg}; border-radius: 1px; opacity: ${opacity};`} title={`${SECTIONS[idx]?.id ?? idx}: ${val !== null ? formatScore(val) : 'ND'}`}></div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span style="color: var(--bg-surface);">--</span>
+                )}
+              </td>
+            </tr>
+          );
+        })}
+      </table>
+      </div>
+    </div>
+
+  </div>
+
+  <style>
+    .table-wrap {
+      overflow-x: auto;
+    }
+    @media (max-width: 640px) {
+      div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
 </Base>
