@@ -42,16 +42,16 @@ const domainFingerprints = await getDomainFingerprints(db, topDomains.map(d => d
 // Derived data
 const statsMap = new Map(articleStats.map(a => [a.section, a]));
 const totalEvaluated = statusCounts.done;
-const allScores = articleStats.filter(a => a.avg_final !== null);
+const allScores = articleStats.filter(a => a.avg_editorial !== null);
 const meanHrcb = allScores.length > 0
-  ? allScores.reduce((sum, a) => sum + (a.avg_final ?? 0), 0) / allScores.length
+  ? allScores.reduce((sum, a) => sum + (a.avg_editorial ?? 0), 0) / allScores.length
   : null;
 const coveragePct = ALL_SECTIONS.length > 0
   ? Math.round((allScores.length / ALL_SECTIONS.length) * 100)
   : 0;
 
 // Rights Under Pressure
-const sortedByScore = [...articleStats].filter(a => a.avg_final !== null).sort((a, b) => (a.avg_final ?? 0) - (b.avg_final ?? 0));
+const sortedByScore = [...articleStats].filter(a => a.avg_editorial !== null).sort((a, b) => (a.avg_editorial ?? 0) - (b.avg_editorial ?? 0));
 const mostNegative = sortedByScore.slice(0, 5);
 const mostTriggered = [...articleStats].filter(a => a.signal_count > 0).sort((a, b) => b.signal_count - a.signal_count).slice(0, 5);
 const lowestCoverage = [...articleStats].filter(a => a.signal_count >= 0).sort((a, b) => a.signal_count - b.signal_count).slice(0, 5);
@@ -147,7 +147,10 @@ const groupColors: Record<string, string> = {
 
     <!-- 2. UDHR Rights Heatmap -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">UDHR Rights Heatmap</div>
+      <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;">
+        <span style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">UDHR Rights Heatmap</span>
+        <span style="color: var(--fg-secondary); font-size: var(--font-xs); opacity: 0.7;">content scores · <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--color-warning); vertical-align: middle;"></span> says ≠ does</span>
+      </div>
 
       {Object.entries(ARTICLE_GROUPS).map(([group, sectionIds]) => {
         const color = groupColors[group] || 'var(--fg-secondary)';
@@ -157,12 +160,14 @@ const groupColors: Record<string, string> = {
             <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
               {sectionIds.map(sid => {
                 const stat = statsMap.get(sid);
-                const score = stat?.avg_final ?? null;
+                const score = stat?.avg_editorial ?? null;
                 const count = stat?.signal_count ?? 0;
                 const section = SECTIONS.find(s => s.id === sid);
                 const label = sid === 'Preamble' ? 'P' : String(section?.number ?? '?');
                 const title = ARTICLE_TITLES[sid] ?? sid;
                 const barColor = scoreToColor(score);
+                const setl = (stat?.avg_editorial != null && stat?.avg_structural != null)
+                  ? Math.abs(stat.avg_editorial - stat.avg_structural) : null;
                 const spark = sparklines.get(sid) || [];
                 let sparkPath = '';
                 if (spark.length > 1) {
@@ -199,6 +204,11 @@ const groupColors: Record<string, string> = {
                       ) : (
                         <span style="color: var(--bg-surface);">--</span>
                       )}
+                    </td>
+                    <td style="width: 18px; padding: 3px 2px; text-align: center;" title={setl !== null ? `E/S tension: ${setl.toFixed(2)}` : 'No tension data'}>
+                      {setl !== null && setl >= 0.10 ? (
+                        <div style={`width: 8px; height: 8px; border-radius: 50%; margin: 0 auto; background: ${setl >= 0.25 ? 'var(--color-negative)' : 'var(--color-warning)'}; opacity: ${Math.min(1, 0.5 + setl)};`}></div>
+                      ) : null}
                     </td>
                     <td style="width: 50px; padding: 3px 4px; text-align: right; color: var(--fg-secondary);" class="score-font">
                       {count > 0 ? count : '--'}
@@ -238,7 +248,7 @@ const groupColors: Record<string, string> = {
                   </a>
                 </td>
                 <td style="width: 50px; text-align: right; padding: 4px 0;">
-                  <span style={`color: ${scoreToColor(a.avg_final)}; font-size: var(--font-xs);`} class="score-font">{formatScore(a.avg_final)}</span>
+                  <span style={`color: ${scoreToColor(a.avg_editorial)}; font-size: var(--font-xs);`} class="score-font">{formatScore(a.avg_editorial)}</span>
                 </td>
               </tr>
             );
