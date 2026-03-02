@@ -186,16 +186,13 @@ const jsonLd = udhrSection ? {
       <thead>
         <tr style="color: var(--fg-secondary); font-size: var(--font-sm); cursor: pointer; user-select: none;">
           <td data-col="rank" data-type="num" width="30"># ▼</td>
-          <td data-col="hrcb" data-type="num" width="60" align="center">HRCB</td>
-          <td data-col="pts" data-type="num" width="34" align="center" title="HN Points">Pts</td>
-          <td data-col="cmt" data-type="num" width="34" align="center" title="HN Comments">Cmt</td>
-          <td data-col="conf" data-type="num" width="34" align="center" title="Confidence: signal coverage">Conf</td>
           <td data-col="story" data-type="str">Story</td>
-          <td data-col="editorial" data-type="num" width="60" align="center" title="Editorial — what the content says">Editorial</td>
-          <td data-col="structural" data-type="num" width="60" align="center" title="Structural — what the site does">Structural</td>
-          <td data-col="setl" data-type="num" width="50" align="center" title="Structural-Editorial Tension Level">SETL</td>
-          <td data-col="evidence" data-type="evidence" width="60" align="center" title="Evidence strength (High, Medium, Low)">Evidence</td>
-          <td data-col="overall" data-type="num" width="60" align="center">Overall</td>
+          <td data-col="hrcb" data-type="num" width="50" align="center" title="Score for this UDHR provision">Score</td>
+          <td data-col="editorial" data-type="num" width="36" align="center" title="Editorial — what the content says">E</td>
+          <td data-col="structural" data-type="num" width="36" align="center" title="Structural — what the site does">S</td>
+          <td data-col="setl" data-type="num" width="40" align="center" title="Structural-Editorial Tension Level">SETL</td>
+          <td data-col="evidence" data-type="evidence" width="50" align="center" title="Evidence strength (High, Medium, Low)">Evid</td>
+          <td data-col="pts" data-type="num" width="34" align="center" title="HN Points">Pts</td>
         </tr>
       </thead>
       <tbody id="article-body">
@@ -205,25 +202,16 @@ const jsonLd = udhrSection ? {
           return (
           <tr style="border-top: 1px solid var(--color-border);">
             <td style="color: var(--fg-secondary);" class="score-font" data-val={offset + i + 1}>{offset + i + 1}.</td>
-            <td align="center" data-val={row.final ?? -999}>
-              <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
-                {formatScore(row.final)}
-              </span>
-            </td>
-            <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.hn_score ?? -999}>
-              {row.hn_score ?? ''}
-            </td>
-            <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.hn_comments ?? -999}>
-              {row.hn_comments ?? ''}
-            </td>
-            <td align="center" class="score-font" style={`color: ${confidenceToColor(rowConf)}; font-size: var(--font-sm);`} data-val={rowConf ?? -999}>
-              {formatConfidence(rowConf)}
-            </td>
             <td data-val={row.title}>
               <a href={`/item/${row.hn_id}`}>{row.title}</a>
               {row.domain && (
                 <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
               )}
+            </td>
+            <td align="center" data-val={row.final ?? -999}>
+              <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
+                {formatScore(row.final)}
+              </span>
             </td>
             <td align="center" class="score-font" style={`color: ${scoreToColor(row.editorial)}; font-size: var(--font-sm);`} data-val={row.editorial ?? -999}>
               {formatScore(row.editorial)}
@@ -235,10 +223,10 @@ const jsonLd = udhrSection ? {
               {formatSetl(rowSetl)}
             </td>
             <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.evidence === 'H' ? 3 : row.evidence === 'M' ? 2 : row.evidence === 'L' ? 1 : 0}>
-              {row.evidence ? ({'H': 'High', 'M': 'Medium', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
+              {row.evidence ? ({'H': 'High', 'M': 'Med', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
             </td>
-            <td align="center" class="score-font" style={`color: ${scoreToColor(row.hcb_editorial_mean ?? row.hcb_weighted_mean)}; font-size: var(--font-sm);`} data-val={(row.hcb_editorial_mean ?? row.hcb_weighted_mean) ?? -999}>
-              {formatScore(row.hcb_editorial_mean ?? row.hcb_weighted_mean)}
+            <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.hn_score ?? -999}>
+              {row.hn_score ?? ''}
             </td>
           </tr>
           );
