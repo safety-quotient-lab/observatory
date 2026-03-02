@@ -10,12 +10,13 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 ## Current Focus
 
 **Show HN soft launch** — `observatory.unratified.org` live, all polish done
-(2026-03-02). Signals redesigned, nav trimmed, HRO rename complete, spot-check
-passed. QA in progress.
+(2026-03-02). Network page fixed (materialized table, migration 0056).
+Short article titles deployed. Multi-lens product direction cataloged
+(`observatory-lenses.md` — 48 factors + 10 meta-constraints, 6 sigma tiers).
 
 Remaining:
 - [ ] Show HN post draft needs personal closer (`.claude/plans/show-hn-draft.md`)
-- [ ] Post Show HN: fix `/rights/network` D1 self-join timeout (add KV caching or materialized table)
+- [ ] Homepage hero reframe: lens-oriented insight pills (Sigma 1 reframing — zero new engineering)
 
 ---
 
