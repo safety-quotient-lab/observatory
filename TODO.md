@@ -9,16 +9,13 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Public lens audit** (Phase 3.4) — `observatory.unratified.org` is live
-(DNS + SSL + deploy all confirmed 2026-03-02). Full site serves on custom domain.
+**Show HN launch prep** (Phase 3.4) — `observatory.unratified.org` live,
+nav trimmed (`/status` removed, `/data` + `/trends` already absent from nav).
+Public nav: observatory | stories | signals | sources | rights | about | search.
 
-Before Show HN, audit which pages/nav items should be visible to a cold HN
-audience vs. hidden from nav (operational internals like `/status`, stub `/data`).
-
-Remaining before Show HN launch:
-- [ ] Public lens audit: trim nav for HN audience (hide /status, /data, review /trends etc.)
+Remaining:
 - [ ] Show HN post draft needs personal closer (`.claude/plans/show-hn-draft.md`)
-- [ ] Final spot-check of live site
+- [ ] Final spot-check of live site at observatory.unratified.org
 
 ---
 
