@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import Base from '../layouts/Base.astro';
 import SubNav from '../components/SubNav.astro';
-import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates } from '../lib/db';
+import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution } from '../lib/db';
 import { scoreToColor, formatScore, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../lib/colors';
 import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../lib/udhr';
 import { readDb } from '../lib/db-utils';
@@ -38,35 +38,11 @@ try {
   ]);
 } catch { /* graceful fallback */ }
 
-// Hero lens data — separate queries to avoid CPU timeout
-let tdData: Awaited<ReturnType<typeof getTdSignalAggregates>> | null = null;
-let complexityData: Awaited<ReturnType<typeof getComplexityAggregates>> | null = null;
-let temporalData: Awaited<ReturnType<typeof getTemporalFramingAggregates>> | null = null;
-try {
-  [tdData, complexityData, temporalData] = await Promise.all([
-    getTdSignalAggregates(db),
-    getComplexityAggregates(db),
-    getTemporalFramingAggregates(db),
-  ]);
-} catch { /* hero pills degrade to dashes */ }
-
 const domainFingerprints = await getDomainFingerprints(db, topDomains.map(d => d.domain));
 
 // Derived data
 const statsMap = new Map(articleStats.map(a => [a.section, a]));
 const totalEvaluated = statusCounts.done;
-
-// Hero lens data (must be after totalEvaluated)
-const fundingPct = tdData?.funding_disclosed_pct ?? null;
-const authorPct = tdData?.author_identified_pct ?? null;
-const ptStoriesCount = signalOverview?.technique_distribution
-  ? Object.values(signalOverview.technique_distribution).reduce((a, b) => a + b, 0) : null;
-const ptStoryPct = ptStoriesCount !== null && totalEvaluated > 0
-  ? Math.round((ptStoriesCount / totalEvaluated) * 100) : null;
-const expertPct = complexityData
-  ? Math.round(((complexityData.knowledge_domain_specific + complexityData.knowledge_expert) / complexityData.total_measured) * 100) : null;
-const presentPct = temporalData?.present_pct ?? null;
-const prospectivePct = temporalData?.prospective_pct ?? null;
 const allScores = articleStats.filter(a => a.avg_editorial !== null);
 const meanEditorial = allScores.length > 0
   ? allScores.reduce((sum, a) => sum + (a.avg_editorial ?? 0), 0) / allScores.length
@@ -78,6 +54,12 @@ const meanStructural = structuralScores.length > 0
 const coveragePct = ALL_SECTIONS.length > 0
   ? Math.round((allScores.length / ALL_SECTIONS.length) * 100)
   : 0;
+
+// Hero lens data (derived from signalOverview — no extra queries)
+const avgTdScore = signalOverview?.avg_td ?? null;
+const avgFwRatio = signalOverview?.avg_fw_ratio ?? null;
+const ptTotalFlags = signalOverview?.technique_distribution
+  ? Object.values(signalOverview.technique_distribution).reduce((a, b) => a + b, 0) : null;
 
 // Rights Under Pressure
 const sortedByScore = [...articleStats].filter(a => a.avg_editorial !== null).sort((a, b) => (a.avg_editorial ?? 0) - (b.avg_editorial ?? 0));
@@ -158,41 +140,40 @@ const groupColors: Record<string, string> = {
 
     <!-- 1. Hero -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 16px; margin-bottom: 16px;">
-      <h1 style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">Human Rights Observatory, Hacker News Edition</h1>
+      <div style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold; margin-bottom: 6px;">Human Rights Observatory, Hacker News Edition</div>
       <div style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.5; margin-bottom: 12px;">
         Every story on Hacker News is evaluated against the 30 articles and Preamble of the
         <a href="/rights/articles" style="color: var(--channel-editorial);">Universal Declaration of Human Rights</a>.
         What does tech content say about rights — and does the platform match?
       </div>
       <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: var(--font-xs);">
-        <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
-          <span style="color: var(--color-positive);">Transparency</span>
-          <span style="color: var(--fg-secondary);"> — only </span>
-          <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{fundingPct !== null ? `${Math.round(fundingPct)}%` : '—'}</span>
-          <span style="color: var(--fg-secondary);"> disclose funding</span>
-        </a>
-        <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
-          <span style="color: var(--color-negative-light);">Persuasion</span>
-          <span style="color: var(--fg-secondary);"> — </span>
-          <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{ptStoryPct !== null ? `${ptStoryPct}%` : '—'}</span>
-          <span style="color: var(--fg-secondary);"> flagged</span>
-        </a>
-        <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
-          <span style="color: var(--color-amber);">Access</span>
-          <span style="color: var(--fg-secondary);"> — </span>
-          <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{expertPct !== null ? `${expertPct}%` : '—'}</span>
-          <span style="color: var(--fg-secondary);"> assume expertise</span>
-        </a>
-        <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
-          <span style="color: var(--channel-editorial);">Temporal</span>
-          <span style="color: var(--fg-secondary);"> — </span>
-          <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{presentPct !== null ? `${Math.round(presentPct)}%` : '—'}</span>
-          <span style="color: var(--fg-secondary);"> present-focused</span>
-        </a>
         <a href="/stories" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
           <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{totalEvaluated.toLocaleString()}</span>
           <span style="color: var(--fg-secondary);"> stories evaluated</span>
         </a>
+        {avgTdScore !== null && (
+          <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
+            <span style="color: var(--color-positive);">Transparency</span>
+            <span style="color: var(--fg-secondary);"> avg </span>
+            <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{(avgTdScore * 100).toFixed(0)}%</span>
+          </a>
+        )}
+        {ptTotalFlags !== null && ptTotalFlags > 0 && (
+          <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
+            <span style="color: var(--color-negative-light);">Persuasion</span>
+            <span style="color: var(--fg-secondary);"> — </span>
+            <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{ptTotalFlags.toLocaleString()}</span>
+            <span style="color: var(--fg-secondary);"> flags</span>
+          </a>
+        )}
+        {avgFwRatio !== null && (
+          <a href="/about#fair-witness" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
+            <span style="color: var(--color-amber);">Evidence</span>
+            <span style="color: var(--fg-secondary);"> — </span>
+            <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{(avgFwRatio * 100).toFixed(0)}%</span>
+            <span style="color: var(--fg-secondary);"> observable</span>
+          </a>
+        )}
         {tensionCount > 0 && (
           <span style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px;">
             <span class="score-font" style="color: var(--color-warning); font-weight: bold;">{tensionCount}</span>
@@ -272,7 +253,7 @@ const groupColors: Record<string, string> = {
                     </td>
                     <td style="width: 90px; padding: 3px 4px; text-align: center;">
                       {spark.length > 1 ? (
-                        <svg width="80" height="20" viewBox="0 0 80 20" role="img" aria-label={`Score trend for ${a.section}`}>
+                        <svg width="80" height="20" viewBox="0 0 80 20">
                           <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
                           <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
                         </svg>
@@ -293,7 +274,7 @@ const groupColors: Record<string, string> = {
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px;">
       <!-- Most Negative -->
       <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-        <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Most Negative</h2>
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Negative</div>
         <table cellpadding="0" cellspacing="0" width="100%">
           {mostNegative.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
@@ -315,7 +296,7 @@ const groupColors: Record<string, string> = {
 
       <!-- Most Triggered -->
       <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-        <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Most Triggered</h2>
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Triggered</div>
         <table cellpadding="0" cellspacing="0" width="100%">
           {mostTriggered.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
@@ -337,7 +318,7 @@ const groupColors: Record<string, string> = {
 
       <!-- Lowest Coverage -->
       <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-        <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Lowest Coverage</h2>
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Lowest Coverage</div>
         <table cellpadding="0" cellspacing="0" width="100%">
           {lowestCoverage.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
@@ -360,7 +341,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 4. Evidence Transparency -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Evidence Transparency — Weakest Fair Witness Ratios</h2>
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Evidence Transparency — Weakest Fair Witness Ratios</div>
       <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 10px;">
         FW Ratio = High-evidence signals / total evidence signals. Lower = more inference-heavy.
       </div>
@@ -400,7 +381,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 5. Propaganda Landscape -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Propaganda Landscape</h2>
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Propaganda Landscape</div>
 
       {techniqueEntries.length > 0 && (
         <div style="margin-bottom: 14px;">
@@ -467,7 +448,7 @@ const groupColors: Record<string, string> = {
     {(speaksEntries.length > 0 || aboutEntries.length > 0) && (
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-          <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Who Speaks</h2>
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Speaks</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {speaksEntries.map(([name, count]) => {
               const pct = maxSpeaks > 0 ? Math.round((count / maxSpeaks) * 100) : 0;
@@ -494,7 +475,7 @@ const groupColors: Record<string, string> = {
         </div>
 
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-          <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Who Is Spoken About</h2>
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Is Spoken About</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {aboutEntries.map(([name, count]) => {
               const pct = maxAbout > 0 ? Math.round((count / maxAbout) * 100) : 0;
@@ -526,7 +507,7 @@ const groupColors: Record<string, string> = {
     {(scopeEntries.length > 0 || regionEntries.length > 0) && (
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-          <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Scope Distribution</h2>
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Scope Distribution</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {scopeEntries.map(([scope, count]) => {
               const pct = maxScopeCount > 0 ? Math.round((count / maxScopeCount) * 100) : 0;
@@ -553,7 +534,7 @@ const groupColors: Record<string, string> = {
         </div>
 
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-          <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Region Distribution</h2>
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Region Distribution</div>
           <table cellpadding="0" cellspacing="0" width="100%">
             {regionEntries.map(r => {
               const pct = maxRegionCount > 0 ? Math.round((r.count / maxRegionCount) * 100) : 0;
@@ -583,7 +564,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 8. Temporal Trends -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">HRCB Trend{dailyReversed.length > 0 ? ` — ${dailyReversed.length} days` : ''}</h2>
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">HRCB Trend{dailyReversed.length > 0 ? ` — ${dailyReversed.length} days` : ''}</div>
       {dailyReversed.length > 1 ? (() => {
         const chartW = 400;
         const chartH = 100;
@@ -602,7 +583,7 @@ const groupColors: Record<string, string> = {
         const barW = Math.max(1, step * 0.6);
 
         return (
-          <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;" role="img" aria-label={`HRCB score trend over ${dailyReversed.length} days`}>
+          <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;">
             {/* Zero reference line */}
             <line x1="0" y1={lineAreaH / 2} x2={chartW} y2={lineAreaH / 2} stroke="var(--color-border)" stroke-width="0.5" stroke-dasharray="4,4" />
             {/* Score line */}
@@ -643,7 +624,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 9. Domain Rights Profiles -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Domain Rights Profiles — Top 10</h2>
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Domain Rights Profiles — Top 10</div>
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
         <tr style="color: var(--fg-secondary);">
