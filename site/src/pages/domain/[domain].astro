@@ -3,6 +3,7 @@
 import Base from '../../layouts/Base.astro';
 import EvalCard from '../../components/EvalCard.astro';
 import DcpTable from '../../components/DcpTable.astro';
+import { ARTICLE_SHORT_TITLES } from '../../lib/udhr';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp, getDomainSetlHistory, getDomainSignals, getDomainGateStats } from '../../lib/db';
 import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence, gateToColor } from '../../lib/colors';
@@ -209,7 +210,7 @@ if (dcpJson) {
                 {fp.map((score, i) => (
                   <rect x={i * 6} y="0" width="5" height="14" rx="1"
                         fill={scoreToColor(score)}>
-                    <title>{i === 0 ? 'Preamble' : `Article ${i}`}: {score !== null ? formatScore(score) : 'ND'}</title>
+                    <title>{ARTICLE_SHORT_TITLES[i === 0 ? 'Preamble' : `Article ${i}`] ?? `Article ${i}`}: {score !== null ? formatScore(score) : 'ND'}</title>
                   </rect>
                 ))}
               </svg>

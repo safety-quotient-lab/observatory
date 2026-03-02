@@ -17,6 +17,10 @@ export const ARTICLE_TITLES: Record<string, string> = Object.fromEntries(
   SECTIONS.map((s) => [s.id, s.title])
 );
 
+export const ARTICLE_SHORT_TITLES: Record<string, string> = Object.fromEntries(
+  SECTIONS.map((s) => [s.id, s.shortTitle])
+);
+
 export const ARTICLE_TEXT: Record<string, string> = Object.fromEntries(
   SECTIONS.map((s) => [s.id, s.text])
 );

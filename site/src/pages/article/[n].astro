@@ -3,7 +3,7 @@
 import Base from '../../layouts/Base.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { scoreToColor, formatScore, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../../lib/colors';
-import { ARTICLE_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
+import { ARTICLE_TITLES, ARTICLE_SHORT_TITLES, ALL_SECTIONS, getSection } from '../../lib/udhr';
 import { getArticleRanking, getArticleCoverage, getArticleDetailStats, getArticleDirectionalityBreakdown, getArticleThemeBreakdown } from '../../lib/db';
 import type { ArticleRankingRow } from '../../lib/db';
 import { readDb } from '../../lib/db-utils';
@@ -111,13 +111,13 @@ const jsonLd = udhrSection ? {
         {prevNum !== null && (
           <>
             <span> | </span>
-            <a href={`/article/${prevNum}`}>&larr; {prevNum === 0 ? 'Preamble' : `Article ${prevNum}`}</a>
+            <a href={`/article/${prevNum}`}>&larr; {ARTICLE_SHORT_TITLES[prevNum === 0 ? 'Preamble' : `Article ${prevNum}`] ?? `Article ${prevNum}`}</a>
           </>
         )}
         {nextNum !== null && (
           <>
             <span> | </span>
-            <a href={`/article/${nextNum}`}>Article {nextNum} &rarr;</a>
+            <a href={`/article/${nextNum}`}>{ARTICLE_SHORT_TITLES[`Article ${nextNum}`] ?? `Article ${nextNum}`} &rarr;</a>
           </>
         )}
       </td>

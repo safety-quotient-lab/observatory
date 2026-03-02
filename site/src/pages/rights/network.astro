@@ -3,7 +3,7 @@
 import Base from '../../layouts/Base.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import SubNav from '../../components/SubNav.astro';
-import { SECTIONS } from '../../lib/udhr';
+import { SECTIONS, ARTICLE_SHORT_TITLES } from '../../lib/udhr';
 import { getArticlePairStats, getArticleDetailedStats } from '../../lib/db';
 import { scoreToColor, formatScore } from '../../lib/colors';
 import { readDb } from '../../lib/db-utils';
@@ -336,7 +336,7 @@ const powerData = JSON.stringify(powerRankings);
                 <td style="color: var(--fg-secondary);" class="score-font">{i + 1}</td>
                 <td>
                   <a href={`/article/${r.number}`} style="color: var(--fg-emphasis);">
-                    {r.id === 'Preamble' ? 'Preamble' : `Article ${r.number}`}
+                    {ARTICLE_SHORT_TITLES[r.id] ?? r.id}
                   </a>
                 </td>
                 <td style="color: var(--fg-secondary);">{r.shortTitle}</td>
