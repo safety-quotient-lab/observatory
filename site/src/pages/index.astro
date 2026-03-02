@@ -158,7 +158,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 1. Hero -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 16px; margin-bottom: 16px;">
-      <div style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold; margin-bottom: 6px;">Human Rights Observatory, Hacker News Edition</div>
+      <h1 style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">Human Rights Observatory, Hacker News Edition</h1>
       <div style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.5; margin-bottom: 12px;">
         Every story on Hacker News is evaluated against the 30 articles and Preamble of the
         <a href="/rights/articles" style="color: var(--channel-editorial);">Universal Declaration of Human Rights</a>.
@@ -272,7 +272,7 @@ const groupColors: Record<string, string> = {
                     </td>
                     <td style="width: 90px; padding: 3px 4px; text-align: center;">
                       {spark.length > 1 ? (
-                        <svg width="80" height="20" viewBox="0 0 80 20">
+                        <svg width="80" height="20" viewBox="0 0 80 20" role="img" aria-label={`Score trend for ${a.section}`}>
                           <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
                           <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
                         </svg>
@@ -293,7 +293,7 @@ const groupColors: Record<string, string> = {
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px;">
       <!-- Most Negative -->
       <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Negative</div>
+        <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Most Negative</h2>
         <table cellpadding="0" cellspacing="0" width="100%">
           {mostNegative.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
@@ -315,7 +315,7 @@ const groupColors: Record<string, string> = {
 
       <!-- Most Triggered -->
       <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Triggered</div>
+        <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Most Triggered</h2>
         <table cellpadding="0" cellspacing="0" width="100%">
           {mostTriggered.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
@@ -337,7 +337,7 @@ const groupColors: Record<string, string> = {
 
       <!-- Lowest Coverage -->
       <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Lowest Coverage</div>
+        <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Lowest Coverage</h2>
         <table cellpadding="0" cellspacing="0" width="100%">
           {lowestCoverage.map(a => {
             const section = SECTIONS.find(s => s.id === a.section);
@@ -360,7 +360,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 4. Evidence Transparency -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Evidence Transparency — Weakest Fair Witness Ratios</div>
+      <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Evidence Transparency — Weakest Fair Witness Ratios</h2>
       <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 10px;">
         FW Ratio = High-evidence signals / total evidence signals. Lower = more inference-heavy.
       </div>
@@ -400,7 +400,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 5. Propaganda Landscape -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Propaganda Landscape</div>
+      <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Propaganda Landscape</h2>
 
       {techniqueEntries.length > 0 && (
         <div style="margin-bottom: 14px;">
@@ -467,7 +467,7 @@ const groupColors: Record<string, string> = {
     {(speaksEntries.length > 0 || aboutEntries.length > 0) && (
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Speaks</div>
+          <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Who Speaks</h2>
           <table cellpadding="0" cellspacing="0" width="100%">
             {speaksEntries.map(([name, count]) => {
               const pct = maxSpeaks > 0 ? Math.round((count / maxSpeaks) * 100) : 0;
@@ -494,7 +494,7 @@ const groupColors: Record<string, string> = {
         </div>
 
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Who Is Spoken About</div>
+          <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Who Is Spoken About</h2>
           <table cellpadding="0" cellspacing="0" width="100%">
             {aboutEntries.map(([name, count]) => {
               const pct = maxAbout > 0 ? Math.round((count / maxAbout) * 100) : 0;
@@ -526,7 +526,7 @@ const groupColors: Record<string, string> = {
     {(scopeEntries.length > 0 || regionEntries.length > 0) && (
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Scope Distribution</div>
+          <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Scope Distribution</h2>
           <table cellpadding="0" cellspacing="0" width="100%">
             {scopeEntries.map(([scope, count]) => {
               const pct = maxScopeCount > 0 ? Math.round((count / maxScopeCount) * 100) : 0;
@@ -553,7 +553,7 @@ const groupColors: Record<string, string> = {
         </div>
 
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Region Distribution</div>
+          <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Region Distribution</h2>
           <table cellpadding="0" cellspacing="0" width="100%">
             {regionEntries.map(r => {
               const pct = maxRegionCount > 0 ? Math.round((r.count / maxRegionCount) * 100) : 0;
@@ -583,7 +583,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 8. Temporal Trends -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">HRCB Trend{dailyReversed.length > 0 ? ` — ${dailyReversed.length} days` : ''}</div>
+      <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">HRCB Trend{dailyReversed.length > 0 ? ` — ${dailyReversed.length} days` : ''}</h2>
       {dailyReversed.length > 1 ? (() => {
         const chartW = 400;
         const chartH = 100;
@@ -602,7 +602,7 @@ const groupColors: Record<string, string> = {
         const barW = Math.max(1, step * 0.6);
 
         return (
-          <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;">
+          <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;" role="img" aria-label={`HRCB score trend over ${dailyReversed.length} days`}>
             {/* Zero reference line */}
             <line x1="0" y1={lineAreaH / 2} x2={chartW} y2={lineAreaH / 2} stroke="var(--color-border)" stroke-width="0.5" stroke-dasharray="4,4" />
             {/* Score line */}
@@ -643,7 +643,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 9. Domain Rights Profiles -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Domain Rights Profiles — Top 10</div>
+      <h2 style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0; font-weight: normal;">Domain Rights Profiles — Top 10</h2>
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
         <tr style="color: var(--fg-secondary);">

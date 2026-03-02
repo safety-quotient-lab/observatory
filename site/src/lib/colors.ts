@@ -39,9 +39,9 @@ export function scoreToColor(score: number | null | undefined): string {
   // Near-zero scores (±0.05) stay grayish; full color by ±0.4.
   const sat = Math.min(0.9, abs * 2.0) * (0.75 + 0.15 * abs);
 
-  // Lightness: gray midpoint at 0.53 (matches #9ca3af on dark bg), brighter at extremes.
-  // Interpolate from neutral-gray (0.53) toward colored-bright (0.50) as magnitude grows.
-  const lit = 0.53 - 0.11 * abs;
+  // Lightness: gray midpoint at 0.58 for WCAG AA contrast on dark backgrounds.
+  // Interpolate from neutral-gray (0.58) toward colored-bright (0.52) as magnitude grows.
+  const lit = 0.58 - 0.06 * abs;
 
   return hslToRgb(hue, sat, lit);
 }

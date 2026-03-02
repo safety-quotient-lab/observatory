@@ -190,7 +190,7 @@ function isLiteModel(id: string): boolean {
         <>
           {i > 0 && <span class="filter-sep"> | </span>}
           {safeSort === opt.value
-            ? <span class="filter-active">{opt.label}</span>
+            ? <span class="filter-active" aria-current="true">{opt.label}</span>
             : <a href={buildUrl({ sort: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
           }
         </>
@@ -208,7 +208,7 @@ function isLiteModel(id: string): boolean {
         <>
           {i > 0 && <span class="filter-sep"> | </span>}
           {safeFilter === opt.value
-            ? <span class="filter-active">{opt.label}</span>
+            ? <span class="filter-active" aria-current="true">{opt.label}</span>
             : <a href={buildUrl({ filter: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
           }
         </>
@@ -225,7 +225,7 @@ function isLiteModel(id: string): boolean {
           <>
             {i > 0 && <span class="filter-sep"> | </span>}
             {safeSort === opt.value
-              ? <span class="filter-active">{opt.label}</span>
+              ? <span class="filter-active" aria-current="true">{opt.label}</span>
               : <a href={buildUrl({ sort: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
             }
           </>
@@ -237,7 +237,7 @@ function isLiteModel(id: string): boolean {
           <>
             {i > 0 && <span class="filter-sep"> | </span>}
             {safeFilter === opt.value
-              ? <span class="filter-active">{opt.label}</span>
+              ? <span class="filter-active" aria-current="true">{opt.label}</span>
               : <a href={buildUrl({ filter: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
             }
           </>
@@ -249,7 +249,7 @@ function isLiteModel(id: string): boolean {
           <>
             {i > 0 && <span class="filter-sep"> | </span>}
             {safeType === t
-              ? <span class="filter-active">{t}</span>
+              ? <span class="filter-active" aria-current="true">{t}</span>
               : <a href={buildUrl({ type: t, p: '1' })} class="filter-link">{t}</a>
             }
           </>
@@ -260,7 +260,7 @@ function isLiteModel(id: string): boolean {
           <>
             {i > 0 && <span class="filter-sep"> | </span>}
             {safeCtype === opt.value
-              ? <span class="filter-active">{opt.label}</span>
+              ? <span class="filter-active" aria-current="true">{opt.label}</span>
               : <a href={buildUrl({ ctype: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
             }
           </>
@@ -270,19 +270,19 @@ function isLiteModel(id: string): boolean {
         <div class="filter-row">
           <span class="filter-label">model:</span>
           {safeModel === 'any'
-            ? <span class="filter-active"> any</span>
+            ? <span class="filter-active" aria-current="true"> any</span>
             : <a href={buildUrl({ model: 'any', p: '1' })} class="filter-link"> any</a>
           }
           <span class="filter-sep"> | </span>
           {safeModel === 'all'
-            ? <span class="filter-active">all</span>
+            ? <span class="filter-active" aria-current="true">all</span>
             : <a href={buildUrl({ model: 'all', p: '1' })} class="filter-link">all</a>
           }
           {distinctModels.map((m) => (
             <>
               <span class="filter-sep"> | </span>
               {safeModel === m
-                ? <span class="filter-active">{modelLabel(m)}{isLiteModel(m) && <a href="/about#eval-modes" class="lite-icon" style="margin-left: 3px; text-decoration: none; color: var(--color-orange);" title="Lite eval — click for details">L</a>}</span>
+                ? <span class="filter-active" aria-current="true">{modelLabel(m)}{isLiteModel(m) && <a href="/about#eval-modes" class="lite-icon" style="margin-left: 3px; text-decoration: none; color: var(--color-orange);" title="Lite eval — click for details">L</a>}</span>
                 : <a href={buildUrl({ model: m, p: '1' })} class="filter-link">{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}</a>
               }
             </>
@@ -308,9 +308,9 @@ function isLiteModel(id: string): boolean {
     <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
       <td style="width: 28px;"></td>
       <td style="width: 90px; min-width: 90px; white-space: nowrap; padding-left: 2px;">
-        <span style="width: 28px; display: inline-block; text-align: right;">HRCB</span>
-        <span style="margin-left: 8px;">E</span>
-        <span style="margin-left: 14px;">S</span>
+        <abbr style="width: 28px; display: inline-block; text-align: right; text-decoration: none;" title="Human Rights Compatibility Bias score">HRCB</abbr>
+        <abbr style="margin-left: 8px; text-decoration: none;" title="Editorial: what the content says">E</abbr>
+        <abbr style="margin-left: 14px; text-decoration: none;" title="Structural: what the site does">S</abbr>
       </td>
       <td></td>
     </tr>

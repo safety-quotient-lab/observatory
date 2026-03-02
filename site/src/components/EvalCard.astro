@@ -76,21 +76,21 @@ function timeAgo(unixTime: number): string {
             </span>
           </div>
           <div class="score-row" data-channel="editorial">
-            <span class="score-font score-label">E</span>
+            <abbr class="score-font score-label" style="text-decoration: none;" title="Editorial channel: what the content says about rights">E</abbr>
             <span class="score-font score-value" style={`color: ${story.hcb_editorial_mean !== null ? scoreToColor(story.hcb_editorial_mean) : 'var(--fg-secondary)'};`}>
               {story.hcb_editorial_mean !== null ? formatScore(story.hcb_editorial_mean) : '--'}
             </span>
           </div>
           {!isLiteOnly ? (
             <div class="score-row" data-channel="structural">
-              <span class="score-font score-label">S</span>
+              <abbr class="score-font score-label" style="text-decoration: none;" title="Structural channel: what the hosting site does (privacy, access, tracking)">S</abbr>
               <span class="score-font score-value" style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : 'var(--fg-secondary)'};`}>
                 {structuralScore !== null ? formatScore(structuralScore) : '--'}
               </span>
             </div>
           ) : (
             <div class="score-row" data-channel="structural">
-              <span class="score-font score-label">S</span>
+              <abbr class="score-font score-label" style="text-decoration: none;" title="Structural channel: what the hosting site does — full eval needed">S</abbr>
               <button
                 class="trigger-btn lite-upgrade-btn"
                 data-hn-id={story.hn_id}
