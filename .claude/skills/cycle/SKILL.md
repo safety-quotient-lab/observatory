@@ -77,9 +77,11 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 
 **TODO.md** (project backlog — open items only, no completed items):
 - Read `TODO.md`
-- Check off any items that were completed by the changes in this session, then remove them (completed items belong in git history, not the TODO)
+- Check off any items that were **directly completed** by this session's changes, then remove them
+- **Upstream unblocking check**: also scan for items listed as prerequisites or blockers that this session satisfied — even if they weren't the primary output (e.g., "cogarch sync" completed as a side effect). Remove those too. Scope too narrow here is the recurring failure mode.
 - Add any new TODO items that surfaced during development (bugs found, follow-up work needed, ideas)
 - Remove items that are no longer relevant
+- **Update `## Current Focus`**: after cleanup, verify the Current Focus block at the top of TODO.md reflects the actual next unblocked item. Update it if the session moved the frontier. If no Current Focus block exists, create one.
 
 **IDEAS.md** (deferred ideas with mission alignment tiers):
 - Read `IDEAS.md`
@@ -140,3 +142,5 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 ### 12. Summary
 
 Report what was updated, what was committed, what was deployed, and what was skipped (with reason).
+
+Include one line: **Next:** [the current focus item from TODO.md]. This makes the session handoff explicit.
