@@ -177,11 +177,16 @@ function isLiteModel(id: string): boolean {
 <Base title={pageTitle} canonicalUrl={canonicalUrl}>
   {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'stories' }]} />
-  {/* Filter/sort bar */}
+  {/* Filter/sort bar — primary (always visible) + advanced (collapsed) */}
   <div class="filter-bar subtext">
     <div class="filter-row">
       <span class="filter-label">sort:</span>
-      {SORT_OPTIONS.map((opt, i) => (
+      {([
+        { value: 'top', label: 'top' },
+        { value: 'time', label: 'new' },
+        { value: 'score_desc', label: 'score' },
+        { value: 'hn_points', label: 'points' },
+      ] as const).map((opt, i) => (
         <>
           {i > 0 && <span class="filter-sep"> | </span>}
           {safeSort === opt.value
@@ -193,7 +198,13 @@ function isLiteModel(id: string): boolean {
     </div>
     <div class="filter-row">
       <span class="filter-label">show:</span>
-      {FILTER_OPTIONS.map((opt, i) => (
+      {([
+        { value: 'all', label: 'all' },
+        { value: 'evaluated', label: 'evaluated' },
+        { value: 'positive', label: 'positive' },
+        { value: 'negative', label: 'negative' },
+        { value: 'neutral', label: 'neutral' },
+      ] as const).map((opt, i) => (
         <>
           {i > 0 && <span class="filter-sep"> | </span>}
           {safeFilter === opt.value
@@ -202,54 +213,83 @@ function isLiteModel(id: string): boolean {
           }
         </>
       ))}
+      <span class="filter-sep"> | </span>
+      <a href="#" id="toggle-advanced-filters" class="filter-link" style="color: var(--fg-secondary);">more ▾</a>
     </div>
-    <div class="filter-row">
-      <span class="filter-label">type:</span>
-      {(['all', 'ask', 'show', 'job'] as const).map((t, i) => (
-        <>
-          {i > 0 && <span class="filter-sep"> | </span>}
-          {safeType === t
-            ? <span class="filter-active">{t}</span>
-            : <a href={buildUrl({ type: t, p: '1' })} class="filter-link">{t}</a>
-          }
-        </>
-      ))}
-    </div>
-    <div class="filter-row">
-      <span class="filter-label">content:</span>
-      {CTYPE_OPTIONS.map((opt, i) => (
-        <>
-          {i > 0 && <span class="filter-sep"> | </span>}
-          {safeCtype === opt.value
-            ? <span class="filter-active">{opt.label}</span>
-            : <a href={buildUrl({ ctype: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
-          }
-        </>
-      ))}
-    </div>
-    {distinctModels.length > 1 && (
+
+    {/* Advanced filters — collapsed by default, auto-open if non-default params active */}
+    <div id="advanced-filters" style={`display: ${safeType !== 'all' || safeCtype !== 'all' || safeModel !== 'any' || safeFilter === 'pending' || safeFilter === 'failed' || !['top', 'time', 'score_desc', 'hn_points'].includes(safeSort) ? 'block' : 'none'};`}>
       <div class="filter-row">
-        <span class="filter-label">model:</span>
-        {safeModel === 'any'
-          ? <span class="filter-active"> any</span>
-          : <a href={buildUrl({ model: 'any', p: '1' })} class="filter-link"> any</a>
-        }
-        <span class="filter-sep"> | </span>
-        {safeModel === 'all'
-          ? <span class="filter-active">all</span>
-          : <a href={buildUrl({ model: 'all', p: '1' })} class="filter-link">all</a>
-        }
-        {distinctModels.map((m) => (
+        <span class="filter-label">sort:</span>
+        {SORT_OPTIONS.map((opt, i) => (
           <>
-            <span class="filter-sep"> | </span>
-            {safeModel === m
-              ? <span class="filter-active">{modelLabel(m)}{isLiteModel(m) && <a href="/about#eval-modes" class="lite-icon" style="margin-left: 3px; text-decoration: none; color: var(--color-orange);" title="Lite eval — click for details">L</a>}</span>
-              : <a href={buildUrl({ model: m, p: '1' })} class="filter-link">{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}</a>
+            {i > 0 && <span class="filter-sep"> | </span>}
+            {safeSort === opt.value
+              ? <span class="filter-active">{opt.label}</span>
+              : <a href={buildUrl({ sort: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
             }
           </>
         ))}
       </div>
-    )}
+      <div class="filter-row">
+        <span class="filter-label">show:</span>
+        {FILTER_OPTIONS.map((opt, i) => (
+          <>
+            {i > 0 && <span class="filter-sep"> | </span>}
+            {safeFilter === opt.value
+              ? <span class="filter-active">{opt.label}</span>
+              : <a href={buildUrl({ filter: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
+            }
+          </>
+        ))}
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">type:</span>
+        {(['all', 'ask', 'show', 'job'] as const).map((t, i) => (
+          <>
+            {i > 0 && <span class="filter-sep"> | </span>}
+            {safeType === t
+              ? <span class="filter-active">{t}</span>
+              : <a href={buildUrl({ type: t, p: '1' })} class="filter-link">{t}</a>
+            }
+          </>
+        ))}
+        <span class="filter-sep"> · </span>
+        <span class="filter-label">content:</span>
+        {CTYPE_OPTIONS.map((opt, i) => (
+          <>
+            {i > 0 && <span class="filter-sep"> | </span>}
+            {safeCtype === opt.value
+              ? <span class="filter-active">{opt.label}</span>
+              : <a href={buildUrl({ ctype: opt.value, p: '1' })} class="filter-link">{opt.label}</a>
+            }
+          </>
+        ))}
+      </div>
+      {distinctModels.length > 1 && (
+        <div class="filter-row">
+          <span class="filter-label">model:</span>
+          {safeModel === 'any'
+            ? <span class="filter-active"> any</span>
+            : <a href={buildUrl({ model: 'any', p: '1' })} class="filter-link"> any</a>
+          }
+          <span class="filter-sep"> | </span>
+          {safeModel === 'all'
+            ? <span class="filter-active">all</span>
+            : <a href={buildUrl({ model: 'all', p: '1' })} class="filter-link">all</a>
+          }
+          {distinctModels.map((m) => (
+            <>
+              <span class="filter-sep"> | </span>
+              {safeModel === m
+                ? <span class="filter-active">{modelLabel(m)}{isLiteModel(m) && <a href="/about#eval-modes" class="lite-icon" style="margin-left: 3px; text-decoration: none; color: var(--color-orange);" title="Lite eval — click for details">L</a>}</span>
+                : <a href={buildUrl({ model: m, p: '1' })} class="filter-link">{modelLabel(m)}{isLiteModel(m) && <span class="lite-icon" style="margin-left: 3px;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}</a>
+              }
+            </>
+          ))}
+        </div>
+      )}
+    </div>
     <div class="filter-row">
       <span class="filter-label">score:</span>
       <button class="score-mode-btn" data-mode="hrcb" aria-label="Show HRCB composite scores">HRCB</button>
@@ -352,4 +392,24 @@ function isLiteModel(id: string): boolean {
       </tr>
     </table>
   )}
+
+  <script is:inline>
+    (function() {
+      var toggle = document.getElementById('toggle-advanced-filters');
+      var panel = document.getElementById('advanced-filters');
+      if (!toggle || !panel) return;
+      var stored = localStorage.getItem('hrcb_advanced_filters');
+      if (stored === 'open' && panel.style.display === 'none') {
+        panel.style.display = 'block';
+        toggle.textContent = 'less ▴';
+      }
+      toggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        var open = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        toggle.textContent = open ? 'more ▾' : 'less ▴';
+        localStorage.setItem('hrcb_advanced_filters', open ? 'closed' : 'open');
+      });
+    })();
+  </script>
 </Base>
