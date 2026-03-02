@@ -212,9 +212,10 @@
   /* Tripartite score display (HRCB | E | S stacked) */
   .tripartite-score {
     display: flex;
-    flex-direction: column;
-    gap: 1px;
+    flex-direction: row;
+    gap: 6px;
     line-height: 1.2;
+    align-items: baseline;
   }
 
   .tripartite-score .score-row {
@@ -226,8 +227,6 @@
   .tripartite-score .score-label {
     color: var(--fg-secondary);
     font-size: var(--font-xs);
-    width: 28px;
-    text-align: right;
   }
 
   .tripartite-score .score-value {
@@ -257,18 +256,27 @@
   /* Active channel highlight — body[data-score-mode] controls which row is prominent */
   body[data-score-mode="hrcb"] .score-row[data-channel="hrcb"] .score-value,
   body:not([data-score-mode]) .score-row[data-channel="hrcb"] .score-value {
-    font-size: var(--font-md);
     font-weight: bold;
   }
 
   body[data-score-mode="editorial"] .score-row[data-channel="editorial"] .score-value {
-    font-size: var(--font-md);
     font-weight: bold;
   }
 
   body[data-score-mode="structural"] .score-row[data-channel="structural"] .score-value {
-    font-size: var(--font-md);
     font-weight: bold;
+  }
+
+  /* Inactive channels in horizontal layout — muted */
+  body[data-score-mode="hrcb"] .score-row:not([data-channel="hrcb"]) .score-value,
+  body:not([data-score-mode]) .score-row:not([data-channel="hrcb"]) .score-value {
+    color: var(--fg-secondary) !important;
+  }
+  body[data-score-mode="editorial"] .score-row:not([data-channel="editorial"]) .score-value {
+    color: var(--fg-secondary) !important;
+  }
+  body[data-score-mode="structural"] .score-row:not([data-channel="structural"]) .score-value {
+    color: var(--fg-secondary) !important;
   }
 
   /* Score mode toggle buttons */

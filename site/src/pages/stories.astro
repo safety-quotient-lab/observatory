@@ -3,7 +3,7 @@
 import Base from '../layouts/Base.astro';
 import EvalCard from '../components/EvalCard.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels } from '../lib/db';
+import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates, getSignalOverview } from '../lib/db';
 import type { SortOption, FilterOption, TypeOption, ContentTypeOption, ModelOption } from '../lib/db';
 import { modelDisplayName, getModelDef, isLiteMode } from '../lib/shared-eval';
 import { readDb } from '../lib/db-utils';
@@ -44,6 +44,46 @@ const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
 const evaluatedCount = await getEvaluatedCount(db);
+
+// Interstitial insight data (lightweight queries, graceful fallback)
+let tdData: Awaited<ReturnType<typeof getTdSignalAggregates>> | null = null;
+let complexityData: Awaited<ReturnType<typeof getComplexityAggregates>> | null = null;
+let temporalData: Awaited<ReturnType<typeof getTemporalFramingAggregates>> | null = null;
+let signalData: Awaited<ReturnType<typeof getSignalOverview>> | null = null;
+try {
+  [tdData, complexityData, temporalData, signalData] = await Promise.all([
+    getTdSignalAggregates(db),
+    getComplexityAggregates(db),
+    getTemporalFramingAggregates(db),
+    getSignalOverview(db),
+  ]);
+} catch { /* interstitials degrade to no-show */ }
+
+// Build interstitial pool — each: { text, context, articleNum, articleLabel }
+const insightPool: { text: string; context: string; articleNum: number; articleLabel: string }[] = [];
+if (tdData) {
+  if (tdData.funding_disclosed_pct != null) insightPool.push({ text: `Only ${Math.round(tdData.funding_disclosed_pct)}% of stories disclose their funding source.`, context: 'Transparency enables informed reading.', articleNum: 19, articleLabel: 'Art. 19' });
+  if (tdData.author_identified_pct != null) insightPool.push({ text: `${Math.round(tdData.author_identified_pct)}% of stories identify their author.`, context: 'Accountability starts with attribution.', articleNum: 19, articleLabel: 'Art. 19' });
+}
+if (complexityData) {
+  const expertShare = complexityData.total_measured > 0 ? Math.round(((complexityData.knowledge_domain_specific + complexityData.knowledge_expert) / complexityData.total_measured) * 100) : null;
+  if (expertShare !== null) insightPool.push({ text: `${expertShare}% of stories assume domain-specific or expert knowledge.`, context: 'Jargon creates invisible barriers to understanding.', articleNum: 26, articleLabel: 'Art. 26' });
+  if (complexityData.accessible_pct != null) insightPool.push({ text: `${Math.round(complexityData.accessible_pct)}% of stories are fully accessible — plain language, self-contained.`, context: 'Education is a human right.', articleNum: 26, articleLabel: 'Art. 26' });
+}
+if (temporalData) {
+  if (temporalData.present_pct != null && temporalData.prospective_pct != null) insightPool.push({ text: `${Math.round(temporalData.present_pct)}% of tech coverage is present-focused — only ${Math.round(temporalData.prospective_pct)}% looks forward.`, context: 'How we frame time shapes how we address rights.', articleNum: 0, articleLabel: 'Preamble' });
+}
+if (signalData?.technique_distribution) {
+  const totalFlagged = Object.values(signalData.technique_distribution).reduce((a, b) => a + b, 0);
+  if (totalFlagged > 0) insightPool.push({ text: `${totalFlagged} propaganda technique flags detected across evaluated stories.`, context: '18 persuasion techniques tracked.', articleNum: 19, articleLabel: 'Art. 19' });
+}
+insightPool.push({ text: `${evaluatedCount.toLocaleString()} stories evaluated against 31 UDHR provisions.`, context: 'Every evaluation separates observable facts from inferences.', articleNum: -1, articleLabel: '' });
+
+// Deterministic selection: pick 2 insights per page based on page number
+const insightA = insightPool.length > 0 ? insightPool[(page * 3) % insightPool.length] : null;
+const insightB = insightPool.length > 1 ? insightPool[(page * 3 + 1) % insightPool.length] : null;
+// Ensure they're different
+const selectedInsights = insightA ? (insightB && insightB !== insightA ? [insightA, insightB] : [insightA]) : [];
 
 function buildUrl(params: Record<string, string>): string {
   const p = new URLSearchParams();
@@ -234,10 +274,49 @@ function isLiteModel(id: string): boolean {
   <div class="table-wrap">
   <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
     {displayStories.map((story, i) => (
-      <EvalCard
-        story={story}
-        rank={offset + i + 1}
-      />
+      <>
+        <EvalCard
+          story={story}
+          rank={offset + i + 1}
+        />
+        {/* Pedagogical interstitial after stories 10 and 20 */}
+        {i === 9 && selectedInsights[0] && (
+          <tr>
+            <td colspan="3" style="padding: 8px 0;">
+              <div style="border-top: 1px dashed var(--color-border); border-bottom: 1px dashed var(--color-border); padding: 8px 10px; color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
+                <span style="color: var(--color-orange);">&#9670;</span>
+                {' '}{selectedInsights[0].text}
+                <br />
+                <span style="margin-left: 16px;">{selectedInsights[0].context}</span>
+                {selectedInsights[0].articleNum >= 0 && (
+                  <a href={`/article/${selectedInsights[0].articleNum}`} style="color: var(--channel-hrcb); margin-left: 6px;">&rarr; {selectedInsights[0].articleLabel}</a>
+                )}
+                {selectedInsights[0].articleNum < 0 && (
+                  <a href="/about" style="color: var(--channel-hrcb); margin-left: 6px;">&rarr; About</a>
+                )}
+              </div>
+            </td>
+          </tr>
+        )}
+        {i === 19 && selectedInsights[1] && (
+          <tr>
+            <td colspan="3" style="padding: 8px 0;">
+              <div style="border-top: 1px dashed var(--color-border); border-bottom: 1px dashed var(--color-border); padding: 8px 10px; color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
+                <span style="color: var(--color-orange);">&#9670;</span>
+                {' '}{selectedInsights[1].text}
+                <br />
+                <span style="margin-left: 16px;">{selectedInsights[1].context}</span>
+                {selectedInsights[1].articleNum >= 0 && (
+                  <a href={`/article/${selectedInsights[1].articleNum}`} style="color: var(--channel-hrcb); margin-left: 6px;">&rarr; {selectedInsights[1].articleLabel}</a>
+                )}
+                {selectedInsights[1].articleNum < 0 && (
+                  <a href="/about" style="color: var(--channel-hrcb); margin-left: 6px;">&rarr; About</a>
+                )}
+              </div>
+            </td>
+          </tr>
+        )}
+      </>
     ))}
   </table>
   </div>

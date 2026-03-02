@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import Base from '../layouts/Base.astro';
 import SubNav from '../components/SubNav.astro';
-import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution } from '../lib/db';
+import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates } from '../lib/db';
 import { scoreToColor, formatScore, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../lib/colors';
 import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../lib/udhr';
 import { readDb } from '../lib/db-utils';
@@ -30,13 +30,31 @@ for (const row of sparklinesRaw) {
 let signalOverview: Awaited<ReturnType<typeof getSignalOverview>> | null = null;
 let stakeholderData: Awaited<ReturnType<typeof getStakeholderOverview>> | null = null;
 let regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null = null;
+let tdData: Awaited<ReturnType<typeof getTdSignalAggregates>> | null = null;
+let complexityData: Awaited<ReturnType<typeof getComplexityAggregates>> | null = null;
+let temporalData: Awaited<ReturnType<typeof getTemporalFramingAggregates>> | null = null;
 try {
-  [signalOverview, stakeholderData, regionData] = await Promise.all([
+  [signalOverview, stakeholderData, regionData, tdData, complexityData, temporalData] = await Promise.all([
     getSignalOverview(db),
     getStakeholderOverview(db),
     getRegionDistribution(db),
+    getTdSignalAggregates(db),
+    getComplexityAggregates(db),
+    getTemporalFramingAggregates(db),
   ]);
 } catch { /* graceful fallback */ }
+
+// Hero lens data
+const fundingPct = tdData?.funding_disclosed_pct ?? null;
+const authorPct = tdData?.author_identified_pct ?? null;
+const ptStoriesCount = signalOverview?.technique_distribution
+  ? Object.values(signalOverview.technique_distribution).reduce((a, b) => a + b, 0) : null;
+const ptStoryPct = ptStoriesCount !== null && totalEvaluated > 0
+  ? Math.round((ptStoriesCount / totalEvaluated) * 100) : null;
+const expertPct = complexityData
+  ? Math.round(((complexityData.knowledge_domain_specific + complexityData.knowledge_expert) / complexityData.total_measured) * 100) : null;
+const presentPct = temporalData?.present_pct ?? null;
+const prospectivePct = temporalData?.prospective_pct ?? null;
 
 const domainFingerprints = await getDomainFingerprints(db, topDomains.map(d => d.domain));
 
@@ -141,38 +159,38 @@ const groupColors: Record<string, string> = {
         What does tech content say about rights — and does the platform match?
       </div>
       <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: var(--font-xs);">
-        <span style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px;">
+        <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
+          <span style="color: var(--color-positive);">Transparency</span>
+          <span style="color: var(--fg-secondary);"> — only </span>
+          <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{fundingPct !== null ? `${Math.round(fundingPct)}%` : '—'}</span>
+          <span style="color: var(--fg-secondary);"> disclose funding</span>
+        </a>
+        <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
+          <span style="color: var(--color-negative-light);">Persuasion</span>
+          <span style="color: var(--fg-secondary);"> — </span>
+          <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{ptStoryPct !== null ? `${ptStoryPct}%` : '—'}</span>
+          <span style="color: var(--fg-secondary);"> flagged</span>
+        </a>
+        <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
+          <span style="color: var(--color-amber);">Access</span>
+          <span style="color: var(--fg-secondary);"> — </span>
+          <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{expertPct !== null ? `${expertPct}%` : '—'}</span>
+          <span style="color: var(--fg-secondary);"> assume expertise</span>
+        </a>
+        <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
+          <span style="color: var(--channel-editorial);">Temporal</span>
+          <span style="color: var(--fg-secondary);"> — </span>
+          <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{presentPct !== null ? `${Math.round(presentPct)}%` : '—'}</span>
+          <span style="color: var(--fg-secondary);"> present-focused</span>
+        </a>
+        <a href="/stories" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
           <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{totalEvaluated.toLocaleString()}</span>
           <span style="color: var(--fg-secondary);"> stories evaluated</span>
-        </span>
-        <span style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px;">
-          <span style="color: var(--fg-secondary);">says </span>
-          <span class="score-font" style={`color: ${scoreToColor(meanEditorial)}; font-weight: bold;`}>{formatScore(meanEditorial)}</span>
-        </span>
-        <span style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px;">
-          <span style="color: var(--fg-secondary);">does </span>
-          <span class="score-font" style={`color: ${scoreToColor(meanStructural)}; font-weight: bold;`}>{formatScore(meanStructural)}</span>
-        </span>
+        </a>
         {tensionCount > 0 && (
           <span style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px;">
             <span class="score-font" style="color: var(--color-warning); font-weight: bold;">{tensionCount}</span>
-            <span style="color: var(--fg-secondary);"> provisions show says ≠ does tension</span>
-          </span>
-        )}
-        {mostNegativeEntry && (
-          <span style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px;">
-            <span style="color: var(--fg-secondary);">weakest: </span>
-            <a href={`/article/${SECTIONS.find(s => s.id === mostNegativeEntry.section)?.number ?? 0}`} style={`color: ${scoreToColor(mostNegativeEntry.avg_editorial)}; font-weight: bold; text-decoration: none;`} class="score-font">
-              {ARTICLE_TITLES[mostNegativeEntry.section] ?? mostNegativeEntry.section}
-            </a>
-          </span>
-        )}
-        {mostPositiveEntry && (
-          <span style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px;">
-            <span style="color: var(--fg-secondary);">strongest: </span>
-            <a href={`/article/${SECTIONS.find(s => s.id === mostPositiveEntry.section)?.number ?? 0}`} style={`color: ${scoreToColor(mostPositiveEntry.avg_editorial)}; font-weight: bold; text-decoration: none;`} class="score-font">
-              {ARTICLE_TITLES[mostPositiveEntry.section] ?? mostPositiveEntry.section}
-            </a>
+            <span style="color: var(--fg-secondary);"> say ≠ do</span>
           </span>
         )}
       </div>
