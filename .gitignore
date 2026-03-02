@@ -28,4 +28,8 @@ node_modules/
 
 # lock files (local dev)
 package-lock.json
-.claude/
+# claude code — ignore all except skills and plans
+.claude/*
+!.claude/skills/
+!.claude/plans/
+.claude/plans/archive/
