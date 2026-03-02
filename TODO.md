@@ -9,10 +9,12 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Create Observatory repo** (Phase 3.2) — License prep complete (Apache 2.0 + CC BY-SA 4.0,
-SPDX headers on all 114 files, ATTRIBUTION.md, SCHEMA.md). Pipeline repo is license-ready.
+**Pre-publish scrub + readiness checklist** (Phase 3.2) — Observatory repo created
+(safety-quotient-lab/observatory). Before populating: scrub for PII (personal name
+references excluding @kashfshah), internal labels ("gray-box"), hardcoded IDs, and
+anything else that shouldn't be in a public repo. Then populate with presentation layer.
 
-Blocked on user actions: acquire humanify.org, create safety-quotient-lab GitHub org.
+User action still needed: acquire humanify.org domain.
 
 ---
 
@@ -246,7 +248,8 @@ Completed 2026-03-02. All 7 decisions resolved:
 
 - [ ] **Acquire domain** — humanify.org + observatory.humanify.org (user action)
 - [ ] **Acquire redirects** — article30.org, clearview TBD (user action)
-- [ ] **Create GitHub org** — safety-quotient-lab (user action)
+- ~~Create GitHub org~~ — done: safety-quotient-lab (https://github.com/safety-quotient-lab)
+- ~~Create observatory repo~~ — done: https://github.com/safety-quotient-lab/observatory
 - ~~Extract methodology~~ — done: `methodology-content.ts` (CC BY-SA) + `prompts.ts` (Apache 2.0)
 - ~~Verify no secrets in git history~~ — done: clean
 - ~~Add license files~~ — done: LICENSE, LICENSE-DATA, ATTRIBUTION.md, SCHEMA.md
