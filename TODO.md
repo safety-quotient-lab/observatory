@@ -18,6 +18,7 @@ font bump, UDHR source links on 6 pages, free-tier mention, about softening.
 Remaining:
 - [ ] Write personal closer and post Show HN (`.claude/plans/show-hn-draft.md`)
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6.
+- [ ] Post-launch: Lite calibration validation — run Haiku on lite prompt for ~50 stories already evaluated by both Llama models. Compare Haiku-lite vs Llama-lite to isolate prompt mode effect from model effect. If Haiku-lite ≈ Llama-lite, the 2.4× gap is prompt architecture. If Haiku-lite >> Llama-lite, there's also a model capability factor. Informs whether calibration-anchored correction (option 3 in model-divergence-analysis.md) is viable.
 - [ ] Post-launch: KV-precompute homepage data blob (TTFB 3.9s → ~200ms)
 - [ ] Post-launch: sync observatory repo with latest changes
 
