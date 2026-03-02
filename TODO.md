@@ -9,14 +9,15 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Show HN ready** (Phase 3.3 complete, 2026-03-02) — Observatory repo fully
-prepared: 212 files, README verified, repo metadata set (homepage, 8 topics,
-description). Screenshots deferred (live link sufficient).
+**Public lens audit** (Phase 3.4) — `observatory.unratified.org` is live
+(DNS + SSL + deploy all confirmed 2026-03-02). Full site serves on custom domain.
+
+Before Show HN, audit which pages/nav items should be visible to a cold HN
+audience vs. hidden from nav (operational internals like `/status`, stub `/data`).
 
 Remaining before Show HN launch:
-- [ ] Show HN post draft v2 ready (`.claude/plans/show-hn-draft.md`) — needs personal closer
-- [ ] Wire up `observatory.unratified.org` → `hn-hrcb.pages.dev` (domain registered, pending CF zone setup)
-- [ ] Update `astro.config.mjs` site URL + observatory repo README links
+- [ ] Public lens audit: trim nav for HN audience (hide /status, /data, review /trends etc.)
+- [ ] Show HN post draft needs personal closer (`.claude/plans/show-hn-draft.md`)
 - [ ] Final spot-check of live site
 
 ---
