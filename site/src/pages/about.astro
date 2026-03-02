@@ -424,23 +424,23 @@ const jsonLd = {
           <div class="table-wrap">
           <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-bottom: 10px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px;">
             <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;"><td style="padding: 4px 8px;"></td><td style="padding: 4px 8px;">Full</td><td style="padding: 4px 8px; color: var(--color-orange);">~lite</td></tr>
-            <tr><td style="color: var(--fg-primary); padding: 4px 8px; white-space: nowrap;" class="score-font">Channels</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Editorial + Structural</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Editorial only</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px; white-space: nowrap;" class="score-font">Channels</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Editorial + Structural (31 per-provision)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Editorial + Structural (holistic)</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Provisions</td><td style="color: var(--fg-secondary); padding: 4px 8px;">31 per-provision scores</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Single aggregate score</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">DCP</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Yes (8 domain elements)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">No</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Fair Witness</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Yes (facts + inferences)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">No</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Supplementary</td><td style="color: var(--fg-secondary); padding: 4px 8px;">All 9 signals</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">5 (EQ, SO, TD, valence, arousal) + tone</td></tr>
-            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">SETL</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Yes</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">No (single channel)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">SETL</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Yes (per-provision)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Yes (holistic)</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Confidence</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Evidence-weighted</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">N/A</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Output tokens</td><td style="color: var(--fg-secondary); padding: 4px 8px;">~4-5K</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">~200-400</td></tr>
-            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Schema</td><td style="color: var(--fg-secondary); padding: 4px 8px;">3.7</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">lite-1.4</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Schema</td><td style="color: var(--fg-secondary); padding: 4px 8px;">3.7</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">lite-1.5</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Anthropic Claude Haiku 4.5</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Feed label</td><td style="color: var(--fg-secondary); padding: 4px 8px;">HRCB</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">~lite</td></tr>
           </table>
           </div>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 0;">
-            Lite item pages display an editorial summary card instead of the full heatmap.
-            Lite scores are editorial-only and not directly comparable to full weighted means.
+            Lite item pages display an editorial+structural summary card instead of the full heatmap.
+            Lite scores use holistic two-dimension scoring (editorial + structural) blended with content-type weights.
           </p>
         </details>
 
@@ -728,7 +728,7 @@ const jsonLd = {
             </tr>
             <tr>
               <td style="color: var(--fg-secondary);" class="score-font">Queue</td><td style="color: var(--fg-primary);" class="score-font">CF Queues (fan-out)</td>
-              <td style="color: var(--fg-secondary);" class="score-font">Lite schema</td><td style="color: var(--color-orange);" class="score-font">lite-1.4 (editorial only, integer 0-100)</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Lite schema</td><td style="color: var(--color-orange);" class="score-font">lite-1.5 (editorial + structural, integer 0-100)</td>
             </tr>
           </table>
         </details>

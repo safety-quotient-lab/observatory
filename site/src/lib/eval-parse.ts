@@ -7,11 +7,13 @@ import { errorSlugFromStatus, errorSlugFromException, ERROR_TYPES } from './type
 import {
   ALL_SECTIONS,
   CLASSIFICATIONS,
+  CONTENT_TYPE_WEIGHTS,
   type EvalResult,
   type SlimEvalResponse,
   type LiteEvalResponse,
   type ValidationResult,
 } from './eval-types';
+import { computeSetl } from './compute-aggregates';
 import { RAW_HTML_MAX_CHARS } from './shared-eval';
 
 /** Valid content type codes for lite evals. */
@@ -326,6 +328,50 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
   return { valid: errors.length === 0, errors, warnings, repairs };
 }
 
+/** Convert a lite integer score (0-100 or float [-1,+1]) to normalized [-1,+1]. */
+function convertLiteScore(
+  value: any,
+  fieldName: string,
+  isIntegerFormat: boolean,
+  repairs: string[],
+): number | null {
+  if (value == null) return null;
+  if (isIntegerFormat || (typeof value === 'number' && value > 1.0)) {
+    // Integer 0-100 format: normalize to [-1, +1] via (score - 50) / 50
+    if (typeof value !== 'number') {
+      const num = parseFloat(value);
+      value = (!isNaN(num) && isFinite(num)) ? num : null;
+      if (value !== null) repairs.push(`Coerced ${fieldName} to number: ${value}`);
+    }
+    if (value !== null) {
+      const raw = value;
+      const clamped = Math.max(0, Math.min(100, raw));
+      value = Math.round(((clamped - 50) / 50) * 1000) / 1000;
+      if (clamped !== raw) {
+        repairs.push(`Clamped+normalized ${fieldName} integer ${raw} \u2192 ${clamped} \u2192 ${value}`);
+      }
+    }
+    return value;
+  } else {
+    // Float format: clamp to [-1, +1]
+    if (typeof value !== 'number') {
+      const num = parseFloat(value);
+      if (!isNaN(num) && isFinite(num)) {
+        value = Math.max(-1.0, Math.min(1.0, num));
+        repairs.push(`Coerced ${fieldName} to number: ${value}`);
+      } else {
+        repairs.push(`Set ${fieldName} to null (was non-numeric)`);
+        return null;
+      }
+    } else if (value < -1.0 || value > 1.0) {
+      const original = value;
+      value = Math.max(-1.0, Math.min(1.0, value));
+      repairs.push(`Clamped ${fieldName}: ${original} \u2192 ${value}`);
+    }
+    return value;
+  }
+}
+
 export function validateLiteEvalResponse(parsed: any): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -357,54 +403,33 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
     }
   }
 
-  // Editorial score (the only scored channel in lite mode)
-  // lite-1.4 uses integer 0-100 (50=neutral); lite-1.3 used float [-1,+1].
-  // Detect by schema_version (authoritative) or by value out of float range (fallback).
-  // Accept both 'lite-1.4' and 'light-1.4' for backward compat during transition.
-  const isV14 = parsed.schema_version === 'lite-1.4' || parsed.schema_version === 'light-1.4';
+  // Detect integer format: lite-1.4+ uses 0-100 scale
+  // Accept 'lite-1.4', 'light-1.4', 'lite-1.5' as integer format
+  const isV14Plus = parsed.schema_version === 'lite-1.4' || parsed.schema_version === 'light-1.4' || parsed.schema_version === 'lite-1.5';
+  const isV15 = parsed.schema_version === 'lite-1.5';
   const couldBeInteger = typeof ev.editorial === 'number' && ev.editorial > 1.0;
+  const integerFormat = isV14Plus || couldBeInteger;
 
-  if (isV14 || couldBeInteger) {
-    // Integer 0-100 format: normalize to [-1, +1] via (score - 50) / 50
-    if (typeof ev.editorial !== 'number') {
-      const num = parseFloat(ev.editorial);
-      ev.editorial = (!isNaN(num) && isFinite(num)) ? num : null;
-      if (ev.editorial !== null) repairs.push(`Coerced editorial to number: ${ev.editorial}`);
-    }
-    if (ev.editorial !== null) {
-      const raw = ev.editorial;
-      const clamped = Math.max(0, Math.min(100, raw));
-      ev.editorial = Math.round(((clamped - 50) / 50) * 1000) / 1000;
-      // Only log as repair if clamping was needed (out-of-range); normal 0-100 → [-1,+1] conversion is expected behavior
-      if (clamped !== raw) {
-        repairs.push(`Clamped+normalized integer ${raw} \u2192 ${clamped} \u2192 ${ev.editorial}`);
-      }
-    }
-  } else {
-    // lite-1.3 float format: clamp to [-1, +1]
-    if (typeof ev.editorial !== 'number') {
-      const num = parseFloat(ev.editorial);
-      if (!isNaN(num) && isFinite(num)) {
-        ev.editorial = Math.max(-1.0, Math.min(1.0, num));
-        repairs.push(`Coerced editorial to number: ${ev.editorial}`);
-      } else {
-        ev.editorial = null;
-        repairs.push('Set editorial to null (was non-numeric)');
-      }
-    } else if (ev.editorial < -1.0 || ev.editorial > 1.0) {
-      const original = ev.editorial;
-      ev.editorial = Math.max(-1.0, Math.min(1.0, ev.editorial));
-      repairs.push(`Clamped editorial: ${original} \u2192 ${ev.editorial}`);
-    }
+  // Editorial score
+  ev.editorial = convertLiteScore(ev.editorial, 'editorial', integerFormat, repairs);
+
+  // Structural score (lite-1.5+)
+  if (ev.structural != null) {
+    ev.structural = convertLiteScore(ev.structural, 'structural', integerFormat, repairs);
+  } else if (isV15) {
+    // lite-1.5 response missing structural — warn, degrade to editorial-only
+    warnings.push('lite-1.5 response missing structural score — falling back to editorial-only');
+    ev.structural = null;
   }
+  // If structural appears in a lite-1.4 response, accept it (free data)
 
   // Validate reasoning field (lite-1.4+): optional, discard if malformed
   if (parsed.reasoning !== null && parsed.reasoning !== undefined) {
     if (typeof parsed.reasoning !== 'string') {
       parsed.reasoning = null;
-    } else if (parsed.reasoning.length > 100) {
-      parsed.reasoning = parsed.reasoning.slice(0, 100);
-      repairs.push('Truncated reasoning to 100 chars');
+    } else if (parsed.reasoning.length > 120) {
+      parsed.reasoning = parsed.reasoning.slice(0, 120);
+      repairs.push('Truncated reasoning to 120 chars');
     }
   }
 
@@ -416,7 +441,12 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
   // Flag suspect lazy neutral: editorial=50 (converts to 0.0) with high confidence
   // This pattern indicates model defaulting to safe center rather than evaluating UDHR signals
   if (ev.editorial === 0 && typeof ev.confidence === 'number' && ev.confidence >= 0.7) {
-    warnings.push(`Suspect lazy neutral: editorial=0.0 with confidence=${ev.confidence} — model may be defaulting to center`);
+    warnings.push(`Suspect lazy neutral: editorial=0.0 with confidence=${ev.confidence} \u2014 model may be defaulting to center`);
+  }
+
+  // Flag suspect lazy neutral on structural dimension too
+  if (ev.structural === 0 && typeof ev.confidence === 'number' && ev.confidence >= 0.7) {
+    warnings.push(`Suspect lazy neutral: structural=0.0 with confidence=${ev.confidence} \u2014 model may be defaulting to center`);
   }
 
   // Evidence strength
@@ -484,15 +514,37 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
 
 // --- Lite Aggregates ---
 
-export function computeLiteAggregates(lite: LiteEvalResponse): {
+export interface LiteAggregates {
   weighted_mean: number;
+  editorial_mean: number | null;
+  structural_mean: number | null;
+  setl: number | null;
   classification: string;
-} {
-  // Lite mode is editorial-only — editorial score IS the weighted mean
-  const e = lite.evaluation.editorial;
-  let weightedMean = e !== null && e !== undefined ? e : 0;
+}
 
-  // Clamp
+export function computeLiteAggregates(lite: LiteEvalResponse): LiteAggregates {
+  const e = lite.evaluation.editorial;
+  const s = lite.evaluation.structural;
+  const editorialMean = (e != null) ? Math.max(-1.0, Math.min(1.0, e)) : null;
+  const structuralMean = (s != null) ? Math.max(-1.0, Math.min(1.0, s)) : null;
+
+  let weightedMean: number;
+  let setl: number | null = null;
+
+  if (editorialMean != null && structuralMean != null) {
+    // Two-dimension: blend using content-type weights
+    const ct = lite.evaluation.content_type?.toUpperCase() || 'MX';
+    const [wE, wS] = CONTENT_TYPE_WEIGHTS[ct] || CONTENT_TYPE_WEIGHTS['MX'];
+    weightedMean = wE * editorialMean + wS * structuralMean;
+
+    // Compute SETL using the same function as full evals
+    setl = computeSetl([{ editorial: editorialMean, structural: structuralMean }]);
+  } else {
+    // Editorial-only (lite-1.4 behavior)
+    weightedMean = editorialMean ?? 0;
+  }
+
+  // Clamp and round
   weightedMean = Math.max(-1.0, Math.min(1.0, weightedMean));
   weightedMean = Math.round(weightedMean * 1000) / 1000;
 
@@ -511,7 +563,13 @@ export function computeLiteAggregates(lite: LiteEvalResponse): {
     }
   }
 
-  return { weighted_mean: weightedMean, classification };
+  return {
+    weighted_mean: weightedMean,
+    editorial_mean: editorialMean,
+    structural_mean: structuralMean,
+    setl,
+    classification,
+  };
 }
 
 // --- OpenRouter Response Parsing ---

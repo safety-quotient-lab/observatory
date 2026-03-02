@@ -54,20 +54,30 @@ const PROVIDER = 'claude-code-standalone';
 const CLAUDE_BIN = join(dirname(process.execPath), 'claude');
 const RAW_HTML_MAX_CHARS = 30_000;
 
-// Lite prompt — inlined from prompts.ts METHODOLOGY_SYSTEM_PROMPT_LITE (lite-1.4)
-const LITE_SYSTEM_PROMPT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score the AUTHOR'S EDITORIAL STANCE toward human rights, not the subject matter.
+// Lite prompt — inlined from prompts.ts METHODOLOGY_SYSTEM_PROMPT_LITE (lite-1.5)
+const LITE_SYSTEM_PROMPT = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score content on TWO independent dimensions.
 
+## DIMENSION 1: EDITORIAL (explicit rights discourse)
+Does the content directly discuss, reference, or engage with human rights?
 Score: integer 0-100 where 50 = neutral. Use the full range.
 Tier anchors:
   90-100: Active rights advocacy — NGO missions, rights organization content, explicit UDHR promotion
   70-89: Implicitly supportive — investigative journalism exposing abuses, rights-aware policy advocacy
   55-69: Slight positive lean — acknowledges rights concerns, balanced reporting on abuses
-  50: Neutral — ONLY for content with literally zero UDHR connection (pure math proofs, abstract algorithms, physics equations)
+  50: Neutral — ONLY for content with literally zero explicit rights discussion (pure math proofs, abstract algorithms, physics equations)
   31-49: Slight negative lean — dismisses relevant rights concerns, normalizes restrictions
   11-30: Implicitly hostile — justifies surveillance/censorship, dehumanizing framing
   0-10: Dehumanizing propaganda — active rights violations advocacy, hate content
 
-IMPLICIT RIGHTS SIGNALS — most tech content has these. Score 52-65, NOT 50:
+CRITICAL: Reserve editorial 50 for content with zero explicit rights discussion. When uncertain between 48-52, pick 48 or 52 — never 50.
+
+Key rules: Exposing abuses → above 50. Promoting/justifying abuses → below 50.
+
+## DIMENSION 2: STRUCTURAL (implicit rights alignment)
+Does the content embody UDHR provisions through its nature, without using rights vocabulary?
+Score: integer 0-100 where 50 = neutral. Use the full range.
+
+IMPLICIT RIGHTS SIGNALS — most tech content has these. Score structural 52-65, NOT 50:
   - Access/openness: open source, free tools, public datasets, APIs → Art. 27 (culture/science) → 55-60
   - Privacy/surveillance: data collection, tracking, encryption → Art. 12 (privacy) → direction depends on stance
   - Labor/work: hiring, remote work, layoffs, working conditions → Art. 23 (work) → 55-60
@@ -76,9 +86,14 @@ IMPLICIT RIGHTS SIGNALS — most tech content has these. Score 52-65, NOT 50:
   - Community: forums, shared governance, community standards → Art. 20 (assembly) → 53-55
   - Health: medical research, public health tools → Art. 25 (health) → 55-60
 
-CRITICAL: Reserve 50 for content with literally zero UDHR connection. When uncertain between 48-52, pick 48 or 52 — never 50. Most tech content touches access, labor, or transparency and deserves 52-60.
+CRITICAL: Reserve structural 50 for content with literally zero UDHR connection. Most tech content touches access, labor, or transparency and deserves structural 52-60.
 
-Key rules: Exposing abuses → above 50. Promoting/justifying abuses → below 50.
+Example: An open-source tool README scores editorial 50 (no rights discourse) / structural 58 (embodies Art. 27 access).
+
+## SCORING RULES
+- Score BOTH dimensions independently. They measure different constructs.
+- editorial = what the content SAYS about rights. structural = what the content IS relative to rights.
+- Content can score high on one and low on the other. A surveillance company's blog about privacy law: editorial 65, structural 35.
 
 Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)
 
@@ -87,13 +102,14 @@ Evidence strength: H=explicit rights discussion | M=implicit | L=tangential
 Output ONLY a JSON object. No markdown, no explanation.
 
 {
-  "schema_version": "lite-1.4",
-  "reasoning": "<content type and rights stance in max 10 words>",
+  "schema_version": "lite-1.5",
+  "reasoning": "<content type, editorial stance, and structural alignment in max 15 words>",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
     "content_type": "<CODE>",
     "editorial": <0 to 100>,
+    "structural": <0 to 100>,
     "evidence_strength": "<H|M|L>",
     "confidence": <0.0 to 1.0>
   },

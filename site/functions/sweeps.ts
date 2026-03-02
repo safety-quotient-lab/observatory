@@ -19,6 +19,8 @@ import {
 } from '../src/lib/coverage-crawl';
 import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate } from '../src/lib/eval-write';
 import { refreshArticlePairStats } from '../src/lib/db-analytics';
+import { getEnabledFreeModels } from '../src/lib/models';
+import { safeBatch } from '../src/lib/db-utils';
 import type { Env } from './cron';
 
 export interface SweepContext {
@@ -510,4 +512,61 @@ export async function sweepRefreshArticlePairStats({ db, env, ctx }: SweepContex
     status: 202,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+// ─── Sweep: lite_reeval ─────────────────────────────────────────────────────
+
+/**
+ * Re-evaluate existing lite-1.4 stories under the lite-1.5 prompt.
+ * Produces longitudinal comparison data (before/after two-dimension split).
+ * Old evals are preserved in eval_history (append-only INSERT with full hcb_json).
+ * rater_evals rows are UPSERTed (overwriting lite-1.4 with lite-1.5).
+ */
+export async function sweepLiteReeval({ db, url }: SweepContext): Promise<Response> {
+  const limit = parseLimit(url, 50, 200);
+
+  // Find stories with pre-two-dimension lite evals
+  const { results: candidates } = await db
+    .prepare(
+      `SELECT re.hn_id, s.url, s.title, s.domain, s.hn_text
+       FROM rater_evals re
+       JOIN stories s ON s.hn_id = re.hn_id
+       WHERE re.schema_version IN ('lite-1.4', 'lite', 'light-1.4')
+         AND re.prompt_mode = 'lite'
+         AND re.eval_status = 'done'
+         AND (s.url IS NOT NULL OR s.hn_text IS NOT NULL)
+       ORDER BY s.hn_time DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ hn_id: number; url: string | null; title: string; domain: string | null; hn_text: string | null }>();
+
+  if (candidates.length === 0) {
+    return json({ sweep: 'lite_reeval', dispatched: 0, note: 'No lite-1.4 evals found' });
+  }
+
+  const freeModels = getEnabledFreeModels().filter(m => m.provider === 'workers-ai');
+  let dispatched = 0;
+
+  for (const model of freeModels) {
+    const stmts = candidates.map(c =>
+      db.prepare(
+        `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id)
+         VALUES (?, 'workers-ai', ?, 'lite', 0, 'lite_reeval')`
+      ).bind(c.hn_id, model.id)
+    );
+    if (stmts.length > 0) {
+      await safeBatch(db, stmts);
+      dispatched += candidates.length;
+    }
+  }
+
+  await logEvent(db, {
+    event_type: 'trigger',
+    severity: 'info',
+    message: `Sweep lite_reeval: dispatched ${dispatched} evals for ${candidates.length} stories across ${freeModels.length} models`,
+    details: { sweep: 'lite_reeval', candidates: candidates.length, dispatched, models: freeModels.map(m => m.id) },
+  });
+
+  return json({ sweep: 'lite_reeval', candidates: candidates.length, dispatched });
 }

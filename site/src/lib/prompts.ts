@@ -232,13 +232,14 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
 const OUTPUT_SCHEMA_LITE = `Output ONLY a JSON object. No markdown, no explanation.
 
 {
-  "schema_version": "lite-1.4",
-  "reasoning": "<content type and rights stance in max 10 words>",
+  "schema_version": "lite-1.5",
+  "reasoning": "<content type, editorial stance, and structural alignment in max 15 words>",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
     "content_type": "<CODE>",
     "editorial": <0 to 100>,
+    "structural": <0 to 100>,
     "evidence_strength": "<H|M|L>",
     "confidence": <0.0 to 1.0>
   },
@@ -272,8 +273,9 @@ ${OUTPUT_SCHEMA_SLIM}`;
 
 /**
  * Lite system prompt for small/free models that can't produce full 31-section output.
- * Editorial-only: single editorial score + basic metadata (~200-400 output tokens).
- * No structural channel, no per-article breakdown, no DCP, no Fair Witness evidence.
+ * Two-dimension: editorial (explicit discourse) + structural (implicit alignment) scores
+ * + basic metadata (~200-400 output tokens).
+ * No per-article breakdown, no DCP, no Fair Witness evidence.
  */
 export const METHODOLOGY_SYSTEM_PROMPT_LITE = `${METHODOLOGY_LITE}
 

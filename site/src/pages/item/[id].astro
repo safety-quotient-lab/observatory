@@ -97,7 +97,8 @@ const isDone = storyData.eval_status === 'done' && storyData.hcb_weighted_mean !
 const isPending = storyData.eval_status === 'pending' || storyData.eval_status === 'evaluating';
 // Lite-only: has editorial scores but no full weighted_mean — lite eval filled COALESCE
 // fields but didn't promote eval_status (story stays pending/queued until full eval)
-const isLiteOnlyEval = !isDone && storyData.hcb_editorial_mean !== null && storyData.hcb_weighted_mean === null && raterEvals.some(re => isLiteMode(re.prompt_mode));
+// Lite-only: use prompt_mode check instead of NULL hcb_weighted_mean (which lite-1.5 now fills)
+const isLiteOnlyEval = !isDone && !isFailed && raterEvals.length > 0 && raterEvals.every(re => isLiteMode(re.prompt_mode)) && storyData.hcb_editorial_mean !== null;
 const liteEval = isLiteOnlyEval ? (raterEvals.find(re => isLiteMode(re.prompt_mode)) ?? null) : null;
 
 // DCP: parse from parallel-fetched result

@@ -41,7 +41,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 **Workers:**
 - `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`. Dispatches sweeps via `SWEEP_HANDLERS` map in `sweeps.ts`.
-- `site/functions/sweeps.ts` — 10 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
+- `site/functions/sweeps.ts` — 12 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
 - `site/functions/consumer-shared.ts` — Shared types, content prep, result writing. Uses `isFirstFullEval` for first-eval housekeeping (R2 snapshot, content hash, DCP cache, archive).
 - `site/functions/consumer-anthropic.ts` — Anthropic queue handler. Prompt caching, proactive rate limit tracking, 429/529/credit handling, truncation retry.
 - `site/functions/consumer-openrouter.ts` — OpenRouter queue handler (8 model queues). Lite + full prompt modes.
@@ -117,6 +117,10 @@ curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut
 # Sweep: expand from submitted — insert missing story-type items from top-karma users' submitted arrays
 curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=expand_from_submitted"
+
+# Sweep: re-evaluate lite-1.4 stories under lite-1.5 prompt (two-dimension scoring)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=lite_reeval&limit=50"
 
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health

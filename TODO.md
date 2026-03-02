@@ -15,11 +15,13 @@ interstitials, horizontal scores, collapsed filters, WCAG a11y, paired
 E/S bars, two-row article tables, rank removal, correlation colors,
 font bump, UDHR source links on 6 pages, free-tier mention, about softening,
 `/reference` routing table (all terms + 31 UDHR articles), Article 19/26 inline
-links in signals page, lite prompt anti-lazy-neutral guidance + consensus
-neutral discount for confident-zero Llama evals.
+links in signals page, lite-1.5 two-dimension scoring (editorial + structural)
+with content-type weight blending + SETL for lite evals, `lite_reeval` sweep,
+consensus neutral discount for confident-zero Llama evals.
 
 Remaining:
 - [ ] Write personal closer and post Show HN (`.claude/plans/show-hn-draft.md`)
+- [ ] Post-launch: Run `sweep=lite_reeval&limit=50` to produce longitudinal lite-1.4→1.5 comparison data, then analyze in eval_history
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
 - [ ] Post-launch: Lite calibration validation — run Haiku on lite prompt for ~50 stories already evaluated by both Llama models. Compare Haiku-lite vs Llama-lite to isolate prompt mode effect from model effect. If Haiku-lite ≈ Llama-lite, the 2.4× gap is prompt architecture. If Haiku-lite >> Llama-lite, there's also a model capability factor. Informs whether calibration-anchored correction (option 3 in model-divergence-analysis.md) is viable. See `findings/2026-03-02-llama-neutral-50-bias.md`.
 - [ ] Post-launch: KV-precompute homepage data blob (TTFB 3.9s → ~200ms)

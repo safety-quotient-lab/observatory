@@ -984,11 +984,12 @@ export async function writeRaterEvalResult(
     }
   }
 
-  // Write to eval_history
+  // Write to eval_history (with structured score columns from migration 0057)
   await db
     .prepare(
-      `INSERT INTO eval_history (hn_id, eval_model, hcb_weighted_mean, hcb_classification, hcb_json, input_tokens, output_tokens)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO eval_history (hn_id, eval_model, hcb_weighted_mean, hcb_classification, hcb_json, input_tokens, output_tokens,
+         hcb_editorial_mean, hcb_structural_mean, hcb_setl, schema_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       hnId, modelId,
@@ -996,6 +997,10 @@ export async function writeRaterEvalResult(
       agg.classification,
       JSON.stringify(result),
       inputTokens, outputTokens,
+      hcbEditorialMean,
+      hcbStructuralMean,
+      hcbSetl,
+      result.schema_version || null,
     )
     .run();
 
@@ -1218,9 +1223,9 @@ export async function writeLiteRaterEvalResult(
       null, // fw_ratio
       0,    // fw_observable_count
       0,    // fw_inference_count
-      lite.evaluation.editorial ?? null,   // hcb_editorial_mean
-      null,                                // hcb_structural_mean (editorial-only in lite mode)
-      0,                                   // hcb_setl (no structural channel)
+      agg.editorial_mean ?? null,           // hcb_editorial_mean
+      agg.structural_mean ?? null,         // hcb_structural_mean (null for lite-1.4, computed for lite-1.5)
+      agg.setl ?? 0,                       // hcb_setl (0 when no structural channel)
       lite.evaluation.confidence ?? null,  // hcb_confidence
       lite.eq_score ?? null,        // EQ
       lite.so_score ?? null,        // SO
@@ -1241,6 +1246,7 @@ export async function writeLiteRaterEvalResult(
   // Lite evals do NOT promote eval_status — stories stay pending/queued until a full eval
   // calls writeEvalResult(). EvalCard.hasEval checks scores directly (not eval_status),
   // so lite-filled stories still display in the feed with editorial scores + [L] icon.
+  // lite-1.5 also fills structural_mean, setl, and weighted_mean when structural is present.
   await db.prepare(
     `UPDATE stories SET
        eq_score = COALESCE(eq_score, ?),
@@ -1250,6 +1256,9 @@ export async function writeLiteRaterEvalResult(
        et_valence = COALESCE(et_valence, ?),
        et_arousal = COALESCE(et_arousal, ?),
        hcb_editorial_mean = COALESCE(hcb_editorial_mean, ?),
+       hcb_structural_mean = COALESCE(hcb_structural_mean, ?),
+       hcb_setl = COALESCE(hcb_setl, ?),
+       hcb_weighted_mean = COALESCE(hcb_weighted_mean, ?),
        hcb_theme_tag = COALESCE(hcb_theme_tag, ?),
        hcb_sentiment_tag = COALESCE(hcb_sentiment_tag, ?),
        hcb_executive_summary = COALESCE(hcb_executive_summary, ?)
@@ -1261,7 +1270,10 @@ export async function writeLiteRaterEvalResult(
     lite.primary_tone ?? null, // tone
     lite.valence ?? null,    // VA
     lite.arousal ?? null,    // AR
-    lite.evaluation.editorial ?? null,  // hcb_editorial_mean
+    agg.editorial_mean ?? null,    // hcb_editorial_mean
+    agg.structural_mean ?? null,   // hcb_structural_mean (null for lite-1.4)
+    agg.setl ?? null,              // hcb_setl (null for lite-1.4)
+    agg.structural_mean != null ? agg.weighted_mean : null,  // hcb_weighted_mean (only when structural present)
     lite.theme_tag || null,  // hcb_theme_tag
     lite.sentiment_tag || null, // hcb_sentiment_tag
     lite.short_description || null, // hcb_executive_summary
@@ -1285,11 +1297,12 @@ export async function writeLiteRaterEvalResult(
   // Update ensemble consensus score (best-effort, non-blocking)
   await updateConsensusScore(db, hnId);
 
-  // Write to eval_history
+  // Write to eval_history (with structured score columns from migration 0057)
   await db
     .prepare(
-      `INSERT INTO eval_history (hn_id, eval_model, hcb_weighted_mean, hcb_classification, hcb_json, input_tokens, output_tokens)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO eval_history (hn_id, eval_model, hcb_weighted_mean, hcb_classification, hcb_json, input_tokens, output_tokens,
+         hcb_editorial_mean, hcb_structural_mean, hcb_setl, schema_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       hnId, modelId,
@@ -1297,6 +1310,10 @@ export async function writeLiteRaterEvalResult(
       agg.classification,
       JSON.stringify(lite),
       inputTokens, outputTokens,
+      agg.editorial_mean ?? null,
+      agg.structural_mean ?? null,
+      agg.setl ?? null,
+      lite.schema_version || 'lite-1.3',
     )
     .run();
 }

@@ -198,6 +198,7 @@ export interface LiteEvalResponse {
     domain: string;
     content_type: string;
     editorial: number | null;
+    structural?: number | null;
     evidence_strength: string;
     confidence: number;
   };
@@ -211,6 +212,21 @@ export interface LiteEvalResponse {
   arousal: number | null;
   primary_tone: string | null;
 }
+
+/** Content-type channel weights: [editorial_weight, structural_weight] */
+export const CONTENT_TYPE_WEIGHTS: Record<string, [number, number]> = {
+  ED: [0.6, 0.4],
+  PO: [0.3, 0.7],
+  LP: [0.3, 0.7],
+  PR: [0.5, 0.5],
+  AC: [0.4, 0.6],
+  MI: [0.7, 0.3],
+  AD: [0.2, 0.8],
+  HR: [0.5, 0.5],
+  CO: [0.4, 0.6],
+  ME: [0.5, 0.5],
+  MX: [0.5, 0.5],
+};
 
 export interface RaterEval {
   hn_id: number;

@@ -125,9 +125,26 @@ After prompt fix deploys, run `sweep=failed` or a custom sweep to re-evaluate th
 
 ## Files Modified
 
+### Phase 1: lite-1.4 anti-50 fix (2026-03-02)
+
 | File | Change |
 |------|--------|
 | `site/src/lib/methodology-content.ts` | Expanded METHODOLOGY_LITE with implicit rights examples + anti-50 instruction |
 | `site/src/lib/eval-parse.ts` | Added suspect_lazy_neutral warning for editorial=50 + high confidence |
 | `site/src/lib/eval-write.ts` | Added neutral discount in consensus weighting for confident-zero lite evals |
 | `scripts/evaluate-standalone.mjs` | Synced inlined lite prompt with methodology-content.ts changes |
+
+### Phase 2: lite-1.5 two-dimension scoring (2026-03-02)
+
+| File | Change |
+|------|--------|
+| `site/src/lib/methodology-content.ts` | Restructured METHODOLOGY_LITE into two-dimension rubric: editorial (explicit discourse) + structural (implicit alignment) |
+| `site/src/lib/prompts.ts` | Added `structural` field to OUTPUT_SCHEMA_LITE, bumped to lite-1.5 |
+| `site/src/lib/eval-types.ts` | Added optional `structural` to LiteEvalResponse, added CONTENT_TYPE_WEIGHTS constant |
+| `site/src/lib/eval-parse.ts` | Extracted `convertLiteScore()` helper, added lite-1.5 structural validation, updated `computeLiteAggregates()` to blend with content-type weights and compute SETL |
+| `site/src/lib/eval-write.ts` | Updated rater_evals UPSERT and stories COALESCE to write structural_mean/setl/weighted_mean; updated eval_history INSERT with structured score columns |
+| `site/src/pages/item/[id].astro` | Updated isLiteOnlyEval detection to use prompt_mode check (lite-1.5 fills hcb_weighted_mean) |
+| `site/functions/sweeps.ts` | Added `sweepLiteReeval` handler for re-evaluating lite-1.4 stories under lite-1.5 prompt |
+| `site/functions/cron.ts` | Registered `lite_reeval` in SWEEP_HANDLERS |
+| `site/migrations/0057_eval_history_longitudinal.sql` | Added hcb_editorial_mean, hcb_structural_mean, hcb_setl, schema_version columns to eval_history |
+| `scripts/evaluate-standalone.mjs` | Mirrored lite-1.5 two-dimension prompt and schema changes |
