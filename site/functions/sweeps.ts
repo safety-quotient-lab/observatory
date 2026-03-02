@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Sweep handler functions for the cron worker's /trigger?sweep=X endpoint.
  *

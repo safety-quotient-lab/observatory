@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // --- Rate Limit State ---
 
 export interface RateLimitState {

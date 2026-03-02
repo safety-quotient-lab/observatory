@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Deterministic aggregate computation — moved from Claude output to Worker CPU.
  * Claude outputs only per-article scores; this module computes all aggregate metrics.

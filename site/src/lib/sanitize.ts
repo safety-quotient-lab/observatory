@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Lightweight HTML sanitizer for user-generated content (HN comments, user bios).
  * Strips all tags except a safe allowlist. Removes dangerous attributes.

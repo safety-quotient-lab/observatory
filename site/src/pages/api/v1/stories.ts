@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { APIRoute } from 'astro';
 import { checkRateLimit, jsonResponse, errorResponse, listCacheHeaders } from '../../../lib/api-v1';
 import { readDb } from '../../../lib/db-utils';

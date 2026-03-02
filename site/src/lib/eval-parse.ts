@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Evaluation response parsing, validation, and content fetching.
  */

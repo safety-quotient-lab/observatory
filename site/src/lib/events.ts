@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Structured event logger for pipeline observability.
  * Inserts into the `events` table and provides query helpers.

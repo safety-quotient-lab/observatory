@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { Story, MiniScore, StoryWithMiniScores, DomainStat } from './db-stories';
 import { getStoriesByEntity, getEntityDetailStats, type EntityDetailStats, type DomainDetailStats } from './db-stories';
 import { getEnabledModels } from './shared-eval';

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { APIContext } from 'astro';
 import { readDb } from '../../../../lib/db-utils';
 import { formatScore } from '../../../../lib/colors';

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { Score } from './types';
 import { getEnabledModels } from './shared-eval';
 import { SETL_CASE_SQL } from './db-utils';

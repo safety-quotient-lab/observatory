@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Shared HRCB evaluation primitives.
  * Barrel re-export from split modules.

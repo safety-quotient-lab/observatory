@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import { defineMiddleware } from 'astro:middleware';
 
 export const onRequest = defineMiddleware(async (_context, next) => {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * OpenRouter Consumer Worker: Processes evaluations for 8 OpenRouter model queues.
  *

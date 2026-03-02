@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * HN Bot: Hacker News crawling, story management, and queue dispatch.
  *

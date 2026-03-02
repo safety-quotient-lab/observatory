@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Shared helpers for public REST API v1 routes (/api/v1/*).
  * - No auth required (public read-only)

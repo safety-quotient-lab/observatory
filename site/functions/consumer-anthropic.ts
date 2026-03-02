@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Anthropic Consumer Worker: Processes primary model evaluations from hrcb-eval-queue.
  *

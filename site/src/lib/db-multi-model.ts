@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import { scoreToColor, formatScore } from './colors';
 import { ALL_SECTIONS } from './eval-types';
 import { ARTICLE_TITLES } from './udhr';

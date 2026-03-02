@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Shared HRCB evaluation logic.
  * Used by both the API trigger endpoint and the cron worker.

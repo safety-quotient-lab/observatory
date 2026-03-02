@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /** Convert HSL (h: 0-360, s: 0-1, l: 0-1) to RGB string */
 function hslToRgb(h: number, s: number, l: number): string {
   const c = (1 - Math.abs(2 * l - 1)) * s;

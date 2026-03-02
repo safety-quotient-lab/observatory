@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Workers AI Consumer Worker: Processes evaluations from hrcb-eval-workers-ai queue.
  *

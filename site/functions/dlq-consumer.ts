@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Dead Letter Queue Consumer + Replay Endpoint.
  *

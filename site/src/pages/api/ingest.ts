@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { APIRoute } from 'astro';
 import { writeRaterEvalResult, writeLiteRaterEvalResult, writeCalibrationEval } from '../../lib/eval-write';
 import { validateSlimEvalResponse, validateLiteEvalResponse, computeLiteAggregates } from '../../lib/eval-parse';

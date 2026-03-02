@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { APIRoute } from 'astro';
 import { corsHeaders, errorResponse } from '../../../../lib/api-v1';
 

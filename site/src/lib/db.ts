@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Database query functions.
  * Barrel re-export from split modules.

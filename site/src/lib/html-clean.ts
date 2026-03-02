@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Regex-based HTML cleaning utility.
  * Strips navigational chrome from raw HTML before sending to Claude, reducing input tokens.

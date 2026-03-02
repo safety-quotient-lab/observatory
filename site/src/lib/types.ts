@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // --- Content type slugs ---
 
 export const CONTENT_TYPES: Record<string, { slug: string; label: string }> = {
