@@ -114,7 +114,7 @@ business:
 - Open data → trust → API adoption
 - SEO surface → organic inbound
 
-License split: **AGPL-3.0 for the code, CC BY-NC-SA 4.0 for the dataset.**
+License split: **Apache 2.0 for the code, CC BY-SA 4.0 for the dataset.**
 These require separate LICENSE files or headers.
 
 A competitor cloning the code + dataset cannot replicate the live pipeline,
@@ -132,7 +132,7 @@ service and data depth are.
 - Remove raw eval output files and personal files from git history
 - Add `.gitignore` entries for secrets and artifacts
 - Write real `README.md` with architecture overview and screenshots
-- Add `LICENSE` (AGPL-3.0) and `LICENSE-DATA` (CC BY-NC-SA 4.0)
+- Add `LICENSE` (Apache 2.0) and `LICENSE-DATA` (CC BY-SA 4.0)
 - Verify no secrets appear in `git log --all`
 
 ### Phase 2 — Build the API moat (1–2 months)
@@ -143,21 +143,20 @@ service and data depth are.
 - **This is the step that makes open-sourcing safe:** value shifts to the
   service and accumulated data, not the code
 
-### Phase 3 — Publish (after Phase 2)
-- Open-source the full codebase under AGPL-3.0 — **including `prompts.ts`
-  and calibration files** — do not strip them
-- AGPL forces derivative network services to publish their modifications;
-  a well-funded competitor cannot fork privately and compete silently
-- Keep methodology documentation (v3.4, calibration set, baselines) in the
-  repo — they are already inferrable from the public site's API output
-- **Do not publish `IDEAS.md`** if you want to protect roadmap details;
-  everything else is fine
+### Phase 3 — Publish (after Phase 2) ✅ DONE (2026-03-02)
+- Open-sourced the full codebase under Apache 2.0 — **including `prompts.ts`
+  and calibration files** — at `safety-quotient-lab/observatory`
+- Methodology and data under CC BY-SA 4.0 (ShareAlike ensures modifications
+  are shared back; no NonCommercial restriction — mission is served by
+  maximum adoption, not by restricting commercial use)
+- `IDEAS.md` kept private (roadmap protection)
 
-### Why AGPL over MIT/Apache
-MIT/Apache lets a competitor take the pipeline, improve it privately, and
-compete with you using your own work. AGPL requires any entity running a
-modified version as a network service to publish their source. This is the
-correct license when the value is in the running service, not in code secrecy.
+### Why Apache 2.0 over AGPL
+AGPL would deter HN community engagement and limit adoption. The moat is
+the running service + accumulated data + temporal history, not the code.
+Apache 2.0 maximizes adoption; CC BY-SA ShareAlike ensures methodology
+modifications are shared back. A competitor starting from the code has zero
+evaluation history, zero domain profiles, zero calibration runs.
 
 ---
 
