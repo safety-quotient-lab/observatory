@@ -9,11 +9,12 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Pre-open-source audit** (Phase 3.1) — L-scale adjudication of every architectural
-choice that becomes a public precedent: naming, license, methodology exposure, data
-model, API contracts, attribution, content rights. Full scope: Phase 3.1 below.
+**Implementation prep** (Phase 3.2) — Pre-open-source audit complete, all decisions locked.
+Next: extract methodology from `prompts.ts` into runtime-loaded data file (license boundary),
+add LICENSE + LICENSE-DATA + ATTRIBUTION.md + SCHEMA.md, add SPDX headers,
+verify no secrets in git history, then create `safety-quotient-lab/observatory` repo.
 
-Prerequisites done: cogarch synced, pedagogy site plan evaluated (all decisions hold).
+User actions needed: acquire humanify.org, create safety-quotient-lab GitHub org.
 
 ---
 
@@ -225,28 +226,33 @@ Full 7-perspective analysis in `construct-validity-analysis.md` Section 16.
 - [ ] **Full-text search endpoint**
   - `/api/v1/search` via FTS5 virtual table on D1
 
-- [ ] **Dataset license decision** *(CC BY-NC-SA 4.0 recommended; publish to `/data` once decided)*
+- ~~Dataset license decision~~ — resolved: CC BY-SA 4.0 (see Phase 3.1 audit)
 
 ---
 
 ## Phase 3 — Open Source Prep & Pedagogy Site Fork
-*Blocked on license decision + pre-open-source audit. Full plan: `.claude/plans/pedagogy-site-fork.md`*
+*Full plan + audit resolutions: `.claude/plans/pedagogy-site-fork.md`*
 
-### 3.1 — Pre-Open-Source Audit (do first)
+### 3.1 — Pre-Open-Source Audit ✓
 
-- [ ] **Pre-open-source audit** ← **NEXT** — adjudicate (L-scale, 8-order, 2-pass) every architectural
-  choice that becomes a public precedent:
-  - Naming (project name, repo name, domain)
-  - License (AGPL-3.0? MIT? dual license?)
-  - Methodology exposure (how much of the scoring methodology is public?)
-  - Data model (schema becomes a public contract)
-  - API contracts (endpoints become expectations)
-  - Attribution (UDHR text, HN data, model outputs)
-  - Content/data rights (who owns the evaluations?)
+Completed 2026-03-02. All 7 decisions resolved:
+- **Naming:** Observatory (`safety-quotient-lab/observatory`, `observatory.humanify.org`)
+- **License:** Apache 2.0 (code) + CC BY-SA 4.0 (methodology/data)
+- **Methodology:** Full transparency
+- **Data model:** Full schema public, versioned API
+- **API contracts:** v0+v1 read-only in pedagogy site, internal ops stay in pipeline
+- **Attribution:** ATTRIBUTION.md with UDHR, academic, HN, LLM credits
+- **Content/data rights:** Evaluations CC BY-SA, snapshots never published
 
-### 3.2 — Pedagogy Site (new repo)
+### 3.2 — Pedagogy Site (`safety-quotient-lab/observatory`)
 
-- [ ] **Acquire domain** — TBD (user action)
+- [ ] **Acquire domain** — humanify.org + observatory.humanify.org (user action)
+- [ ] **Acquire redirects** — article30.org, clearview TBD (user action)
+- [ ] **Create GitHub org** — safety-quotient-lab (user action)
+- [ ] **Extract methodology** — move methodology text from `prompts.ts` into runtime-loaded data file (license boundary)
+- [ ] **Add license files** — LICENSE (Apache 2.0), LICENSE-DATA (CC BY-SA 4.0), ATTRIBUTION.md, SCHEMA.md
+- [ ] **Add SPDX headers** — `// SPDX-License-Identifier: Apache-2.0` to all source files
+- [ ] **Verify no secrets in git history** — `git log --all -- site/.dev.vars`
 - [ ] **Create new repo** — Astro presentation layer only, copy lib/ query subset (~20 functions)
 - [ ] **HN-native design system** — light bg (#f6f6ef), pure orange (#ff6600), black text,
   zero chrome, Verdana only, ~130-line CSS. Accessibility features preserved (focus-visible,
