@@ -86,20 +86,20 @@
     color: var(--fg-primary);
     font-size: var(--font-lg);
     font-weight: bold;
-    text-shadow: 0.31rem 0.31rem 0.5rem rgba(0,0,0,0.62);
+    /* text-shadow: 0.31rem 0.31rem 0.5rem rgba(0,0,0,0.62); — disabled for clean presentation */
   }
 
   h2, h3, h4 {
     color: var(--fg-primary);
     font-size: var(--font-md);
     font-weight: bold;
-    text-shadow: 0.19rem 0.19rem 0.31rem rgba(0,0,0,0.62);
+    /* text-shadow: 0.19rem 0.19rem 0.31rem rgba(0,0,0,0.62); — disabled for clean presentation */
   }
 
   h5, h6 {
     color: var(--fg-primary);
     font-weight: bold;
-    text-shadow: 0.11rem 0.11rem 0.19rem rgba(0,0,0,0.62);
+    /* text-shadow: 0.11rem 0.11rem 0.19rem rgba(0,0,0,0.62); — disabled for clean presentation */
   }
 
   body {
@@ -152,7 +152,7 @@
 
   .card {
     @apply bg-surface-1 border border-surface-3 rounded-lg;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+    /* box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3); — disabled for clean presentation */
   }
 
   .badge {
