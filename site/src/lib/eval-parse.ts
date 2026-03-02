@@ -413,6 +413,12 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
     errors.push('Editorial score is null \u2014 no data to score');
   }
 
+  // Flag suspect lazy neutral: editorial=50 (converts to 0.0) with high confidence
+  // This pattern indicates model defaulting to safe center rather than evaluating UDHR signals
+  if (ev.editorial === 0 && typeof ev.confidence === 'number' && ev.confidence >= 0.7) {
+    warnings.push(`Suspect lazy neutral: editorial=0.0 with confidence=${ev.confidence} — model may be defaulting to center`);
+  }
+
   // Evidence strength
   if (ev.evidence_strength) {
     const upper = String(ev.evidence_strength).toUpperCase();

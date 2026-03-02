@@ -193,12 +193,23 @@ Tier anchors:
   90-100: Active rights advocacy — NGO missions, rights organization content, explicit UDHR promotion
   70-89: Implicitly supportive — investigative journalism exposing abuses, rights-aware policy advocacy
   55-69: Slight positive lean — acknowledges rights concerns, balanced reporting on abuses
-  50: Neutral — pure tech tutorials, math papers, product changelogs, utility sites, encyclopedic facts
+  50: Neutral — ONLY for content with literally zero UDHR connection (pure math proofs, abstract algorithms, physics equations)
   31-49: Slight negative lean — dismisses relevant rights concerns, normalizes restrictions
   11-30: Implicitly hostile — justifies surveillance/censorship, dehumanizing framing
   0-10: Dehumanizing propaganda — active rights violations advocacy, hate content
 
-Key rules: Exposing abuses → above 50. Promoting/justifying abuses → below 50. Only use 50 for zero UDHR relevance.
+IMPLICIT RIGHTS SIGNALS — most tech content has these. Score 52-65, NOT 50:
+  - Access/openness: open source, free tools, public datasets, APIs → Art. 27 (culture/science) → 55-60
+  - Privacy/surveillance: data collection, tracking, encryption → Art. 12 (privacy) → direction depends on stance
+  - Labor/work: hiring, remote work, layoffs, working conditions → Art. 23 (work) → 55-60
+  - Transparency: open data, FOIA, disclosure, accountability → Art. 19 (expression/information) → 55-60
+  - Education: tutorials making knowledge accessible, documentation → Art. 26 (education) → 53-58
+  - Community: forums, shared governance, community standards → Art. 20 (assembly) → 53-55
+  - Health: medical research, public health tools → Art. 25 (health) → 55-60
+
+CRITICAL: Reserve 50 for content with literally zero UDHR connection. When uncertain between 48-52, pick 48 or 52 — never 50. Most tech content touches access, labor, or transparency and deserves 52-60.
+
+Key rules: Exposing abuses → above 50. Promoting/justifying abuses → below 50.
 
 Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)
 

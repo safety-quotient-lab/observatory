@@ -307,7 +307,11 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
       // Confidence modulates within prompt mode — floor 0.2 so no model is fully silenced
       const confidenceFactor = Math.max(0.2, r.confidence);
       const truncPct = r.content_truncation_pct ?? 0;
-      const weight = baseWeight * confidenceFactor * (1 - truncPct * 0.5);
+      // Discount lite evals that score exactly 0.0 with high confidence — the confident-neutral
+      // pattern is the known Llama failure mode (defaults to center instead of evaluating).
+      // Halves their effective weight so they don't pull the consensus toward 0.
+      const neutralDiscount = (isLite && score === 0 && r.confidence >= 0.7) ? 0.5 : 1.0;
+      const weight = baseWeight * confidenceFactor * (1 - truncPct * 0.5) * neutralDiscount;
       weightedSum += score * weight;
       totalWeight += weight;
       scores.push(score);
