@@ -471,7 +471,7 @@ export async function getArticleRanking(
          JOIN stories s ON s.hn_id = sc.hn_id
          WHERE sc.section = ? AND sc.final IS NOT NULL AND TYPEOF(sc.final) != 'text'
            AND sc.eval_model = s.eval_model
-         ORDER BY sc.final ${order}
+         ORDER BY sc.final ${order}, s.hn_id DESC
          LIMIT ? OFFSET ?`
       )
       .bind(section, limit, offset)

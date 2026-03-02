@@ -548,13 +548,28 @@ export async function getStakeholderOverview(db: D1Database): Promise<Stakeholde
 
   for (const r of results) {
     if (r.sr_who_speaks) {
-      for (const s of r.sr_who_speaks.split(',').map(s => s.trim()).filter(Boolean)) {
-        speaksCounts[s] = (speaksCounts[s] || 0) + 1;
+      try {
+        const arr = JSON.parse(r.sr_who_speaks);
+        for (const s of (Array.isArray(arr) ? arr : [arr]).map((v: string) => String(v).trim()).filter(Boolean)) {
+          speaksCounts[s] = (speaksCounts[s] || 0) + 1;
+        }
+      } catch {
+        // Fallback for non-JSON comma-separated values
+        for (const s of r.sr_who_speaks.split(',').map(s => s.trim()).filter(Boolean)) {
+          speaksCounts[s] = (speaksCounts[s] || 0) + 1;
+        }
       }
     }
     if (r.sr_who_spoken_about) {
-      for (const s of r.sr_who_spoken_about.split(',').map(s => s.trim()).filter(Boolean)) {
-        aboutCounts[s] = (aboutCounts[s] || 0) + 1;
+      try {
+        const arr = JSON.parse(r.sr_who_spoken_about);
+        for (const s of (Array.isArray(arr) ? arr : [arr]).map((v: string) => String(v).trim()).filter(Boolean)) {
+          aboutCounts[s] = (aboutCounts[s] || 0) + 1;
+        }
+      } catch {
+        for (const s of r.sr_who_spoken_about.split(',').map(s => s.trim()).filter(Boolean)) {
+          aboutCounts[s] = (aboutCounts[s] || 0) + 1;
+        }
       }
     }
   }

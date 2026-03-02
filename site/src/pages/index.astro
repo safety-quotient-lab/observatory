@@ -559,7 +559,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 8. Temporal Trends -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Temporal Trends — 60-Day HRCB</div>
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">HRCB Trend{dailyReversed.length > 0 ? ` — ${dailyReversed.length} days` : ''}</div>
       {dailyReversed.length > 1 ? (() => {
         const chartW = 400;
         const chartH = 100;
