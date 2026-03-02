@@ -26,57 +26,6 @@ try {
   tdData = await cachedQuery(kv, 'sys:tdSignalAggregates', () => getTdSignalAggregates(db), 300);
 } catch {}
 
-const avgEq = signalData?.avg_eq ?? 0;
-const avgSo = signalData?.avg_so ?? 0;
-const avgSr = signalData?.avg_sr ?? 0;
-const avgTd = signalData?.avg_td ?? 0;
-const avgPt = signalData?.avg_pt_count ?? 0;
-const avgValence = signalData?.avg_valence ?? null;
-const avgArousal = signalData?.avg_arousal ?? null;
-const avgDominance = signalData?.avg_dominance ?? null;
-
-const barSignals = [
-  { label: 'EQ', value: avgEq, barW: avgEq, color: 'var(--color-amber)', note: '' },
-  { label: 'SO', value: avgSo, barW: avgSo, color: 'var(--color-positive)', note: '' },
-  { label: 'SR', value: avgSr, barW: avgSr, color: 'var(--channel-editorial)', note: '' },
-  { label: 'TD', value: avgTd, barW: avgTd, color: 'var(--color-positive)', note: '' },
-  { label: 'PT', value: avgPt, barW: Math.max(0, 1 - avgPt / 5), color: 'var(--color-negative)', note: 'inv' },
-  { label: 'VA', value: avgValence, barW: avgValence !== null ? (avgValence + 1) / 2 : 0, color: 'var(--color-inference)', note: 'val' },
-  { label: 'AR', value: avgArousal, barW: avgArousal ?? 0, color: '#818cf8', note: '' },
-  { label: 'DO', value: avgDominance, barW: avgDominance ?? 0, color: '#38bdf8', note: '' },
-];
-
-// Distribution data — sorted entry arrays for rendering
-const toneEntries = signalData?.tone_distribution
-  ? Object.entries(signalData.tone_distribution).sort((a, b) => b[1] - a[1])
-  : [];
-const maxTone = toneEntries.length > 0 ? toneEntries[0][1] : 1;
-
-const scopeEntries = signalData?.scope_distribution
-  ? Object.entries(signalData.scope_distribution).sort((a, b) => b[1] - a[1])
-  : [];
-const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
-
-const levelEntries = signalData?.reading_level_distribution
-  ? Object.entries(signalData.reading_level_distribution).sort((a, b) => b[1] - a[1])
-  : [];
-const maxLevel = levelEntries.length > 0 ? levelEntries[0][1] : 1;
-
-const techEntries = signalData?.technique_distribution
-  ? Object.entries(signalData.technique_distribution).sort((a, b) => b[1] - a[1]).slice(0, 5)
-  : [];
-const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
-
-const tdRows = tdData ? [
-  { label: 'Any disclosure',      pct: tdData.any_disclosure_pct },
-  { label: 'Author identified',   pct: tdData.author_identified_pct },
-  { label: 'Conflicts disclosed', pct: tdData.conflicts_disclosed_pct },
-  { label: 'Funding disclosed',   pct: tdData.funding_disclosed_pct },
-] : [];
-
-let meanSetl: number | null = null;
-try { meanSetl = await getMeanSetl(db); } catch {}
-
 let complexityData: Awaited<ReturnType<typeof getComplexityAggregates>> | null = null;
 try {
   complexityData = await cachedQuery(kv, 'sys:complexityAggregates', () => getComplexityAggregates(db), 600);
@@ -87,6 +36,21 @@ try {
   temporalData = await cachedQuery(kv, 'sys:temporalFramingAggregates', () => getTemporalFramingAggregates(db), 600);
 } catch {}
 
+// Transparency rows
+const tdRows = tdData ? [
+  { label: 'Any disclosure',      pct: tdData.any_disclosure_pct },
+  { label: 'Author identified',   pct: tdData.author_identified_pct },
+  { label: 'Conflicts disclosed', pct: tdData.conflicts_disclosed_pct },
+  { label: 'Funding disclosed',   pct: tdData.funding_disclosed_pct },
+] : [];
+
+// Propaganda techniques — top 5
+const techEntries = signalData?.technique_distribution
+  ? Object.entries(signalData.technique_distribution).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  : [];
+const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
+
+// Jargon / knowledge distributions
 const jargonRows = complexityData ? [
   { label: 'Plain language',    count: complexityData.jargon_low },
   { label: 'Some jargon',       count: complexityData.jargon_medium },
@@ -102,6 +66,15 @@ const knowledgeRows = complexityData ? [
 ] : [];
 const maxKnowledge = knowledgeRows.length > 0 ? Math.max(...knowledgeRows.map(r => r.count), 1) : 1;
 
+// Temporal framing
+const focusRows = temporalData ? [
+  { label: 'Retrospective', count: temporalData.retrospective, pct: temporalData.retrospective_pct, color: 'var(--color-amber)' },
+  { label: 'Present',       count: temporalData.present,       pct: temporalData.present_pct,       color: 'var(--channel-editorial)' },
+  { label: 'Prospective',   count: temporalData.prospective,   pct: temporalData.prospective_pct,   color: 'var(--color-positive)' },
+  { label: 'Mixed',         count: temporalData.mixed,         pct: temporalData.mixed_pct,         color: 'var(--fg-secondary)' },
+] : [];
+const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count), 1) : 1;
+
 const horizonRows = temporalData ? [
   { label: 'Immediate',   count: temporalData.horizon_immediate },
   { label: 'Short-term',  count: temporalData.horizon_short_term },
@@ -112,272 +85,40 @@ const horizonRows = temporalData ? [
 ].filter(r => r.count > 0) : [];
 const maxHorizon = horizonRows.length > 0 ? Math.max(...horizonRows.map(r => r.count), 1) : 1;
 
-const focusRows = temporalData ? [
-  { label: 'Retrospective', count: temporalData.retrospective, pct: temporalData.retrospective_pct, color: 'var(--color-amber)' },
-  { label: 'Present',       count: temporalData.present,       pct: temporalData.present_pct,       color: 'var(--channel-editorial)' },
-  { label: 'Prospective',   count: temporalData.prospective,   pct: temporalData.prospective_pct,   color: 'var(--color-positive)' },
-  { label: 'Mixed',         count: temporalData.mixed,         pct: temporalData.mixed_pct,         color: 'var(--fg-secondary)' },
-] : [];
-const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count), 1) : 1;
+// Tone — top 5 only
+const toneEntries = signalData?.tone_distribution
+  ? Object.entries(signalData.tone_distribution).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  : [];
+const maxTone = toneEntries.length > 0 ? toneEntries[0][1] : 1;
+const totalTone = signalData?.tone_distribution ? Object.values(signalData.tone_distribution).reduce((a, b) => a + b, 0) : 0;
+
+// Geographic scope
+const scopeEntries = signalData?.scope_distribution
+  ? Object.entries(signalData.scope_distribution).sort((a, b) => b[1] - a[1])
+  : [];
+const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
 ---
 
-<Base title="Signal Dashboard">
+<Base title="Signals">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'signals' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
       <td>
-        <h1 style="font-size: var(--font-md); margin-bottom: 4px;">Signal Dashboard</h1>
+        <h1 style="font-size: var(--font-md); margin-bottom: 4px;">What {storyCount.toLocaleString()} stories reveal</h1>
         <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 20px;">
-          Live measurement dashboard across {storyCount.toLocaleString()} evaluated stories.
+          Aggregate patterns across every evaluated Hacker News story — what the tech ecosystem says about human rights, and what it doesn't.
+          <a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 6px;">Methodology &rarr;</a>
         </p>
 
-        {/* ═══ SECTION 1 — Core HRCB ═══ */}
-
-        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-          <span style="background: rgba(213,101,0,0.15); color: var(--color-orange); border-radius: 3px; padding: 2px 7px; font-size: var(--font-xs); font-weight: bold; white-space: nowrap;">{storyCount.toLocaleString()} stories</span>
-          <span style="color: var(--fg-primary); font-size: var(--font-sm);">
-            <b>Core HRCB</b> — HRCB score [-1,+1] across Editorial and Structural channels.
-          </span>
-          <a href="/about#classification" style="color: var(--channel-hrcb); font-size: var(--font-xs); white-space: nowrap;">How it works &rarr;</a>
-        </div>
-
-        {/* ═══ Global Averages ═══ */}
-
-        {signalData && signalData.total_with_signals > 0 && (
-          <div style="margin-bottom: 20px;">
-            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">
-              Global Averages <span style="color: var(--fg-secondary); font-weight: normal;">({signalData.total_with_signals.toLocaleString()} stories)</span>
-            </p>
-            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-              <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm);">
-                {barSignals.map((s) => {
-                  const displayVal = s.note === 'inv'
-                    ? `${avgPt.toFixed(1)} flags`
-                    : s.value !== null
-                      ? (typeof s.value === 'number' ? s.value.toFixed(2) : 'n/a')
-                      : 'n/a';
-                  const barPct = Math.min(Math.max(s.barW, 0), 1) * 100;
-                  return (
-                    <tr>
-                      <td style={`color: ${s.color}; width: 30px;`} class="score-font">{s.label}</td>
-                      <td style="padding: 0 8px; width: 200px;">
-                        <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
-                          <div style={`background: ${s.color}; opacity: 0.5; border-radius: 3px; height: 14px; width: ${barPct}%;`}></div>
-                        </div>
-                      </td>
-                      <td style="color: var(--fg-primary);" class="score-font">{displayVal}</td>
-                    </tr>
-                  );
-                })}
-              </table>
-            </div>
-            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 4px;">PT bar inverted (lower = better). VA bar normalized from [-1,+1] to [0,1]; actual value shown.</p>
-
-            {(toneEntries.length > 0 || scopeEntries.length > 0 || levelEntries.length > 0 || techEntries.length > 0) && (
-              <div class="insight-grid" style="margin-top: 14px;">
-
-                {toneEntries.length > 0 && (
-                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-                    <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Tone Distribution</p>
-                    <table cellpadding="0" cellspacing="0" width="100%">
-                      {toneEntries.map(([label, count]) => {
-                        const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
-                        return (
-                          <tr>
-                            <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
-                            <td style="padding: 2px 8px;">
-                              <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
-                                <div style={`width: ${pct}%; height: 100%; background: var(--color-inference); border-radius: 3px;`}></div>
-                              </div>
-                            </td>
-                            <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
-                          </tr>
-                        );
-                      })}
-                    </table>
-                  </div>
-                )}
-
-                {scopeEntries.length > 0 && (
-                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-                    <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
-                    <table cellpadding="0" cellspacing="0" width="100%">
-                      {scopeEntries.map(([label, count]) => {
-                        const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
-                        return (
-                          <tr>
-                            <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
-                            <td style="padding: 2px 8px;">
-                              <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
-                                <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
-                              </div>
-                            </td>
-                            <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
-                          </tr>
-                        );
-                      })}
-                    </table>
-                  </div>
-                )}
-
-                {levelEntries.length > 0 && (
-                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-                    <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Reading Level</p>
-                    <table cellpadding="0" cellspacing="0" width="100%">
-                      {levelEntries.map(([label, count]) => {
-                        const pct = maxLevel > 0 ? Math.round((count / maxLevel) * 100) : 0;
-                        return (
-                          <tr>
-                            <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
-                            <td style="padding: 2px 8px;">
-                              <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
-                                <div style={`width: ${pct}%; height: 100%; background: var(--color-warning); border-radius: 3px;`}></div>
-                              </div>
-                            </td>
-                            <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
-                          </tr>
-                        );
-                      })}
-                    </table>
-                  </div>
-                )}
-
-                {techEntries.length > 0 && (
-                  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-                    <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Top Propaganda Techniques</p>
-                    <table cellpadding="0" cellspacing="0" width="100%">
-                      {techEntries.map(([technique, count]) => {
-                        const pct = maxTech > 0 ? Math.round((count / maxTech) * 100) : 0;
-                        const displayName = technique.replace(/_/g, ' ');
-                        return (
-                          <tr>
-                            <td title={displayName} style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{displayName}</td>
-                            <td style="padding: 2px 8px;">
-                              <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
-                                <div style={`width: ${pct}%; height: 100%; background: var(--color-negative-light); border-radius: 3px;`}></div>
-                              </div>
-                            </td>
-                            <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
-                          </tr>
-                        );
-                      })}
-                    </table>
-                  </div>
-                )}
-
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ═══ SECTION 2 — Derived Metrics ═══ */}
-
-        <h2 style="font-size: var(--font-base); margin: 0 0 8px 0;">Derived Metrics</h2>
-
-        <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <a href="/about#setl" style="color: var(--color-sentiment); font-weight: bold; text-decoration: none;">SETL</a>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span>
-            {meanSetl !== null && <span class="score-font" style="float: right; color: var(--color-sentiment);">{meanSetl.toFixed(2)}</span>}<br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Channel divergence — says one thing, does another.</span>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <a href="/about#evidence" style="color: var(--color-amber); font-weight: bold; text-decoration: none;">Confidence</a>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Evidence-weighted strength across provisions.</span>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <a href="/about#volatility" style="color: var(--color-inference); font-weight: bold; text-decoration: none;">Volatility</a>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0, 1]</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Score consistency across provisions.</span>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <a href="/about#consensus" style="color: var(--color-orange); font-weight: bold; text-decoration: none;">Consensus</a>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[-1, +1]</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Multi-model agreement score.</span>
-          </div>
-        </div>
-
-        {/* ═══ SECTION 3 — Supplementary Signals ═══ */}
-
-        <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Supplementary Signals</h2>
-        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">9 dimensions capturing how content communicates</p>
-
-        <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 14px;">
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(245,158,11,0.15); color: var(--color-amber);">EQ</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Epistemic Quality</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Source quality, evidence reasoning, uncertainty handling, purpose transparency.</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(220,38,38,0.15); color: var(--color-negative);">PT</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Propaganda Flags</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">count</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Detects 18 propaganda techniques: loaded language, fear appeals, ad hominem, and more.</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive);">SO</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Solution Orientation</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Problem-only vs solution-oriented framing. High SO = content empowers, not just alarms.</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference);">ET</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Emotional Tone</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">VAD</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Primary tone label + VAD: valence [-1,+1], arousal [0,1], dominance [0,1].</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">SR</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Stakeholder Voice</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Who speaks vs who is spoken about — perspective count, voice balance, power axis.</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">TF</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Temporal Framing</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Retrospective, present, or prospective focus with time horizon.</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">GS</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Geographic Scope</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Local, national, regional, or global scope with specific regions.</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(234,179,8,0.15); color: var(--color-warning);">CL</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Complexity Level</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">categorical</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Reading level, jargon density, and assumed knowledge requirements.</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-            <span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive);">TD</span>
-            <b style="color: var(--fg-primary); margin-left: 4px;">Transparency &amp; Disclosure</b>
-            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">[0-1]</span><br>
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">Author identified, conflicts of interest disclosed, funding sources disclosed.</span>
-            <br><a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs);">details &rarr;</a>
-          </div>
-        </div>
-
-        {/* ═══ Transparency Disclosure Rates ═══ */}
+        {/* ═══ 1. TRANSPARENCY ═══ */}
 
         {tdData && tdData.td_measured > 0 && (
           <div style="margin-bottom: 20px;">
-            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">
-              Transparency Observatory
-              <span style="color: var(--fg-secondary); font-weight: normal; margin-left: 4px;">
-                ({tdData.td_measured.toLocaleString()} of {tdData.total_evaluated.toLocaleString()} stories measured)
-              </span>
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+              Transparency
+            </p>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+              Who's transparent about what they write? UDHR Article 19 protects expression — but expression without disclosure undermines trust.
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
@@ -396,28 +137,24 @@ const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count),
                 ))}
               </table>
               <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                Each rate is the share of stories where that field was measured and true.
-                Avg TD score: <span class="score-font">{tdData.avg_td_score !== null ? tdData.avg_td_score.toFixed(2) : 'n/a'}</span>.
+                {tdData.td_measured.toLocaleString()} stories measured.
                 {tdData.high_td_pct !== null && (
-                  <> <span style="color: var(--color-positive);">{tdData.high_td_pct.toFixed(0)}%</span> high (≥ 0.5)</>
+                  <> <span style="color: var(--color-positive);">{tdData.high_td_pct.toFixed(0)}%</span> meet high transparency standards.</>
                 )}
-                {tdData.low_td_pct !== null && (
-                  <> · <span style="color: var(--color-negative);">{tdData.low_td_pct.toFixed(0)}%</span> low (≤ −0.3)</>
-                )}.
               </p>
             </div>
           </div>
         )}
 
-        {/* ═══ Content Accessibility Observatory ═══ */}
+        {/* ═══ 2. ACCESSIBILITY ═══ */}
 
         {complexityData && complexityData.total_measured > 0 && (
           <div style="margin-bottom: 20px;">
-            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">
-              Content Accessibility
-              <span style="color: var(--fg-secondary); font-weight: normal; margin-left: 4px;">
-                ({complexityData.total_measured.toLocaleString()} of {complexityData.total_evaluated.toLocaleString()} stories measured)
-              </span>
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+              Accessibility
+            </p>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+              Who can understand this content? UDHR Article 26 protects the right to education — jargon and assumed expertise create invisible barriers.
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -463,23 +200,57 @@ const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count),
                   <><span style="color: var(--color-negative);">{complexityData.expert_pct.toFixed(0)}%</span> of stories assume expert-level knowledge. </>
                 )}
                 {complexityData.accessible_pct !== null && (
-                  <><span style="color: var(--color-positive);">{complexityData.accessible_pct.toFixed(0)}%</span> are plain-language + self-contained (fully accessible). </>
+                  <><span style="color: var(--color-positive);">{complexityData.accessible_pct.toFixed(0)}%</span> are plain-language and self-contained.</>
                 )}
-                <a href="/about#supplementary" style="color: var(--channel-hrcb);">Article 26 &rarr;</a>
               </p>
             </div>
           </div>
         )}
 
-        {/* ═══ Temporal Framing Observatory ═══ */}
+        {/* ═══ 3. PERSUASION TECHNIQUES ═══ */}
+
+        {techEntries.length > 0 && (
+          <div style="margin-bottom: 20px;">
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+              Persuasion Techniques
+            </p>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+              Propaganda techniques detected across all stories. Not all flagged content is harmful — loaded language is common in opinion writing — but the distribution reveals how tech discourse persuades.
+            </p>
+            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+              <table cellpadding="0" cellspacing="0" width="100%">
+                {techEntries.map(([technique, count]) => {
+                  const pct = maxTech > 0 ? Math.round((count / maxTech) * 100) : 0;
+                  const displayName = technique.replace(/_/g, ' ');
+                  return (
+                    <tr>
+                      <td title={displayName} style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-sm); width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{displayName}</td>
+                      <td style="padding: 2px 8px;">
+                        <div style="height: 10px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                          <div style={`width: ${pct}%; height: 100%; background: var(--color-negative-light); border-radius: 3px;`}></div>
+                        </div>
+                      </td>
+                      <td style="width: 50px; text-align: right; color: var(--fg-secondary); font-size: var(--font-sm);" class="score-font">{count} stories</td>
+                    </tr>
+                  );
+                })}
+              </table>
+              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+                18 techniques tracked using the PTC-18 taxonomy. <a href="/about#supplementary" style="color: var(--channel-hrcb);">Full methodology &rarr;</a>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ 4. TEMPORAL FRAMING ═══ */}
 
         {temporalData && temporalData.total_measured > 0 && (
           <div style="margin-bottom: 20px;">
-            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 6px 0;">
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
               Temporal Framing
-              <span style="color: var(--fg-secondary); font-weight: normal; margin-left: 4px;">
-                ({temporalData.total_measured.toLocaleString()} of {temporalData.total_evaluated.toLocaleString()} stories measured)
-              </span>
+            </p>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+              Does tech coverage look backward or forward? Retrospective analysis and prospective advocacy signal different relationships to change.
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
@@ -519,29 +290,79 @@ const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count),
                 {temporalData.retrospective_pct !== null && temporalData.prospective_pct !== null && temporalData.prospective_pct > 0 && (
                   <>Tech coverage looks backward <span class="score-font">{(temporalData.retrospective_pct / temporalData.prospective_pct).toFixed(1)}×</span> more than forward. </>
                 )}
-                {temporalData.prospective_pct !== null && temporalData.prospective_pct === 0 && (
-                  <>No prospective (forward-looking) coverage measured yet. </>
-                )}
-                Temporal framing shapes how rights issues are understood: retrospective analysis vs prospective advocacy signal different relationships to change.
+                {temporalData.total_measured.toLocaleString()} stories measured.
               </p>
             </div>
           </div>
         )}
 
-        {/* ═══ SECTION 4 — Fair Witness ═══ */}
+        {/* ═══ 5. TONE & SCOPE ═══ */}
+
+        {(toneEntries.length > 0 || scopeEntries.length > 0) && (
+          <div style="margin-bottom: 20px;">
+            <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 8px 0;">
+              Tone & Geographic Scope
+            </p>
+            <div class="insight-grid">
+              {toneEntries.length > 0 && (
+                <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Tone (top 5 of {totalTone})</p>
+                  <table cellpadding="0" cellspacing="0" width="100%">
+                    {toneEntries.map(([label, count]) => {
+                      const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
+                      return (
+                        <tr>
+                          <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 8px;">
+                            <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: var(--color-inference); border-radius: 3px;`}></div>
+                            </div>
+                          </td>
+                          <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
+                        </tr>
+                      );
+                    })}
+                  </table>
+                </div>
+              )}
+
+              {scopeEntries.length > 0 && (
+                <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
+                  <table cellpadding="0" cellspacing="0" width="100%">
+                    {scopeEntries.map(([label, count]) => {
+                      const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
+                      return (
+                        <tr>
+                          <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
+                          <td style="padding: 2px 8px;">
+                            <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                              <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
+                            </div>
+                          </td>
+                          <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
+                        </tr>
+                      );
+                    })}
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ 6. METHODOLOGY NOTES ═══ */}
 
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 10px;">
           <b style="color: var(--color-positive-vivid);">Fair Witness</b>
-          <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 6px;">Evidence transparency layer — observable facts vs inferences.</span>
-          <a href="/about#fair-witness" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">details &rarr;</a>
+          <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 6px;">Every evaluation separates observable facts from interpretive inferences — no black boxes.</span>
+          <a href="/about#fair-witness" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">how it works &rarr;</a>
         </div>
 
-        {/* ═══ SECTION 5 — Evaluation Modes ═══ */}
-
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 10px;">
-          <b style="color: var(--fg-primary);">Evaluation Modes</b>
-          <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 6px;">Full evaluation vs <span style="color: var(--color-orange);" class="score-font">~lite</span> — cost/quality trade-offs.</span>
-          <a href="/about#eval-modes" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">details &rarr;</a>
+          <b style="color: var(--fg-primary);">9 supplementary signals</b>
+          <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 6px;">Beyond the core HRCB score: epistemic quality, stakeholder voice, solution orientation, and more.</span>
+          <a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">full reference &rarr;</a>
         </div>
 
       </td>
