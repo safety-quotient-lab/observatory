@@ -183,50 +183,56 @@ const jsonLd = udhrSection ? {
 
   {displayRankings.length > 0 ? (
     <table id="article-table" cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
-      <thead>
-        <tr style="color: var(--fg-secondary); font-size: var(--font-sm); cursor: pointer; user-select: none;">
-          <td data-col="story" data-type="str">Story</td>
-          <td data-col="hrcb" data-type="num" width="50" align="center" title="Score for this UDHR provision">Score</td>
-          <td data-col="editorial" data-type="num" width="36" align="center" title="Editorial — what the content says">E</td>
-          <td data-col="structural" data-type="num" width="36" align="center" title="Structural — what the site does">S</td>
-          <td data-col="setl" data-type="num" width="40" align="center" title="Structural-Editorial Tension Level">SETL</td>
-          <td data-col="evidence" data-type="evidence" width="50" align="center" title="Evidence strength (High, Medium, Low)">Evid</td>
-          <td data-col="pts" data-type="num" width="34" align="center" title="HN Points">Pts</td>
-        </tr>
-      </thead>
       <tbody id="article-body">
         {displayRankings.map((row, i) => {
           const rowSetl = computeSetl(row.structural, row.editorial);
           const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
           return (
-          <tr style="border-top: 1px solid var(--color-border); cursor: pointer;" onclick={`window.location.href='/item/${row.hn_id}'`}>
-            <td data-val={row.title}>
-              <a href={`/item/${row.hn_id}`}>{row.title}</a>
+          <>
+          {/* Row 1: Title + domain */}
+          <tr style={`border-top: 1px solid var(--color-border); cursor: pointer;${i === 0 ? '' : ' padding-top: 4px;'}`} onclick={`window.location.href='/item/${row.hn_id}'`}>
+            <td colspan="7" style="padding: 6px 4px 2px 4px;">
+              <a href={`/item/${row.hn_id}`} style="color: var(--fg-primary);">{row.title}</a>
               {row.domain && (
                 <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 4px;">({row.domain})</span>
               )}
             </td>
-            <td align="center" data-val={row.final ?? -999}>
-              <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>
-                {formatScore(row.final)}
+          </tr>
+          {/* Row 2: Signals */}
+          <tr style="cursor: pointer;" onclick={`window.location.href='/item/${row.hn_id}'`}>
+            <td colspan="7" style="padding: 0 4px 6px 4px;">
+              <span style="display: inline-flex; gap: 10px; flex-wrap: wrap; font-size: var(--font-xs);">
+                <span>
+                  <span style="color: var(--fg-secondary);">Score </span>
+                  <span class="score-font" style={`color: ${scoreToColor(row.final)}; font-weight: bold;`}>{formatScore(row.final)}</span>
+                </span>
+                <span>
+                  <abbr style="color: var(--fg-secondary); text-decoration: none;" title="Editorial: what the content says">E</abbr>
+                  {' '}<span class="score-font" style={`color: ${scoreToColor(row.editorial)};`}>{formatScore(row.editorial)}</span>
+                </span>
+                <span>
+                  <abbr style="color: var(--fg-secondary); text-decoration: none;" title="Structural: what the site does">S</abbr>
+                  {' '}<span class="score-font" style={`color: ${scoreToColor(row.structural)};`}>{formatScore(row.structural)}</span>
+                </span>
+                {rowSetl !== null && (
+                  <span>
+                    <abbr style="color: var(--fg-secondary); text-decoration: none;" title="Structural-Editorial Tension Level">SETL</abbr>
+                    {' '}<span class="score-font" style={`color: ${setlToColor(rowSetl)};`}>{formatSetl(rowSetl)}</span>
+                  </span>
+                )}
+                {row.evidence && (
+                  <span style="color: var(--fg-secondary);">
+                    {({'H': 'High', 'M': 'Med', 'L': 'Low'}[row.evidence] ?? row.evidence)} evidence
+                  </span>
+                )}
+                {row.hn_score != null && (
+                  <span style="color: var(--fg-secondary);">{row.hn_score} pts</span>
+                )}
               </span>
             </td>
-            <td align="center" class="score-font" style={`color: ${scoreToColor(row.editorial)}; font-size: var(--font-sm);`} data-val={row.editorial ?? -999}>
-              {formatScore(row.editorial)}
-            </td>
-            <td align="center" class="score-font" style={`color: ${scoreToColor(row.structural)}; font-size: var(--font-sm);`} data-val={row.structural ?? -999}>
-              {formatScore(row.structural)}
-            </td>
-            <td align="center" class="score-font" style={`color: ${setlToColor(rowSetl)}; font-size: var(--font-sm);`} data-val={rowSetl ?? -999}>
-              {formatSetl(rowSetl)}
-            </td>
-            <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.evidence === 'H' ? 3 : row.evidence === 'M' ? 2 : row.evidence === 'L' ? 1 : 0}>
-              {row.evidence ? ({'H': 'High', 'M': 'Med', 'L': 'Low'}[row.evidence] ?? row.evidence) : ''}
-            </td>
-            <td align="center" style="color: var(--fg-secondary); font-size: var(--font-sm);" data-val={row.hn_score ?? -999}>
-              {row.hn_score ?? ''}
-            </td>
           </tr>
+          </>
+
           );
         })}
       </tbody>
