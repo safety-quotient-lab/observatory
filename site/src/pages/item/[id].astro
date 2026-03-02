@@ -713,13 +713,29 @@ function timeAgo(unixTime: number): string {
     <div>
       <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
           <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Aggregates</div>
+          {/* E/S Channel Bars — paired under-over */}
+          <div style="margin-bottom: 10px;">
+            {[
+              { label: 'Editorial', abbr: 'E', title: 'What the content says about rights', value: storyData.hcb_editorial_mean, color: 'var(--channel-editorial)' },
+              { label: 'Structural', abbr: 'S', title: 'What the hosting site does', value: storyData.hcb_structural_mean, color: 'var(--channel-structural)' },
+            ].map(ch => (
+              <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                <abbr style="color: var(--fg-secondary); font-size: var(--font-xs); width: 12px; text-align: right; text-decoration: none;" title={ch.title}>{ch.abbr}</abbr>
+                <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative;">
+                  <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
+                  {ch.value != null && (ch.value >= 0 ? (
+                    <div style={`position: absolute; left: 50%; top: 0; width: ${ch.value * 50}%; height: 100%; background: ${ch.color}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
+                  ) : (
+                    <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(ch.value) * 50}%; height: 100%; background: ${ch.color}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
+                  ))}
+                </div>
+                <span class="score-font" style={`color: ${ch.value != null ? scoreToColor(ch.value) : 'var(--fg-secondary)'}; font-size: var(--font-xs); width: 36px; text-align: right;`}>
+                  {ch.value != null ? formatScore(ch.value) : 'ND'}
+                </span>
+              </div>
+            ))}
+          </div>
           <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
-            <tr>
-              <td style="color: var(--fg-secondary);" title="Average editorial channel score across all UDHR sections">Editorial Mean</td>
-              <td class="score-font" style={`color: ${scoreToColor(storyData.hcb_editorial_mean)}`}>{storyData.hcb_editorial_mean !== null && storyData.hcb_editorial_mean !== undefined ? formatScore(storyData.hcb_editorial_mean) : 'ND'}</td>
-              <td style="color: var(--fg-secondary);" title="Average structural channel score across all UDHR sections">Structural Mean</td>
-              <td class="score-font" style={`color: ${storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? scoreToColor(storyData.hcb_structural_mean) : 'var(--fg-secondary)'}`}>{storyData.hcb_structural_mean !== null && storyData.hcb_structural_mean !== undefined ? formatScore(storyData.hcb_structural_mean) : 'ND'}</td>
-            </tr>
             <tr>
               <td style="color: var(--fg-secondary);" title="Evidence-weighted average of combined E+S+DCP final scores">Weighted Mean</td>
               <td class="score-font" style={`color: ${scoreToColor(aggregates.weighted_mean)}`}>{formatScore(aggregates.weighted_mean)}</td>
