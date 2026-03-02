@@ -9,9 +9,16 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Populate observatory repo** (Phase 3.2) — Pre-publish scrub complete (2026-03-02):
-removed "gray-box" internal labels (2 files), scanned for PII/secrets/hardcoded IDs
-(clean). Next: populate `safety-quotient-lab/observatory` with presentation layer.
+**Show HN prep** (Phase 3.3) — Observatory repo populated (2026-03-02):
+212 files pushed to `safety-quotient-lab/observatory` with README, SECURITY.md,
+methodology, calibration, construct validity analysis, full site + pipeline code.
+Excluded: IDEAS.md, COMMERCIALIZATION.md, TODO.md, .claude/. License: Apache 2.0.
+
+Next steps before Show HN:
+- [ ] Review README.md on GitHub (rendering, links, formatting)
+- [ ] Set repo topics on GitHub (human-rights, udhr, hacker-news, cloudflare-workers, astro)
+- [ ] Add repo description + homepage URL on GitHub settings
+- [ ] Consider screenshots/demo GIF for README
 
 User action still needed: acquire humanify.org domain.
 
