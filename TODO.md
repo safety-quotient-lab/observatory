@@ -9,16 +9,15 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Show HN prep** (Phase 3.3) — Observatory repo populated (2026-03-02):
-212 files pushed to `safety-quotient-lab/observatory` with README, SECURITY.md,
-methodology, calibration, construct validity analysis, full site + pipeline code.
-Excluded: IDEAS.md, COMMERCIALIZATION.md, TODO.md, .claude/. License: Apache 2.0.
+**Show HN ready** (Phase 3.3 complete, 2026-03-02) — Observatory repo fully
+prepared: 212 files, README verified, repo metadata set (homepage, 8 topics,
+description). Screenshots deferred (live link sufficient).
 
-Next steps before Show HN:
-- [ ] Review README.md on GitHub (rendering, links, formatting)
-- [ ] Set repo topics on GitHub (human-rights, udhr, hacker-news, cloudflare-workers, astro)
-- [ ] Add repo description + homepage URL on GitHub settings
-- [ ] Consider screenshots/demo GIF for README
+Remaining before Show HN launch:
+- [ ] Draft Show HN post text (title + body)
+- [ ] Final spot-check of live site (hn-hrcb.pages.dev)
+
+Then: stand up `observatory.humanify.org` (or final domain) as the public-facing site.
 
 User action still needed: acquire humanify.org domain.
 
