@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 /**
- * Standalone HRCB evaluator for gray-box.
+ * Standalone HRCB evaluator.
  *
  * Fetches pending stories from the production queue, evaluates them via Claude,
  * and POSTs results back to the production ingest endpoint.

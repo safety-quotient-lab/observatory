@@ -9,10 +9,9 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Pre-publish scrub + readiness checklist** (Phase 3.2) — Observatory repo created
-(safety-quotient-lab/observatory). Before populating: scrub for PII (personal name
-references excluding @kashfshah), internal labels ("gray-box"), hardcoded IDs, and
-anything else that shouldn't be in a public repo. Then populate with presentation layer.
+**Populate observatory repo** (Phase 3.2) — Pre-publish scrub complete (2026-03-02):
+removed "gray-box" internal labels (2 files), scanned for PII/secrets/hardcoded IDs
+(clean). Next: populate `safety-quotient-lab/observatory` with presentation layer.
 
 User action still needed: acquire humanify.org domain.
 

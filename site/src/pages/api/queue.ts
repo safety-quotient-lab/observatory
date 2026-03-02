@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro';
 import { readDb } from '../../lib/db-utils';
 
 /**
- * GET /api/queue — returns pending stories for the standalone evaluator on gray-box.
+ * GET /api/queue — returns pending stories for the standalone evaluator.
  * Auth: Authorization: Bearer <TRIGGER_SECRET>
  *
  * KV reservation: served hn_ids are marked in-flight (queue:inflight:<provider>:<id>, TTL 300s)
