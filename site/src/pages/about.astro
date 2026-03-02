@@ -9,15 +9,15 @@ const siteUrl = Astro.site?.origin ?? 'https://observatory.unratified.org';
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
-  name: 'About HN HRCB',
+  name: 'About Human Rights Observatory',
   url: `${siteUrl}/about`,
   description: 'Methodology and documentation for the HN Human Rights Compatibility Bias evaluation system',
   mainEntity: {
     '@type': 'Dataset',
-    name: 'HN HRCB Evaluation Dataset',
+    name: 'Human Rights Observatory Evaluation Dataset',
     description: 'Automated LLM evaluations of Hacker News stories against the 30 articles and Preamble of the UN Universal Declaration of Human Rights',
     url: `${siteUrl}/data`,
-    creator: { '@type': 'Organization', name: 'HN HRCB', url: siteUrl },
+    creator: { '@type': 'Organization', name: 'Human Rights Observatory', url: siteUrl },
     measurementTechnique: 'Multi-model LLM ensemble evaluated against 31 UDHR provisions using HRCB methodology v3.4',
     variableMeasured: [
       { '@type': 'PropertyValue', name: 'HCB Weighted Mean', description: 'Human Rights Compatibility Bias score, range [-1.0, +1.0]' },
@@ -39,12 +39,12 @@ const jsonLd = {
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
       <td>
-        <h1 style="font-size: var(--font-md); margin-bottom: 10px;">About HN HRCB</h1>
+        <h1 style="font-size: var(--font-md); margin-bottom: 10px;">About HRO</h1>
 
         {/* ═══ TIER 1 — Always visible ═══ */}
 
         <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 15px;">
-          HN HRCB is a mirror of <a href="https://news.ycombinator.com" style="color: var(--color-orange);">Hacker News</a> that
+          The Human Rights Observatory is a mirror of <a href="https://news.ycombinator.com" style="color: var(--color-orange);">Hacker News</a> that
           evaluates every story's linked content against the 30 articles and preamble of the UN Universal Declaration
           of Human Rights. Each evaluation produces a Human Rights Compatibility Bias (HRCB) score showing how the
           content's editorial and structural signals align with fundamental human rights provisions.

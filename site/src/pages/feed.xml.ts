@@ -215,7 +215,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   }
 
   // Build feed metadata
-  const titleParts = ['HN HRCB'];
+  const titleParts = ['HRO'];
   const subtitleParts: string[] = [];
   let selfUrl = `${baseUrl}/feed.xml`;
   const params: string[] = [];
@@ -240,7 +240,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   }
 
   const title = titleParts.length === 1
-    ? 'HN HRCB — Human Rights Compatibility Bias'
+    ? 'HRO — Human Rights Compatibility Bias'
     : titleParts.join(' — ');
   const subtitle = subtitleParts.length === 0
     ? 'Hacker News stories evaluated against the UN Universal Declaration of Human Rights'

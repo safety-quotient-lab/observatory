@@ -23,13 +23,13 @@ export const GET: APIRoute = async () => {
 
   // Main feed
   outlines.push(
-    `      <outline text="HN HRCB — All Stories" title="HN HRCB — All Stories" type="rss" xmlUrl="${BASE_URL}/feed.xml" htmlUrl="${BASE_URL}/" />`
+    `      <outline text="HRO — All Stories" title="HRO — All Stories" type="rss" xmlUrl="${BASE_URL}/feed.xml" htmlUrl="${BASE_URL}/" />`
   );
 
   // Stance-filtered feeds
   for (const stance of ['positive', 'negative', 'neutral'] as const) {
     outlines.push(
-      `      <outline text="HN HRCB — ${stance} stories" title="HN HRCB — ${stance} stories" type="rss" xmlUrl="${BASE_URL}/feed.xml?filter=${stance}" htmlUrl="${BASE_URL}/?filter=${stance}" />`
+      `      <outline text="HRO — ${stance} stories" title="HRO — ${stance} stories" type="rss" xmlUrl="${BASE_URL}/feed.xml?filter=${stance}" htmlUrl="${BASE_URL}/?filter=${stance}" />`
     );
   }
 
@@ -47,13 +47,13 @@ export const GET: APIRoute = async () => {
   const xml = `<?xml version="1.0" encoding="utf-8"?>
 <opml version="2.0">
   <head>
-    <title>HN HRCB — UDHR Provision Feeds</title>
+    <title>HRO — UDHR Provision Feeds</title>
     <dateCreated>${escapeXml(now)}</dateCreated>
-    <ownerName>HN HRCB</ownerName>
+    <ownerName>Human Rights Observatory</ownerName>
     <docs>https://observatory.unratified.org/about</docs>
   </head>
   <body>
-    <outline text="HN HRCB" title="HN HRCB — Human Rights Compatibility Bias">
+    <outline text="HRO" title="HRO — Human Rights Compatibility Bias">
 ${outlines.join('\n')}
       <outline text="UDHR Provisions" title="Per-provision feeds">
 ${provisionOutlines.join('\n')}

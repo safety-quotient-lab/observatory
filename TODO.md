@@ -9,11 +9,13 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Show HN launch prep** (Phase 3.4) — `observatory.unratified.org` live,
-nav trimmed (`/status` removed, `/data` + `/trends` already absent from nav).
-Public nav: observatory | stories | signals | sources | rights | about | search.
+**Pre-launch polish** (Phase 3.4) — `observatory.unratified.org` live,
+nav trimmed (HRO title, /status removed, /rights/network removed).
+Public nav: stories | signals | sources | rights | about | search.
 
-Remaining:
+Polish pass before Show HN:
+- [ ] `/signals` page redesign: restructure around findings ("What we found") not metrics ("What we measure"). Problems: 13 unexplained acronyms, no narrative, best insights (transparency, temporal framing) buried below abstract metric bars. Keep: Transparency Observatory, Content Accessibility, Temporal Framing, Propaganda Techniques. Rethink: Core HRCB bars, Global Averages acronym soup, raw 20-item tone distribution, Derived Metrics cards.
+- [ ] Spot-check remaining pages for cold-audience readiness (sources, rights, about, stories)
 - [ ] Show HN post draft needs personal closer (`.claude/plans/show-hn-draft.md`)
 - [ ] Final spot-check of live site at observatory.unratified.org
 

@@ -43,7 +43,7 @@ const isFuture = dayDate >= today;
 const displayDate = dayDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 ---
 
-<Base title={`${displayDate} — HN HRCB`}>
+<Base title={`${displayDate} — HRO`}>
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'past' }]} />
   <div class="filter-bar">
     <span style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold;">{displayDate}</span>

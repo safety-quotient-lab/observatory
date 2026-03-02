@@ -69,7 +69,7 @@ const pageTitle = safeType === 'ask' ? 'Ask HN' : safeType === 'show' ? 'Show HN
 const jsonLd = (safeSort === 'top' && safeFilter === 'all' && safeType === 'all' && safeModel === 'any' && page === 1) ? {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
-  name: 'HN HRCB — Latest Evaluated Stories',
+  name: 'Human Rights Observatory — Latest Evaluated Stories',
   description: `Hacker News stories evaluated for human rights compatibility bias. ${evaluatedCount} stories evaluated.`,
   url: `${url.origin}/stories`,
   numberOfItems: evaluatedCount,

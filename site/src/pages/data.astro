@@ -8,7 +8,7 @@ export const prerender = true;
 const siteUrl = Astro.site?.origin ?? 'https://observatory.unratified.org';
 ---
 
-<Base title="Data — HN HRCB" canonicalUrl={`${siteUrl}/data`}>
+<Base title="Data — HRO" canonicalUrl={`${siteUrl}/data`}>
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'data' }]} />
 
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
@@ -17,7 +17,7 @@ const siteUrl = Astro.site?.origin ?? 'https://observatory.unratified.org';
         <h1 style="font-size: var(--font-md); margin-bottom: 10px;">Dataset &amp; Exports</h1>
 
         <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 20px;">
-          The HN HRCB evaluation dataset — story scores, domain profiles, and rater evaluations — will be available for bulk download here. Dataset exports and bulk snapshots are in progress.
+          The HRO evaluation dataset — story scores, domain profiles, and rater evaluations — will be available for bulk download here. Dataset exports and bulk snapshots are in progress.
         </p>
 
         {/* API access (available now) */}

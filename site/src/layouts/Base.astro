@@ -15,7 +15,7 @@ interface Props {
 
 const {
   title,
-  description = 'HN HRCB — Hacker News stories scored against the UN Universal Declaration of Human Rights',
+  description = 'HRO — Hacker News stories scored against the UN Universal Declaration of Human Rights',
   ogTitle,
   ogDescription,
   ogUrl,
@@ -41,15 +41,15 @@ try {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    <title>{title} | HN HRCB</title>
+    <title>{title} | HRO</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
-    <link rel="alternate" type="application/atom+xml" title="HN HRCB Feed" href="/feed.xml" />
+    <link rel="alternate" type="application/atom+xml" title="HRO Feed" href="/feed.xml" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="HN HRCB" />
+    <meta property="og:site_name" content="Human Rights Observatory" />
     <meta property="og:title" content={ogTitle || title} />
     <meta property="og:description" content={ogDescription || description} />
     {ogUrl && <meta property="og:url" content={ogUrl} />}
@@ -82,9 +82,9 @@ try {
     {/* Donate modal */}
     <div id="donate-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
       <div style="background:#093946; border:1px solid #1a5568; border-radius:8px; padding:24px; max-width:420px; width:90%; text-align:center;">
-        <div style="color:#98a8a8; font-size:14pt; margin-bottom:12px;">Support HN HRCB</div>
+        <div style="color:#98a8a8; font-size:14pt; margin-bottom:12px;">Support HRO</div>
         <div style="color:#5b7279; font-size:10pt; line-height:1.6; margin-bottom:20px;">
-          Each evaluation uses real API credits. HN HRCB runs on donations — no ads, no paywalls.
+          Each evaluation uses real API credits. HRO runs on donations — no ads, no paywalls.
           If you find it useful, please consider helping keep it running.
         </div>
         <form action="https://www.paypal.com/donate" method="post" target="_blank" id="donate-form">

@@ -75,7 +75,7 @@ if (dcpJson) {
 }
 ---
 
-<Base title={`${domain} — HN HRCB`} canonicalUrl={`${url.origin}/domain/${domain}`}>
+<Base title={`${domain} — HRO`} canonicalUrl={`${url.origin}/domain/${domain}`}>
   {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />}
   <Breadcrumb crumbs={[
     { label: 'home', href: '/' },
