@@ -53,10 +53,10 @@
 
     /* Golden ratio type scale (φ = 1.618, base = 10pt) */
     --phi: 1.618;
-    --font-xs: 8pt;       /* raised from 6.18pt for legibility — micro labels, timestamps */
-    --font-sm: 7.64pt;    /* base / φ^(3/4) — subtext, secondary scores (SETL, Conf) */
-    --font-base: 10pt;    /* φ^0 — body text */
-    --font-md: 12.36pt;   /* base × φ^(1/2) — primary scores (HRCB in feed) */
+    --font-xs: 9pt;       /* micro labels, timestamps — readable on mobile */
+    --font-sm: 8.5pt;     /* subtext, secondary scores (SETL, Conf) */
+    --font-base: 11pt;    /* body text — bumped from 10pt for readability */
+    --font-md: 13.5pt;    /* primary scores, headings */
     --font-lg: 16.18pt;   /* base × φ — section headers, big scores */
     --font-xl: 26.18pt;   /* base × φ² — hero numbers */
 
