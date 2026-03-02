@@ -1,0 +1,144 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import Base from '../layouts/Base.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import { SECTIONS } from '../lib/udhr';
+
+export const prerender = true;
+
+// Group UDHR sections by category for display
+const groupedSections: Record<string, typeof SECTIONS> = {};
+for (const s of SECTIONS) {
+  if (!groupedSections[s.group]) groupedSections[s.group] = [];
+  groupedSections[s.group].push(s);
+}
+const articleGroups = Object.entries(groupedSections);
+
+const scoringConcepts = [
+  { term: 'HRCB', full: 'Human Rights Compatibility Bias', def: 'Directional lean of content relative to the UDHR. Scale: −1.0 (hostile) to +1.0 (affirming). Not a compliance audit — measures observable signals only.', href: '/about#classification' },
+  { term: 'E channel', full: 'Editorial Channel', def: 'What the content says. Scores what the author writes, argues, or frames.', href: '/about#pipeline' },
+  { term: 'S channel', full: 'Structural Channel', def: 'What the site does. Scores the site\'s policies, access model, consent architecture, and governance.', href: '/about#pipeline' },
+  { term: 'SETL', full: 'Structural-Editorial Tension Level', def: '"Says one thing, does another." Measures divergence between E and S channel scores. High SETL = stated values contradict actual behaviour.', href: '/about#setl' },
+  { term: 'Fair Witness', full: 'Fair Witness Evidence Layer', def: 'Every scored section separates witness_facts (directly observable) from witness_inferences (interpretive). No black boxes.', href: '/about#fair-witness' },
+  { term: 'DCP', full: 'Domain Context Profile', def: 'Inherited modifiers from domain-level policies (privacy, ToS, access model, ownership, ads/tracking). Applied after URL-level scoring.', href: '/about#dcp' },
+  { term: 'Evidence strength', full: 'H / M / L', def: 'H (High) = explicit, direct evidence — max score ±1.0. M (Medium) = implicit — max ±0.7. L (Low) = tangential — max ±0.4.', href: '/about#evidence' },
+  { term: 'Confidence', full: 'Score confidence', def: 'How much evidence supports the score. Low confidence = regress toward zero.', href: '/about#evidence' },
+  { term: 'Content type', full: 'ED / PO / LP / PR / MI / …', def: 'Category that sets E/S channel weights. ED (editorial) = 60/40. PO (policy) = 30/70. LP (landing page) = 30/70. Default MX = 50/50.', href: '/about#content-types' },
+  { term: 'Directionality', full: 'A / F / P / C', def: 'How content engages rights: A=Advocacy, F=Framing, P=Practice, C=Coverage.', href: '/about#directionality' },
+  { term: 'Consensus', full: 'Multi-model ensemble', def: 'Weighted average across enabled models. Weight = baseWeight × confidenceFactor × truncDiscount. Full eval weight = 1.0, lite = 0.5.', href: '/about#consensus' },
+  { term: 'Volatility', full: 'Score stability', def: 'stdDev < 0.10 = Low, < 0.25 = Medium, else High. Tracks score stability across re-evaluations over time.', href: '/about#volatility' },
+];
+
+const supplementarySignals = [
+  { code: 'EQ', name: 'Epistemic Quality', color: 'var(--color-amber)', bg: 'rgba(245,158,11,0.12)', def: 'Source quality, evidence reasoning, uncertainty handling, purpose transparency. Composite of 4 CRAAP Test dimensions.', href: '/about#eq' },
+  { code: 'PT', name: 'Propaganda Flags', color: 'var(--color-negative)', bg: 'rgba(220,38,38,0.12)', def: '18-technique detection (loaded language, strawman, whataboutism, appeal to fear…). Based on Da San Martino et al. PTC-18 corpus.', href: '/about#pt' },
+  { code: 'SO', name: 'Solution Orientation', color: 'var(--color-positive)', bg: 'rgba(22,163,106,0.12)', def: 'Problem-only vs solution-oriented framing + reader agency score. How much the content empowers vs passivises the reader.', href: '/about#so' },
+  { code: 'ET', name: 'Emotional Tone', color: 'var(--color-inference)', bg: 'rgba(168,85,247,0.12)', def: 'Valence (−1.0 to +1.0), arousal (0–1), dominance (0–1), primary tone. Based on Russell\'s Circumplex Model of Affect.', href: '/about#et' },
+  { code: 'SR', name: 'Stakeholder Representation', color: 'var(--channel-editorial)', bg: 'rgba(96,165,250,0.12)', def: 'Who speaks vs who is spoken about. Voice balance, perspective count, power-axis analysis. Aligned with UDHR rights-holder/duty-bearer framework.', href: '/about#sr' },
+  { code: 'TF', name: 'Temporal Framing', color: 'var(--channel-editorial)', bg: 'rgba(96,165,250,0.12)', def: 'Retrospective / present / prospective / mixed. Time horizon: immediate → historical. Does tech coverage look backward or forward?', href: '/about#tf' },
+  { code: 'GS', name: 'Geographic Scope', color: 'var(--channel-editorial)', bg: 'rgba(96,165,250,0.12)', def: 'Local / national / regional / global / unspecified. Regions mentioned. Whose rights are centred?', href: '/about#gs' },
+  { code: 'CL', name: 'Complexity Level', color: 'var(--color-warning)', bg: 'rgba(234,179,8,0.12)', def: 'Reading level, jargon density, assumed knowledge. Tracks invisible access barriers — relevant to Article 26 (education).', href: '/about#cl' },
+  { code: 'TD', name: 'Transparency & Disclosure', color: 'var(--color-positive)', bg: 'rgba(22,163,106,0.12)', def: 'Author identified, conflicts disclosed, funding disclosed. Composite transparency score. Relevant to Article 19 (expression).', href: '/about#td' },
+];
+---
+
+<Base title="Reference">
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'reference' }]} />
+  <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
+    <tr>
+      <td>
+        <h1 style="font-size: var(--font-md); margin-bottom: 4px;">Reference</h1>
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 20px;">
+          Every term used on this site — scoring concepts, supplementary signals, and all 31 UDHR provisions.
+          Full methodology at <a href="/about" style="color: var(--channel-hrcb);">/about</a>.
+          Evaluated against <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">the UDHR</a>.
+        </p>
+
+        {/* ═══ SCORING CONCEPTS ═══ */}
+
+        <div style="margin-bottom: 24px;">
+          <div style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 8px 0;">
+            Scoring Concepts
+          </div>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden;">
+            <table cellpadding="0" cellspacing="0" width="100%">
+              {scoringConcepts.map((c, i) => (
+                <tr style={i % 2 === 0 ? '' : 'background: var(--bg-surface);'}>
+                  <td style="padding: 7px 10px; width: 120px; vertical-align: top; white-space: nowrap;">
+                    <a href={c.href} style="color: var(--channel-hrcb); font-size: var(--font-sm); font-weight: bold; text-decoration: none;">{c.term}</a>
+                  </td>
+                  <td style="padding: 7px 10px; vertical-align: top;">
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); display: block; margin-bottom: 1px;">{c.full}</span>
+                    <span style="color: var(--fg-primary); font-size: var(--font-xs);">{c.def}</span>
+                  </td>
+                </tr>
+              ))}
+            </table>
+          </div>
+        </div>
+
+        {/* ═══ SUPPLEMENTARY SIGNALS ═══ */}
+
+        <div style="margin-bottom: 24px;">
+          <div style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 8px 0;">
+            Supplementary Signals
+          </div>
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden;">
+            <table cellpadding="0" cellspacing="0" width="100%">
+              {supplementarySignals.map((s, i) => (
+                <tr style={i % 2 === 0 ? '' : 'background: var(--bg-surface);'}>
+                  <td style="padding: 7px 10px; width: 40px; vertical-align: top;">
+                    <a href={s.href} style="text-decoration: none;">
+                      <span class="badge" style={`background: ${s.bg}; color: ${s.color}; font-size: var(--font-xs);`}>{s.code}</span>
+                    </a>
+                  </td>
+                  <td style="padding: 7px 10px; width: 160px; vertical-align: top; white-space: nowrap;">
+                    <span style="color: var(--fg-primary); font-size: var(--font-sm);">{s.name}</span>
+                  </td>
+                  <td style="padding: 7px 10px; vertical-align: top;">
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs);">{s.def}</span>
+                  </td>
+                </tr>
+              ))}
+            </table>
+          </div>
+        </div>
+
+        {/* ═══ UDHR ARTICLES ═══ */}
+
+        <div style="margin-bottom: 10px;">
+          <div style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 8px 0;">
+            UDHR Provisions
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            {articleGroups.map(([group, sections]) => (
+              <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; overflow: hidden;">
+                <div style="background: var(--bg-surface); border-bottom: 1px solid var(--color-border); padding: 5px 10px;">
+                  <span style="font-size: var(--font-xs); color: var(--fg-secondary); font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">{group}</span>
+                </div>
+                <table cellpadding="0" cellspacing="0" width="100%">
+                  {sections.map((s, i) => (
+                    <tr style={i % 2 === 0 ? '' : 'background: var(--bg-surface);'}>
+                      <td style="padding: 5px 10px; width: 85px; vertical-align: top;">
+                        <a href={`/article/${s.number}`} style="color: var(--channel-hrcb); font-size: var(--font-xs); text-decoration: none; white-space: nowrap;">
+                          {s.number === 0 ? 'Preamble' : `Article ${s.number}`}
+                        </a>
+                      </td>
+                      <td style="padding: 5px 10px; width: 160px; vertical-align: top;">
+                        <span style="color: var(--fg-primary); font-size: var(--font-xs);">{s.shortTitle}</span>
+                      </td>
+                      <td style="padding: 5px 10px; vertical-align: top;">
+                        <span style="color: var(--fg-secondary); font-size: var(--font-xs);">{s.title}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </table>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </td>
+    </tr>
+  </table>
+</Base>

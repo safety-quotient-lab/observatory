@@ -13,7 +13,10 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 `observatory.unratified.org` live. All polish deployed: lens hero pills,
 interstitials, horizontal scores, collapsed filters, WCAG a11y, paired
 E/S bars, two-row article tables, rank removal, correlation colors,
-font bump, UDHR source links on 6 pages, free-tier mention, about softening.
+font bump, UDHR source links on 6 pages, free-tier mention, about softening,
+`/reference` routing table (all terms + 31 UDHR articles), Article 19/26 inline
+links in signals page, lite prompt anti-lazy-neutral guidance + consensus
+neutral discount for confident-zero Llama evals.
 
 Remaining:
 - [ ] Write personal closer and post Show HN (`.claude/plans/show-hn-draft.md`)
