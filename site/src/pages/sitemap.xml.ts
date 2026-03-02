@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro';
 
 export const GET: APIRoute = async ({ locals }) => {
   const db = locals.runtime.env.DB;
-  const baseUrl = 'https://hn-hrcb.pages.dev';
+  const baseUrl = 'https://observatory.unratified.org';
   const buildDate = new Date().toISOString().slice(0, 10);
 
   // Static pages with priority tiers

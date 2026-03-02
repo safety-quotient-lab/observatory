@@ -18,7 +18,7 @@ try {
 const buildTime = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
 export default defineConfig({
-  site: 'https://hn-hrcb.pages.dev',
+  site: 'https://observatory.unratified.org',
   output: 'server',
   adapter: cloudflare({
     platformProxy: {

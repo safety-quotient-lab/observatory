@@ -116,7 +116,7 @@ ${entries}
 export const GET: APIRoute = async ({ locals, request }) => {
   const env = locals.runtime.env as { DB: D1Database };
   const db = readDb(env.DB);
-  const baseUrl = 'https://hn-hrcb.pages.dev';
+  const baseUrl = 'https://observatory.unratified.org';
 
   const url = new URL(request.url);
   const filter = url.searchParams.get('filter');      // positive | negative | neutral

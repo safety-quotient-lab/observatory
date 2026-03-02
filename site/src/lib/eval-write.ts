@@ -259,7 +259,7 @@ export async function requestArchive(
     const archiveUrl = `https://web.archive.org/save/${url}`;
     const resp = await fetch(archiveUrl, {
       method: 'GET',
-      headers: { 'User-Agent': 'HRCB-Evaluator/1.0 (hn-hrcb.pages.dev)' },
+      headers: { 'User-Agent': 'HRCB-Evaluator/1.0 (observatory.unratified.org)' },
     });
 
     // Wayback Machine returns the Memento URL in the Content-Location header

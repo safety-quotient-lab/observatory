@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro';
 
 export const prerender = true;
 
-const BASE_URL = 'https://hn-hrcb.pages.dev';
+const BASE_URL = 'https://observatory.unratified.org';
 
 const escapeXml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -50,7 +50,7 @@ export const GET: APIRoute = async () => {
     <title>HN HRCB — UDHR Provision Feeds</title>
     <dateCreated>${escapeXml(now)}</dateCreated>
     <ownerName>HN HRCB</ownerName>
-    <docs>https://hn-hrcb.pages.dev/about</docs>
+    <docs>https://observatory.unratified.org/about</docs>
   </head>
   <body>
     <outline text="HN HRCB" title="HN HRCB — Human Rights Compatibility Bias">

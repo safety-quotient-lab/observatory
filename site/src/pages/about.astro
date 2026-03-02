@@ -5,7 +5,7 @@ import Breadcrumb from '../components/Breadcrumb.astro';
 
 export const prerender = true;
 
-const siteUrl = Astro.site?.origin ?? 'https://hn-hrcb.pages.dev';
+const siteUrl = Astro.site?.origin ?? 'https://observatory.unratified.org';
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
@@ -657,11 +657,11 @@ const jsonLd = {
           <div style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px; margin-bottom: 12px;">
             <p style="color: var(--fg-emphasis); font-size: var(--font-sm); margin: 0 0 6px 0;">Markdown:</p>
             <code style="color: var(--color-orange); font-size: var(--font-xs); word-break: break-all;">
-              ![HRCB](https://hn-hrcb.pages.dev/api/v1/badge/example.com.svg)
+              ![HRCB](https://observatory.unratified.org/api/v1/badge/example.com.svg)
             </code>
             <p style="color: var(--fg-emphasis); font-size: var(--font-sm); margin: 10px 0 6px 0;">HTML:</p>
             <code style="color: var(--color-orange); font-size: var(--font-xs); word-break: break-all;">
-              &lt;img src="https://hn-hrcb.pages.dev/api/v1/badge/example.com.svg" alt="HRCB Score"&gt;
+              &lt;img src="https://observatory.unratified.org/api/v1/badge/example.com.svg" alt="HRCB Score"&gt;
             </code>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
               Badge colors match the HRCB score scale (red → amber → green). Cached for 1 hour.

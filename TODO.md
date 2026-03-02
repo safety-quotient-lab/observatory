@@ -14,12 +14,10 @@ prepared: 212 files, README verified, repo metadata set (homepage, 8 topics,
 description). Screenshots deferred (live link sufficient).
 
 Remaining before Show HN launch:
-- [ ] Draft Show HN post text (title + body)
-- [ ] Final spot-check of live site (hn-hrcb.pages.dev)
-
-Then: stand up `observatory.humanify.org` (or final domain) as the public-facing site.
-
-User action still needed: acquire humanify.org domain.
+- [ ] Show HN post draft v2 ready (`.claude/plans/show-hn-draft.md`) — needs personal closer
+- [ ] Wire up `observatory.unratified.org` → `hn-hrcb.pages.dev` (domain registered, pending CF zone setup)
+- [ ] Update `astro.config.mjs` site URL + observatory repo README links
+- [ ] Final spot-check of live site
 
 ---
 
