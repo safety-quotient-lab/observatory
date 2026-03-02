@@ -5,7 +5,7 @@ import { SETL_CASE_SQL } from './db-utils';
 
 // --- SETL queries ---
 
-/** @internal Future use: dashboard candidate */
+/** Corpus-wide mean SETL — wired to /signals Derived Metrics SETL card */
 export async function getMeanSetl(db: D1Database): Promise<number | null> {
   const row = await db
     .prepare(

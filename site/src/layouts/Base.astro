@@ -128,8 +128,9 @@ try {
         updateScoreModeButtons();
       });
 
+      // Client-side score color — mirrors scoreToColor() in colors.ts.
+      // Exposed on window so inline scripts (define:vars) can reuse without duplication.
       function scoreColor(score: number): string {
-        // Mirror scoreToColor() in colors.ts: gray at zero, desaturates near-zero, colored at extremes.
         const abs = Math.abs(score);
         const sat = Math.min(0.9, abs * 2.0) * (0.75 + 0.15 * abs);
         const lit = 0.53 - 0.11 * abs;
@@ -139,7 +140,6 @@ try {
         } else {
           hue = 40 + 102 * score;
         }
-        // HSL to RGB
         const c = (1 - Math.abs(2 * lit - 1)) * sat;
         const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
         const m = lit - c / 2;
@@ -152,6 +152,11 @@ try {
         else { r = c; b = x; }
         return `rgb(${Math.round((r+m)*255)},${Math.round((g+m)*255)},${Math.round((b+m)*255)})`;
       }
+      function fmtScore(s: number): string {
+        return (s > 0 ? '+' : '') + s.toFixed(2);
+      }
+      (window as any).scoreColor = scoreColor;
+      (window as any).fmtScore = fmtScore;
 
       function makeRetryBtn(hnId: string, title: string): HTMLButtonElement {
         const btn = document.createElement('button');
