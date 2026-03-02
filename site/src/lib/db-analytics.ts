@@ -69,24 +69,12 @@ export async function getArticlePairStats(db: D1Database): Promise<ArticlePairDa
   const t0 = Date.now();
   const { results } = await db
     .prepare(
-      `SELECT a.section as section_a, b.section as section_b,
-        COUNT(*) as n,
-        SUM(a.final * b.final) as sum_ab,
-        SUM(a.final) as sum_a, SUM(b.final) as sum_b,
-        SUM(a.final * a.final) as sum_a2, SUM(b.final * b.final) as sum_b2
-       FROM rater_scores a
-       JOIN rater_scores b ON a.hn_id = b.hn_id AND a.eval_model = b.eval_model
-       JOIN stories s ON s.hn_id = a.hn_id AND a.eval_model = s.eval_model
-       WHERE a.final IS NOT NULL AND b.final IS NOT NULL AND a.sort_order <= b.sort_order
-       GROUP BY a.section, b.section
-       HAVING COUNT(*) >= 5`
+      `SELECT section_a, section_b, n, pearson_r
+       FROM article_pair_stats
+       WHERE n >= 5
+       ORDER BY section_a, section_b`
     )
-    .all<{
-      section_a: string; section_b: string;
-      n: number; sum_ab: number;
-      sum_a: number; sum_b: number;
-      sum_a2: number; sum_b2: number;
-    }>();
+    .all<{ section_a: string; section_b: string; n: number; pearson_r: number | null }>();
 
   const cooccurrence = new Map<string, number>();
   const correlation = new Map<string, number>();
@@ -96,22 +84,95 @@ export async function getArticlePairStats(db: D1Database): Promise<ArticlePairDa
     const key = `${r.section_a}|${r.section_b}`;
     cooccurrence.set(key, r.n);
     if (r.n > maxCo) maxCo = r.n;
-
-    // Pearson r
-    if (r.n > 1) {
-      const num = r.n * r.sum_ab - r.sum_a * r.sum_b;
-      const denA = r.n * r.sum_a2 - r.sum_a * r.sum_a;
-      const denB = r.n * r.sum_b2 - r.sum_b * r.sum_b;
-      const den = Math.sqrt(Math.max(0, denA) * Math.max(0, denB));
-      if (den > 0) {
-        correlation.set(key, num / den);
-      }
-    }
+    if (r.pearson_r != null) correlation.set(key, r.pearson_r);
   }
 
   const ms = Date.now() - t0;
-  if (ms > 200) console.warn(`[getArticlePairStats] slow query: ${ms}ms`);
+  if (ms > 50) console.warn(`[getArticlePairStats] read: ${ms}ms`);
   return { cooccurrence, correlation, maxCooccurrence: maxCo };
+}
+
+/** Refresh the article_pair_stats materialized table.
+ *  The full self-join exceeds D1's CPU limit, so we compute per-section:
+ *  for each section, get all (hn_id, eval_model, final) scores, then
+ *  compute pair stats in JS. 31 small queries instead of 1 huge join. */
+export async function refreshArticlePairStats(db: D1Database): Promise<{ pairs: number; ms: number }> {
+  const t0 = Date.now();
+
+  // Step 1: get all section scores, grouped by section
+  const { results: allScores } = await db
+    .prepare(
+      `SELECT rs.section, rs.hn_id, rs.eval_model, rs.final, rs.sort_order
+       FROM rater_scores rs
+       JOIN stories s ON s.hn_id = rs.hn_id AND rs.eval_model = s.eval_model
+       WHERE rs.final IS NOT NULL AND TYPEOF(rs.final) != 'text' AND s.hn_id > 0
+       ORDER BY rs.sort_order, rs.hn_id`
+    )
+    .all<{ section: string; hn_id: number; eval_model: string; final: number; sort_order: number }>();
+
+  // Group by section → Map<section, Map<"hn_id:model", score>>
+  const bySection = new Map<string, Map<string, number>>();
+  const sectionOrder = new Map<string, number>();
+  for (const r of allScores) {
+    if (!bySection.has(r.section)) bySection.set(r.section, new Map());
+    bySection.get(r.section)!.set(`${r.hn_id}:${r.eval_model}`, r.final);
+    sectionOrder.set(r.section, r.sort_order);
+  }
+
+  // Step 2: compute pair stats in JS
+  const sections = [...bySection.keys()].sort((a, b) => (sectionOrder.get(a) ?? 0) - (sectionOrder.get(b) ?? 0));
+  const stmts: D1PreparedStatement[] = [];
+
+  for (let i = 0; i < sections.length; i++) {
+    const secA = sections[i];
+    const mapA = bySection.get(secA)!;
+    for (let j = i; j < sections.length; j++) {
+      const secB = sections[j];
+      const mapB = bySection.get(secB)!;
+
+      // Find common keys
+      let n = 0, sumA = 0, sumB = 0, sumAB = 0, sumA2 = 0, sumB2 = 0;
+      for (const [key, valA] of mapA) {
+        const valB = mapB.get(key);
+        if (valB == null) continue;
+        n++;
+        sumA += valA; sumB += valB;
+        sumAB += valA * valB;
+        sumA2 += valA * valA; sumB2 += valB * valB;
+      }
+
+      if (n < 5) continue;
+
+      let pearsonR: number | null = null;
+      if (n > 1) {
+        const num = n * sumAB - sumA * sumB;
+        const denA = n * sumA2 - sumA * sumA;
+        const denB = n * sumB2 - sumB * sumB;
+        const den = Math.sqrt(Math.max(0, denA) * Math.max(0, denB));
+        if (den > 0) pearsonR = num / den;
+      }
+
+      stmts.push(
+        db.prepare(
+          `INSERT INTO article_pair_stats (section_a, section_b, n, sum_ab, sum_a, sum_b, sum_a2, sum_b2, pearson_r, last_updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+           ON CONFLICT (section_a, section_b) DO UPDATE SET
+             n = excluded.n, sum_ab = excluded.sum_ab, sum_a = excluded.sum_a,
+             sum_b = excluded.sum_b, sum_a2 = excluded.sum_a2, sum_b2 = excluded.sum_b2,
+             pearson_r = excluded.pearson_r, last_updated_at = excluded.last_updated_at`
+        ).bind(secA, secB, n, sumAB, sumA, sumB, sumA2, sumB2, pearsonR)
+      );
+    }
+  }
+
+  // Batch writes in chunks of 100
+  for (let i = 0; i < stmts.length; i += 100) {
+    await db.batch(stmts.slice(i, i + 100));
+  }
+
+  const ms = Date.now() - t0;
+  console.log(`[refreshArticlePairStats] ${stmts.length} pairs from ${allScores.length} scores in ${ms}ms`);
+  return { pairs: stmts.length, ms };
 }
 
 // --- Score distribution histogram ---

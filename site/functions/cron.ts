@@ -34,7 +34,7 @@ import { getModelQueue, PRIMARY_MODEL_ID } from '../src/lib/shared-eval';
 import {
   sweepFailed, sweepSkipped, sweepCoverage, sweepContentDrift,
   sweepAlgoliaBackfill, sweepRefreshDomainAggregates, sweepBackfillPtScore, sweepSetlSpikes,
-  sweepRefreshUserAggregates, sweepExpandFromSubmitted,
+  sweepRefreshUserAggregates, sweepExpandFromSubmitted, sweepRefreshArticlePairStats,
   type SweepContext,
 } from './sweeps';
 
@@ -621,6 +621,7 @@ export default {
         setl_spikes: sweepSetlSpikes,
         refresh_user_aggregates: sweepRefreshUserAggregates,
         expand_from_submitted: sweepExpandFromSubmitted,
+        refresh_article_pair_stats: sweepRefreshArticlePairStats,
       };
 
       const handler = SWEEP_HANDLERS[sweep];

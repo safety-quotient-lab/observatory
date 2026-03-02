@@ -6,12 +6,13 @@ import SubNav from '../../components/SubNav.astro';
 import { SECTIONS } from '../../lib/udhr';
 import { getArticlePairStats, getArticleDetailedStats } from '../../lib/db';
 import { scoreToColor, formatScore } from '../../lib/colors';
-import { readDb } from '../../lib/db-utils';
+import { cachedQuery, readDb } from '../../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
+const kv = (Astro.locals as any).runtime.env.CONTENT_CACHE as KVNamespace | undefined;
 
 const [pairStats, articleStats] = await Promise.all([
-  getArticlePairStats(db),
+  kv ? cachedQuery(kv, 'sys:articlePairStats', () => getArticlePairStats(db), 600) : getArticlePairStats(db),
   getArticleDetailedStats(db),
 ]);
 

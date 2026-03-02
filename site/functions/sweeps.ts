@@ -18,6 +18,7 @@ import {
   insertAlgoliaHits,
 } from '../src/lib/coverage-crawl';
 import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate } from '../src/lib/eval-write';
+import { refreshArticlePairStats } from '../src/lib/db-analytics';
 import type { Env } from './cron';
 
 export interface SweepContext {
@@ -484,4 +485,29 @@ export async function sweepExpandFromSubmitted({ db, env }: SweepContext): Promi
   }
 
   return json({ sweep: 'expand_from_submitted', users_checked: topUsers.length, inserted: totalInserted });
+}
+
+// ─── Refresh Article Pair Stats ──────────────────────────────────────────────
+
+export async function sweepRefreshArticlePairStats({ db, env, ctx }: SweepContext): Promise<Response> {
+  ctx.waitUntil(
+    (async () => {
+      try {
+        const result = await refreshArticlePairStats(db);
+        await logEvent(db, {
+          event_type: 'trigger',
+          message: `Article pair stats refreshed: ${result.pairs} pairs in ${result.ms}ms`,
+        });
+        // Invalidate KV cache so next page load gets fresh data
+        await env.CONTENT_CACHE.delete('sys:articlePairStats').catch(() => {});
+      } catch (err) {
+        console.error('[sweepRefreshArticlePairStats] error:', err);
+      }
+    })()
+  );
+
+  return new Response(JSON.stringify({ sweep: 'refresh_article_pair_stats', status: 'accepted' }), {
+    status: 202,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
