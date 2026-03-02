@@ -6,13 +6,12 @@ import SubNav from '../../components/SubNav.astro';
 import { SECTIONS } from '../../lib/udhr';
 import { getArticlePairStats, getArticleDetailedStats } from '../../lib/db';
 import { scoreToColor, formatScore } from '../../lib/colors';
-import { cachedQuery, readDb } from '../../lib/db-utils';
+import { readDb } from '../../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
-const kv = (Astro.locals as any).runtime.env.CONTENT_CACHE as KVNamespace | undefined;
 
 const [pairStats, articleStats] = await Promise.all([
-  kv ? cachedQuery(kv, 'sys:articlePairStats', () => getArticlePairStats(db), 600) : getArticlePairStats(db),
+  getArticlePairStats(db),  // reads from materialized table — fast, no KV cache needed (Map not JSON-serializable)
   getArticleDetailedStats(db),
 ]);
 
@@ -148,7 +147,7 @@ const powerData = JSON.stringify(powerRankings);
 
 <Base title="Rights Network — HRO">
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'rights', href: '/rights' }, { label: 'network' }]} />
-  <SubNav items={[{ label: 'Articles', href: '/rights/articles' }, { label: 'Observatory', href: '/rights/observatory' }]} current="/rights/network" />
+  <SubNav items={[{ label: 'Articles', href: '/rights/articles' }, { label: 'Observatory', href: '/rights/observatory' }, { label: 'Network', href: '/rights/network' }]} current="/rights/network" />
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td>
