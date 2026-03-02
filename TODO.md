@@ -9,11 +9,10 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**License files + SPDX headers** (Phase 3.2) — Methodology extracted, secrets verified clean.
-Next: add LICENSE (Apache 2.0), LICENSE-DATA (CC BY-SA 4.0), ATTRIBUTION.md, SCHEMA.md,
-then SPDX headers on all source files.
+**Create Observatory repo** (Phase 3.2) — License prep complete (Apache 2.0 + CC BY-SA 4.0,
+SPDX headers on all 114 files, ATTRIBUTION.md, SCHEMA.md). Pipeline repo is license-ready.
 
-User actions needed: acquire humanify.org, create safety-quotient-lab GitHub org.
+Blocked on user actions: acquire humanify.org, create safety-quotient-lab GitHub org.
 
 ---
 
@@ -250,8 +249,8 @@ Completed 2026-03-02. All 7 decisions resolved:
 - [ ] **Create GitHub org** — safety-quotient-lab (user action)
 - ~~Extract methodology~~ — done: `methodology-content.ts` (CC BY-SA) + `prompts.ts` (Apache 2.0)
 - ~~Verify no secrets in git history~~ — done: clean
-- [ ] **Add license files** ← **NEXT** — LICENSE (Apache 2.0), LICENSE-DATA (CC BY-SA 4.0), ATTRIBUTION.md, SCHEMA.md
-- [ ] **Add SPDX headers** — `// SPDX-License-Identifier: Apache-2.0` to all source files
+- ~~Add license files~~ — done: LICENSE, LICENSE-DATA, ATTRIBUTION.md, SCHEMA.md
+- ~~Add SPDX headers~~ — done: 114 source files (112 Apache 2.0, 1 CC BY-SA, 1 already had it)
 - [ ] **Create new repo** — Astro presentation layer only, copy lib/ query subset (~20 functions)
 - [ ] **HN-native design system** — light bg (#f6f6ef), pure orange (#ff6600), black text,
   zero chrome, Verdana only, ~130-line CSS. Accessibility features preserved (focus-visible,
