@@ -9,10 +9,9 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Implementation prep** (Phase 3.2) — Pre-open-source audit complete, all decisions locked.
-Next: extract methodology from `prompts.ts` into runtime-loaded data file (license boundary),
-add LICENSE + LICENSE-DATA + ATTRIBUTION.md + SCHEMA.md, add SPDX headers,
-verify no secrets in git history, then create `safety-quotient-lab/observatory` repo.
+**License files + SPDX headers** (Phase 3.2) — Methodology extracted, secrets verified clean.
+Next: add LICENSE (Apache 2.0), LICENSE-DATA (CC BY-SA 4.0), ATTRIBUTION.md, SCHEMA.md,
+then SPDX headers on all source files.
 
 User actions needed: acquire humanify.org, create safety-quotient-lab GitHub org.
 
@@ -249,10 +248,10 @@ Completed 2026-03-02. All 7 decisions resolved:
 - [ ] **Acquire domain** — humanify.org + observatory.humanify.org (user action)
 - [ ] **Acquire redirects** — article30.org, clearview TBD (user action)
 - [ ] **Create GitHub org** — safety-quotient-lab (user action)
-- [ ] **Extract methodology** — move methodology text from `prompts.ts` into runtime-loaded data file (license boundary)
-- [ ] **Add license files** — LICENSE (Apache 2.0), LICENSE-DATA (CC BY-SA 4.0), ATTRIBUTION.md, SCHEMA.md
+- ~~Extract methodology~~ — done: `methodology-content.ts` (CC BY-SA) + `prompts.ts` (Apache 2.0)
+- ~~Verify no secrets in git history~~ — done: clean
+- [ ] **Add license files** ← **NEXT** — LICENSE (Apache 2.0), LICENSE-DATA (CC BY-SA 4.0), ATTRIBUTION.md, SCHEMA.md
 - [ ] **Add SPDX headers** — `// SPDX-License-Identifier: Apache-2.0` to all source files
-- [ ] **Verify no secrets in git history** — `git log --all -- site/.dev.vars`
 - [ ] **Create new repo** — Astro presentation layer only, copy lib/ query subset (~20 functions)
 - [ ] **HN-native design system** — light bg (#f6f6ef), pure orange (#ff6600), black text,
   zero chrome, Verdana only, ~130-line CSS. Accessibility features preserved (focus-visible,
