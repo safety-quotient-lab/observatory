@@ -9,14 +9,16 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Show HN soft launch ready** — `observatory.unratified.org` live (2026-03-02).
-All pre-launch polish complete: hero reframe (6 lens pills), story feed
-interstitials (pedagogical insights every 10 stories), horizontal scores,
-collapsed filters, WCAG 2.1 AA accessibility (6 fixes), materialized
-article_pair_stats, short article titles, site-wide HRO rename. QA in progress.
+**Show HN soft launch — write personal closer and post.** Site ready.
+`observatory.unratified.org` live. All polish deployed: lens hero pills,
+interstitials, horizontal scores, collapsed filters, WCAG a11y, paired
+E/S bars, two-row article tables, rank removal, correlation colors,
+font bump, UDHR source links on 6 pages, free-tier mention, about softening.
 
 Remaining:
-- [ ] Show HN post draft needs personal closer (`.claude/plans/show-hn-draft.md`)
+- [ ] Write personal closer and post Show HN (`.claude/plans/show-hn-draft.md`)
+- [ ] Post-launch: KV-precompute homepage data blob (TTFB 3.9s → ~200ms)
+- [ ] Post-launch: sync observatory repo with latest changes
 - [ ] Sync all recent changes to observatory repo (accumulated since last sync)
 
 ---
