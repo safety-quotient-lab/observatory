@@ -9,15 +9,15 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Show HN soft launch** — `observatory.unratified.org` live, all polish done
-(2026-03-02). Network page fixed (materialized table, migration 0056).
-Short article titles deployed. Multi-lens product direction cataloged
-(`observatory-lenses.md` — 48 factors + 10 meta-constraints, 6 sigma tiers).
+**Show HN soft launch ready** — `observatory.unratified.org` live (2026-03-02).
+All pre-launch polish complete: hero reframe (6 lens pills), story feed
+interstitials (pedagogical insights every 10 stories), horizontal scores,
+collapsed filters, WCAG 2.1 AA accessibility (6 fixes), materialized
+article_pair_stats, short article titles, site-wide HRO rename. QA in progress.
 
-Remaining pre-launch polish (next session):
-- [ ] Homepage hero reframe: replace HRCB pills with 6 lens-oriented findings (Transparency 7%, Persuasion 24%, Accessibility 53%, Temporal 70%, Voice 2×, Trust 56%). Zero new queries — data already fetched. See wireframe in earlier session.
-- [ ] Story feed interstitials: pedagogical insight rows every ~10 stories (φ-scaled, ~2-3 per page). Orange diamond bullet, dashed separators, 1 finding + 1 context line + UDHR article link. Full wireframe + candidate templates in `.claude/plans/landing-wireframe.md` §4. Data sources: `getTdSignalAggregates`, `getComplexityAggregates`, `getTemporalFramingAggregates`, `getArticleDetailedStats`. Rotate based on what's interesting; prefer insights that changed vs 7-day average.
+Remaining:
 - [ ] Show HN post draft needs personal closer (`.claude/plans/show-hn-draft.md`)
+- [ ] Sync all recent changes to observatory repo (accumulated since last sync)
 
 ---
 
