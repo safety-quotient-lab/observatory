@@ -55,8 +55,8 @@ export function correlationToColor(r: number | null | undefined): string {
   const abs = Math.abs(clamped);
   // Hue: negative → red (0°), positive → green (142°)
   const hue = clamped < 0 ? 0 : 142;
-  // Saturation: zero at r=0, full at |r|=1
-  const sat = Math.min(0.85, abs * 1.5);
+  // Saturation: zero at r=0, slow ramp — stays gray until |r| > 0.3
+  const sat = abs < 0.1 ? 0 : Math.min(0.85, (abs - 0.1) * 1.2);
   // Lightness: gray at r=0 (0.58), brighter at extremes
   const lit = 0.58 - 0.06 * abs;
   return hslToRgb(hue, sat, lit);
