@@ -523,4 +523,5 @@
 @media (max-width: 400px) {
   .insight-grid { grid-template-columns: 1fr; }
   .stat-cards > * { flex-basis: 100%; }
+  .hero-section { padding: 10px !important; }
 }
