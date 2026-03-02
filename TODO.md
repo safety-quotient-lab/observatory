@@ -7,6 +7,16 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ---
 
+## Current Focus
+
+**Pre-open-source audit** (Phase 3.1) — L-scale adjudication of every architectural
+choice that becomes a public precedent: naming, license, methodology exposure, data
+model, API contracts, attribution, content rights. Full scope: Phase 3.1 below.
+
+Prerequisites done: cogarch synced, pedagogy site plan evaluated (all decisions hold).
+
+---
+
 ## Phase 0 — Construct Validity
 *Foundational measurement work. Must inform all subsequent engineering.*
 *Full analysis: `construct-validity-analysis.md`*
@@ -224,11 +234,7 @@ Full 7-perspective analysis in `construct-validity-analysis.md` Section 16.
 
 ### 3.1 — Pre-Open-Source Audit (do first)
 
-- [ ] **Pull cogarch updates** — sync latest cognitive architecture from psychology project
-  before evaluating any architectural decisions
-- [ ] **Evaluate pedagogy site plan against updated cogarch** — adjudicate any decisions
-  that the updated triggers/principles affect
-- [ ] **Pre-open-source audit** — adjudicate (L-scale, 8-order, 2-pass) every architectural
+- [ ] **Pre-open-source audit** ← **NEXT** — adjudicate (L-scale, 8-order, 2-pass) every architectural
   choice that becomes a public precedent:
   - Naming (project name, repo name, domain)
   - License (AGPL-3.0? MIT? dual license?)
