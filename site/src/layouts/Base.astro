@@ -255,6 +255,8 @@ try {
         const btn = (e.target as HTMLElement).closest('.trigger-btn') as HTMLButtonElement | null;
         if (!btn) return;
 
+        e.preventDefault(); // Stop parent <a> link from navigating
+
         const hnId = btn.dataset.hnId;
         if (!hnId) return;
 
