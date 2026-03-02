@@ -200,7 +200,7 @@ const jsonLd = udhrSection ? {
           const rowSetl = computeSetl(row.structural, row.editorial);
           const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
           return (
-          <tr style="border-top: 1px solid var(--color-border);">
+          <tr style="border-top: 1px solid var(--color-border); cursor: pointer;" onclick={`window.location.href='/item/${row.hn_id}'`}>
             <td style="color: var(--fg-secondary);" class="score-font" data-val={offset + i + 1}>{offset + i + 1}.</td>
             <td data-val={row.title}>
               <a href={`/item/${row.hn_id}`}>{row.title}</a>
