@@ -81,15 +81,26 @@ function timeAgo(unixTime: number): string {
               {story.hcb_editorial_mean !== null ? formatScore(story.hcb_editorial_mean) : '--'}
             </span>
           </div>
-          {!isLiteOnly && (
+          {!isLiteOnly ? (
             <div class="score-row" data-channel="structural">
               <span class="score-font score-label">S</span>
               <span class="score-font score-value" style={`color: ${structuralScore !== null ? scoreToColor(structuralScore) : 'var(--fg-secondary)'};`}>
                 {structuralScore !== null ? formatScore(structuralScore) : '--'}
               </span>
             </div>
+          ) : (
+            <div class="score-row" data-channel="structural">
+              <span class="score-font score-label">S</span>
+              <button
+                class="trigger-btn lite-upgrade-btn"
+                data-hn-id={story.hn_id}
+                title="Lite eval — full structural analysis costs API credits. Click to evaluate (donors only)."
+                aria-label="Run full evaluation"
+                style="background: none; border: 1px solid var(--color-orange); border-radius: 3px; cursor: pointer; padding: 0 4px; font-size: var(--font-xs); color: var(--color-orange); line-height: 1.4;"
+                onclick="event.preventDefault();event.stopPropagation();"
+              >&#9654;</button>
+            </div>
           )}
-          {isLiteOnly && <span class="lite-icon" title="Lite eval (editorial only) — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}
         </div>
       </a>
     ) : story.eval_status === 'evaluating' ? (

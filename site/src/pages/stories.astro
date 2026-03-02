@@ -291,14 +291,6 @@ function isLiteModel(id: string): boolean {
       )}
     </div>
     <div class="filter-row">
-      <span class="filter-label">score:</span>
-      <button class="score-mode-btn" data-mode="hrcb" aria-label="Show HRCB composite scores">HRCB</button>
-      <span class="filter-sep"> | </span>
-      <button class="score-mode-btn" data-mode="editorial" aria-label="Show Editorial channel scores">E</button>
-      <span class="filter-sep"> | </span>
-      <button class="score-mode-btn" data-mode="structural" aria-label="Show Structural channel scores">S</button>
-    </div>
-    <div class="filter-row">
       <span class="filter-stats">{displayStories.length}{hasMore ? '+' : ''} stories</span>
       {evaluatedCount > 0 && <span class="filter-stats"> ({evaluatedCount} evaluated)</span>}
       <span class="filter-stats"> · page {page}{hasMore ? '' : ' (last)'}</span>
@@ -313,6 +305,15 @@ function isLiteModel(id: string): boolean {
 
   <div class="table-wrap">
   <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
+    <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+      <td style="width: 28px;"></td>
+      <td style="width: 90px; min-width: 90px; white-space: nowrap; padding-left: 2px;">
+        <span style="width: 28px; display: inline-block; text-align: right;">HRCB</span>
+        <span style="margin-left: 8px;">E</span>
+        <span style="margin-left: 14px;">S</span>
+      </td>
+      <td></td>
+    </tr>
     {displayStories.map((story, i) => (
       <>
         <EvalCard
