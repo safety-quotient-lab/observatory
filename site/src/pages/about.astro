@@ -46,13 +46,14 @@ const jsonLd = {
         <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 15px;">
           The Human Rights Observatory tracks <a href="https://news.ycombinator.com" style="color: var(--color-orange);">Hacker News</a> stories and
           evaluates their linked content against the 30 articles and preamble of the UN Universal Declaration
-          of Human Rights. Coverage depends on available API credits and free-tier usage plans — the goal is
+          of Human Rights. Coverage depends on available API credits and free-tier usage plans for LLMs and general compute — the goal is
           comprehensive evaluation, but not every story can be scored in real time. Each evaluation produces a Human Rights Compatibility
           Bias (HRCB) score showing how the content's editorial and structural signals align with fundamental
           human rights provisions.
         </p>
 
         <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 15px;">
+          Evaluations are powered by <a href="https://anthropic.com" style="color: var(--color-orange);">Anthropic's</a> Claude LLM as the primary model, supplemented by open-source models on Cloudflare Workers AI.
           A cron worker crawls HN stories every 5 minutes across 6 lists (top, new, best, ask, show, job),
           tracking all stories but only auto-evaluating those in the top 7 pages (210 stories) of the
           front page plus the top 30 from the best, ask, and show feeds. Stories outside this range are tracked but skipped unless manually triggered.
@@ -140,8 +141,8 @@ const jsonLd = {
 
         <div class="two-col" style="font-size: var(--font-base); margin-bottom: 15px;">
           <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 8px;">
-            <b style="color: var(--fg-secondary);">No Data</b><br>
-            <span style="color: var(--fg-secondary);">No relevant content for this UDHR article. The topic is simply absent.</span>
+            <b style="color: var(--fg-secondary);">No Data (ND)</b><br>
+            <span style="color: var(--fg-secondary);">Insufficient evidence to evaluate this UDHR article for the given content. The topic may be absent, or the available text didn't provide enough signal to score. ND is not zero — it means "not measured."</span>
           </div>
           <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 8px;">
             <b style="color: var(--fg-primary);">0.0 (Neutral)</b><br>
@@ -425,7 +426,7 @@ const jsonLd = {
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Confidence</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Evidence-weighted</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">N/A</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Output tokens</td><td style="color: var(--fg-secondary); padding: 4px 8px;">~4-5K</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">~200-400</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Schema</td><td style="color: var(--fg-secondary); padding: 4px 8px;">3.7</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">lite-1.4</td></tr>
-            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Claude Haiku 4.5, DeepSeek V3, Llama 3.3 70B</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Anthropic Claude Haiku 4.5</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Feed label</td><td style="color: var(--fg-secondary); padding: 4px 8px;">HRCB</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">~lite</td></tr>
           </table>
           </div>
@@ -706,7 +707,7 @@ const jsonLd = {
               <td style="color: var(--fg-secondary);" class="score-font">Framework</td><td style="color: var(--fg-primary);" class="score-font">Astro + CF Pages</td>
             </tr>
             <tr>
-              <td style="color: var(--fg-secondary);" class="score-font">Evaluator (full)</td><td style="color: var(--fg-primary);" class="score-font">Claude Haiku 4.5</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Evaluator (full)</td><td style="color: var(--fg-primary);" class="score-font">Anthropic Claude Haiku 4.5</td>
               <td style="color: var(--fg-secondary);" class="score-font">Database</td><td style="color: var(--fg-primary);" class="score-font">Cloudflare D1</td>
             </tr>
             <tr>
