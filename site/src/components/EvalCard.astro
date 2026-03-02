@@ -72,9 +72,8 @@ function timeAgo(unixTime: number): string {
           <div class="score-row" data-channel="hrcb">
             <abbr class="score-font score-label" style="text-decoration: none;" title="Human Rights Compatibility Bias: directional lean of content relative to UDHR provisions, from −1.0 to +1.0">HRCB</abbr>
             <span class="score-font score-value" style={`color: ${isLiteOnly ? 'var(--fg-secondary)' : displayColor};`}>
-              {formatScore(displayScore)}
+              {formatScore(displayScore)}{isLiteOnly && <span class="lite-icon" style="margin-left: 2px;" title="Lite eval (editorial only) — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}
             </span>
-            {isLiteOnly && <span class="lite-icon" title="Lite eval (editorial only) — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}
           </div>
           <div class="score-row" data-channel="editorial">
             <span class="score-font score-label">E</span>
