@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 import { checkRateLimit, jsonResponse, errorResponse, itemCacheHeaders } from '../../../lib/api-v1';
 import { readDb } from '../../../lib/db-utils';
 import { getSignalOverview } from '../../../lib/db-entities';
+import { getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates } from '../../../lib/db-analytics';
 
 export const GET: APIRoute = async ({ locals, request }) => {
   if (request.method === 'OPTIONS') {
@@ -19,8 +20,22 @@ export const GET: APIRoute = async ({ locals, request }) => {
   }
 
   try {
-    const overview = await getSignalOverview(db);
-    return jsonResponse({ signals: overview }, 200, itemCacheHeaders());
+    const [overview, transparency, accessibility, temporal] = await Promise.all([
+      getSignalOverview(db),
+      getTdSignalAggregates(db),
+      getComplexityAggregates(db),
+      getTemporalFramingAggregates(db),
+    ]);
+
+    return jsonResponse({
+      signals: {
+        ...overview,
+        transparency,
+        accessibility,
+        temporal,
+        generated_at: new Date().toISOString(),
+      },
+    }, 200, itemCacheHeaders());
   } catch (err) {
     console.error('[api/v1/signals]', err);
     return errorResponse('Internal error', 500);

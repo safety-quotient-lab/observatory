@@ -1558,9 +1558,11 @@ export interface ComplexityAggregates {
   knowledge_domain_specific: number;
   knowledge_expert: number;
   // derived percentages (of total_measured)
-  high_jargon_pct: number | null;    // % where jargon is high
-  expert_pct: number | null;         // % where assumed_knowledge is expert
-  accessible_pct: number | null;     // % where jargon=low AND knowledge in (none, general)
+  high_jargon_pct: number | null;          // % where jargon is high
+  expert_pct: number | null;               // % where assumed_knowledge is expert
+  domain_specific_pct: number | null;      // % where assumed_knowledge is domain_specific
+  non_accessible_pct: number | null;       // % where domain_specific OR expert (combined barrier metric)
+  accessible_pct: number | null;           // % where jargon=low AND knowledge in (none, general)
 }
 
 export async function getComplexityAggregates(db: D1Database): Promise<ComplexityAggregates | null> {
@@ -1583,6 +1585,12 @@ export async function getComplexityAggregates(db: D1Database): Promise<Complexit
            ROUND(100.0 * SUM(CASE WHEN cl_assumed_knowledge = 'expert' THEN 1 ELSE 0 END) /
                  NULLIF(SUM(CASE WHEN cl_assumed_knowledge IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
                                                                                            AS expert_pct,
+           ROUND(100.0 * SUM(CASE WHEN cl_assumed_knowledge = 'domain_specific' THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN cl_assumed_knowledge IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                                           AS domain_specific_pct,
+           ROUND(100.0 * SUM(CASE WHEN cl_assumed_knowledge IN ('domain_specific', 'expert') THEN 1 ELSE 0 END) /
+                 NULLIF(SUM(CASE WHEN cl_assumed_knowledge IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
+                                                                                           AS non_accessible_pct,
            ROUND(100.0 * SUM(CASE WHEN cl_jargon_density = 'low'
                                     AND cl_assumed_knowledge IN ('none', 'general')
                                    THEN 1 ELSE 0 END) /
