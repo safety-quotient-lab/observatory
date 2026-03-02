@@ -219,8 +219,39 @@ Full 7-perspective analysis in `construct-validity-analysis.md` Section 16.
 
 ---
 
-## Phase 3 — Open Source Prep
-*Blocked on license decision. Do before creating the public GitHub repo.*
+## Phase 3 — Open Source Prep & Pedagogy Site Fork
+*Blocked on license decision + pre-open-source audit. Full plan: `.claude/plans/pedagogy-site-fork.md`*
+
+### 3.1 — Pre-Open-Source Audit (do first)
+
+- [ ] **Pull cogarch updates** — sync latest cognitive architecture from psychology project
+  before evaluating any architectural decisions
+- [ ] **Evaluate pedagogy site plan against updated cogarch** — adjudicate any decisions
+  that the updated triggers/principles affect
+- [ ] **Pre-open-source audit** — adjudicate (L-scale, 8-order, 2-pass) every architectural
+  choice that becomes a public precedent:
+  - Naming (project name, repo name, domain)
+  - License (AGPL-3.0? MIT? dual license?)
+  - Methodology exposure (how much of the scoring methodology is public?)
+  - Data model (schema becomes a public contract)
+  - API contracts (endpoints become expectations)
+  - Attribution (UDHR text, HN data, model outputs)
+  - Content/data rights (who owns the evaluations?)
+
+### 3.2 — Pedagogy Site (new repo)
+
+- [ ] **Acquire domain** — TBD (user action)
+- [ ] **Create new repo** — Astro presentation layer only, copy lib/ query subset (~20 functions)
+- [ ] **HN-native design system** — light bg (#f6f6ef), pure orange (#ff6600), black text,
+  zero chrome, Verdana only, ~130-line CSS. Accessibility features preserved (focus-visible,
+  ARIA, skip-link, reduced-motion) — improve on HN, don't depart from its look.
+- [ ] **Landing page** — today's HN stories with HRCB scores + interstitial pattern insights
+  every 5-10 stories + single-line framing header
+- [ ] **Core pages** — item detail, UDHR articles, search, about/methodology, support
+- [ ] **Feeds + badges** — Atom feed, OPML, embeddable domain badge SVGs
+- [ ] **Show HN post** — draft and publish
+
+### 3.3 — Credentials & Publishing
 
 - [ ] **Decide on `LICENSE`** — TBD (AGPL-3.0 was considered; not yet decided)
 
