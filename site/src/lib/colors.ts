@@ -46,6 +46,22 @@ export function scoreToColor(score: number | null | undefined): string {
   return hslToRgb(hue, sat, lit);
 }
 
+/** Map a Pearson r [-1, +1] to a color for correlation display.
+ *  Unlike scoreToColor, zero = neutral gray (no hue), not amber.
+ *  -1.0 = red (anti-correlated), 0.0 = gray (no relationship), +1.0 = green (correlated). */
+export function correlationToColor(r: number | null | undefined): string {
+  if (r == null) return '#4b5563';
+  const clamped = Math.max(-1, Math.min(1, r));
+  const abs = Math.abs(clamped);
+  // Hue: negative → red (0°), positive → green (142°)
+  const hue = clamped < 0 ? 0 : 142;
+  // Saturation: zero at r=0, full at |r|=1
+  const sat = Math.min(0.85, abs * 1.5);
+  // Lightness: gray at r=0 (0.58), brighter at extremes
+  const lit = 0.58 - 0.06 * abs;
+  return hslToRgb(hue, sat, lit);
+}
+
 /** Get classification badge color (derived from scoreToColor scale) */
 export function classificationColor(classification: string): string {
   const lower = classification.toLowerCase();

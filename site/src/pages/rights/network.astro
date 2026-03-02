@@ -5,7 +5,7 @@ import Breadcrumb from '../../components/Breadcrumb.astro';
 import SubNav from '../../components/SubNav.astro';
 import { SECTIONS, ARTICLE_SHORT_TITLES, ARTICLE_TITLES } from '../../lib/udhr';
 import { getArticlePairStats, getArticleDetailedStats } from '../../lib/db';
-import { scoreToColor, formatScore } from '../../lib/colors';
+import { scoreToColor, correlationToColor, formatScore } from '../../lib/colors';
 import { readDb } from '../../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -209,7 +209,7 @@ const powerData = JSON.stringify(powerRankings);
                   <td>
                     <a href={`/article/${getArticleNumber(e.target)}`} style="color: var(--fg-emphasis);">{ARTICLE_SHORT_TITLES[e.target] ?? e.target}</a>
                   </td>
-                  <td style={`text-align: right; color: ${scoreToColor(e.r)};`} class="score-font">
+                  <td style={`text-align: right; color: ${correlationToColor(e.r)};`} class="score-font">
                     {e.r >= 0 ? '+' : ''}{e.r.toFixed(3)}
                   </td>
                   <td style="text-align: right; color: var(--fg-secondary);" class="score-font">{e.n}</td>
@@ -234,7 +234,7 @@ const powerData = JSON.stringify(powerRankings);
                   <td>
                     <a href={`/article/${getArticleNumber(e.target)}`} style="color: var(--fg-emphasis);">{ARTICLE_SHORT_TITLES[e.target] ?? e.target}</a>
                   </td>
-                  <td style={`text-align: right; color: ${scoreToColor(e.r)};`} class="score-font">
+                  <td style={`text-align: right; color: ${correlationToColor(e.r)};`} class="score-font">
                     {e.r >= 0 ? '+' : ''}{e.r.toFixed(3)}
                   </td>
                   <td style="text-align: right; color: var(--fg-secondary);" class="score-font">{e.n}</td>
