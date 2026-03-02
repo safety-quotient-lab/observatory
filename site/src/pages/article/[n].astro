@@ -69,6 +69,18 @@ const DIRMETA: { [k: string]: { label: string; desc: string; color: string } } =
 const prevNum = articleNum > 0 ? articleNum - 1 : null;
 const nextNum = articleNum < 30 ? articleNum + 1 : null;
 
+// ICESCR correspondence — maps UDHR article numbers to overlapping ICESCR articles
+// ICESCR covers economic/social/cultural rights; civil/political rights are ICCPR
+const ICESCR_CONTEXT: Record<number, { arts: string; label: string }> = {
+  22: { arts: 'Art. 9', label: 'Social Security' },
+  23: { arts: 'Art. 6 & 7', label: 'Right to Work & Fair Conditions' },
+  24: { arts: 'Art. 7', label: 'Fair Working Conditions' },
+  25: { arts: 'Art. 11 & 12', label: 'Adequate Living Standards & Health' },
+  26: { arts: 'Art. 13', label: 'Education' },
+  27: { arts: 'Art. 15', label: 'Science & Cultural Rights' },
+};
+const icescrCtx = ICESCR_CONTEXT[articleNum] ?? null;
+
 const jsonLd = udhrSection ? {
   '@context': 'https://schema.org',
   '@type': 'Article',
@@ -123,6 +135,14 @@ const jsonLd = udhrSection ? {
       </td>
     </tr>
   </table>
+
+  {/* ICESCR policy context — for articles with direct ICESCR correspondence */}
+  {icescrCtx && (
+    <div style="font-size: var(--font-xs); color: var(--fg-secondary); padding: 3px 0 8px 0;">
+      Also covered by <a href="https://unratified.org/covenant" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">ICESCR {icescrCtx.arts} ({icescrCtx.label})</a>
+      — the international covenant 173 nations ratified, the U.S. has not.
+    </div>
+  )}
 
   {/* UDHR Article Text */}
   {udhrSection && (

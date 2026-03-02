@@ -6,6 +6,16 @@ import { SECTIONS } from '../lib/udhr';
 
 export const prerender = true;
 
+// ICESCR ↔ UDHR correspondence (economic/social/cultural rights only — civil/political = ICCPR)
+const ICESCR_MAP: Record<number, string> = {
+  22: 'ICESCR 9',
+  23: 'ICESCR 6/7',
+  24: 'ICESCR 7',
+  25: 'ICESCR 11/12',
+  26: 'ICESCR 13',
+  27: 'ICESCR 15',
+};
+
 // Group UDHR sections by category for display
 const groupedSections: Record<string, typeof SECTIONS> = {};
 for (const s of SECTIONS) {
@@ -124,11 +134,20 @@ const supplementarySignals = [
                           {s.number === 0 ? 'Preamble' : `Article ${s.number}`}
                         </a>
                       </td>
-                      <td style="padding: 5px 10px; width: 160px; vertical-align: top;">
+                      <td style="padding: 5px 10px; width: 140px; vertical-align: top;">
                         <span style="color: var(--fg-primary); font-size: var(--font-xs);">{s.shortTitle}</span>
                       </td>
                       <td style="padding: 5px 10px; vertical-align: top;">
                         <span style="color: var(--fg-secondary); font-size: var(--font-xs);">{s.title}</span>
+                      </td>
+                      <td style="padding: 5px 10px; width: 80px; vertical-align: top; text-align: right;">
+                        {ICESCR_MAP[s.number] && (
+                          <a href="https://unratified.org/covenant" target="_blank" rel="noopener"
+                             title="Also covered by the ICESCR — 173 nations ratified, U.S. has not"
+                             style="color: var(--fg-secondary); font-size: var(--font-xs); text-decoration: none; white-space: nowrap; opacity: 0.7;">
+                            {ICESCR_MAP[s.number]}
+                          </a>
+                        )}
                       </td>
                     </tr>
                   ))}
