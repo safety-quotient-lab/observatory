@@ -9,14 +9,13 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Soft launch polish** (Phase 3.4) — `observatory.unratified.org` live.
-Show HN = soft launch for marketing. Site-wide rename HN HRCB → HRO done.
-Stakeholder display + article pagination + trend label fixed.
+**Show HN soft launch** — `observatory.unratified.org` live, all polish done
+(2026-03-02). Signals redesigned, nav trimmed, HRO rename complete, spot-check
+passed. QA in progress.
 
-Remaining polish before Show HN soft launch:
-- [ ] `/signals` page redesign: restructure around findings ("What we found") not metrics ("What we measure"). Problems: 13 unexplained acronyms, no narrative, best insights buried below abstract metric bars. Keep: Transparency Observatory, Content Accessibility, Temporal Framing, Propaganda Techniques. Rethink: Core HRCB bars, Global Averages acronym soup, raw tone distribution, Derived Metrics.
+Remaining:
 - [ ] Show HN post draft needs personal closer (`.claude/plans/show-hn-draft.md`)
-- [ ] Final spot-check of live site at observatory.unratified.org
+- [ ] Post Show HN: fix `/rights/network` D1 self-join timeout (add KV caching or materialized table)
 
 ---
 
