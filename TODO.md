@@ -17,9 +17,9 @@ font bump, UDHR source links on 6 pages, free-tier mention, about softening.
 
 Remaining:
 - [ ] Write personal closer and post Show HN (`.claude/plans/show-hn-draft.md`)
+- [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6.
 - [ ] Post-launch: KV-precompute homepage data blob (TTFB 3.9s → ~200ms)
 - [ ] Post-launch: sync observatory repo with latest changes
-- [ ] Sync all recent changes to observatory repo (accumulated since last sync)
 
 ---
 
