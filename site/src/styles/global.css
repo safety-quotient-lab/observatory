@@ -451,9 +451,10 @@
 /* Mobile responsiveness */
 @media (max-width: 640px) {
   :root {
-    --font-base: 12pt;
-    --font-xs: 8pt;
-    --font-sm: 9pt;
+    --font-base: 13pt;
+    --font-xs: 10pt;
+    --font-sm: 11pt;
+    --font-md: 15pt;
   }
 
   body {
