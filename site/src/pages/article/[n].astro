@@ -185,7 +185,6 @@ const jsonLd = udhrSection ? {
     <table id="article-table" cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-base);">
       <thead>
         <tr style="color: var(--fg-secondary); font-size: var(--font-sm); cursor: pointer; user-select: none;">
-          <td data-col="rank" data-type="num" width="30"># ▼</td>
           <td data-col="story" data-type="str">Story</td>
           <td data-col="hrcb" data-type="num" width="50" align="center" title="Score for this UDHR provision">Score</td>
           <td data-col="editorial" data-type="num" width="36" align="center" title="Editorial — what the content says">E</td>
@@ -201,7 +200,6 @@ const jsonLd = udhrSection ? {
           const rowConf = computeConfidence(row.hcb_evidence_h, row.hcb_evidence_m, row.hcb_evidence_l, row.hcb_nd_count);
           return (
           <tr style="border-top: 1px solid var(--color-border); cursor: pointer;" onclick={`window.location.href='/item/${row.hn_id}'`}>
-            <td style="color: var(--fg-secondary);" class="score-font" data-val={offset + i + 1}>{offset + i + 1}.</td>
             <td data-val={row.title}>
               <a href={`/item/${row.hn_id}`}>{row.title}</a>
               {row.domain && (
