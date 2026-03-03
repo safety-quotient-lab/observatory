@@ -1,43 +1,40 @@
-# Astro Starter Kit: Minimal
+# HRO — Site & Pipeline
 
-```sh
-npm create astro@latest -- --template minimal
+Astro 5 SSR frontend + Cloudflare Workers pipeline for the [Human Rights Observatory](https://observatory.unratified.org).
+
+For full architecture, build/deploy commands, storage schema, and key patterns — see **[`CLAUDE.md`](CLAUDE.md)**.
+
+## Quick start
+
+```bash
+# Install
+npm install
+
+# Dev server (requires .dev.vars — see below)
+npx astro dev
+
+# Build
+npx astro build
+
+# Deploy site
+npx wrangler pages deploy dist --project-name hn-hrcb
+
+# Deploy workers
+npx wrangler deploy --config wrangler.cron.toml
+npx wrangler deploy --config wrangler.consumer-anthropic.toml
+npx wrangler deploy --config wrangler.consumer-openrouter.toml
+npx wrangler deploy --config wrangler.consumer-workers-ai.toml
+npx wrangler deploy --config wrangler.dlq.toml
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Secrets
 
-## 🚀 Project Structure
+Create `site/.dev.vars` (gitignored) with:
 
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```
+TRIGGER_SECRET=...
+ANTHROPIC_API_KEY=...
+OPENROUTER_API_KEY=...
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
-
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Never commit `.dev.vars`.

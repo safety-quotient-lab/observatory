@@ -1,3 +1,7 @@
+# private strategy docs
+COMMERCIALIZATION.md
+IDEAS.md
+
 # secrets
 *.key
 .env
