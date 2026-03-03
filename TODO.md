@@ -22,7 +22,10 @@ persona toggle on /about, Anthropic/Claude Code section (Pentagon dispute +
 UDHR framing + disclosure), site-wide framework citations (CRAAP Test, PTC-18,
 Russell's Circumplex), homepage unratified.org ×φ references,
 light/dark theme toggle (OkSolar Light default, `localStorage['hro_theme']`),
-score color WCAG tuning (brightness filter feeds+heatmap, theme-aware client scoreColor).
+score color WCAG tuning (brightness filter feeds+heatmap+evidence bars, theme-aware client scoreColor),
+reader prose plain-English (FW Ratio expanded, Confidence notation, steps list jargon-free),
+HRO attributed to SQ Lab + unratified.org (about lede, index hero, JSON-LD creator),
+exports/ restructure (proposals + blog under single tracked-output root).
 **Audit note:** lite-1.5 structural channel is noise for Llama (86% on 2
 integers). Safe to ship — structural not surfaced to users, 0.5× consensus
 weight. TQ replacement designed for post-launch. See
@@ -34,7 +37,7 @@ Remaining:
   - [ ] Audit `MEMORY.md` metacognitive/factual ratio — metacognitive standards (sycophancy flags, epistemic quality, single-question rule) are higher-value entries than project facts; current ratio may be inverted
   - [ ] Add proactive gap-detection step to `/cycle` skill — after each implementation step, AI should ask "what did I not examine in the files I just changed?" before moving on
   - [ ] Update T1 trigger — add session-mode inference: AI reads first message, states inferred mode ("treating this as a reflection session — is that right?"), one confirmation question; removes ambiguity without creating user-side entry friction
-- [ ] **Blog post pre-publication fixes** (`.claude/plans/blog-post-cognitive-architecture.md`):
+- [ ] **Blog post pre-publication fixes** (`.claude/plans/exports/blog/cognitive-architecture.md`):
   - [ ] Fix T1 session-mode suggestion — invert from "user states mode" to "AI infers mode from first message and states it as one confirmation question" (current draft creates ADHD-hostile entry friction)
   - [ ] Add authorship disclosure footer — "drafted by Claude, reviewed by author" (Fair Witness applied to the post itself; omission is ironic given subject matter)
   - [ ] Qualify Zettelkasten analogy — MEMORY.md uses routing rules, not bidirectional links; analogy holds for "index not content" but breaks on linking property
