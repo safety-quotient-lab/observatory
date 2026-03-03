@@ -17,7 +17,10 @@ font bump, UDHR source links on 6 pages, free-tier mention, about softening,
 `/reference` routing table (all terms + 31 UDHR articles), Article 19/26 inline
 links in signals page, lite-1.5 two-dimension scoring (editorial + structural)
 with content-type weight blending + SETL for lite evals, `lite_reeval` sweep,
-consensus neutral discount for confident-zero Llama evals.
+consensus neutral discount for confident-zero Llama evals, Reader|Researcher
+persona toggle on /about, Anthropic/Claude Code section (Pentagon dispute +
+UDHR framing + disclosure), site-wide framework citations (CRAAP Test, PTC-18,
+Russell's Circumplex), homepage unratified.org ×φ references.
 **Audit note:** lite-1.5 structural channel is noise for Llama (86% on 2
 integers). Safe to ship — structural not surfaced to users, 0.5× consensus
 weight. TQ replacement designed for post-launch. See
