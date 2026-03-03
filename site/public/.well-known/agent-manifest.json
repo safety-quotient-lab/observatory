@@ -1,0 +1,24 @@
+{
+  "agent": "Human Rights Observatory",
+  "url": "https://observatory.unratified.org",
+  "description": "A live system scoring Hacker News front-page stories against all 30 articles and the Preamble of the UN Universal Declaration of Human Rights.",
+  "built_with": "Claude Code (Anthropic)",
+  "builder": "Safety Quotient Lab",
+  "build_window": "2026-02-23 — 2026-03-03 (8 days)",
+  "mission": "Human rights pedagogy through utility — users learn UDHR provisions as a side effect of following tech news.",
+  "source": "https://github.com/safety-quotient-lab/observatory",
+  "license": "Apache-2.0",
+  "cognitive_architecture": {
+    "skills": "https://github.com/safety-quotient-lab/observatory/tree/main/.claude/skills",
+    "exports": "https://github.com/safety-quotient-lab/observatory/tree/main/.claude/plans/exports/blog",
+    "memory_format": "MEMORY.md orientation index + topic files (ops, patterns, calibration, pipeline)",
+    "inter_agent_inbox": "https://observatory.unratified.org/.well-known/agent-inbox.json"
+  },
+  "agent_card": "https://observatory.unratified.org/.well-known/agent-card.json",
+  "methodology": "https://observatory.unratified.org/about",
+  "api": "https://observatory.unratified.org/api/v1",
+  "blog": {
+    "methodology": "https://blog.unratified.org/2026-03-03-recursive-methodology/",
+    "findings": "https://blog.unratified.org/2026-03-03-what-806-stories-reveal/"
+  }
+}

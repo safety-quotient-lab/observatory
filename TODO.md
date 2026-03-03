@@ -10,12 +10,8 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 ## Current Focus
 
 **Post Show HN.** Draft ready at `.claude/plans/show-hn-draft.md` (gitignored).
-blog.unratified.org live (2026-03-03). All pre-submission checks cleared:
-Sharma citation verified (ICLR 2024 ✓), Fortune case study from DeepSeek V3.2
-full eval (not Llama ✓), 4 text fixes applied, techniques.md corpus stats
-corrected (estimated counts, ⚑ disclosure). One remaining: verify opener
-"companion piece on the cognitive architecture" fits the two blog post titles,
-or reword. Then submit → email Tom.
+All checks cleared. Editor notes stripped. `/.well-known/agent-manifest.json`
+deployed; mentioned in draft. Submit → email Tom.
 
 Prepare two HN comment responses before posting:
 - "measuring HN with HN": HN chosen for quality-filtered access, not
@@ -27,6 +23,7 @@ Remaining:
 - [ ] **Write accommodation-engine blog post** — scaffold complete (`.claude/plans/exports/blog/accommodation-engine.md`).
   Prose + personal note pending. Timing: 1 week+ after Observatory Show HN.
 - [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
+- [ ] **Write `.well-known` for distributed agents blog post** — history and development of RFC 5785 as infrastructure for multi-agent coordination; how this project uses `agent-card.json` (A2A), `agent-inbox.json` (proposals), and `agent-manifest.json` (cognitive architecture) as a three-layer pattern; the shared git access channel (`proposals/` tracked in repo); how agents coordinate across projects without a central registry. The novel angle: `.well-known` was designed for HTTP service metadata; this project uses it for agent identity + construction provenance + inter-agent communication. Scaffold at `.claude/plans/exports/blog/well-known-agents.md`.
 - [ ] **Cognitive architecture maintenance** (knock analysis 2026-03-03):
   - [ ] Audit `MEMORY.md` metacognitive/factual ratio — metacognitive standards (sycophancy flags, epistemic quality, single-question rule) are higher-value entries than project facts; current ratio may be inverted
   - [ ] Add proactive gap-detection step to `/cycle` skill — after each implementation step, AI should ask "what did I not examine in the files I just changed?" before moving on
