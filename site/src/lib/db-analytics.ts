@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Story } from './db-stories';
+import { getArticleDetailedStats, getStatusCounts, getDomainStats } from './db-stories';
+import { getDomainFingerprints, getSignalOverview } from './db-entities';
 
 // --- Model comparison ---
 
@@ -1739,6 +1741,64 @@ export async function getTdSignalAggregates(db: D1Database): Promise<TdSignalAgg
     console.error('[getTdSignalAggregates]', err);
     return null;
   }
+}
+
+// ─── Homepage precompute blob ───
+
+export const HOMEPAGE_BLOB_KEY = 'sys:homepage';
+export const HOMEPAGE_BLOB_TTL = 300; // 5 minutes
+
+export interface HomepageBlob {
+  articleStats: Awaited<ReturnType<typeof getArticleDetailedStats>>;
+  sparklinesRaw: Awaited<ReturnType<typeof getArticleSparklines>>;
+  statusCounts: Awaited<ReturnType<typeof getStatusCounts>>;
+  dailyHrcb: Awaited<ReturnType<typeof getDailyHrcb>>;
+  topDomains: Awaited<ReturnType<typeof getDomainStats>>;
+  propagandaStories: Awaited<ReturnType<typeof getTopPropagandaStories>>;
+  signalOverview: Awaited<ReturnType<typeof getSignalOverview>> | null;
+  stakeholderData: Awaited<ReturnType<typeof getStakeholderOverview>> | null;
+  regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null;
+  domainFingerprintsRaw: Record<string, (number | null)[]>;
+  computedAt: string;
+}
+
+export async function computeHomepageBlob(db: D1Database): Promise<HomepageBlob> {
+  const [articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories] =
+    await Promise.all([
+      getArticleDetailedStats(db),
+      getArticleSparklines(db, 60),
+      getStatusCounts(db),
+      getDailyHrcb(db, 60),
+      getDomainStats(db, 10),
+      getTopPropagandaStories(db, 15),
+    ]);
+
+  let signalOverview: Awaited<ReturnType<typeof getSignalOverview>> | null = null;
+  let stakeholderData: Awaited<ReturnType<typeof getStakeholderOverview>> | null = null;
+  let regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null = null;
+  try {
+    [signalOverview, stakeholderData, regionData] = await Promise.all([
+      getSignalOverview(db),
+      getStakeholderOverview(db),
+      getRegionDistribution(db),
+    ]);
+  } catch { /* non-fatal */ }
+
+  const fpMap = await getDomainFingerprints(db, topDomains.map(d => d.domain));
+
+  return {
+    articleStats,
+    sparklinesRaw,
+    statusCounts,
+    dailyHrcb,
+    topDomains,
+    propagandaStories,
+    signalOverview,
+    stakeholderData,
+    regionData,
+    domainFingerprintsRaw: Object.fromEntries(fpMap),
+    computedAt: new Date().toISOString(),
+  };
 }
 
 

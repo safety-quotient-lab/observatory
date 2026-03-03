@@ -119,6 +119,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
             </h2>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
               Who's transparent about what they write? <a href="/article/19" style="color: var(--channel-editorial);">UDHR Article 19</a> protects expression — but expression without disclosure undermines trust.
+              <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">by source →</a>
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
@@ -141,6 +142,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
                 {tdData.high_td_pct !== null && (
                   <> <span style="color: var(--color-positive);">{tdData.high_td_pct.toFixed(0)}%</span> meet high transparency standards.</>
                 )}
+                <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 6px; white-space: nowrap;">data →</a>
               </p>
             </div>
           </div>
@@ -156,6 +158,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
               Who can understand this content? <a href="/article/26" style="color: var(--channel-editorial);">UDHR Article 26</a> protects the right to education — jargon and assumed expertise create invisible barriers.
               <a href="https://unratified.org/covenant" target="_blank" rel="noopener" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">ICESCR Art. 13 →</a>
+              <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data →</a>
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -217,6 +220,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
             </h2>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
               Propaganda techniques detected across all stories. Not all flagged content is harmful — loaded language is common in opinion writing — but the distribution reveals how tech discourse persuades.
+              <a href="/stories?show=negative&sort=score" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">flagged stories →</a>
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="0" cellspacing="0" width="100%">
@@ -231,7 +235,9 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
                           <div style={`width: ${pct}%; height: 100%; background: var(--color-negative-light); border-radius: 3px;`}></div>
                         </div>
                       </td>
-                      <td style="width: 50px; text-align: right; color: var(--fg-secondary); font-size: var(--font-sm);" class="score-font">{count} stories</td>
+                      <td style="width: 50px; text-align: right; color: var(--fg-secondary); font-size: var(--font-sm);" class="score-font">
+                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(technique)}`} style="color: inherit; text-decoration: none;" title={`Stories flagged for ${technique.replace(/_/g, ' ')}`}>{count}</a>
+                      </td>
                     </tr>
                   );
                 })}
@@ -252,6 +258,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
             </h2>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
               Does tech coverage look backward or forward? Retrospective analysis and prospective advocacy signal different relationships to change.
+              <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data →</a>
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
@@ -301,9 +308,12 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
 
         {(toneEntries.length > 0 || scopeEntries.length > 0) && (
           <div style="margin-bottom: 20px;">
-            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 8px 0;">
+            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
               Tone & Geographic Scope
             </h2>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+              <a href="/sources" style="color: var(--channel-hrcb); white-space: nowrap;">by source →</a>
+            </p>
             <div class="insight-grid">
               {toneEntries.length > 0 && (
                 <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
