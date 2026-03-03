@@ -129,6 +129,17 @@ const dailyReversed = [...dailyHrcb]; // already chronological from getDailyHrcb
 const maxDailyCount = dailyReversed.length > 0 ? Math.max(...dailyReversed.map(d => d.count)) : 1;
 const latestDailyScore = dailyReversed.length > 0 ? dailyReversed[dailyReversed.length - 1].avg : 0;
 
+// Pre-computed trend chart geometry (avoids IIFE in JSX template)
+const chartW = 400, chartH = 100, barAreaH = 24;
+const lineAreaH = chartH - barAreaH;
+const chartStep = dailyReversed.length > 1 ? chartW / (dailyReversed.length - 1) : 0;
+const chartLinePath = dailyReversed.length > 1 ? dailyReversed.map((d, i) => {
+  const x = i * chartStep;
+  const y = lineAreaH / 2 - (d.avg * lineAreaH / 2);
+  return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${Math.max(0, Math.min(lineAreaH, y)).toFixed(1)}`;
+}).join(' ') : '';
+const chartBarW = dailyReversed.length > 1 ? Math.max(1, chartStep * 0.6) : 0;
+
 // Group colors — mapped to UDHR rights generations (pedagogical taxonomy)
 // 1st gen (civil/political, "freedom FROM"): cool blues → teals
 // 2nd gen (economic/social/cultural, "entitlement TO"): warm ambers
@@ -160,7 +171,7 @@ const groupColors: Record<string, string> = {
 
     <!-- 1. Hero -->
     <div class="hero-section" style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 16px; margin-bottom: 16px;">
-      <div style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold; margin-bottom: 6px;">Human Rights Observatory, Hacker News Edition</div>
+      <div role="heading" aria-level="1" style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold; margin-bottom: 6px;">Human Rights Observatory, Hacker News Edition</div>
       <div style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.5; margin-bottom: 12px;">
         Every story on Hacker News is evaluated against the 30 articles and Preamble of the
         <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" target="_blank" rel="noopener" style="color: var(--channel-editorial);">Universal Declaration of Human Rights</a>.
@@ -195,10 +206,10 @@ const groupColors: Record<string, string> = {
           </a>
         )}
         {tensionCount > 0 && (
-          <span style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px;">
+          <a href="/about#setl" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
             <span class="score-font" style="color: var(--color-warning); font-weight: bold;">{tensionCount}</span>
             <span style="color: var(--fg-secondary);"> say ≠ do</span>
-          </span>
+          </a>
         )}
       </div>
     </div>
@@ -312,10 +323,13 @@ const groupColors: Record<string, string> = {
                       </td>
                       <td class="hm-data" style="width: 90px; padding: 3px 4px; text-align: center;">
                         {spark.length > 1 ? (
-                          <svg width="80" height="20" viewBox="0 0 80 20">
-                            <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
-                            <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
-                          </svg>
+                          <div style="display: inline-flex; align-items: center; gap: 2px;">
+                            <svg width="64" height="20" viewBox="0 0 80 20">
+                              <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
+                              <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
+                            </svg>
+                            {trendDir && <span style={`color: ${trendColor}; font-size: var(--font-xs);`} class="score-font">{trendDir}</span>}
+                          </div>
                         ) : (
                           <span style="color: var(--bg-surface);">--</span>
                         )}
@@ -349,6 +363,7 @@ const groupColors: Record<string, string> = {
                               <path d={sparkPath} fill="none" stroke={color} stroke-width="1.2" />
                             </svg>
                           ) : null}
+                          {trendDir && <span style={`color: ${trendColor}; font-size: var(--font-xs); flex-shrink: 0;`} class="score-font">{trendDir}</span>}
                         </div>
                       </td>
                     </tr>
@@ -432,7 +447,10 @@ const groupColors: Record<string, string> = {
 
     <!-- 4. Evidence Transparency -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Evidence Transparency — Weakest Fair Witness Ratios</div>
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+        Evidence Transparency — Weakest Fair Witness Ratios
+        <a href="/about#fair-witness" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; text-transform: none; letter-spacing: 0; font-weight: normal; white-space: nowrap;">what's this? →</a>
+      </div>
       <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 10px;">
         FW Ratio = High-evidence signals / total evidence signals. Lower = more inference-heavy.
       </div>
@@ -491,7 +509,7 @@ const groupColors: Record<string, string> = {
                     </div>
                   </td>
                   <td style="width: 40px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
-                    {count}
+                    <a href={`/stories?pt=${encodeURIComponent(technique)}`} style="color: inherit; text-decoration: none;" title={`Stories flagged for ${technique}`}>{count}</a>
                   </td>
                 </tr>
               );
@@ -656,41 +674,18 @@ const groupColors: Record<string, string> = {
     <!-- 8. Temporal Trends -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
       <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">HRCB Trend{dailyReversed.length > 0 ? ` — ${dailyReversed.length} days` : ''}</div>
-      {dailyReversed.length > 1 ? (() => {
-        const chartW = 400;
-        const chartH = 100;
-        const barAreaH = 24;
-        const lineAreaH = chartH - barAreaH;
-        const step = chartW / (dailyReversed.length - 1);
-
-        // Score line path
-        const linePath = dailyReversed.map((d, i) => {
-          const x = i * step;
-          const y = lineAreaH / 2 - (d.avg * lineAreaH / 2);
-          return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${Math.max(0, Math.min(lineAreaH, y)).toFixed(1)}`;
-        }).join(' ');
-
-        // Bar width
-        const barW = Math.max(1, step * 0.6);
-
-        return (
-          <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;">
-            {/* Zero reference line */}
-            <line x1="0" y1={lineAreaH / 2} x2={chartW} y2={lineAreaH / 2} stroke="var(--color-border)" stroke-width="0.5" stroke-dasharray="4,4" />
-            {/* Score line */}
-            <path d={linePath} fill="none" stroke={scoreToColor(latestDailyScore)} stroke-width="1.5" />
-            {/* Daily count bars */}
-            {dailyReversed.map((d, i) => {
-              const x = i * step - barW / 2;
-              const barH = maxDailyCount > 0 ? (d.count / maxDailyCount) * barAreaH : 0;
-              const barY = chartH - barH;
-              return (
-                <rect x={x.toFixed(1)} y={barY.toFixed(1)} width={barW.toFixed(1)} height={barH.toFixed(1)} fill="var(--color-border)" rx="1" />
-              );
-            })}
-          </svg>
-        );
-      })() : (
+      {dailyReversed.length > 1 ? (
+        <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;">
+          <line x1="0" y1={lineAreaH / 2} x2={chartW} y2={lineAreaH / 2} stroke="var(--color-border)" stroke-width="0.5" stroke-dasharray="4,4" />
+          <path d={chartLinePath} fill="none" stroke={scoreToColor(latestDailyScore)} stroke-width="1.5" />
+          {dailyReversed.map((d, i) => {
+            const x = i * chartStep - chartBarW / 2;
+            const barH = maxDailyCount > 0 ? (d.count / maxDailyCount) * barAreaH : 0;
+            const barY = chartH - barH;
+            return <rect x={x.toFixed(1)} y={barY.toFixed(1)} width={chartBarW.toFixed(1)} height={barH.toFixed(1)} fill="var(--color-border)" rx="1" />;
+          })}
+        </svg>
+      ) : (
         <div style="color: var(--fg-secondary); font-size: var(--font-xs);">Not enough data for trend chart.</div>
       )}
       <div style="display: flex; justify-content: space-between; margin-top: 6px;">
@@ -715,7 +710,10 @@ const groupColors: Record<string, string> = {
 
     <!-- 9. Domain Rights Profiles -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Domain Rights Profiles — Top 10</div>
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+        Domain Rights Profiles — Top 10
+        <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; text-transform: none; letter-spacing: 0; font-weight: normal; white-space: nowrap;">all sources →</a>
+      </div>
       <div class="table-wrap">
       <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
         <tr style="color: var(--fg-secondary);">
