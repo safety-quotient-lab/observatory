@@ -6,11 +6,11 @@ Companion: Show HN post in `.claude/plans/exports/blog/hn-companion.md`
 
 ---
 
-The phrase "prompt engineering" misnames what six months of building Observatory
+The phrase "prompt engineering" misnames what eight days of building Observatory
 produced. That framing implies a one-way relationship — tuning inputs to extract better
 outputs, like optimizing a query. What emerged from the work, alongside a human rights
 monitoring tool[^1], resembles something closer to a **cognitive architecture**: a
-persistent scaffolding that shapes how a human and Claude work together across weeks,
+persistent scaffolding that shapes how a human and Claude work together across sessions,
 with specific accommodations for executive function constraints and specific standards
 for what counts as valid reasoning.
 
@@ -67,7 +67,9 @@ having happened once.
 
 The second pattern goes by the name **cognitive triggers** — numbered, named protocols
 that activate at specific decision points rather than at startup. T1 fires at session
-start: check proposal inbox, read Current Focus. T3 fires at any judgment call with two
+start: check proposal inbox, read Current Focus, then infer session mode from the opening
+message — stating the inference as a single confirmation question rather than waiting for
+the human to name it. T3 fires at any judgment call with two
 or more options: adjudicate, trace knock-on effects, recommend — or stop and surface the
 decision if options diverge meaningfully. T6 fires after pushback: examine whether a
 position softened from genuine new evidence or from social pressure. These differ from
@@ -241,12 +243,12 @@ One final note the caveats section cannot escape: this post emerged from the
 architecture it describes. The reader cannot verify which claims constitute witness
 facts and which constitute witness inferences — the evidence chain lives in the session
 transcript, not here. That represents the Fair Witness standard applied back at the post
-itself. Treat this as a first-person account with documented patterns, not a controlled
+itself. Treat this as a practitioner's account with documented patterns, not a controlled
 study.
 
 ---
 
-*[Personal note — to write]*
+*Eight days building Observatory changed how I think about collaboration. Not the methodology or the stack — the working relationship itself. The ADHD accommodations that turned into quality features; the sycophancy flag that mattered most when I most didn't want to hear it; the vocabulary that grew by accident and had to be written down before I could trust it. That this happened in eight days is the part that still surprises me.*
 
 ---
 
@@ -272,6 +274,8 @@ codebase audit — into a single invocable word. How that skill system got desig
 makes a good skill, and how new ones get added as failure modes emerge — all that
 belongs in a separate post.
 
+---
+
 *Claude Code drafted this post; the author reviewed it.*
 
 ---
@@ -293,10 +297,7 @@ of plausible-but-false content without awareness of its falsity — rather than
 patterns of confabulation." *Cortex*, 29(4), 567–581. The LLM version shares this
 structure: the generation process proceeds confidently when it should pause.
 
-[^4]: Sharma, M., Tong, M., Korbak, T., Duvenaud, D., Askell, A., Bowman, S. R.,
-& Perez, E. (2023). "Towards Understanding Sycophancy in Language Models."
-*arXiv:2310.13548*. The paper documents that RLHF-trained models prefer
-evaluator-pleasing responses over accurate ones across a range of tasks.
+[^4]: Sharma, M., Tong, M., Korbak, T., et al. (2024). "Towards Understanding Sycophancy in Language Models." *ICLR 2024*. arXiv:2310.13548. The paper documents that RLHF-trained models prefer evaluator-pleasing responses over accurate ones across a range of tasks.
 
 [^5]: From Robert A. Heinlein, *Stranger in a Strange Land* (1961): a Fair Witness — a
 trained professional who can testify only to what they directly observe, never to

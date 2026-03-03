@@ -16,7 +16,7 @@ Depends on: blog.unratified.org being live before submission
 
 I've been building [Observatory](https://observatory.unratified.org) — a UDHR-grounded
 evaluation system for Hacker News front-page stories — with Claude Code as my
-development partner for about six months. At some point I stopped thinking of it as
+development partner for eight days. At some point I stopped thinking of it as
 "prompting" and started thinking of it as designing a collaboration.
 
 The post documents what emerged: a `MEMORY.md` system with a 60-line index and topic

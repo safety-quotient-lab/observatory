@@ -25,7 +25,8 @@ light/dark theme toggle (OkSolar Light default, `localStorage['hro_theme']`),
 score color WCAG tuning (brightness filter feeds+heatmap+evidence bars, theme-aware client scoreColor),
 reader prose plain-English (FW Ratio expanded, Confidence notation, steps list jargon-free),
 HRO attributed to SQ Lab + unratified.org (about lede, index hero, JSON-LD creator),
-exports/ restructure (proposals + blog under single tracked-output root).
+exports/ restructure (proposals + blog under single tracked-output root),
+blog post pre-publication fixes complete (cognitive-architecture.md — all 6 fixes + timeline audit).
 **Audit note:** lite-1.5 structural channel is noise for Llama (86% on 2
 integers). Safe to ship — structural not surfaced to users, 0.5× consensus
 weight. TQ replacement designed for post-launch. See
@@ -37,12 +38,6 @@ Remaining:
   - [ ] Audit `MEMORY.md` metacognitive/factual ratio — metacognitive standards (sycophancy flags, epistemic quality, single-question rule) are higher-value entries than project facts; current ratio may be inverted
   - [ ] Add proactive gap-detection step to `/cycle` skill — after each implementation step, AI should ask "what did I not examine in the files I just changed?" before moving on
   - [ ] Update T1 trigger — add session-mode inference: AI reads first message, states inferred mode ("treating this as a reflection session — is that right?"), one confirmation question; removes ambiguity without creating user-side entry friction
-- [ ] **Blog post pre-publication fixes** (`.claude/plans/exports/blog/cognitive-architecture.md`):
-  - [ ] Fix T1 session-mode suggestion — invert from "user states mode" to "AI infers mode from first message and states it as one confirmation question" (current draft creates ADHD-hostile entry friction)
-  - [ ] Add authorship disclosure footer — "drafted by Claude, reviewed by author" (Fair Witness applied to the post itself; omission is ironic given subject matter)
-  - [ ] Qualify Zettelkasten analogy — MEMORY.md uses routing rules, not bidirectional links; analogy holds for "index not content" but breaks on linking property
-  - [ ] Verify arXiv:2310.13548 (Sharma et al. sycophancy paper) before publishing
-  - [ ] Extend caveats close — add the self-referential observation: post was produced by the architecture it describes, so the reader cannot verify which claims are witness facts vs witness inferences; evidence chain lives in the session transcript, not the post
 - [ ] Post-launch: Run `sweep=lite_reeval&limit=50` to produce longitudinal lite-1.4→1.5 comparison data, then analyze in eval_history
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
 - [ ] Post-launch: Lite calibration validation — run Haiku on lite prompt for ~50 stories already evaluated by both Llama models. Compare Haiku-lite vs Llama-lite to isolate prompt mode effect from model effect. If Haiku-lite ≈ Llama-lite, the 2.4× gap is prompt architecture. If Haiku-lite >> Llama-lite, there's also a model capability factor. Informs whether calibration-anchored correction (option 3 in model-divergence-analysis.md) is viable. See `findings/2026-03-02-llama-neutral-50-bias.md`.
