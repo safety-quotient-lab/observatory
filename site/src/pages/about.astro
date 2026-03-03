@@ -35,11 +35,19 @@ const jsonLd = {
 
 <Base title="About">
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+  <script is:inline>(function(){var p=localStorage.getItem('hro_persona')||'reader';document.body.dataset.persona=p;})();</script>
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'about' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
     <tr>
       <td>
         <h1 style="font-size: var(--font-md); margin-bottom: 10px;">About HRO</h1>
+
+        <div style="margin-bottom: 16px; font-size: var(--font-sm);">
+          <span class="filter-label">Reading level:</span>
+          <button class="persona-btn filter-link filter-active" data-persona="reader">Reader</button>
+          <span class="filter-sep"> | </span>
+          <button class="persona-btn filter-link" data-persona="researcher">Researcher</button>
+        </div>
 
         {/* ═══ TIER 1 — Always visible ═══ */}
 
@@ -69,8 +77,50 @@ const jsonLd = {
           Part of the <a href="https://unratified.org" style="color: var(--channel-hrcb);" target="_blank" rel="noopener">Unratified</a> project by Safety Quotient Lab —
           which maps the same rights framework to U.S. non-ratification of the
           <a href="https://unratified.org/covenant" style="color: var(--channel-hrcb);" target="_blank" rel="noopener">ICESCR</a>,
-          the treaty 173 nations have ratified and the U.S. signed in 1977 but never ratified.
+          the treaty <a href="https://treaties.un.org/pages/ViewDetails.aspx?src=TREATY&mtdsg_no=IV-3&chapter=4" target="_blank" rel="noopener" style="color: var(--fg-secondary);">173 nations have ratified</a> and the U.S. signed in 1977 but never ratified.
         </p>
+
+        <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">Built with Claude Code — and Why That Matters</h2>
+
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-left: 3px solid var(--channel-hrcb); border-radius: 4px; padding: 12px 16px; margin-bottom: 15px;">
+          <p style="color: var(--fg-primary); line-height: 1.6; margin: 0 0 10px 0;">
+            HRO is built entirely with <a href="https://claude.ai/code" target="_blank" rel="noopener" style="color: var(--color-orange);">Claude Code</a>, Anthropic's AI-assisted development tool,
+            and uses <a href="https://anthropic.com" target="_blank" rel="noopener" style="color: var(--color-orange);">Anthropic's</a> Claude Haiku as the primary full-mode evaluation model.
+            We flag this relationship upfront because the site that measures human rights alignment in others
+            should be transparent about its own supply chain.
+          </p>
+
+          <p style="color: var(--fg-primary); line-height: 1.6; margin: 0 0 10px 0;">
+            In summer 2025, Anthropic secured a Pentagon contract — worth up to $200 million — to run Claude on classified military networks.
+            When the Trump administration later demanded Anthropic remove safeguards that prevented the AI from being used
+            for <b>autonomous weapons systems</b> and <b>mass surveillance of American citizens</b>, Anthropic refused.
+            In February 2026, Defense Secretary Pete Hegseth labeled Anthropic a "<a href="https://fortune.com/2026/02/28/openai-pentagon-deal-anthropic-designated-supply-chain-risk-unprecedented-action-damage-its-growth/" target="_blank" rel="noopener" style="color: var(--color-orange);">supply chain risk</a>"
+            and blacklisted the company from U.S. military contracts.
+            Hours later, <a href="https://openai.com/index/our-agreement-with-the-department-of-war/" target="_blank" rel="noopener" style="color: var(--fg-secondary);">OpenAI announced a replacement deal</a> with the Pentagon.
+          </p>
+
+          <p style="color: var(--fg-primary); line-height: 1.6; margin: 0 0 10px 0;">
+            CEO Dario Amodei <a href="https://www.cnn.com/2026/02/26/tech/anthropic-rejects-pentagon-offer" target="_blank" rel="noopener" style="color: var(--color-orange);">stated publicly</a>:
+            <span style="color: var(--fg-secondary); font-style: italic;">"We cannot in good conscience accede to their request… in a narrow set of cases, we believe AI can undermine, rather than defend, democratic values."</span>
+          </p>
+
+          <p style="color: var(--fg-primary); line-height: 1.6; margin: 0 0 12px 0;">
+            The dispute directly implicates provisions this site tracks every day:
+            <b>Article 3</b> (right to life and security of person — autonomous lethal systems),
+            <b>Article 12</b> (right to privacy — mass surveillance programs), and the
+            <b>Preamble</b>'s recognition that human rights require institutional protection.
+            <a href="https://www.technologyreview.com/2026/03/02/1133850/openais-compromise-with-the-pentagon-is-what-anthropic-feared/" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">MIT Technology Review</a>
+            framed OpenAI's deal as precisely what Anthropic feared: a competitor trading safety commitments for access.
+          </p>
+
+          <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0; border-top: 1px solid var(--color-border); padding-top: 8px;">
+            <b style="color: var(--fg-primary);">Disclosure:</b> HRO uses Anthropic's Claude as its primary evaluation model. The account above is based on public reporting from CNN, NPR, Fortune, and MIT Technology Review. HRO has no independent verification of the internal negotiations.
+            Sources: <a href="https://www.npr.org/2026/02/26/nx-s1-5727847/anthropic-defense-hegseth-ai-weapons-surveillance" target="_blank" rel="noopener" style="color: var(--color-orange);">NPR</a> ·
+            <a href="https://www.cnn.com/2026/02/27/tech/anthropic-pentagon-deadline" target="_blank" rel="noopener" style="color: var(--color-orange);">CNN</a> ·
+            <a href="https://www.euronews.com/next/2026/02/25/why-ai-company-anthropic-and-the-us-are-at-a-standoff-over-a-military-contract" target="_blank" rel="noopener" style="color: var(--color-orange);">Euronews</a> ·
+            <a href="https://www.technologyreview.com/2026/03/02/1133850/openais-compromise-with-the-pentagon-is-what-anthropic-feared/" target="_blank" rel="noopener" style="color: var(--color-orange);">MIT Tech Review</a>
+          </p>
+        </div>
 
         <h2 id="classification" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Core Construct: HRCB</h2>
 
@@ -160,9 +210,9 @@ const jsonLd = {
         <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">The Universal Declaration of Human Rights</h2>
 
         <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 15px;">
-          Adopted by the United Nations General Assembly on 10 December 1948 (Resolution 217 A),
+          Adopted by the United Nations General Assembly on 10 December 1948 (<a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Resolution 217 A</a>),
           the UDHR is a milestone document in the history of human rights. It has been translated
-          into over 500 languages. The Declaration consists of a Preamble and 30 Articles covering civil, political,
+          into <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" target="_blank" rel="noopener" style="color: var(--fg-secondary);">over 500 languages</a>. The Declaration consists of a Preamble and 30 Articles covering civil, political,
           economic, social, and cultural rights — from the right to life and liberty
           (Article 3) to freedom of expression (Article 19) to the right to education (Article 26).
         </p>
@@ -186,8 +236,8 @@ const jsonLd = {
           </div>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
-            Channels are weighted by content type (e.g., Editorial=0.6, Structural=0.4).
-            Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.
+            <span class="persona-reader">The weights depend on content type — news articles lean 65% editorial, product pages lean 60% structural. Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.</span>
+            <span class="persona-researcher">Channels are weighted by content type (e.g., Editorial=0.6, Structural=0.4). Combined: <span class="score-font">(w<sub>E</sub> &times; Editorial) + (w<sub>S</sub> &times; Structural)</span>.</span>
           </p>
 
           <h2 id="content-types" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Content Type Weights</h2>
@@ -217,17 +267,18 @@ const jsonLd = {
           <h3 id="content-type-consensus" style="font-size: var(--font-sm); margin: 15px 0 8px 0;">Content Type Consensus Vote</h3>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
-            Content type classification directly determines the E:S weight split, so misclassification can meaningfully distort the final HRCB score.
-            For example, an editorial article (ED: E=0.65, S=0.35) misclassified as a landing page (LP: E=0.40, S=0.60) shifts 25 percentage points of weight from the editorial channel to the structural channel.
+            <span class="persona-reader">Getting the content type wrong shifts the score. A news article misclassified as a product page moves 25% of the weight from what was written to how the site behaves.</span>
+            <span class="persona-researcher">Content type classification directly determines the E:S weight split, so misclassification can meaningfully distort the final HRCB score. For example, an editorial article (ED: E=0.65, S=0.35) misclassified as a landing page (LP: E=0.40, S=0.60) shifts 25 percentage points of weight from the editorial channel to the structural channel.</span>
           </p>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
-            When multiple models evaluate the same story, the system uses a <b style="color: var(--fg-primary);">majority vote</b> to determine the consensus content type rather than trusting any single model's classification.
-            Each full-mode rater contributes one vote; lite-mode raters do not vote (they don't classify content type). The plurality type becomes the consensus content type used for weight assignment.
+            <span class="persona-reader">When several AI models review the same story, they <b style="color: var(--fg-primary);">vote</b> on the content type. The majority wins. Lite-mode models don't vote.</span>
+            <span class="persona-researcher">When multiple models evaluate the same story, the system uses a <b style="color: var(--fg-primary);">majority vote</b> to determine the consensus content type rather than trusting any single model's classification. Each full-mode rater contributes one vote; lite-mode raters do not vote (they don't classify content type). The plurality type becomes the consensus content type used for weight assignment.</span>
           </p>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 8px;">
-            Validation metrics tracked on the <a href="/status/models" style="color: var(--color-blue);">models dashboard</a>:
+            <span class="persona-reader">Two accuracy checks run on the <a href="/status/models" style="color: var(--color-blue);">models dashboard</a>:</span>
+            <span class="persona-researcher">Validation metrics tracked on the <a href="/status/models" style="color: var(--color-blue);">models dashboard</a>:</span>
           </p>
           <ul style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; padding-left: 20px; margin-bottom: 12px;">
             <li><b style="color: var(--fg-primary);">Suspect rate</b> — structural-heavy types (PO, LP, PR, AC) where the structural channel has no data, suggesting misclassification</li>
@@ -255,7 +306,8 @@ const jsonLd = {
           </div>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 12px;">
-            Each of 31 UDHR provisions (Preamble + Articles 1-30) is scored independently on both channels. Per-provision fields:
+            <span class="persona-reader">Each of the 31 UDHR provisions gets its own score on both channels. Each provision tracks:</span>
+            <span class="persona-researcher">Each of 31 UDHR provisions (Preamble + Articles 1-30) is scored independently on both channels. Per-provision fields:</span>
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-sm); margin-bottom: 15px;" width="100%">
@@ -270,8 +322,8 @@ const jsonLd = {
           <h2 id="setl" style="font-size: var(--font-base); margin: 20px 0 8px 0;">SETL — Structural-Editorial Tension Level</h2>
 
           <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
-            SETL measures the divergence between editorial and structural signals for each article.
-            It captures whether a site's words and infrastructure tell different stories.
+            <span class="persona-reader">SETL measures the gap between what a site <em>says</em> and what it <em>does</em>. A high score means the article's words point one way on human rights, but the site's design and tracking point another.</span>
+            <span class="persona-researcher">SETL measures the divergence between editorial and structural signals for each article. It captures whether a site's words and infrastructure tell different stories.</span>
           </p>
 
           <div style="margin: 10px 0;">
@@ -285,14 +337,15 @@ const jsonLd = {
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
             Formula: <span class="score-font">sign(E-S) &times; &radic;(|E-S| &times; max(|E|, |S|))</span>.
-            A high absolute SETL means the site's content and infrastructure are misaligned on human rights.
+            <span class="persona-reader">A large gap means the site's content and infrastructure send opposite signals on human rights.</span>
+            <span class="persona-researcher">A high absolute SETL means the site's content and infrastructure are misaligned on human rights.</span>
           </p>
 
           <h2 id="fair-witness" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Fair Witness Evidence Layer</h2>
 
           <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
-            Inspired by Heinlein's Fair Witnesses from <i>Stranger in a Strange Land</i>,
-            every evaluation separates its evidence into two categories:
+            <span class="persona-reader">Every evaluation separates its evidence into two categories:</span>
+            <span class="persona-researcher">Inspired by Heinlein's Fair Witnesses from <a href="https://en.wikipedia.org/wiki/Stranger_in_a_Strange_Land" target="_blank" rel="noopener" style="color: var(--fg-secondary);"><i>Stranger in a Strange Land</i></a>, every evaluation separates its evidence into two categories:</span>
           </p>
 
           <div class="two-col" style="font-size: var(--font-base); margin-bottom: 10px;">
@@ -307,10 +360,8 @@ const jsonLd = {
           </div>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">
-            The <b style="color: var(--fg-primary);">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts
-            to total evidence items. A high ratio means the evaluation is well-grounded in verifiable observations;
-            a low ratio means more interpretive weight. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference); font-size: var(--font-xs);">Fair Witness</span>
-            on any item page to switch between the standard view and a stripped-down view showing only the evidence breakdown.
+            <span class="persona-reader">The <b style="color: var(--fg-primary);">FW Ratio</b> is the share of directly verifiable facts vs. all evidence. High = grounded in what's on the page. Low = more interpretation. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference); font-size: var(--font-xs);">Fair Witness</span> on any item page to see just the evidence breakdown.</span>
+            <span class="persona-researcher">The <b style="color: var(--fg-primary);">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts to total evidence items. A high ratio means the evaluation is well-grounded in verifiable observations; a low ratio means more interpretive weight. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference); font-size: var(--font-xs);">Fair Witness</span> on any item page to switch between the standard view and a stripped-down view showing only the evidence breakdown.</span>
           </p>
 
           <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 12px 0 6px 0;">FW Ratio</p>
@@ -341,8 +392,8 @@ const jsonLd = {
           </table>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
-            <b style="color: var(--fg-primary);">Confidence</b> is an evidence-weighted aggregate across all 31 provisions:
-            H=1.0, M=0.6, L=0.2, ND=0.0. Higher confidence means more provisions had strong evidence.
+            <span class="persona-reader"><b style="color: var(--fg-primary);">Confidence</b> summarizes how well-evidenced the evaluation is across all 31 provisions. More high-evidence provisions = higher confidence. Scale: H=1.0, M=0.6, L=0.2, ND=0.0.</span>
+            <span class="persona-researcher"><b style="color: var(--fg-primary);">Confidence</b> is an evidence-weighted aggregate across all 31 provisions: H=1.0, M=0.6, L=0.2, ND=0.0. Higher confidence means more provisions had strong evidence.</span>
           </p>
 
           <h2 id="directionality" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Directionality Markers</h2>
@@ -369,7 +420,8 @@ const jsonLd = {
           <h2 id="volatility" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Volatility</h2>
 
           <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
-            Standard deviation of per-provision combined scores. Measures how uniformly content aligns across different rights.
+            <span class="persona-reader">How consistently does a piece of content treat different rights? Low volatility = treats all rights about the same. High = strong on some rights, weak on others.</span>
+            <span class="persona-researcher">Standard deviation of per-provision combined scores. Measures how uniformly content aligns across different rights.</span>
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
@@ -381,9 +433,8 @@ const jsonLd = {
           <h2 id="consensus" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Consensus (Multi-Model)</h2>
 
           <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
-            When multiple models evaluate the same story, a consensus score is computed as a weighted mean.
-            Each rater's weight combines three factors: prompt mode (full = 1.0, lite = 0.5),
-            self-reported confidence (floored at 0.2 so no model is silenced), and a content truncation discount.
+            <span class="persona-reader">When several AI models evaluate the same story, scores are averaged with weights. Full-mode evaluations count more than lite. Higher self-reported confidence counts more. Truncated content counts less.</span>
+            <span class="persona-researcher">When multiple models evaluate the same story, a consensus score is computed as a weighted mean. Each rater's weight combines three factors: prompt mode (full = 1.0, lite = 0.5), self-reported confidence (floored at 0.2 so no model is silenced), and a content truncation discount.</span>
           </p>
 
           <table cellpadding="3" cellspacing="0" style="font-size: var(--font-base); margin-bottom: 15px;">
@@ -394,7 +445,14 @@ const jsonLd = {
 
           <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">How Evaluations Work</h2>
 
-          <ol style="color: var(--fg-secondary); line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;">
+          <ol style="color: var(--fg-secondary); line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;" class="persona-reader">
+            <li>Fetch and classify the URL — content type determines the scoring weights</li>
+            <li>Build a Domain Context Profile from 8 site-level signals</li>
+            <li>Score all 31 UDHR provisions on editorial and structural channels</li>
+            <li>Record Fair Witness evidence; generate theme tag, sentiment, and summary</li>
+            <li>Compute final statistics: weighted mean, confidence, SETL, classification</li>
+          </ol>
+          <ol style="color: var(--fg-secondary); line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;" class="persona-researcher">
             <li>A URL from HN's top 7 pages (plus top best/ask/show) is fetched as the unit of analysis (other stories can be manually triggered)</li>
             <li>The page's content type is classified (Editorial, Community, HR, etc.); when multiple models evaluate the same story, a <a href="#content-type-consensus" style="color: var(--color-blue);">majority vote</a> determines the consensus type</li>
             <li>Channel weights are assigned based on the consensus content type</li>
@@ -410,8 +468,8 @@ const jsonLd = {
           <h2 id="eval-modes" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Evaluation Modes</h2>
 
           <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
-            Two evaluation modes serve different cost/quality trade-offs. Stories with only a lite evaluation
-            show <span style="color: var(--color-orange); font-family: var(--font-mono);">~lite</span> in the feed.
+            <span class="persona-reader">Two modes balance cost vs. depth. Stories in lite mode show <span style="color: var(--color-orange); font-family: var(--font-mono);">~lite</span> in the feed.</span>
+            <span class="persona-researcher">Two evaluation modes serve different cost/quality trade-offs. Stories with only a lite evaluation show <span style="color: var(--color-orange); font-family: var(--font-mono);">~lite</span> in the feed.</span>
           </p>
 
           <div class="table-wrap">
@@ -455,12 +513,12 @@ const jsonLd = {
             <tr>
               <td id="eq"><span class="badge" style="background: rgba(245,158,11,0.15); color: var(--color-amber);">EQ</span></td>
               <td style="color: var(--fg-primary); padding-left: 6px; width: 140px;">Epistemic Quality</td>
-              <td style="color: var(--fg-secondary); padding-left: 6px;">Source quality, evidence reasoning, uncertainty handling, purpose transparency. Based on the CRAAP Test framework from library science.</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Source quality, evidence reasoning, uncertainty handling, purpose transparency. Based on the <a href="https://en.wikipedia.org/wiki/CRAAP_test" target="_blank" rel="noopener" style="color: var(--fg-secondary);">CRAAP Test</a> framework from library science.</td>
             </tr>
             <tr>
               <td id="pt"><span class="badge" style="background: rgba(220,38,38,0.15); color: var(--color-negative);">PT</span></td>
               <td style="color: var(--fg-primary); padding-left: 6px;">Propaganda Flags</td>
-              <td style="color: var(--fg-secondary); padding-left: 6px;">Detects 18 propaganda techniques (loaded language, strawman, whataboutism, etc.). Based on Da San Martino et al. (2019) PTC-18 corpus.</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Detects 18 propaganda techniques (loaded language, strawman, whataboutism, etc.). Based on <a href="https://aclanthology.org/D19-1565/" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Da San Martino et al. (2019)</a> PTC-18 corpus.</td>
             </tr>
             <tr>
               <td id="so"><span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive);">SO</span></td>
@@ -470,7 +528,7 @@ const jsonLd = {
             <tr>
               <td id="et"><span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference);">ET</span></td>
               <td style="color: var(--fg-primary); padding-left: 6px;">Emotional Tone</td>
-              <td style="color: var(--fg-secondary); padding-left: 6px;">Primary tone label + valence/arousal/dominance dimensions. Based on Russell's Circumplex Model of Affect.</td>
+              <td style="color: var(--fg-secondary); padding-left: 6px;">Primary tone label + valence/arousal/dominance dimensions. Based on <a href="https://en.wikipedia.org/wiki/Circumplex_model_of_affect" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Russell's Circumplex Model of Affect</a>.</td>
             </tr>
             <tr>
               <td id="sr"><span class="badge" style="background: rgba(96,165,250,0.15); color: var(--channel-editorial);">SR</span></td>
@@ -730,3 +788,35 @@ const jsonLd = {
     </tr>
   </table>
 </Base>
+
+<style>
+  /* Persona toggle — Reader (default) shows reader content, hides researcher */
+  .persona-researcher { display: none; }
+  body[data-persona="researcher"] .persona-researcher { display: block; }
+  body[data-persona="researcher"] .persona-reader { display: none; }
+  /* Inline span variants */
+  span.persona-researcher { display: none; }
+  body[data-persona="researcher"] span.persona-researcher { display: inline; }
+  body[data-persona="researcher"] span.persona-reader { display: none; }
+</style>
+
+<script is:inline>
+  // Sync button states after DOM is ready
+  (function () {
+    var p = document.body.dataset.persona || 'reader';
+    document.querySelectorAll('.persona-btn').forEach(function (b) {
+      b.classList.toggle('filter-active', b.dataset.persona === p);
+    });
+  })();
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.persona-btn');
+    if (!btn) return;
+    var p = btn.dataset.persona;
+    localStorage.setItem('hro_persona', p);
+    document.body.dataset.persona = p;
+    document.querySelectorAll('.persona-btn').forEach(function (b) {
+      b.classList.toggle('filter-active', b.dataset.persona === p);
+    });
+  });
+</script>
