@@ -28,8 +28,11 @@ node_modules/
 
 # lock files (local dev)
 package-lock.json
-# claude code — ignore all except skills and plans
+# claude code — skills and inter-agent relay dirs only
 .claude/*
 !.claude/skills/
 !.claude/plans/
 .claude/plans/archive/
+.claude/plans/*.md
+!.claude/plans/proposals/
+!.claude/plans/exports/

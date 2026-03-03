@@ -26,7 +26,7 @@ Remaining:
 - [ ] Post-launch: Lite calibration validation — run Haiku on lite prompt for ~50 stories already evaluated by both Llama models. Compare Haiku-lite vs Llama-lite to isolate prompt mode effect from model effect. If Haiku-lite ≈ Llama-lite, the 2.4× gap is prompt architecture. If Haiku-lite >> Llama-lite, there's also a model capability factor. Informs whether calibration-anchored correction (option 3 in model-divergence-analysis.md) is viable. See `findings/2026-03-02-llama-neutral-50-bias.md`.
 - [ ] Post-launch: KV-precompute homepage data blob (TTFB 3.9s → ~200ms)
 - [ ] Post-launch: sync observatory repo with latest changes
-- [ ] Post-launch: `/.well-known/agent-inbox.json` — inter-agent proposal discovery endpoint. Build-time derived from `.claude/plans/` frontmatter (status/summary/recipient/date → JSON). Pair with stub `POST /api/webmention` for push notification. Key insight from knock analysis: manifest must be a build artifact (not manually maintained) or it silently drifts. See knock analysis in session 2026-03-02.
+- [ ] Post-launch: `/.well-known/agent-inbox.json` — inter-agent proposal discovery endpoint. Build-time derived from `.claude/plans/proposals/` frontmatter (status/summary/recipient/date → JSON). Pair with stub `POST /api/webmention` for push notification. Key insight from knock analysis: manifest must be a build artifact (not manually maintained) or it silently drifts. See knock analysis in session 2026-03-02.
 
 ---
 
