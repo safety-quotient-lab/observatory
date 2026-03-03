@@ -17,23 +17,30 @@ export const prerender = true;
         <div style="color:#5b7279; font-size:9pt; line-height:1.8; max-width:580px;">
           <p>This project is built and maintained by a single developer — a software engineer for roughly a decade, now retired and navigating a long-term disability determination while managing ongoing medical challenges. Thanks to an <a href="https://claude.ai/code" style="color:#d56500;">Anthropic Claude Code</a> subscription, I'm able to keep building — and this is how I spend that ability: community service tools that make human rights visible in the places where builders already spend their time.</p>
 
-          <p>The Human Rights Observatory evaluates Hacker News stories against the <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" style="color:#d56500;">UN Universal Declaration of Human Rights</a> using large language models. Each evaluation costs real API credits — multiple models, multiple passes, a continuous 24/7 pipeline. Some models run on free-tier usage plans, but the primary evaluations require paid credits. There are no ads, no tracking, no paywalls, and no VC funding. The entire service runs on personal savings and donations.</p>
+          <p>The Human Rights Observatory evaluates Hacker News stories against the <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" style="color:#d56500;">UN Universal Declaration of Human Rights</a> using large language models. There are no ads, no tracking, no paywalls, and no VC funding.</p>
 
-          <p>Right now, I simply can't afford the API credits to evaluate as many stories as I'd like. Every dollar directly translates into more evaluations — more stories scored, more patterns surfaced, more of the invisible made visible. Even a small contribution makes a real difference.</p>
+          <!-- Funding Track 1: Monthly sponsorship -->
+          <div style="margin:24px 0; padding:16px; background:rgba(139,92,246,0.07); border:1px solid rgba(139,92,246,0.2); border-radius:6px;">
+            <div style="font-size:10pt; font-weight:bold; color:#a78bfa; margin-bottom:8px;">Goal: $200 / month — Safety Quotient Lab</div>
+            <p style="margin:0 0 10px;">Monthly sponsorship funds <a href="https://github.com/safety-quotient-lab" style="color:#d56500;">Safety Quotient Lab</a> — the research org behind this project. The target covers the full Claude Code usage tier, which is what makes continuous development of tools like this one possible. We're not there yet. Every recurring sponsor moves the needle directly.</p>
+            <a href="https://github.com/sponsors/kashifshah" target="_blank" id="support-sponsors-link" style="display:block; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#a78bfa; padding:12px 28px; font-size:11pt; border-radius:6px; font-weight:bold; text-decoration:none; text-align:center;">
+              ♥ Sponsor on GitHub (monthly or one-time)
+            </a>
+          </div>
 
-          <p>If you find this useful — as a research tool, a lens on media bias, or just an interesting way to think about the news — anything helps. It means more than I can say.</p>
-
-          <div style="margin:24px 0; display:flex; flex-direction:column; gap:10px; max-width:360px;">
+          <!-- Funding Track 2: API token donations -->
+          <div style="margin:24px 0; padding:16px; background:rgba(234,179,8,0.05); border:1px solid rgba(234,179,8,0.2); border-radius:6px;">
+            <div style="font-size:10pt; font-weight:bold; color:#eab308; margin-bottom:8px;">API Token Donations — one-time or recurring</div>
+            <p style="margin:0 0 10px;">The evaluation pipeline runs 24/7 and costs real API credits — multiple models, multiple passes per story, continuous operation. Some models run on free-tier plans, but primary evaluations require paid credits. Every dollar here translates directly into more evaluations: more stories scored, more patterns surfaced, more of the invisible made visible.</p>
             <form action="https://www.paypal.com/donate" method="post" target="_blank" id="support-donate-form">
               <input type="hidden" name="hosted_button_id" value="56GCFHDZHB7AJ" />
               <button type="submit" style="width:100%; background:rgba(234,179,8,0.2); border:1px solid rgba(234,179,8,0.4); color:#eab308; cursor:pointer; padding:12px 28px; font-size:11pt; border-radius:6px; font-weight:bold;">
-                Donate via PayPal
+                Donate API credits via PayPal
               </button>
             </form>
-            <a href="https://github.com/sponsors/kashifshah" target="_blank" id="support-sponsors-link" style="display:block; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#a78bfa; padding:12px 28px; font-size:11pt; border-radius:6px; font-weight:bold; text-decoration:none; text-align:center;">
-              ♥ GitHub Sponsors
-            </a>
           </div>
+
+          <p>If you find this useful — as a research tool, a lens on media bias, or just an interesting way to think about the news — anything helps. It means more than I can say.</p>
 
           <p>Already donated? <a href="#" id="support-mark-donated" style="color:#5b7279; text-decoration:underline;">Click here to skip the donation prompt</a> for 7 days.</p>
 
