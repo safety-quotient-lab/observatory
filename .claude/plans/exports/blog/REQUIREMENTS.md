@@ -98,6 +98,18 @@ Agent should adjudicate field naming, optionality, and any fields we missed.
 
 ---
 
+### 3. `accommodation-engine.md`
+- **Title:** "Claude Code as an Accommodation Engine"
+- **Status:** SCAFFOLD — structure + section stubs, personal note + full prose pending
+- **Voice:** E-Prime, no first person ("the builder")
+- **Angle:** Claude Code as assistive technology / accommodation device, not productivity tool.
+  Rights connection: Article 23 (right to work), ICESCR gap, private accommodation vs legal rights.
+- **Distinct from:** cognitive-architecture.md (patterns/architecture) and techniques.md (operators)
+- **Timing:** after Observatory Show HN and cognitive-architecture companion have settled (1 week+)
+- **HN companion:** `hn-companion-accommodation.md` (to create when ready to post)
+
+---
+
 ## Publication workflow
 
 1. Observatory Show HN posted first (`.claude/plans/show-hn-draft.md`)
