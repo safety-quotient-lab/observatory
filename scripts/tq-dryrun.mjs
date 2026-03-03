@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: Apache-2.0
 /**
  * TQ (Transparency Quotient) prompt dry-run.
  * Tests whether an LLM can reliably produce binary/countable

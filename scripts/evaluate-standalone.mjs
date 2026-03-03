@@ -426,11 +426,17 @@ async function evaluateOne(hnId, url) {
   if (dryRun) {
     console.log(`  [dry-run] Would POST result for hn_id=${hnId}`);
     console.log(`  schema_version: ${slim.schema_version}`);
-    console.log(`  editorial: ${slim.evaluation?.editorial}`);
-    console.log(`  structural: ${slim.evaluation?.structural}`);
-    console.log(`  content_type: ${slim.evaluation?.content_type}`);
-    console.log(`  confidence: ${slim.evaluation?.confidence}`);
-    console.log(`  reasoning: ${slim.reasoning}`);
+    if (mode === 'lite' || mode === 'light') {
+      console.log(`  editorial: ${slim.evaluation?.editorial}`);
+      console.log(`  structural: ${slim.evaluation?.structural}`);
+      console.log(`  content_type: ${slim.evaluation?.content_type}`);
+      console.log(`  confidence: ${slim.evaluation?.confidence}`);
+      console.log(`  reasoning: ${slim.reasoning}`);
+    } else {
+      console.log(`  weighted_mean: ${slim.evaluation?.hcb_weighted_mean}`);
+      console.log(`  classification: ${slim.evaluation?.hcb_classification}`);
+      console.log(`  theme_tag: ${slim.theme_tag}`);
+    }
     return;
   }
 
