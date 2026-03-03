@@ -178,7 +178,7 @@ const groupColors: Record<string, string> = {
         What does tech content say about rights — and does the platform match?
       </div>
       <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 10px;">
-        Part of the <a href="https://unratified.org" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">Unratified</a> project by <a href="https://github.com/safety-quotient-lab" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Safety Quotient Lab</a> — advocating for U.S. ICESCR ratification.
+        Part of the <a href="https://unratified.org" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">Unratified</a> project by <a href="https://github.com/safety-quotient-lab" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Safety Quotient Lab</a> — the U.S. signed an international economic rights covenant in 1977 and has never ratified it.
       </div>
       <div class="hero-pills" style="font-size: var(--font-xs);">
         <a href="/stories" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
@@ -238,11 +238,15 @@ const groupColors: Record<string, string> = {
           </p>
         )}
         {avgTdScore !== null && (
-          <p style="margin: 0;">
+          <p style="margin: 0 0 8px 0;">
             Transparency is low: the average disclosure score across all stories is <span class="score-font" style="font-weight: bold;">{(avgTdScore * 100).toFixed(0)}%</span>.
             <a href="/signals" style="color: var(--channel-hrcb); margin-left: 4px;">See all findings &rarr;</a>
           </p>
         )}
+        <p style="margin: 0; padding-top: 8px; border-top: 1px solid var(--bg-surface); color: var(--fg-secondary); font-size: var(--font-sm);">
+          These patterns — rights discussed but not backed by law — reflect a specific gap: the U.S. signed the international economic and social rights covenant in 1977 and has never ratified it.
+          <a href="https://unratified.org" target="_blank" rel="noopener" style="color: var(--channel-hrcb); font-weight: bold;">unratified.org</a> is building the case for why AI makes closing it urgent.
+        </p>
       </div>
     </div>
 
@@ -761,7 +765,8 @@ const groupColors: Record<string, string> = {
     </div>
 
     <div style="color: var(--fg-secondary); font-size: var(--font-xs); padding: 12px 0 4px 0; border-top: 1px solid var(--color-border); margin-top: 16px;">
-      Part of the <a href="https://unratified.org" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">Unratified</a> project by <a href="https://github.com/safety-quotient-lab" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Safety Quotient Lab</a> — mapping the UDHR to U.S. non-ratification of the <a href="https://unratified.org/covenant" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">ICESCR</a>.
+      <a href="https://github.com/safety-quotient-lab/observatory" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Safety Quotient Lab</a> · Apache 2.0 ·
+      <a href="https://unratified.org" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">unratified.org</a>
     </div>
 
   </div>
