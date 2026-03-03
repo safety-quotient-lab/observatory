@@ -40,4 +40,3 @@ package-lock.json
 .claude/plans/*.md
 !.claude/plans/proposals/
 !.claude/plans/exports/
-!.claude/plans/blog/
