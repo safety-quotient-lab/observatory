@@ -51,8 +51,18 @@ export function jsonResponse(
   });
 }
 
-export function errorResponse(msg: string, status: number): Response {
-  return jsonResponse({ error: msg }, status);
+// RFC 7807 — Problem Details for HTTP APIs
+export function errorResponse(msg: string, status: number, instance?: string): Response {
+  const body: Record<string, unknown> = {
+    type: `https://observatory.unratified.org/errors/${status}`,
+    title: msg,
+    status,
+  };
+  if (instance) body.instance = instance;
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/problem+json', ...corsHeaders() },
+  });
 }
 
 export function listCacheHeaders(): Record<string, string> {

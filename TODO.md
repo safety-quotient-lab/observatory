@@ -31,6 +31,12 @@ Remaining:
 - [ ] Post-launch: **TQ (Transparency Quotient) implementation** — replace structural channel for Llama with binary/countable verifiability indicators (author, sources, date, corrections, conflicts, methodology). Model-tiered prompt routing: Llama → editorial + TQ; Haiku → editorial + structural. Schema: new tq_* columns, prompt_mode variant. Design validated via TQ dry-run (Haiku, n=4, full range 0.00-0.80). See `findings/2026-03-02-lite-1.5-structural-audit.md`.
 - [ ] Post-launch: `/.well-known/agent-inbox.json` — inter-agent proposal discovery endpoint. Build-time derived from `.claude/plans/proposals/` frontmatter (status/summary/recipient/date → JSON). Pair with stub `POST /api/webmention` for push notification. Key insight from knock analysis: manifest must be a build artifact (not manually maintained) or it silently drifts. See knock analysis in session 2026-03-02.
 
+### Standards (M effort — deferred)
+
+- [ ] **OpenAPI 3.x spec** — machine-readable API description at `/api/v1/openapi.json`. ~150 lines YAML covering 8 endpoints (stories, story/[id], domains, domain/[domain], domain/[domain]/history, signals, users, user/[username]). Unlocks: auto-generated client SDKs, agent tool use, Postman/Insomnia import. Serve as prerendered static `.ts` endpoint.
+- [ ] **WebSub** (W3C) — real-time push for Atom feed subscribers. Add `Link: <hub>; rel="hub"` to `/feed.xml` response, ping `hub.superfeedr.com` (free) from cron worker on new evaluations. ~30 lines in `cron.ts`. Prerequisite: none.
+- [ ] **ActivityPub** (W3C) — Fediverse federation. Each evaluation → ActivityPub Note/Article. Follow `@observatory@observatory.unratified.org` from Mastodon. Requires: Actor endpoint, outbox, HTTP Signatures (RFC 9421), WebFinger integration (already done). Significant scope — worth a dedicated plan before starting.
+
 ---
 
 ## Phase 0 — Construct Validity

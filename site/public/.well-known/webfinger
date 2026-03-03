@@ -1,0 +1,30 @@
+{
+  "subject": "https://observatory.unratified.org",
+  "aliases": [
+    "https://observatory.unratified.org",
+    "https://github.com/safety-quotient-lab",
+    "acct:safety-quotient-lab@observatory.unratified.org"
+  ],
+  "links": [
+    {
+      "rel": "http://webfinger.net/rel/profile-page",
+      "type": "text/html",
+      "href": "https://observatory.unratified.org"
+    },
+    {
+      "rel": "alternate",
+      "type": "application/atom+xml",
+      "href": "https://observatory.unratified.org/feed.xml"
+    },
+    {
+      "rel": "https://observatory.unratified.org/rel/agent-card",
+      "type": "application/json",
+      "href": "https://observatory.unratified.org/.well-known/agent-card.json"
+    },
+    {
+      "rel": "https://observatory.unratified.org/rel/api",
+      "type": "application/json",
+      "href": "https://observatory.unratified.org/api/v1"
+    }
+  ]
+}

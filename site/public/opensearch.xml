@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>HRO</ShortName>
+  <Description>Search Hacker News stories by human rights score, domain, or keyword</Description>
+  <Url type="text/html"
+       template="https://observatory.unratified.org/search?q={searchTerms}"/>
+  <Image height="16" width="16" type="image/x-icon">https://observatory.unratified.org/favicon.ico</Image>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Language>en-US</Language>
+  <OutputEncoding>UTF-8</OutputEncoding>
+  <Developer>Safety Quotient Lab</Developer>
+  <Attribution>Human Rights Observatory — observatory.unratified.org</Attribution>
+</OpenSearchDescription>
