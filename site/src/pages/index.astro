@@ -233,8 +233,13 @@ const groupColors: Record<string, string> = {
                 const label = sid === 'Preamble' ? 'P' : String(section?.number ?? '?');
                 const title = ARTICLE_TITLES[sid] ?? sid;
                 const barColor = scoreToColor(score);
+                const structural = stat?.avg_structural ?? null;
+                const sBarColor = scoreToColor(structural);
                 const setl = (stat?.avg_editorial != null && stat?.avg_structural != null)
                   ? Math.abs(stat.avg_editorial - stat.avg_structural) : null;
+                const evidenceTotal = (stat?.evidence_h ?? 0) + (stat?.evidence_m ?? 0) + (stat?.evidence_l ?? 0);
+                const fwRatio = evidenceTotal >= 3 ? (stat?.evidence_h ?? 0) / evidenceTotal : null;
+                const fwPct = fwRatio !== null ? Math.round(fwRatio * 100) : null;
                 const spark = sparklines.get(sid) || [];
                 let sparkPath = '';
                 if (spark.length > 1) {
@@ -247,6 +252,16 @@ const groupColors: Record<string, string> = {
                     return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
                   }).join(' ');
                 }
+                const trendDir = spark.length >= 6
+                  ? (() => {
+                      const half = Math.floor(spark.length / 2);
+                      const recent = spark.slice(-half).reduce((a, b) => a + b, 0) / half;
+                      const prev = spark.slice(0, half).reduce((a, b) => a + b, 0) / half;
+                      const delta = recent - prev;
+                      return delta > 0.03 ? '↑' : delta < -0.03 ? '↓' : '→';
+                    })()
+                  : null;
+                const trendColor = trendDir === '↑' ? 'var(--color-positive)' : trendDir === '↓' ? 'var(--color-negative)' : 'var(--fg-secondary)';
                 return (
                   <Fragment>
                     <tr style="border-top: 1px solid var(--bg-surface);">
@@ -256,48 +271,13 @@ const groupColors: Record<string, string> = {
                       <td title={title} class="hm-title" style={`padding: 3px 4px; color: ${score !== null ? 'var(--fg-primary)' : 'var(--fg-secondary)'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
                         <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{title}</a>
                       </td>
+                      {/* Score cell — E + S bars stacked (desktop only) */}
                       <td class="hm-data" style="width: 140px; padding: 3px 4px;">
-                        {score !== null ? (
-                          <div style="display: flex; align-items: center; gap: 4px;">
-                            <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative;">
-                              <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.3;"></div>
-                              {score < 0 ? (
-                                <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(score) * 50}%; height: 100%; background: ${barColor}; border-radius: 3px 0 0 3px;`}></div>
-                              ) : (
-                                <div style={`position: absolute; left: 50%; top: 0; width: ${score * 50}%; height: 100%; background: ${barColor}; border-radius: 0 3px 3px 0;`}></div>
-                              )}
-                            </div>
-                            <span style={`color: ${barColor}; font-size: var(--font-xs); min-width: 36px; text-align: right;`} class="score-font">{formatScore(score)}</span>
-                          </div>
-                        ) : (
-                          <span style="color: var(--bg-surface);">--</span>
-                        )}
-                      </td>
-                      <td class="hm-data" style="width: 18px; padding: 3px 2px; text-align: center;" title={setl !== null ? `E/S tension: ${setl.toFixed(2)}` : 'No tension data'}>
-                        {setl !== null && setl >= 0.10 ? (
-                          <div style={`width: 8px; height: 8px; border-radius: 50%; margin: 0 auto; background: ${setl >= 0.25 ? 'var(--color-negative)' : 'var(--color-warning)'}; opacity: ${Math.min(1, 0.5 + setl)};`}></div>
-                        ) : null}
-                      </td>
-                      <td class="hm-data score-font" style="width: 50px; padding: 3px 4px; text-align: right; color: var(--fg-secondary);">
-                        {count > 0 ? count : '--'}
-                      </td>
-                      <td class="hm-data" style="width: 90px; padding: 3px 4px; text-align: center;">
-                        {spark.length > 1 ? (
-                          <svg width="80" height="20" viewBox="0 0 80 20">
-                            <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
-                            <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
-                          </svg>
-                        ) : (
-                          <span style="color: var(--bg-surface);">--</span>
-                        )}
-                      </td>
-                    </tr>
-                    <tr class="hm-trend">
-                      <td colSpan={6} style="padding: 2px 4px 4px 26px;">
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                          <div style="flex: 1; min-width: 80px;">
+                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                          <div style="display: flex; align-items: center; gap: 3px;">
+                            <span style="color: var(--fg-secondary); font-size: 9px; width: 7px; flex-shrink: 0;">E</span>
                             {score !== null ? (
-                              <div style="display: flex; align-items: center; gap: 4px;">
+                              <Fragment>
                                 <div style="flex: 1; height: 5px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative;">
                                   <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.3;"></div>
                                   {score < 0 ? (
@@ -306,16 +286,96 @@ const groupColors: Record<string, string> = {
                                     <div style={`position: absolute; left: 50%; top: 0; width: ${score * 50}%; height: 100%; background: ${barColor}; border-radius: 0 3px 3px 0;`}></div>
                                   )}
                                 </div>
-                                <span style={`color: ${barColor}; font-size: var(--font-xs); min-width: 34px; text-align: right;`} class="score-font">{formatScore(score)}</span>
-                              </div>
-                            ) : <span style="color: var(--bg-surface); font-size: var(--font-xs);">--</span>}
+                                <span style={`color: ${barColor}; font-size: var(--font-xs); min-width: 32px; text-align: right;`} class="score-font">{formatScore(score)}</span>
+                              </Fragment>
+                            ) : <span style="color: var(--bg-surface); font-size: var(--font-xs); flex: 1;">--</span>}
                           </div>
+                          <div style="display: flex; align-items: center; gap: 3px;">
+                            <span style="color: var(--fg-secondary); font-size: 9px; width: 7px; flex-shrink: 0;">S</span>
+                            {structural !== null ? (
+                              <Fragment>
+                                <div style="flex: 1; height: 5px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative;">
+                                  <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.3;"></div>
+                                  {structural < 0 ? (
+                                    <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(structural) * 50}%; height: 100%; background: ${sBarColor}; border-radius: 3px 0 0 3px;`}></div>
+                                  ) : (
+                                    <div style={`position: absolute; left: 50%; top: 0; width: ${structural * 50}%; height: 100%; background: ${sBarColor}; border-radius: 0 3px 3px 0;`}></div>
+                                  )}
+                                </div>
+                                <span style={`color: ${sBarColor}; font-size: var(--font-xs); min-width: 32px; text-align: right;`} class="score-font">{formatScore(structural)}</span>
+                              </Fragment>
+                            ) : <span style="color: var(--bg-surface); font-size: var(--font-xs); flex: 1;">--</span>}
+                          </div>
+                        </div>
+                      </td>
+                      {/* SETL dot — unchanged */}
+                      <td class="hm-data" style="width: 18px; padding: 3px 2px; text-align: center; vertical-align: middle;" title={setl !== null ? `E/S tension: ${setl.toFixed(2)}` : 'No tension data'}>
+                        {setl !== null && setl >= 0.10 ? (
+                          <div style={`width: 8px; height: 8px; border-radius: 50%; margin: 0 auto; background: ${setl >= 0.25 ? 'var(--color-negative)' : 'var(--color-warning)'}; opacity: ${Math.min(1, 0.5 + setl)};`}></div>
+                        ) : null}
+                      </td>
+                      {/* Count + FW ratio stacked */}
+                      <td class="hm-data score-font" style="width: 50px; padding: 3px 4px; text-align: right; vertical-align: top;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                          <span style="color: var(--fg-secondary);">{count > 0 ? count : '--'}</span>
+                          {fwPct !== null && fwRatio !== null ? (
+                            <span style={`color: ${fwRatioColor(fwRatio)}; font-size: 9px;`} title="High-quality evidence ratio">H:{fwPct}%</span>
+                          ) : null}
+                        </div>
+                      </td>
+                      {/* Trend arrow + sparkline stacked */}
+                      <td class="hm-data" style="width: 90px; padding: 3px 4px; text-align: center; vertical-align: top;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                          {trendDir ? <span style={`color: ${trendColor}; font-size: var(--font-xs); line-height: 1;`}>{trendDir}</span> : null}
+                          {spark.length > 1 ? (
+                            <svg width="80" height="20" viewBox="0 0 80 20">
+                              <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
+                              <path d={sparkPath} fill="none" stroke={color} stroke-width="1" />
+                            </svg>
+                          ) : <span style="color: var(--bg-surface);">--</span>}
+                        </div>
+                      </td>
+                    </tr>
+                    {/* Mobile-only data row — hidden on desktop via .hm-trend */}
+                    <tr class="hm-trend">
+                      <td colSpan={6} style="padding: 2px 4px 5px 26px;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                          <span style="color: var(--fg-secondary); font-size: var(--font-xs); flex-shrink: 0;">E</span>
+                          <div style="flex: 1; min-width: 50px; display: flex; align-items: center; gap: 3px;">
+                            <div style="flex: 1; height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden; position: relative;">
+                              <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.3;"></div>
+                              {score !== null && score < 0 ? (
+                                <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(score) * 50}%; height: 100%; background: ${barColor}; border-radius: 2px 0 0 2px;`}></div>
+                              ) : score !== null ? (
+                                <div style={`position: absolute; left: 50%; top: 0; width: ${score * 50}%; height: 100%; background: ${barColor}; border-radius: 0 2px 2px 0;`}></div>
+                              ) : null}
+                            </div>
+                            <span style={`color: ${score !== null ? barColor : 'var(--bg-surface)'}; font-size: var(--font-xs); min-width: 28px; text-align: right;`} class="score-font">{score !== null ? formatScore(score) : '--'}</span>
+                          </div>
+                          <span style="color: var(--fg-secondary); font-size: var(--font-xs); flex-shrink: 0;">S</span>
+                          <div style="flex: 1; min-width: 50px; display: flex; align-items: center; gap: 3px;">
+                            <div style="flex: 1; height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden; position: relative;">
+                              <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.3;"></div>
+                              {structural !== null && structural < 0 ? (
+                                <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(structural) * 50}%; height: 100%; background: ${sBarColor}; border-radius: 2px 0 0 2px;`}></div>
+                              ) : structural !== null ? (
+                                <div style={`position: absolute; left: 50%; top: 0; width: ${structural * 50}%; height: 100%; background: ${sBarColor}; border-radius: 0 2px 2px 0;`}></div>
+                              ) : null}
+                            </div>
+                            <span style={`color: ${structural !== null ? sBarColor : 'var(--bg-surface)'}; font-size: var(--font-xs); min-width: 28px; text-align: right;`} class="score-font">{structural !== null ? formatScore(structural) : '--'}</span>
+                          </div>
+                          {trendDir ? (
+                            <span style={`color: ${trendColor}; font-size: var(--font-xs); flex-shrink: 0;`}>{trendDir}</span>
+                          ) : <span style="width: 10px; flex-shrink: 0;"></span>}
                           {setl !== null && setl >= 0.10 ? (
                             <div style={`width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: ${setl >= 0.25 ? 'var(--color-negative)' : 'var(--color-warning)'}; opacity: ${Math.min(1, 0.5 + setl)};`} title={`E/S tension: ${setl.toFixed(2)}`}></div>
                           ) : <div style="width: 7px; flex-shrink: 0;"></div>}
                           <span style="color: var(--fg-secondary); font-size: var(--font-xs); flex-shrink: 0;" class="score-font">{count > 0 ? count : '--'}</span>
+                          {fwPct !== null && fwRatio !== null ? (
+                            <span style={`color: ${fwRatioColor(fwRatio)}; font-size: var(--font-xs); flex-shrink: 0;`} class="score-font" title="High-quality evidence ratio">H:{fwPct}%</span>
+                          ) : null}
                           {spark.length > 1 ? (
-                            <svg width="64" height="16" viewBox="0 0 80 20" style="flex-shrink: 0;">
+                            <svg width="54" height="14" viewBox="0 0 80 20" style="flex-shrink: 0;">
                               <line x1="0" y1="10" x2="80" y2="10" stroke="var(--bg-surface)" stroke-width="0.5" />
                               <path d={sparkPath} fill="none" stroke={color} stroke-width="1.2" />
                             </svg>
