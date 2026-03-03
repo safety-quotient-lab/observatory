@@ -36,7 +36,7 @@ weight. TQ replacement designed for post-launch. See
 `findings/2026-03-02-lite-1.5-structural-audit.md`.
 
 Remaining:
-- [ ] Write personal closer and post Show HN (`.claude/plans/show-hn-draft.md`)
+- [ ] Post Show HN — draft complete (`.claude/plans/show-hn-draft.md`): opener/case study at final review stage, personal closer + credentials note done, curation paragraph + blog-story paragraph added. Adjust opener health-disclosure level then submit.
 - [ ] **Cognitive architecture maintenance** (knock analysis 2026-03-03):
   - [ ] Audit `MEMORY.md` metacognitive/factual ratio — metacognitive standards (sycophancy flags, epistemic quality, single-question rule) are higher-value entries than project facts; current ratio may be inverted
   - [ ] Add proactive gap-detection step to `/cycle` skill — after each implementation step, AI should ask "what did I not examine in the files I just changed?" before moving on

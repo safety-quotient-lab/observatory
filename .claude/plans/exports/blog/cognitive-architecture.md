@@ -282,8 +282,10 @@ belongs in a separate post.
 
 [^1]: [Observatory](https://observatory.unratified.org) — a live system that evaluates
 Hacker News front-page stories against the 30 articles and Preamble of the UN Universal
-Declaration of Human Rights. UN General Assembly, "Universal Declaration of Human
-Rights," Resolution 217A (III), December 10, 1948.
+Declaration of Human Rights. HN was chosen as the initial corpus because its human-curated
+front page provides a quality-filtered sample: a story's presence signals editorial selection
+by a technical community, not algorithmic amplification. UN General Assembly, "Universal
+Declaration of Human Rights," Resolution 217A (III), December 10, 1948.
 
 [^2]: The Zettelkasten method, developed by sociologist Niklas Luhmann, organizes notes
 as a network of atomic ideas linked by reference rather than a hierarchy or chronological

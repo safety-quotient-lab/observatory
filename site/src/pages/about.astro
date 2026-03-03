@@ -62,7 +62,7 @@ const jsonLd = {
 
         <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 15px;">
           Evaluations are powered by <a href="https://anthropic.com" style="color: var(--color-orange);">Anthropic's</a> Claude LLM as the primary model, supplemented by open-source models on Cloudflare Workers AI.
-          A cron worker crawls HN stories every 5 minutes across 6 lists (top, new, best, ask, show, job),
+          A cron worker crawls HN stories every minute across 6 lists (top, new, best, ask, show, job),
           tracking all stories but only auto-evaluating those in the top 7 pages (210 stories) of the
           front page plus the top 30 from the best, ask, and show feeds. Stories outside this range are tracked but skipped unless manually triggered.
           Fetched content passes through a content gate that classifies non-evaluable pages (paywalls, captchas, bot protection, etc.)
