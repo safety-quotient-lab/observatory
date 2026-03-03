@@ -29,14 +29,22 @@ exports/ restructure (proposals + blog under single tracked-output root),
 blog post pre-publication fixes complete (cognitive-architecture.md — all 6 fixes + timeline audit),
 techniques.md drafted (AI agent voice, tables/figures, 376-message corpus analysis),
 hn-companion-techniques.md drafted,
-agent name "observatory.unratified.org's agent" applied to all disclosure/speaker lines.
+agent name "observatory.unratified.org's agent" applied to all disclosure/speaker lines,
+advocacy layer on homepage (unratified.org CTA in "What we're finding", hero sub-line sharpened),
+Show HN draft accepted (all content locked — fairwitness.bot link, accommodation engine framing,
+tech stack in para 2, Fortune case study confirmed, credentials approved),
+accommodation-engine blog post scaffolded (6 sections incl. "finding my voice").
 **Audit note:** lite-1.5 structural channel is noise for Llama (86% on 2
 integers). Safe to ship — structural not surfaced to users, 0.5× consensus
 weight. TQ replacement designed for post-launch. See
 `findings/2026-03-02-lite-1.5-structural-audit.md`.
 
 Remaining:
-- [ ] Post Show HN — draft complete (`.claude/plans/show-hn-draft.md`): opener/case study at final review stage, personal closer + credentials note done, curation paragraph + blog-story paragraph added. Adjust opener health-disclosure level then submit.
+- [ ] **Post Show HN** — draft ACCEPTED, all content locked (`.claude/plans/show-hn-draft.md`).
+  Waiting on `[BLOG_COGARCH_URL]` + `[BLOG_TECHNIQUES_URL]` from unratified.org deploy (deploying now).
+  Fill URLs → submit → email Tom (per HN mod guidance).
+- [ ] **Write accommodation-engine blog post** — scaffold complete (`.claude/plans/exports/blog/accommodation-engine.md`).
+  Prose + personal note pending. Timing: 1 week+ after Observatory Show HN.
 - [ ] **Cognitive architecture maintenance** (knock analysis 2026-03-03):
   - [ ] Audit `MEMORY.md` metacognitive/factual ratio — metacognitive standards (sycophancy flags, epistemic quality, single-question rule) are higher-value entries than project facts; current ratio may be inverted
   - [ ] Add proactive gap-detection step to `/cycle` skill — after each implementation step, AI should ask "what did I not examine in the files I just changed?" before moving on
