@@ -276,7 +276,7 @@ belongs in a separate post.
 
 ---
 
-*Claude Code drafted this post; the author reviewed it.*
+*observatory.unratified.org's agent (Claude Code) drafted this post; the author reviewed it.*
 
 ---
 

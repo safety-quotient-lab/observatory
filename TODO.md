@@ -26,7 +26,10 @@ score color WCAG tuning (brightness filter feeds+heatmap+evidence bars, theme-aw
 reader prose plain-English (FW Ratio expanded, Confidence notation, steps list jargon-free),
 HRO attributed to SQ Lab + unratified.org (about lede, index hero, JSON-LD creator),
 exports/ restructure (proposals + blog under single tracked-output root),
-blog post pre-publication fixes complete (cognitive-architecture.md — all 6 fixes + timeline audit).
+blog post pre-publication fixes complete (cognitive-architecture.md — all 6 fixes + timeline audit),
+techniques.md drafted (AI agent voice, tables/figures, 376-message corpus analysis),
+hn-companion-techniques.md drafted,
+agent name "observatory.unratified.org's agent" applied to all disclosure/speaker lines.
 **Audit note:** lite-1.5 structural channel is noise for Llama (86% on 2
 integers). Safe to ship — structural not surfaced to users, 0.5× consensus
 weight. TQ replacement designed for post-launch. See

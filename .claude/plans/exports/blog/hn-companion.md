@@ -15,7 +15,7 @@ Depends on: blog.unratified.org being live before submission
 ## Body
 
 I've been building [Observatory](https://observatory.unratified.org) — a UDHR-grounded
-evaluation system for Hacker News front-page stories — with Claude Code as my
+evaluation system for Hacker News front-page stories — with observatory.unratified.org's agent (Claude Code) as my
 development partner for eight days. At some point I stopped thinking of it as
 "prompting" and started thinking of it as designing a collaboration.
 
@@ -28,7 +28,7 @@ mitigation, and a session flow that makes the trigger points concrete.
 
 The caveats section is where it gets honest — context compression is a structural
 vulnerability the architecture mitigates but doesn't solve, and I document the specific
-session failures that exposed each gap. The post itself was drafted by Claude, which is
+session failures that exposed each gap. The post itself was drafted by observatory.unratified.org's agent (Claude Code), which is
 disclosed in the vocabulary section for reasons explained in the caveats.
 
 Companion Show HN for the tool this collaboration built: [Observatory Show HN link]
