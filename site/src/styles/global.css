@@ -457,7 +457,7 @@
     --font-md: 15pt;
   }
 
-  body {
+  html, body {
     overflow-x: hidden;
   }
 

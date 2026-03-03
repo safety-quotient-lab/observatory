@@ -460,7 +460,7 @@ const groupColors: Record<string, string> = {
       <table cellpadding="0" cellspacing="0" width="100%">
         <tr style="color: var(--fg-secondary); font-size: var(--font-xs);">
           <td style="padding: 4px 0;">Article</td>
-          <td style="width: 200px; padding: 4px 0;">Ratio</td>
+          <td class="fw-bar-col" style="width: 200px; padding: 4px 0;">Ratio</td>
           <td style="width: 50px; text-align: right; padding: 4px 0;">%</td>
         </tr>
         {articlesWithFwRatio.map(a => {
@@ -474,7 +474,7 @@ const groupColors: Record<string, string> = {
                   {ARTICLE_TITLES[a.section] ?? a.section}
                 </a>
               </td>
-              <td style="width: 200px; padding: 4px 0;">
+              <td class="fw-bar-col" style="width: 200px; padding: 4px 0;">
                 <div style="height: 8px; background: var(--bg-surface); border-radius: 4px; overflow: hidden;">
                   <div style={`width: ${pct}%; height: 100%; background: ${barColor}; border-radius: 4px;`}></div>
                 </div>
@@ -525,10 +525,10 @@ const groupColors: Record<string, string> = {
         <div>
           <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 6px;">Top Flagged Stories</div>
           <div class="table-wrap">
-          <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
+          <table class="prop-table" cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
             <tr style="color: var(--fg-secondary);">
               <td style="padding: 4px 0;">Title</td>
-              <td style="width: 120px; padding: 4px 0;">Domain</td>
+              <td class="prop-domain" style="width: 120px; padding: 4px 0;">Domain</td>
               <td style="width: 50px; text-align: right; padding: 4px 0;">Flags</td>
               <td style="width: 60px; text-align: right; padding: 4px 0;">HRCB</td>
             </tr>
@@ -537,7 +537,7 @@ const groupColors: Record<string, string> = {
                 <td title={s.title} style="padding: 4px 0; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   <a href={`/item/${s.hn_id}`} style="color: var(--fg-primary); text-decoration: none;">{s.title}</a>
                 </td>
-                <td title={s.domain ?? '--'} style="width: 120px; padding: 4px 0; color: var(--fg-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <td class="prop-domain" title={s.domain ?? '--'} style="width: 120px; padding: 4px 0; color: var(--fg-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   {s.domain ? <a href={`/domain/${s.domain}`} style="color: var(--fg-secondary); text-decoration: none;">{s.domain}</a> : '--'}
                 </td>
                 <td style="width: 50px; text-align: right; padding: 4px 0; color: var(--color-negative-light);" class="score-font">
@@ -718,12 +718,12 @@ const groupColors: Record<string, string> = {
         <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; text-transform: none; letter-spacing: 0; font-weight: normal; white-space: nowrap;">all sources →</a>
       </div>
       <div class="table-wrap">
-      <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
+      <table class="fp-table" cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
         <tr style="color: var(--fg-secondary);">
           <td style="padding: 4px 0;">Domain</td>
           <td style="width: 60px; text-align: right; padding: 4px 0;">HRCB</td>
           <td style="width: 50px; text-align: right; padding: 4px 0;">Stories</td>
-          <td style="padding: 4px 8px;">Fingerprint</td>
+          <td class="fp-col" style="padding: 4px 8px;">Fingerprint</td>
         </tr>
         {topDomains.map(d => {
           const fp = domainFingerprints.get(d.domain);
@@ -738,7 +738,7 @@ const groupColors: Record<string, string> = {
               <td style="width: 50px; text-align: right; padding: 4px 0; color: var(--fg-secondary);" class="score-font">
                 {d.count}
               </td>
-              <td style="padding: 4px 8px;">
+              <td class="fp-col" style="padding: 4px 8px;">
                 {fp ? (
                   <div style="display: flex; gap: 1px; align-items: center;">
                     {fp.map((val, idx) => {
@@ -776,6 +776,14 @@ const groupColors: Record<string, string> = {
       .hm-data { display: none; }
       .hm-title { max-width: none !important; }
       .hm-trend { display: table-row; }
+      /* Domain profiles: hide fingerprint column, shrink table */
+      .fp-col { display: none; }
+      .fp-table { min-width: 200px !important; }
+      /* Propaganda stories: hide domain column, shrink table */
+      .prop-domain { display: none; }
+      .prop-table { min-width: 260px !important; }
+      /* Evidence transparency: narrow bar column */
+      .fw-bar-col { width: 100px !important; }
     }
     @media (max-width: 640px) {
       div[style*="grid-template-columns: 1fr 1fr"] {
