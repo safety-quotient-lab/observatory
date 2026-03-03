@@ -52,9 +52,9 @@ const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
 
 // Jargon / knowledge distributions
 const jargonRows = complexityData ? [
-  { label: 'Plain language',    count: complexityData.jargon_low },
-  { label: 'Some jargon',       count: complexityData.jargon_medium },
-  { label: 'Heavy jargon',      count: complexityData.jargon_high },
+  { label: 'Plain language',    count: complexityData.jargon_low,    param: 'low' },
+  { label: 'Some jargon',       count: complexityData.jargon_medium, param: 'medium' },
+  { label: 'Heavy jargon',      count: complexityData.jargon_high,   param: 'high' },
 ] : [];
 const maxJargon = jargonRows.length > 0 ? Math.max(...jargonRows.map(r => r.count), 1) : 1;
 
@@ -68,10 +68,10 @@ const maxKnowledge = knowledgeRows.length > 0 ? Math.max(...knowledgeRows.map(r 
 
 // Temporal framing
 const focusRows = temporalData ? [
-  { label: 'Retrospective', count: temporalData.retrospective, pct: temporalData.retrospective_pct, color: 'var(--color-amber)' },
-  { label: 'Present',       count: temporalData.present,       pct: temporalData.present_pct,       color: 'var(--channel-editorial)' },
-  { label: 'Prospective',   count: temporalData.prospective,   pct: temporalData.prospective_pct,   color: 'var(--color-positive)' },
-  { label: 'Mixed',         count: temporalData.mixed,         pct: temporalData.mixed_pct,         color: 'var(--fg-secondary)' },
+  { label: 'Retrospective', count: temporalData.retrospective, pct: temporalData.retrospective_pct, color: 'var(--color-amber)',         param: 'retrospective' },
+  { label: 'Present',       count: temporalData.present,       pct: temporalData.present_pct,       color: 'var(--channel-editorial)',   param: 'present' },
+  { label: 'Prospective',   count: temporalData.prospective,   pct: temporalData.prospective_pct,   color: 'var(--color-positive)',      param: 'prospective' },
+  { label: 'Mixed',         count: temporalData.mixed,         pct: temporalData.mixed_pct,         color: 'var(--fg-secondary)',        param: 'mixed' },
 ] : [];
 const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count), 1) : 1;
 
@@ -165,7 +165,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
                 <div>
                   <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Jargon Density</p>
                   <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                    {jargonRows.map(({ label, count }) => (
+                    {jargonRows.map(({ label, count, param }) => (
                       <tr>
                         <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
                         <td style="padding: 0 6px;">
@@ -174,7 +174,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
                           </div>
                         </td>
                         <td style="width: 40px; text-align: right; color: var(--fg-secondary);" class="score-font">
-                          {count.toLocaleString()}
+                          <a href={`/stories?jargon=${param}`} style="color: inherit; text-decoration: none;" title={`Stories with ${label.toLowerCase()} jargon density`}>{count.toLocaleString()}</a>
                         </td>
                       </tr>
                     ))}
@@ -262,7 +262,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                {focusRows.map(({ label, count, pct, color }) => (
+                {focusRows.map(({ label, count, pct, color, param }) => (
                   <tr>
                     <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
                     <td style="padding: 0 8px;">
@@ -271,7 +271,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
                       </div>
                     </td>
                     <td style="width: 40px; text-align: right; color: var(--fg-primary);" class="score-font">
-                      {pct !== null ? `${pct.toFixed(0)}%` : '—'}
+                      {pct !== null ? <a href={`/stories?temporal=${param}`} style="color: inherit; text-decoration: none;" title={`${label} stories`}>{pct.toFixed(0)}%</a> : '—'}
                     </td>
                   </tr>
                 ))}

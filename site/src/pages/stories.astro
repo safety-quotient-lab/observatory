@@ -18,6 +18,17 @@ const ctype = (url.searchParams.get('ctype') || 'all') as ContentTypeOption;
 const model = (url.searchParams.get('model') || 'any') as ModelOption;
 const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 
+// Supplemental signal filters (drill-through from /signals chart rows)
+const ptRaw = url.searchParams.get('pt') || '';
+const jargonRaw = url.searchParams.get('jargon') || '';
+const temporalRaw = url.searchParams.get('temporal') || '';
+const validJargon = ['low', 'medium', 'high'];
+const validTemporal = ['retrospective', 'present', 'prospective', 'mixed'];
+const safePt = /^[\w\s\-]{1,60}$/.test(ptRaw) ? ptRaw : '';
+const safeJargon = validJargon.includes(jargonRaw) ? jargonRaw : '';
+const safeTemporal = validTemporal.includes(temporalRaw) ? temporalRaw : '';
+const hasSupplFilter = !!(safePt || safeJargon || safeTemporal);
+
 const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'velocity'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
@@ -39,7 +50,7 @@ const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
 // Single JOIN query: stories + scores in one round-trip
-const stories = await getFilteredStoriesWithScores(db, safeSort, safeFilter, safeType, PER_PAGE + 1, offset, undefined, safeModel, safeCtype);
+const stories = await getFilteredStoriesWithScores(db, safeSort, safeFilter, safeType, PER_PAGE + 1, offset, undefined, safeModel, safeCtype, safePt || undefined, safeJargon || undefined, safeTemporal || undefined);
 const hasMore = stories.length > PER_PAGE;
 const displayStories = hasMore ? stories.slice(0, PER_PAGE) : stories;
 
@@ -99,6 +110,22 @@ function buildUrl(params: Record<string, string>): string {
   if (ct !== 'all') p.set('ctype', ct);
   if (m !== 'any') p.set('model', m);
   if (pg !== '1') p.set('p', pg);
+  // Preserve supplemental signal filters across pagination/sort changes
+  if (safePt) p.set('pt', safePt);
+  if (safeJargon) p.set('jargon', safeJargon);
+  if (safeTemporal) p.set('temporal', safeTemporal);
+  const qs = p.toString();
+  return qs ? `/stories?${qs}` : '/stories';
+}
+
+// Build URL preserving all current params except suppl signal filters
+function buildClearSupplUrl(): string {
+  const p = new URLSearchParams();
+  if (safeSort !== 'top') p.set('sort', safeSort);
+  if (safeFilter !== 'all') p.set('filter', safeFilter);
+  if (safeType !== 'all') p.set('type', safeType);
+  if (safeCtype !== 'all') p.set('ctype', safeCtype);
+  if (safeModel !== 'any') p.set('model', safeModel);
   const qs = p.toString();
   return qs ? `/stories?${qs}` : '/stories';
 }
@@ -301,6 +328,15 @@ function isLiteModel(id: string): boolean {
       <span class="filter-stats"> · </span>
       <a href="/dynamics" class="filter-link">dynamics</a>
     </div>
+    {hasSupplFilter && (
+      <div class="filter-row" style="margin-top: 2px;">
+        <span class="filter-label">signal filter:</span>
+        {safePt && <span class="filter-active" style="margin-right: 4px;">technique: {safePt}</span>}
+        {safeJargon && <span class="filter-active" style="margin-right: 4px;">jargon: {safeJargon}</span>}
+        {safeTemporal && <span class="filter-active" style="margin-right: 4px;">temporal: {safeTemporal}</span>}
+        <a href={buildClearSupplUrl()} class="filter-link" style="color: var(--fg-secondary);">× clear</a>
+      </div>
+    )}
   </div>
 
   <div class="table-wrap">

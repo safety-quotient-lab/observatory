@@ -222,7 +222,10 @@ export async function getFilteredStoriesWithScores(
   offset = 0,
   day?: string,
   model: ModelOption = 'all',
-  ctype: ContentTypeOption = 'all'
+  ctype: ContentTypeOption = 'all',
+  pt?: string,       // propaganda technique filter (re.pt_flags_json)
+  jargon?: string,   // jargon density filter (re.jargon_density)
+  temporal?: string  // temporal framing filter (re.tf_primary_focus)
 ): Promise<StoryWithMiniScores[]> {
   const conditions: string[] = ['1=1'];
   switch (filter) {
@@ -244,6 +247,7 @@ export async function getFilteredStoriesWithScores(
 
   const bindParams: (string | number)[] = [];
   const isAltModel = model !== 'all' && model !== 'any';
+  const hasSupplFilter = !!(pt || jargon || temporal);
 
   // "all" model filter: only show stories evaluated by every enabled full-mode model
   if (model === 'all') {
@@ -273,6 +277,11 @@ export async function getFilteredStoriesWithScores(
     conditions.push(`re.eval_status = 'done'`);
     bindParams.push(model);
   }
+
+  // Supplemental signal filters (require JOIN to rater_evals on primary model)
+  if (pt) { conditions.push(`re.pt_flags_json LIKE ?`); bindParams.push(`%"${pt}"%`); }
+  if (jargon) { conditions.push(`re.jargon_density = ?`); bindParams.push(jargon); }
+  if (temporal) { conditions.push(`re.tf_primary_focus = ?`); bindParams.push(temporal); }
 
   const where = conditions.join(' AND ');
 
@@ -304,8 +313,13 @@ export async function getFilteredStoriesWithScores(
                  AND (ABS(sc2.editorial) > 0 OR ABS(sc2.structural) > 0)${setlExtraWhere}
               ) as story_setl` : '';
 
-  // For alt models, JOIN rater_evals and overlay score columns
-  const joinClause = isAltModel ? `INNER JOIN rater_evals re ON re.hn_id = s.hn_id` : '';
+  // For alt models, JOIN rater_evals and overlay score columns.
+  // Also JOIN for supplemental signal filters (pt/jargon/temporal) on primary model path.
+  const joinClause = isAltModel
+    ? `INNER JOIN rater_evals re ON re.hn_id = s.hn_id`
+    : hasSupplFilter
+      ? `INNER JOIN rater_evals re ON re.hn_id = s.hn_id AND re.eval_model = s.eval_model AND re.eval_status = 'done' AND re.prompt_mode = 'full'`
+      : '';
   const selectCols = isAltModel
     ? `s.hn_id, s.url, s.title, s.domain, s.hn_score, s.hn_comments, s.hn_by,
               s.hn_time, s.hn_type, re.content_type,
