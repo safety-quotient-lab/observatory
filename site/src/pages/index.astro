@@ -180,7 +180,7 @@ const groupColors: Record<string, string> = {
       <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 10px;">
         Part of the <a href="https://unratified.org" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">Unratified</a> project — advocating for U.S. ICESCR ratification.
       </div>
-      <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: var(--font-xs);">
+      <div class="hero-pills" style="font-size: var(--font-xs);">
         <a href="/stories" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
           <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{totalEvaluated.toLocaleString()}</span>
           <span style="color: var(--fg-secondary);"> stories evaluated</span>
@@ -767,6 +767,11 @@ const groupColors: Record<string, string> = {
       overflow-x: auto;
     }
     .hm-trend { display: none; }
+    .hero-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
     @media (max-width: 540px) {
       .hm-data { display: none; }
       .hm-title { max-width: none !important; }
@@ -775,6 +780,13 @@ const groupColors: Record<string, string> = {
     @media (max-width: 640px) {
       div[style*="grid-template-columns: 1fr 1fr"] {
         grid-template-columns: 1fr !important;
+      }
+      .hero-pills {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .hero-pills > a {
+        text-align: center;
       }
     }
   </style>
