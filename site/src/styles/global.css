@@ -74,7 +74,9 @@
     font-family: Verdana, Geneva, sans-serif;
     font-size: var(--font-base);
     line-height: 1.5;
+    background-color: var(--bg-primary); /* override @apply for theme support */
     color: var(--fg-primary);
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   [id] {
@@ -143,6 +145,59 @@
   ::-webkit-scrollbar-track { background: var(--bg-primary); }
   ::-webkit-scrollbar-thumb { background: var(--fg-secondary); border-radius: 4px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--fg-primary); }
+}
+
+/* ─── Light theme (OkSolar Light) ─────────────────────────────────── */
+html[data-theme="light"] {
+  /* OkSolar Light palette — core */
+  --bg-primary:   #fdf6e3;   /* OkSolar base3 (cream) */
+  --bg-highlight: #eee8d5;   /* OkSolar base2 */
+  --bg-surface:   #dbd2b9;   /* between base2 and base1 */
+  --fg-primary:   #657b83;   /* OkSolar base00 */
+  --fg-emphasis:  #586e75;   /* OkSolar base01 */
+  --fg-secondary: #93a1a1;   /* OkSolar base1 */
+  --color-border: #cdc8b1;   /* between base2 and base3 */
+
+  /* Accent — Solarized Light equivalents */
+  --color-orange: #cb4b16;
+  --color-blue:   #268bd2;
+  --color-cyan:   #2aa198;
+  --color-violet: #6c71c4;
+
+  /* Channel colors */
+  --channel-hrcb:       #2aa198;
+  --channel-editorial:  #268bd2;
+  --channel-structural: #6c71c4;
+
+  /* Semantic — adjusted for light bg legibility */
+  --color-warning:       #ca8a04;
+  --color-warning-light: #d97706;
+  --color-nd:            #374151;
+  --color-muted:         #708890;
+  --color-disabled:      #9aacb0;
+  --color-hn-score:      #92661c;
+  --color-inference:     #7c3aed;
+  --color-amber:         #d97706;
+  --color-amber-light:   #c2410c;
+}
+
+/* Tailwind hardcoded surface utilities — override for light theme */
+html[data-theme="light"] .card {
+  background-color: var(--bg-highlight);
+  border-color: var(--color-border);
+}
+html[data-theme="light"] .bg-surface-2 {
+  background-color: var(--bg-surface);
+}
+html[data-theme="light"] .border-surface-3,
+html[data-theme="light"] .border-surface-3\/50 {
+  border-color: var(--color-border);
+}
+html[data-theme="light"] .hover\:bg-surface-2\/50:hover {
+  background-color: color-mix(in srgb, var(--bg-surface) 50%, transparent);
+}
+html[data-theme="light"] .text-gray-300 {
+  color: var(--fg-primary);
 }
 
 @layer components {

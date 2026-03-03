@@ -39,6 +39,10 @@ try {
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <script is:inline>
+      // FOUC prevention — apply stored theme before CSS renders
+      (function(){var t=localStorage.getItem('hro_theme')||'light';document.documentElement.dataset.theme=t;})();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <title>{title} | HRO</title>
@@ -61,7 +65,7 @@ try {
   <body>
     <a href="#main-content" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Skip to content</a>
     <center>
-      <table id="hnmain" role="presentation" width="85%" cellpadding="0" cellspacing="0" style="background-color: #002d38; max-width: 1280px;">
+      <table id="hnmain" role="presentation" width="85%" cellpadding="0" cellspacing="0" style="background-color: var(--bg-primary); max-width: 1280px;">
         <tr>
           <td>
             <Nav />
@@ -82,9 +86,9 @@ try {
     </center>
     {/* Donate modal */}
     <div id="donate-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
-      <div style="background:#093946; border:1px solid #1a5568; border-radius:8px; padding:24px; max-width:420px; width:90%; text-align:center;">
-        <div style="color:#98a8a8; font-size:14pt; margin-bottom:12px;">Support HRO</div>
-        <div style="color:#5b7279; font-size:10pt; line-height:1.6; margin-bottom:20px;">
+      <div style="background:var(--bg-highlight); border:1px solid var(--color-border); border-radius:8px; padding:24px; max-width:420px; width:90%; text-align:center;">
+        <div style="color:var(--fg-primary); font-size:14pt; margin-bottom:12px;">Support HRO</div>
+        <div style="color:var(--fg-secondary); font-size:10pt; line-height:1.6; margin-bottom:20px;">
           Each evaluation uses real API credits. HRO runs on donations — no ads, no paywalls.
           If you find it useful, please consider helping keep it running.
         </div>
@@ -95,18 +99,39 @@ try {
           </button>
         </form>
         <div style="margin-top:10px;">
-          <a href="https://github.com/sponsors/kashifshah" target="_blank" id="github-sponsors-link" style="display:block; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:#a78bfa; padding:10px 28px; font-size:11pt; border-radius:6px; font-weight:bold; text-decoration:none; text-align:center;">
+          <a href="https://github.com/sponsors/kashifshah" target="_blank" id="github-sponsors-link" style="display:block; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); color:var(--channel-structural); padding:10px 28px; font-size:11pt; border-radius:6px; font-weight:bold; text-decoration:none; text-align:center;">
             ♥ GitHub Sponsors
           </a>
         </div>
         <div style="margin-top:16px; display:flex; justify-content:center; gap:16px;">
-          <a href="/support" style="color:#5b7279; font-size:9pt; text-decoration:underline;">About project costs</a>
-          <a href="#" id="already-donated" style="color:#5b7279; font-size:9pt; text-decoration:underline;">I've already donated</a>
+          <a href="/support" style="color:var(--fg-secondary); font-size:9pt; text-decoration:underline;">About project costs</a>
+          <a href="#" id="already-donated" style="color:var(--fg-secondary); font-size:9pt; text-decoration:underline;">I've already donated</a>
         </div>
       </div>
     </div>
 
     <script>
+      // Theme toggle — sync button states with current theme
+      function updateThemeButtons() {
+        const theme = document.documentElement.dataset.theme || 'light';
+        document.querySelectorAll('.theme-btn').forEach((btn) => {
+          const el = btn as HTMLElement;
+          const active = el.dataset.theme === theme;
+          el.style.fontWeight = active ? 'bold' : 'normal';
+          el.style.opacity = active ? '1' : '0.55';
+        });
+      }
+      updateThemeButtons();
+
+      document.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.theme-btn') as HTMLElement | null;
+        if (!btn || !btn.dataset.theme) return;
+        const theme = btn.dataset.theme;
+        localStorage.setItem('hro_theme', theme);
+        document.documentElement.dataset.theme = theme;
+        updateThemeButtons();
+      });
+
       // Apply stored score mode on page load
       document.body.dataset.scoreMode = localStorage.getItem('hrcb_score_mode') || 'hrcb';
 
