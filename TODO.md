@@ -40,15 +40,30 @@ weight. TQ replacement designed for post-launch. See
 `findings/2026-03-02-lite-1.5-structural-audit.md`.
 
 Remaining:
-- [ ] **Post Show HN** — draft ACCEPTED, all content locked (`.claude/plans/show-hn-draft.md`).
-  Waiting on `[BLOG_COGARCH_URL]` + `[BLOG_TECHNIQUES_URL]` from unratified.org deploy (deploying now).
-  Fill URLs → submit → email Tom (per HN mod guidance).
+- [ ] **Post Show HN** — draft ready. Blog URLs filled, all 4 text fixes applied, both BLOCK conditions cleared. One remaining check: opener sentence "companion piece on the cognitive architecture" — verify the blog post titles at recursive-methodology and what-806-stories-reveal match that framing, or reword the sentence. Then submit → email Tom.
+
+### Pre-submission checks (embarrassment analysis 2026-03-03)
+
+**BLOCK conditions — must resolve before any submission:**
+- [x] **Verify Sharma et al. arXiv:2310.13548** — confirmed: correct title, correct authors (Sharma, Tong, Korbak et al.), confirmed ICLR 2024 proceedings. Citation valid.
+- [x] **Confirm Fortune case study scores source** — D1 shows scores from DeepSeek V3.2 (OpenRouter, full mode): editorial 0.3, structural -0.633, SETL 0.837. Not Llama. Noisy-structural concern does not apply. Haiku eval failed on this story; DeepSeek full eval is the canonical source.
+
+**Show HN text fixes (apply before submitting):**
+- [x] Softened "tech journalism" → "one in three stories on HN was published without a named author"
+- [x] "The fix I'm building is TQ" → "The direction I'm exploring is TQ"
+- [x] "see whether the inference is warranted" → "assess whether the inference is warranted"
+- [x] "every architectural decision" → "every major architectural decision"
+
+**HN comment prep (not blockers, but useful before posting):**
+- [ ] Prepare response for "measuring HN with HN" — sampling bias meta-observation not addressed anywhere in post. Response: HN chosen for quality-filtered access, not representativeness; future corpora extend beyond HN.
+- [ ] Prepare response for "44% expert-assuming = Article 26 concern" — the stretchiest claim in the aggregate stats. Response: Article 26 framing is a lens at scale, not a condemnation; HN self-selects but cumulative inaccessibility is still a rights-relevant pattern.
 - [ ] **Write accommodation-engine blog post** — scaffold complete (`.claude/plans/exports/blog/accommodation-engine.md`).
   Prose + personal note pending. Timing: 1 week+ after Observatory Show HN.
 - [ ] **Cognitive architecture maintenance** (knock analysis 2026-03-03):
   - [ ] Audit `MEMORY.md` metacognitive/factual ratio — metacognitive standards (sycophancy flags, epistemic quality, single-question rule) are higher-value entries than project facts; current ratio may be inverted
   - [ ] Add proactive gap-detection step to `/cycle` skill — after each implementation step, AI should ask "what did I not examine in the files I just changed?" before moving on
   - [ ] Update T1 trigger — add session-mode inference: AI reads first message, states inferred mode ("treating this as a reflection session — is that right?"), one confirmation question; removes ambiguity without creating user-side entry friction
+- [ ] Post-launch: **Sortable UDHR heatmap** — homepage heatmap currently renders in static UDHR article order. Add client-side sort controls: by score (most negative / most positive), by signal count (most triggered), by SETL (highest tension). No new queries needed — all data already on the page. Pure JS sort + re-render of existing rows.
 - [ ] Post-launch: Run `sweep=lite_reeval&limit=50` to produce longitudinal lite-1.4→1.5 comparison data, then analyze in eval_history
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
 - [ ] Post-launch: Lite calibration validation — run Haiku on lite prompt for ~50 stories already evaluated by both Llama models. Compare Haiku-lite vs Llama-lite to isolate prompt mode effect from model effect. If Haiku-lite ≈ Llama-lite, the 2.4× gap is prompt architecture. If Haiku-lite >> Llama-lite, there's also a model capability factor. Informs whether calibration-anchored correction (option 3 in model-divergence-analysis.md) is viable. See `findings/2026-03-02-llama-neutral-50-bias.md`.
