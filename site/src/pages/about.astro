@@ -17,7 +17,7 @@ const jsonLd = {
     name: 'Human Rights Observatory Evaluation Dataset',
     description: 'Automated LLM evaluations of Hacker News stories against the 30 articles and Preamble of the UN Universal Declaration of Human Rights',
     url: `${siteUrl}/data`,
-    creator: { '@type': 'Organization', name: 'Human Rights Observatory', url: siteUrl },
+    creator: { '@type': 'Organization', name: 'Safety Quotient Lab', url: 'https://github.com/safety-quotient-lab' },
     measurementTechnique: 'Multi-model LLM ensemble evaluated against 31 UDHR provisions using HRCB methodology v3.4',
     variableMeasured: [
       { '@type': 'PropertyValue', name: 'HCB Weighted Mean', description: 'Human Rights Compatibility Bias score, range [-1.0, +1.0]' },
@@ -74,7 +74,7 @@ const jsonLd = {
         </p>
 
         <p style="color: var(--fg-secondary); line-height: 1.6; margin-bottom: 15px; font-size: var(--font-sm);">
-          Part of the <a href="https://unratified.org" style="color: var(--channel-hrcb);" target="_blank" rel="noopener">Unratified</a> project by Safety Quotient Lab —
+          Part of the <a href="https://unratified.org" style="color: var(--channel-hrcb);" target="_blank" rel="noopener">Unratified</a> project by <a href="https://github.com/safety-quotient-lab" style="color: var(--fg-secondary);" target="_blank" rel="noopener">Safety Quotient Lab</a> —
           which maps the same rights framework to U.S. non-ratification of the
           <a href="https://unratified.org/covenant" style="color: var(--channel-hrcb);" target="_blank" rel="noopener">ICESCR</a>,
           the treaty <a href="https://treaties.un.org/pages/ViewDetails.aspx?src=TREATY&mtdsg_no=IV-3&chapter=4" target="_blank" rel="noopener" style="color: var(--fg-secondary);">173 nations have ratified</a> and the U.S. signed in 1977 but never ratified.
