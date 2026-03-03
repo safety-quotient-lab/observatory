@@ -2,7 +2,7 @@
 
 Status: **DRAFT v3** — E-Prime, no first person — 2026-03-03
 Target: blog.unratified.org (hypothetical; no blog infrastructure yet)
-Companion: Show HN post in `.claude/plans/blog-post-hn-companion.md`
+Companion: Show HN post in `.claude/plans/exports/blog/hn-companion.md`
 
 ---
 
