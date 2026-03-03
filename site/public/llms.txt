@@ -1,0 +1,25 @@
+# Human Rights Observatory, Hacker News Edition
+
+> Every story on Hacker News evaluated against all 30 articles and the Preamble
+> of the UN Universal Declaration of Human Rights. Scores editorial content (what
+> a story says about rights) and structural alignment (what the site itself does).
+> When these diverge — a privacy piece on a surveillance-heavy platform — a SETL
+> tension flag fires: "says one thing, does another." Part of the Unratified
+> project — advocating for U.S. ICESCR ratification.
+
+## Key pages
+
+- [Observatory](https://observatory.unratified.org/): Today's HN stories with per-article HRCB scores, rights heatmap grouped by UDHR generation, corpus findings, and domain profiles
+- [Signals](https://observatory.unratified.org/signals): Live corpus findings — transparency disclosure rates (author identified, conflicts, funding), accessibility (jargon density, assumed knowledge), persuasion technique distribution, temporal framing
+- [About & Methodology](https://observatory.unratified.org/about): Full methodology — Fair Witness evidence standard, HRCB scoring, E/S channel definitions, SETL tension, supplementary signals, calibration set
+- [UDHR Articles](https://observatory.unratified.org/rights/articles): All 31 UDHR provisions ranked by corpus engagement and average directional lean
+- [Reference](https://observatory.unratified.org/reference): Scoring concept glossary and UDHR provision lookup table — entry point for understanding any score
+- [API](https://observatory.unratified.org/data): Live JSON API (CORS-enabled, 200 req/hr, no key) — stories, domains, signals, users; /api/v1/signals returns corpus-wide transparency, accessibility, and temporal aggregates
+
+## Optional
+
+- [Sources](https://observatory.unratified.org/sources): Domain-level HRCB profiles, signal fingerprints, editorial character clustering by 8 supplementary signal dimensions
+- [Stories](https://observatory.unratified.org/stories): Full story feed with HRCB scores — filter by UDHR article, domain, content type, score direction, model
+- [Status](https://observatory.unratified.org/status): Pipeline health, model performance, evaluation coverage funnel
+- [Atom Feed](https://observatory.unratified.org/feed.xml): Subscribe by provision (?article=N), score direction (?filter=positive|negative), or domain (?domain=example.com)
+- [Domain Badge](https://observatory.unratified.org/api/v1/badge/example.com.svg): Embeddable SVG badge showing a domain's HRCB score

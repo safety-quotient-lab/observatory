@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://hn-hrcb.pages.dev/sitemap.xml
+Sitemap: https://observatory.unratified.org/sitemap.xml
