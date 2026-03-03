@@ -4,7 +4,7 @@ import Base from '../layouts/Base.astro';
 import SubNav from '../components/SubNav.astro';
 import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution, HOMEPAGE_BLOB_KEY } from '../lib/db';
 import type { HomepageBlob } from '../lib/db';
-import { scoreToColor, formatScore, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../lib/colors';
+import { scoreToColor, formatScore, fwRatioColor, formatFwRatio } from '../lib/colors';
 import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../lib/udhr';
 import { readDb } from '../lib/db-utils';
 
@@ -172,10 +172,13 @@ const groupColors: Record<string, string> = {
     <!-- 1. Hero -->
     <div class="hero-section" style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 16px; margin-bottom: 16px;">
       <div role="heading" aria-level="1" style="font-size: var(--font-md); color: var(--fg-primary); font-weight: bold; margin-bottom: 6px;">Human Rights Observatory, Hacker News Edition</div>
-      <div style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.5; margin-bottom: 12px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.5; margin-bottom: 6px;">
         Every story on Hacker News is evaluated against the 30 articles and Preamble of the
         <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" target="_blank" rel="noopener" style="color: var(--channel-editorial);">Universal Declaration of Human Rights</a>.
         What does tech content say about rights — and does the platform match?
+      </div>
+      <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 10px;">
+        Part of the <a href="https://unratified.org" target="_blank" rel="noopener" style="color: var(--channel-hrcb);">Unratified</a> project — advocating for U.S. ICESCR ratification.
       </div>
       <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: var(--font-xs);">
         <a href="/stories" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
