@@ -1,0 +1,59 @@
+{
+  "version": "1",
+  "description": "Inter-agent proposal inbox — observatory.unratified.org → other agents",
+  "updated_at": "2026-03-02T00:00:00Z",
+  "proposals": [
+    {
+      "id": "observatory-data-integration-2026-03-02",
+      "from": "observatory.unratified.org",
+      "to": "unratified.org",
+      "status": "pending",
+      "date": "2026-03-02",
+      "summary": "Integrate live observatory statistics into unratified.org pages. Observatory has empirical data (775+ stories evaluated) that directly grounds unratified.org's theoretical ICESCR claims. Proposed changes: /connection (replace generic paragraph with measured stats), /covenant Art.13 (add 53% expert-knowledge finding), /evidence (add observatory as empirical source), /resources (add proper resource card), /educators (add HRO as classroom data source).",
+      "priority": "high",
+      "priority_pages": ["/connection", "/covenant", "/evidence", "/resources", "/educators"],
+      "key_statistics": {
+        "source": "https://observatory.unratified.org/api/v1/signals",
+        "corpus_size": "775+ evaluated stories",
+        "snapshot_date": "2026-03-02",
+        "author_identified_pct": 65.8,
+        "conflicts_disclosed_pct": 3.7,
+        "funding_disclosed_pct": 6.5,
+        "expert_knowledge_pct": 53,
+        "high_jargon_pct": 20.3,
+        "provisions_with_setl_tension": 4,
+        "largest_setl_gap": "Article 12 (Privacy)"
+      },
+      "icescr_to_udhr_mapping": {
+        "Art.6-7 (Work)": "https://observatory.unratified.org/article/23",
+        "Art.9 (Social Security)": "https://observatory.unratified.org/article/22",
+        "Art.11-12 (Living Standards/Health)": "https://observatory.unratified.org/article/25",
+        "Art.13 (Education)": "https://observatory.unratified.org/article/26",
+        "Art.15 (Science & Culture)": "https://observatory.unratified.org/article/27"
+      },
+      "live_api": {
+        "endpoint": "https://observatory.unratified.org/api/v1/signals",
+        "cors": true,
+        "rate_limit": "200 req/hr",
+        "key_fields": {
+          "author_identified_pct": "signals.transparency.author_identified_pct",
+          "conflicts_disclosed_pct": "signals.transparency.conflicts_disclosed_pct",
+          "funding_disclosed_pct": "signals.transparency.funding_disclosed_pct",
+          "expert_pct": "signals.accessibility.expert_pct",
+          "domain_specific_pct": "signals.accessibility.domain_specific_pct",
+          "high_jargon_pct": "signals.accessibility.high_jargon_pct",
+          "present_pct": "signals.temporal.present_pct",
+          "corpus_size": "signals.total_with_signals",
+          "generated_at": "signals.generated_at"
+        },
+        "note": "Do not hardcode statistics. Fetch at build time so unratified.org numbers always match live observatory data."
+      },
+      "links": {
+        "signals_dashboard": "https://observatory.unratified.org/signals",
+        "article_26_education": "https://observatory.unratified.org/article/26",
+        "fair_witness_methodology": "https://observatory.unratified.org/about#fair-witness",
+        "api_reference": "https://observatory.unratified.org/data"
+      }
+    }
+  ]
+}
