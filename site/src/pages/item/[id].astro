@@ -791,13 +791,13 @@ function timeAgo(unixTime: number): string {
               <span style="color: var(--fg-secondary); font-size: var(--font-xs);">coverage</span>
               <a href="/about#confidence" style="color: var(--fg-secondary); text-decoration: none; font-size: var(--font-xs);" title="About Confidence">ℹ</a>
             </div>
-            <div style="display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: var(--bg-surface); gap: 1px;">
+            <div class="ev-bar" style="display: flex; height: 7px; border-radius: 3px; overflow: hidden; background: var(--bg-surface); gap: 1px;">
               {_evH > 0 && <div style={`width: ${_evH}%; background: ${evidenceColor('H')}; flex-shrink: 0;`} title={`High evidence: ${storyData.hcb_evidence_h} sections`} />}
               {_evM > 0 && <div style={`width: ${_evM}%; background: ${evidenceColor('M')}; flex-shrink: 0;`} title={`Medium evidence: ${storyData.hcb_evidence_m} sections`} />}
               {_evL > 0 && <div style={`width: ${_evL}%; background: ${evidenceColor('L')}; flex-shrink: 0;`} title={`Low evidence: ${storyData.hcb_evidence_l} sections`} />}
               {_evND > 0 && <div style={`width: ${_evND}%; background: ${evidenceColor(null)}; flex-shrink: 0;`} title={`No data: ${storyData.hcb_nd_count} sections`} />}
             </div>
-            <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 2px; font-family: monospace;">
+            <div class="ev-labels" style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 2px; font-family: monospace;">
               {(storyData.hcb_evidence_h ?? 0) > 0 && <span style={`color: ${evidenceColor('H')};`}>{storyData.hcb_evidence_h}H </span>}
               {(storyData.hcb_evidence_m ?? 0) > 0 && <span style={`color: ${evidenceColor('M')};`}>{storyData.hcb_evidence_m}M </span>}
               {(storyData.hcb_evidence_l ?? 0) > 0 && <span style={`color: ${evidenceColor('L')};`}>{storyData.hcb_evidence_l}L </span>}

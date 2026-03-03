@@ -306,7 +306,7 @@ const jsonLd = {
           </div>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 12px;">
-            <span class="persona-reader">Each of the 31 UDHR provisions gets its own score on both channels. Each provision tracks:</span>
+            <span class="persona-reader">Each of the 31 human rights articles gets its own score for what the content says and what the site does. Each article tracks:</span>
             <span class="persona-researcher">Each of 31 UDHR provisions (Preamble + Articles 1-30) is scored independently on both channels. Per-provision fields:</span>
           </p>
 
@@ -337,7 +337,7 @@ const jsonLd = {
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
             Formula: <span class="score-font">sign(E-S) &times; &radic;(|E-S| &times; max(|E|, |S|))</span>.
-            <span class="persona-reader">A large gap means the site's content and infrastructure send opposite signals on human rights.</span>
+            <span class="persona-reader">A large gap means the site's articles point one way on human rights, but the site's design and tracking point another.</span>
             <span class="persona-researcher">A high absolute SETL means the site's content and infrastructure are misaligned on human rights.</span>
           </p>
 
@@ -360,7 +360,7 @@ const jsonLd = {
           </div>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">
-            <span class="persona-reader">The <b style="color: var(--fg-primary);">FW Ratio</b> is the share of directly verifiable facts vs. all evidence. High = grounded in what's on the page. Low = more interpretation. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference); font-size: var(--font-xs);">Fair Witness</span> on any item page to see just the evidence breakdown.</span>
+            <span class="persona-reader">The <b style="color: var(--fg-primary);">FW Ratio</b> (Fair Witness Ratio) tracks what share of the evidence is directly verifiable — things anyone could confirm by visiting the page. High = grounded in visible facts. Low = relies more on interpretation. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference); font-size: var(--font-xs);">Fair Witness</span> on any story page to see the evidence breakdown.</span>
             <span class="persona-researcher">The <b style="color: var(--fg-primary);">FW Ratio</b> (Fair Witness Ratio) is the proportion of observable facts to total evidence items. A high ratio means the evaluation is well-grounded in verifiable observations; a low ratio means more interpretive weight. Toggle <span class="badge" style="background: rgba(168,85,247,0.15); color: var(--color-inference); font-size: var(--font-xs);">Fair Witness</span> on any item page to switch between the standard view and a stripped-down view showing only the evidence breakdown.</span>
           </p>
 
@@ -392,7 +392,7 @@ const jsonLd = {
           </table>
 
           <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
-            <span class="persona-reader"><b style="color: var(--fg-primary);">Confidence</b> summarizes how well-evidenced the evaluation is across all 31 provisions. More high-evidence provisions = higher confidence. Scale: H=1.0, M=0.6, L=0.2, ND=0.0.</span>
+            <span class="persona-reader"><b style="color: var(--fg-primary);">Confidence</b> shows how well-supported the score is across all 31 human rights articles. More articles with strong evidence push it higher. Articles with no data don't count.</span>
             <span class="persona-researcher"><b style="color: var(--fg-primary);">Confidence</b> is an evidence-weighted aggregate across all 31 provisions: H=1.0, M=0.6, L=0.2, ND=0.0. Higher confidence means more provisions had strong evidence.</span>
           </p>
 
@@ -446,11 +446,11 @@ const jsonLd = {
           <h2 style="font-size: var(--font-base); margin: 20px 0 8px 0;">How Evaluations Work</h2>
 
           <ol style="color: var(--fg-secondary); line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;" class="persona-reader">
-            <li>Fetch and classify the URL — content type determines the scoring weights</li>
-            <li>Build a Domain Context Profile from 8 site-level signals</li>
-            <li>Score all 31 UDHR provisions on editorial and structural channels</li>
-            <li>Record Fair Witness evidence; generate theme tag, sentiment, and summary</li>
-            <li>Compute final statistics: weighted mean, confidence, SETL, classification</li>
+            <li>Fetch the page and identify its content type (news, marketing, academic, etc.) — this sets the scoring weights</li>
+            <li>Build a background profile of the site: privacy policy, tracking, access model, and other site-level signals</li>
+            <li>Score all 31 human rights articles — what the content says, and what the site does</li>
+            <li>Record the evidence; generate a theme tag, an overall sentiment rating, and a 2–3 sentence summary</li>
+            <li>Calculate the final score, confidence level, say-do tension (SETL), and overall classification</li>
           </ol>
           <ol style="color: var(--fg-secondary); line-height: 1.8; padding-left: 20px; font-size: var(--font-base); margin-bottom: 15px;" class="persona-researcher">
             <li>A URL from HN's top 7 pages (plus top best/ask/show) is fetched as the unit of analysis (other stories can be manually triggered)</li>

@@ -211,6 +211,10 @@ html[data-theme="light"] .hm-score,
 html[data-theme="light"] .hm-data .score-font {
   filter: brightness(0.74);
 }
+/* Evidence/directionality badges (ArticleDetail) and evidence bar/labels (item page) */
+html[data-theme="light"] .ev-badges .badge { filter: brightness(0.74); }
+html[data-theme="light"] .ev-bar > div { filter: brightness(0.74); }
+html[data-theme="light"] .ev-labels > span { filter: brightness(0.74); }
 
 @layer components {
   .score-font {
