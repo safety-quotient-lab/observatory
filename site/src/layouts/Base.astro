@@ -155,17 +155,20 @@ try {
         updateScoreModeButtons();
       });
 
-      // Client-side score color — mirrors scoreToColor() in colors.ts.
+      // Client-side score color — mirrors scoreToColor() in colors.ts exactly.
+      // Auto-detects theme from html[data-theme]; pass explicit lightMode to override.
       // Exposed on window so inline scripts (define:vars) can reuse without duplication.
-      function scoreColor(score: number): string {
-        const abs = Math.abs(score);
+      function scoreColor(score: number, lightMode?: boolean): string {
+        const isLight = lightMode ?? document.documentElement.dataset.theme === 'light';
+        const abs = Math.abs(Math.max(-1, Math.min(1, score)));
         const sat = Math.min(0.9, abs * 2.0) * (0.75 + 0.15 * abs);
-        const lit = 0.53 - 0.11 * abs;
+        const baseLit = isLight ? 0.43 : 0.58;
+        const lit = baseLit - 0.06 * abs;
         let hue: number;
         if (score < 0) {
-          hue = 40 * (1 + score);
+          hue = 40 * (1 + Math.max(-1, score));
         } else {
-          hue = 40 + 102 * score;
+          hue = 40 + 102 * Math.min(1, score);
         }
         const c = (1 - Math.abs(2 * lit - 1)) * sat;
         const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));

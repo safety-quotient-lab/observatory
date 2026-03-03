@@ -21,7 +21,8 @@ consensus neutral discount for confident-zero Llama evals, Reader|Researcher
 persona toggle on /about, Anthropic/Claude Code section (Pentagon dispute +
 UDHR framing + disclosure), site-wide framework citations (CRAAP Test, PTC-18,
 Russell's Circumplex), homepage unratified.org ×φ references,
-light/dark theme toggle (OkSolar Light default, `localStorage['hro_theme']`).
+light/dark theme toggle (OkSolar Light default, `localStorage['hro_theme']`),
+score color WCAG tuning (brightness filter feeds+heatmap, theme-aware client scoreColor).
 **Audit note:** lite-1.5 structural channel is noise for Llama (86% on 2
 integers). Safe to ship — structural not surfaced to users, 0.5× consensus
 weight. TQ replacement designed for post-launch. See
@@ -29,6 +30,7 @@ weight. TQ replacement designed for post-launch. See
 
 Remaining:
 - [ ] Write personal closer and post Show HN (`.claude/plans/show-hn-draft.md`)
+- [ ] **Light mode follow-up**: Pass `lightMode=true` to `evidenceColor()` and `directionalityColor()` in `ArticleDetail.astro` and `item/[id].astro` — SSR callers not yet updated; those pages have washed-out evidence badge colors in light mode. CSS filter doesn't cover these contexts. Requires cookie-based theme detection or page-load re-color script.
 - [ ] **Cognitive architecture maintenance** (knock analysis 2026-03-03):
   - [ ] Audit `MEMORY.md` metacognitive/factual ratio — metacognitive standards (sycophancy flags, epistemic quality, single-question rule) are higher-value entries than project facts; current ratio may be inverted
   - [ ] Add proactive gap-detection step to `/cycle` skill — after each implementation step, AI should ask "what did I not examine in the files I just changed?" before moving on

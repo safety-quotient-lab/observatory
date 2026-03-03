@@ -293,7 +293,7 @@ const groupColors: Record<string, string> = {
                 return (
                   <Fragment>
                     <tr style="border-top: 1px solid var(--bg-surface);">
-                      <td style={`width: 22px; padding: 3px 4px; color: ${score !== null ? color : 'var(--bg-surface)'}; font-weight: bold;`} class="score-font">
+                      <td style={`width: 22px; padding: 3px 4px; color: ${score !== null ? color : 'var(--bg-surface)'}; font-weight: bold;`} class="score-font hm-score">
                         <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{label}</a>
                       </td>
                       <td title={title} class="hm-title" style={`padding: 3px 4px; color: ${score !== null ? 'var(--fg-primary)' : 'var(--fg-secondary)'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>

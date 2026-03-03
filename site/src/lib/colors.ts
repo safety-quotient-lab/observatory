@@ -17,9 +17,11 @@ function hslToRgb(h: number, s: number, l: number): string {
 /** Map a score [-1, +1] to a color via HSL interpolation for clean transitions.
  *  -1.0 = red (hue 0°), 0.0 = gray (desaturated), +1.0 = green (hue 142°).
  *  Scores near zero desaturate smoothly toward gray; colors become vivid as magnitude increases.
- *  Interpolates through HSL so mid-tones stay vibrant instead of going muddy brown. */
-export function scoreToColor(score: number | null | undefined): string {
-  if (score == null) return '#4b5563'; // ND gray (gray-600)
+ *  Interpolates through HSL so mid-tones stay vibrant instead of going muddy brown.
+ *  @param lightMode — when true, uses lighter-bg lightness target (~4.5:1 on OkSolar cream).
+ *                     Dark mode default is calibrated for #002d38 bg; light for #fdf6e3. */
+export function scoreToColor(score: number | null | undefined, lightMode = false): string {
+  if (score == null) return lightMode ? '#374151' : '#4b5563'; // ND gray
 
   const clamped = Math.max(-1, Math.min(1, score));
   const abs = Math.abs(clamped);
@@ -39,9 +41,11 @@ export function scoreToColor(score: number | null | undefined): string {
   // Near-zero scores (±0.05) stay grayish; full color by ±0.4.
   const sat = Math.min(0.9, abs * 2.0) * (0.75 + 0.15 * abs);
 
-  // Lightness: gray midpoint at 0.58 for WCAG AA contrast on dark backgrounds.
-  // Interpolate from neutral-gray (0.58) toward colored-bright (0.52) as magnitude grows.
-  const lit = 0.58 - 0.06 * abs;
+  // Lightness: calibrated per background.
+  // Dark mode (#002d38): 0.58→0.52 — neutral gray gives ~6.3:1 on dark bg.
+  // Light mode (#fdf6e3): 0.43→0.37 — neutral gray gives ~4.6:1 on cream bg.
+  const baseLit = lightMode ? 0.43 : 0.58;
+  const lit = baseLit - 0.06 * abs;
 
   return hslToRgb(hue, sat, lit);
 }
@@ -49,16 +53,17 @@ export function scoreToColor(score: number | null | undefined): string {
 /** Map a Pearson r [-1, +1] to a color for correlation display.
  *  Unlike scoreToColor, zero = neutral gray (no hue), not amber.
  *  -1.0 = red (anti-correlated), 0.0 = gray (no relationship), +1.0 = green (correlated). */
-export function correlationToColor(r: number | null | undefined): string {
-  if (r == null) return '#4b5563';
+export function correlationToColor(r: number | null | undefined, lightMode = false): string {
+  if (r == null) return lightMode ? '#374151' : '#4b5563';
   const clamped = Math.max(-1, Math.min(1, r));
   const abs = Math.abs(clamped);
   // Hue: negative → red (0°), positive → green (142°)
   const hue = clamped < 0 ? 0 : 142;
   // Saturation: zero at r=0, slow ramp — stays gray until |r| > 0.3
   const sat = abs < 0.1 ? 0 : Math.min(0.85, (abs - 0.1) * 1.2);
-  // Lightness: gray at r=0 (0.58), brighter at extremes
-  const lit = 0.58 - 0.06 * abs;
+  // Lightness: dark bg 0.58→0.52, light bg 0.43→0.37 (same calibration as scoreToColor)
+  const baseLit = lightMode ? 0.43 : 0.58;
+  const lit = baseLit - 0.06 * abs;
   return hslToRgb(hue, sat, lit);
 }
 
@@ -88,7 +93,15 @@ export function formatScore(score: number | null | undefined): string {
 }
 
 /** Evidence badge color — OkSolar teal brightness ramp (distinct from score red→green) */
-export function evidenceColor(evidence: string | null): string {
+export function evidenceColor(evidence: string | null, lightMode = false): string {
+  if (lightMode) {
+    switch (evidence) {
+      case 'H': return '#1a7d77'; // darker cyan — contrast ~4.9:1 on cream
+      case 'M': return '#526870'; // darker gray  — contrast ~4.6:1 on cream
+      case 'L': return '#4a5c61'; // darker muted — contrast ~5.1:1 on cream
+      default:  return '#2d5f6e'; // darker border — contrast ~4.8:1 on cream
+    }
+  }
   switch (evidence) {
     case 'H': return '#259d94'; // cyan (bright)
     case 'M': return '#98a8a8'; // fg-primary (neutral)
@@ -98,7 +111,16 @@ export function evidenceColor(evidence: string | null): string {
 }
 
 /** Directionality badge color */
-export function directionalityColor(d: string): string {
+export function directionalityColor(d: string, lightMode = false): string {
+  if (lightMode) {
+    switch (d) {
+      case 'A': return '#4338ca'; // Advocacy - indigo-700
+      case 'P': return '#0891b2'; // Practice - cyan-600
+      case 'F': return '#7c3aed'; // Framing - violet-600
+      case 'C': return '#c2410c'; // Content - orange-700
+      default: return '#374151';
+    }
+  }
   switch (d) {
     case 'A': return '#818cf8'; // Advocacy - indigo
     case 'P': return '#22d3ee'; // Practice - cyan

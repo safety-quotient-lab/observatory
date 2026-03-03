@@ -200,6 +200,18 @@ html[data-theme="light"] .text-gray-300 {
   color: var(--fg-primary);
 }
 
+/* Score gradient colors are SSR-rendered at dark-bg lightness (L≈0.52-0.58).
+ * brightness(0.74) brings neutral L=0.58 → ~0.43, giving ≥4.5:1 on cream.
+ * Applied to specific score display containers — not all .score-font — to avoid
+ * over-darkening elements that already use CSS-var-defined semantic colors. */
+html[data-theme="light"] .tripartite-score .score-value {
+  filter: brightness(0.74);
+}
+html[data-theme="light"] .hm-score,
+html[data-theme="light"] .hm-data .score-font {
+  filter: brightness(0.74);
+}
+
 @layer components {
   .score-font {
     font-family: 'JetBrains Mono', monospace;
