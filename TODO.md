@@ -26,6 +26,7 @@ Prepare two HN comment responses before posting:
 Remaining:
 - [ ] **Write accommodation-engine blog post** — scaffold complete (`.claude/plans/exports/blog/accommodation-engine.md`).
   Prose + personal note pending. Timing: 1 week+ after Observatory Show HN.
+- [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
 - [ ] **Cognitive architecture maintenance** (knock analysis 2026-03-03):
   - [ ] Audit `MEMORY.md` metacognitive/factual ratio — metacognitive standards (sycophancy flags, epistemic quality, single-question rule) are higher-value entries than project facts; current ratio may be inverted
   - [ ] Add proactive gap-detection step to `/cycle` skill — after each implementation step, AI should ask "what did I not examine in the files I just changed?" before moving on
