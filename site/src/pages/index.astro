@@ -2,21 +2,53 @@
 // SPDX-License-Identifier: Apache-2.0
 import Base from '../layouts/Base.astro';
 import SubNav from '../components/SubNav.astro';
-import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution } from '../lib/db';
+import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution, type HomepageBlob, HOMEPAGE_BLOB_KEY } from '../lib/db';
 import { scoreToColor, formatScore, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../lib/colors';
 import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../lib/udhr';
 import { readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
+const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
-const [articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories] = await Promise.all([
-  getArticleDetailedStats(db),
-  getArticleSparklines(db, 60),
-  getStatusCounts(db),
-  getDailyHrcb(db, 60),
-  getDomainStats(db, 10),
-  getTopPropagandaStories(db, 15),
-]);
+// Fast path: KV blob precomputed by cron every 5 min (zero D1 queries on cache hit)
+let blob: HomepageBlob | null = null;
+try { blob = await kv.get(HOMEPAGE_BLOB_KEY, 'json') as HomepageBlob | null; } catch { /* fall through */ }
+
+let articleStats: HomepageBlob['articleStats'];
+let sparklinesRaw: HomepageBlob['sparklinesRaw'];
+let statusCounts: HomepageBlob['statusCounts'];
+let dailyHrcb: HomepageBlob['dailyHrcb'];
+let topDomains: HomepageBlob['topDomains'];
+let propagandaStories: HomepageBlob['propagandaStories'];
+let signalOverview: HomepageBlob['signalOverview'] = null;
+let stakeholderData: HomepageBlob['stakeholderData'] = null;
+let regionData: HomepageBlob['regionData'] = null;
+let domainFingerprints: Map<string, (number | null)[]> = new Map();
+
+if (blob) {
+  ({ articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories,
+     signalOverview, stakeholderData, regionData } = blob);
+  domainFingerprints = new Map(Object.entries(blob.domainFingerprintsRaw));
+} else {
+  // Cold path: D1 fallback (first load before blob exists, or blob expired)
+  [articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories] =
+    await Promise.all([
+      getArticleDetailedStats(db),
+      getArticleSparklines(db, 60),
+      getStatusCounts(db),
+      getDailyHrcb(db, 60),
+      getDomainStats(db, 10),
+      getTopPropagandaStories(db, 15),
+    ]);
+  try {
+    [signalOverview, stakeholderData, regionData] = await Promise.all([
+      getSignalOverview(db),
+      getStakeholderOverview(db),
+      getRegionDistribution(db),
+    ]);
+  } catch { /* graceful fallback */ }
+  domainFingerprints = await getDomainFingerprints(db, topDomains.map(d => d.domain));
+}
 
 // Build section → ordered final values map from daily rollup rows
 const sparklines = new Map<string, number[]>();
@@ -25,20 +57,6 @@ for (const row of sparklinesRaw) {
   if (!arr) { arr = []; sparklines.set(row.section, arr); }
   arr.push(row.final);
 }
-
-// Graceful fallback for newer queries
-let signalOverview: Awaited<ReturnType<typeof getSignalOverview>> | null = null;
-let stakeholderData: Awaited<ReturnType<typeof getStakeholderOverview>> | null = null;
-let regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null = null;
-try {
-  [signalOverview, stakeholderData, regionData] = await Promise.all([
-    getSignalOverview(db),
-    getStakeholderOverview(db),
-    getRegionDistribution(db),
-  ]);
-} catch { /* graceful fallback */ }
-
-const domainFingerprints = await getDomainFingerprints(db, topDomains.map(d => d.domain));
 
 // Derived data
 const statsMap = new Map(articleStats.map(a => [a.section, a]));

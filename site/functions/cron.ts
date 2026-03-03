@@ -18,7 +18,7 @@ import {
 import { logEvent, pruneEvents } from '../src/lib/events';
 import { CALIBRATION_SET, LITE_CALIBRATION_SET, LITE_DRIFT_THRESHOLDS, runCalibrationCheck } from '../src/lib/calibration';
 import { shouldAutoDisableFromCalibration, raterHealthKvKey, emptyRaterHealth, type RaterHealthState } from '../src/lib/rater-health';
-import { getPipelineHealth, computeModelComparisonBlob, MODEL_COMPARISON_KV_KEY, MODEL_COMPARISON_TTL } from '../src/lib/db';
+import { getPipelineHealth, computeModelComparisonBlob, MODEL_COMPARISON_KV_KEY, MODEL_COMPARISON_TTL, computeHomepageBlob, HOMEPAGE_BLOB_KEY, HOMEPAGE_BLOB_TTL } from '../src/lib/db';
 import { safeBatch, writeDb } from '../src/lib/db-utils';
 import { runScheduledCoverageStrategy } from '../src/lib/coverage-crawl';
 import {
@@ -79,6 +79,17 @@ export default {
         console.log(`[cron] Model comparison blob computed: ${blob.totalStories} stories, ${blob.modelIds.length} models`);
       } catch (err) {
         console.error('[cron] Model comparison blob failed (non-fatal):', err);
+      }
+    }
+
+    // ─── Pre-compute homepage data blob (lock-free, read-only + KV write) ───
+    if (minute % 5 === 0) {
+      try {
+        const hpBlob = await computeHomepageBlob(db);
+        await env.CONTENT_CACHE.put(HOMEPAGE_BLOB_KEY, JSON.stringify(hpBlob), { expirationTtl: HOMEPAGE_BLOB_TTL });
+        console.log(`[cron] Homepage blob computed: ${hpBlob.statusCounts.done} evaluated, ${hpBlob.topDomains.length} domains`);
+      } catch (err) {
+        console.error('[cron] Homepage blob failed (non-fatal):', err);
       }
     }
 
