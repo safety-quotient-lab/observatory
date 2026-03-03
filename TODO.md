@@ -54,6 +54,9 @@ Remaining:
 - [x] "see whether the inference is warranted" → "assess whether the inference is warranted"
 - [x] "every architectural decision" → "every major architectural decision"
 
+**techniques.md validity fix (2026-03-03):**
+- [x] Corpus overview table: removed fabricated exact counts (376, 6/8 sessions), replaced with "~300–400 (estimated)" and qualitative frequency labels; added ⚑ disclosure note inside the ASCII block; opening paragraph de-scoped to "8-day build" without specific counts; taxonomy table Count column replaced with Frequency (low/medium/high/rare). Knock analysis confirmed: exact counts were agent reconstruction from compressed context, not verified parse.
+
 **HN comment prep (not blockers, but useful before posting):**
 - [ ] Prepare response for "measuring HN with HN" — sampling bias meta-observation not addressed anywhere in post. Response: HN chosen for quality-filtered access, not representativeness; future corpora extend beyond HN.
 - [ ] Prepare response for "44% expert-assuming = Article 26 concern" — the stretchiest claim in the aggregate stats. Response: Article 26 framing is a lens at scale, not a condemnation; HN self-selects but cumulative inaccessibility is still a rights-relevant pattern.
