@@ -9,57 +9,21 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Show HN soft launch — write personal closer and post.** Site ready.
-`observatory.unratified.org` live. All polish deployed: lens hero pills,
-interstitials, horizontal scores, collapsed filters, WCAG a11y, paired
-E/S bars, two-row article tables, rank removal, correlation colors,
-font bump, UDHR source links on 6 pages, free-tier mention, about softening,
-`/reference` routing table (all terms + 31 UDHR articles), Article 19/26 inline
-links in signals page, lite-1.5 two-dimension scoring (editorial + structural)
-with content-type weight blending + SETL for lite evals, `lite_reeval` sweep,
-consensus neutral discount for confident-zero Llama evals, Reader|Researcher
-persona toggle on /about, Anthropic/Claude Code section (Pentagon dispute +
-UDHR framing + disclosure), site-wide framework citations (CRAAP Test, PTC-18,
-Russell's Circumplex), homepage unratified.org ×φ references,
-light/dark theme toggle (OkSolar Light default, `localStorage['hro_theme']`),
-score color WCAG tuning (brightness filter feeds+heatmap+evidence bars, theme-aware client scoreColor),
-reader prose plain-English (FW Ratio expanded, Confidence notation, steps list jargon-free),
-HRO attributed to SQ Lab + unratified.org (about lede, index hero, JSON-LD creator),
-exports/ restructure (proposals + blog under single tracked-output root),
-blog post pre-publication fixes complete (cognitive-architecture.md — all 6 fixes + timeline audit),
-techniques.md drafted (AI agent voice, tables/figures, 376-message corpus analysis),
-hn-companion-techniques.md drafted,
-agent name "observatory.unratified.org's agent" applied to all disclosure/speaker lines,
-advocacy layer on homepage (unratified.org CTA in "What we're finding", hero sub-line sharpened),
-Show HN draft accepted (all content locked — fairwitness.bot link, accommodation engine framing,
-tech stack in para 2, Fortune case study confirmed, credentials approved),
-accommodation-engine blog post scaffolded (6 sections incl. "finding my voice").
-**Audit note:** lite-1.5 structural channel is noise for Llama (86% on 2
-integers). Safe to ship — structural not surfaced to users, 0.5× consensus
-weight. TQ replacement designed for post-launch. See
-`findings/2026-03-02-lite-1.5-structural-audit.md`.
+**Post Show HN.** Draft ready at `.claude/plans/show-hn-draft.md` (gitignored).
+blog.unratified.org live (2026-03-03). All pre-submission checks cleared:
+Sharma citation verified (ICLR 2024 ✓), Fortune case study from DeepSeek V3.2
+full eval (not Llama ✓), 4 text fixes applied, techniques.md corpus stats
+corrected (estimated counts, ⚑ disclosure). One remaining: verify opener
+"companion piece on the cognitive architecture" fits the two blog post titles,
+or reword. Then submit → email Tom.
+
+Prepare two HN comment responses before posting:
+- "measuring HN with HN": HN chosen for quality-filtered access, not
+  representativeness; future corpora extend beyond HN.
+- "44% expert-assuming = Article 26": lens at scale, not condemnation; HN
+  self-selects but cumulative inaccessibility is a rights-relevant pattern.
 
 Remaining:
-- [ ] **Post Show HN** — draft ready. Blog URLs filled, all 4 text fixes applied, both BLOCK conditions cleared. One remaining check: opener sentence "companion piece on the cognitive architecture" — verify the blog post titles at recursive-methodology and what-806-stories-reveal match that framing, or reword the sentence. Then submit → email Tom.
-
-### Pre-submission checks (embarrassment analysis 2026-03-03)
-
-**BLOCK conditions — must resolve before any submission:**
-- [x] **Verify Sharma et al. arXiv:2310.13548** — confirmed: correct title, correct authors (Sharma, Tong, Korbak et al.), confirmed ICLR 2024 proceedings. Citation valid.
-- [x] **Confirm Fortune case study scores source** — D1 shows scores from DeepSeek V3.2 (OpenRouter, full mode): editorial 0.3, structural -0.633, SETL 0.837. Not Llama. Noisy-structural concern does not apply. Haiku eval failed on this story; DeepSeek full eval is the canonical source.
-
-**Show HN text fixes (apply before submitting):**
-- [x] Softened "tech journalism" → "one in three stories on HN was published without a named author"
-- [x] "The fix I'm building is TQ" → "The direction I'm exploring is TQ"
-- [x] "see whether the inference is warranted" → "assess whether the inference is warranted"
-- [x] "every architectural decision" → "every major architectural decision"
-
-**techniques.md validity fix (2026-03-03):**
-- [x] Corpus overview table: removed fabricated exact counts (376, 6/8 sessions), replaced with "~300–400 (estimated)" and qualitative frequency labels; added ⚑ disclosure note inside the ASCII block; opening paragraph de-scoped to "8-day build" without specific counts; taxonomy table Count column replaced with Frequency (low/medium/high/rare). Knock analysis confirmed: exact counts were agent reconstruction from compressed context, not verified parse.
-
-**HN comment prep (not blockers, but useful before posting):**
-- [ ] Prepare response for "measuring HN with HN" — sampling bias meta-observation not addressed anywhere in post. Response: HN chosen for quality-filtered access, not representativeness; future corpora extend beyond HN.
-- [ ] Prepare response for "44% expert-assuming = Article 26 concern" — the stretchiest claim in the aggregate stats. Response: Article 26 framing is a lens at scale, not a condemnation; HN self-selects but cumulative inaccessibility is still a rights-relevant pattern.
 - [ ] **Write accommodation-engine blog post** — scaffold complete (`.claude/plans/exports/blog/accommodation-engine.md`).
   Prose + personal note pending. Timing: 1 week+ after Observatory Show HN.
 - [ ] **Cognitive architecture maintenance** (knock analysis 2026-03-03):
