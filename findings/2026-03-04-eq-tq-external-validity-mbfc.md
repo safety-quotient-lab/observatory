@@ -16,7 +16,11 @@
 
 **Result:** ρ = +0.362, p = 0.0983, n = 22 → **MARGINAL at α=0.10**
 
-**Re-validation (2026-03-04, 64 eligible domains):** ρ = +0.362, p = 0.0983, n = 22 — **identical**. MBFC coverage is the ceiling, not our data size. 64 full-eval domains in D1, but only 22 appear in MBFC. Accumulating more D1 data will not improve n. Need broader external dataset.
+**Re-validation (2026-03-04, 64 eligible domains, idiap extract):** ρ = +0.362, p = 0.0983, n = 22 — identical to initial. MBFC coverage is the ceiling, not our data size.
+
+**Direct MBFC scrape (2026-03-04):** Constructed slugs for 42 domains not in idiap extract; found 3 new matches (fs.blog, spectrum.ieee.org, metr.org). Combined n=25, ρ = +0.274, p = 0.185 — NOT SIGNIFICANT. Result worsened: `metr.org` (EQ=0.866, MBFC=Mixed) is an outlier — METR is an AI safety research org rated "Mixed" for advocacy, not content quality. Classic construct mismatch in the extension set.
+
+**Conclusion:** MBFC path exhausted. Coverage ceiling ~22-25 for our corpus regardless of approach. MBFC doesn't cover most HN-surfaced domains (tech blogs, research orgs, indie outlets). Need NewsGuard for broader coverage and better construct alignment.
 
 ### Domain-level data (sorted by avg_eq ascending)
 
@@ -57,7 +61,7 @@
 
 Direction confirmed: high-EQ domains cluster at MBFC High/VeryHigh, low-EQ at Mixed. The positive ρ=+0.362 is directionally consistent with the hypothesis. n=22 limits power; marginal result is expected at this sample size. The per-content vs per-outlet mismatch (EQ measures specific stories; MBFC rates outlets) explains part of the variance — this is actually a feature, not a bug.
 
-**Assessment:** Directionally confirmed, MBFC coverage is the hard ceiling (~22 HN/MBFC overlapping domains regardless of D1 accumulation). To reach p<0.05 requires either a larger external dataset (e.g., AllSides + NewsGuard combined) or waiting for HN to naturally surface more MBFC-rated outlets.
+**Assessment:** MBFC path fully exhausted (idiap extract + direct scrape, n=25 max). Ceiling is the MBFC dataset's coverage of HN-type domains, not our data volume or slug construction. Requires NewsGuard for broader, more relevant coverage.
 
 ---
 

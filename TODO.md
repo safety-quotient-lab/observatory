@@ -22,7 +22,7 @@ Phase 0 external validation progress:
 ✓ TQ implementation (lite-1.6, migration 0059 — 2026-03-04)
 ✓ EQ/TQ external validity vs idiap/MBFC (2026-03-04, re-validated 2026-03-04): EQ ρ=+0.362 marginal (MBFC coverage ceiling ~22 — not a data volume problem), TQ ρ=-0.094 (construct mismatch confirmed at n=24 — MBFC reliability is wrong validator for per-article transparency)
 
-Next: Phase 0 complete for core HRCB construct. Remaining open: CL validator (needs human ratings), TQ re-validation (needs NewsGuard sourcing sub-scores + ED/HR/MI content filter), EQ re-validation (needs AllSides+NewsGuard combined dataset). All gated on finding better external datasets — data accumulation won't help.
+Next: Phase 0 complete for core HRCB construct. Remaining open: CL validator (needs human ratings), TQ re-validation (needs NewsGuard sourcing sub-scores + ED/HR/MI content filter), EQ re-validation (needs NewsGuard — MBFC path fully exhausted at n=25). All gated on NewsGuard research access — email drafted at `.claude/plans/exports/newsguard-research-access-email.md`.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/exports/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.

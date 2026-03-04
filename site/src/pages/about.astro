@@ -134,6 +134,30 @@ const jsonLd = {
           </p>
         </div>
 
+        <h2 id="data-sources" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Data Sources</h2>
+
+        <p style="color: var(--fg-secondary); line-height: 1.6; margin-bottom: 10px; font-size: var(--font-sm);">
+          Story data, scores, and user metadata are fetched from the
+          <a href="https://hacker-news.firebaseio.com" target="_blank" rel="noopener" style="color: var(--fg-primary);">Hacker News Firebase API</a>
+          (public, real-time). Historical backfill uses the
+          <a href="https://hn.algolia.com/api" target="_blank" rel="noopener" style="color: var(--fg-primary);">Algolia HN Search API</a>.
+          When live article content is unavailable, the pipeline falls back to
+          <a href="https://web.archive.org" target="_blank" rel="noopener" style="color: var(--fg-primary);">Internet Archive / Wayback Machine</a> snapshots.
+          The UDHR text evaluated against is the
+          <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" target="_blank" rel="noopener" style="color: var(--fg-primary);">1948 UN Universal Declaration of Human Rights</a>
+          (public domain). Propaganda technique classification follows the
+          <a href="https://aclanthology.org/D19-1565/" target="_blank" rel="noopener" style="color: var(--fg-primary);">PTC-18 taxonomy</a> (Rashkin et al., ACL 2019).
+        </p>
+
+        <p class="persona-researcher" style="color: var(--fg-secondary); line-height: 1.6; margin-bottom: 10px; font-size: var(--font-sm);">
+          External construct validation uses the
+          <a href="https://github.com/idiap/News-Media-Reliability" target="_blank" rel="noopener" style="color: var(--fg-primary);">idiap/News-Media-Reliability</a>
+          dataset (Apache 2.0) and
+          <a href="https://mediabiasfactcheck.com" target="_blank" rel="noopener" style="color: var(--fg-primary);">Media Bias/Fact Check</a>
+          factual reporting ratings. Validation findings are in <code>findings/</code> in the
+          <a href="https://github.com/safety-quotient-lab/observatory" target="_blank" rel="noopener" style="color: var(--fg-primary);">public repository</a>.
+        </p>
+
         <h2 id="classification" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Core Construct: HRCB</h2>
 
         <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
