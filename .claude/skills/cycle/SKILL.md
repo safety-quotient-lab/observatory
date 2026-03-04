@@ -145,3 +145,9 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 Report what was updated, what was committed, what was deployed, and what was skipped (with reason).
 
 Include one line: **Next:** [the current focus item from TODO.md]. This makes the session handoff explicit.
+
+### 12.5. Detect cogarch wins
+
+- Run `node scripts/detect-cogarch-win.mjs` from repo root
+- Reports win + scaffold path, or "no win detected this session"
+- Skip for routine sessions with no AI judgment calls (trivial edits, typo fixes)
