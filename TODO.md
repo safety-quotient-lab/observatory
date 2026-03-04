@@ -12,10 +12,12 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 **Construct validity work active.** Tom emailed. HN thread quiet.
 
 Phase 0 external validation progress:
+- ✓ DB hygiene — 8 gated-pending → skipped, 442 orphaned queued → failed, 107 null-editorial full evals retroactively failed + 28 re-queued
 - ✓ Discriminant validity (r=0.08, PASS — `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`)
-- ✓ PTD inter-rater reliability (κ=0.325 fair, only `loaded_language` usable — `findings/2026-03-04-ptd-inter-rater-reliability.md`)
+- ✓ PTD inter-rater reliability (κ=0.325 fair — `findings/2026-03-04-ptd-inter-rater-reliability.md`)
+- ✓ Test-retest preliminary (r=0.984, n=11, same-day — `findings/2026-03-04-test-retest-reliability-haiku-lite.md`)
 
-Next: TQ (plan first, L effort) or test-retest reliability (M effort, no new infra needed).
+Next: TQ implementation (plan first, L effort) — highest remaining Phase 0 priority.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — draft complete (`.claude/plans/exports/blog/accommodation-engine.md`).
@@ -97,7 +99,7 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 - [ ] **Convergent validity** — correlate TQ with RDR disclosure indicators on ~20 overlapping domains
 - ~~**Discriminant validity**~~ — ✓ DONE 2026-03-04. Pearson r=+0.08, R²=0.007 (0.7% shared variance). PASS. See `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`.
 - [ ] **Known-groups expansion** — expand calibration beyond 15 URLs to 50+ pre-classified domains
-- [ ] **Test-retest reliability** — re-evaluate 50 stable-content stories for temporal consistency
+- [ ] **Test-retest reliability** — ✓ Preliminary DONE 2026-03-04 (n=11, hours apart, r=0.984). Formal test still needed: n≥50, 1+ week gap. See `findings/2026-03-04-test-retest-reliability-haiku-lite.md`. Low priority — temporal instability not a primary concern.
 
 #### HRCB Decomposition Decision
 
