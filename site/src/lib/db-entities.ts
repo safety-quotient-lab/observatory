@@ -149,12 +149,8 @@ export async function getDomainIntelligence(
               / NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) as negative_pct,
         ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END)
               / NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) as neutral_pct,
-        (SELECT ROUND(AVG(sc.editorial), 4) FROM rater_scores sc
-         JOIN stories s2 ON s2.hn_id = sc.hn_id
-         WHERE s2.domain = s.domain AND sc.eval_model = s2.eval_model AND sc.editorial IS NOT NULL) as avg_editorial,
-        (SELECT ROUND(AVG(sc.structural), 4) FROM rater_scores sc
-         JOIN stories s2 ON s2.hn_id = sc.hn_id
-         WHERE s2.domain = s.domain AND sc.eval_model = s2.eval_model AND sc.structural IS NOT NULL) as avg_structural
+        ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_editorial_mean END), 4) as avg_editorial,
+        ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_structural_mean END), 4) as avg_structural
       FROM stories s
       WHERE s.domain IS NOT NULL
       GROUP BY s.domain
