@@ -9,15 +9,11 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Post Show HN.** Draft ready at `.claude/plans/show-hn-draft.md` (gitignored).
-All checks cleared. Editor notes stripped. `/.well-known/agent-manifest.json`
-deployed; mentioned in draft. Submit → email Tom.
+**Show HN posted.** Monitor thread, reply to comments using
+`.claude/plans/hn-comments.md` (6 objection responses + 2 initial context comments).
+Email Tom with HN link if not done.
 
-Prepare two HN comment responses before posting:
-- "measuring HN with HN": HN chosen for quality-filtered access, not
-  representativeness; future corpora extend beyond HN.
-- "44% expert-assuming = Article 26": lens at scale, not condemnation; HN
-  self-selects but cumulative inaccessibility is a rights-relevant pattern.
+Next unblocked engineering work: post-launch items below.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — scaffold complete (`.claude/plans/exports/blog/accommodation-engine.md`).
@@ -34,6 +30,10 @@ Remaining:
 - [ ] Post-launch: Lite calibration validation — run Haiku on lite prompt for ~50 stories already evaluated by both Llama models. Compare Haiku-lite vs Llama-lite to isolate prompt mode effect from model effect. If Haiku-lite ≈ Llama-lite, the 2.4× gap is prompt architecture. If Haiku-lite >> Llama-lite, there's also a model capability factor. Informs whether calibration-anchored correction (option 3 in model-divergence-analysis.md) is viable. See `findings/2026-03-02-llama-neutral-50-bias.md`.
 - [ ] Post-launch: **TQ (Transparency Quotient) implementation** — replace structural channel for Llama with binary/countable verifiability indicators (author, sources, date, corrections, conflicts, methodology). Model-tiered prompt routing: Llama → editorial + TQ; Haiku → editorial + structural. Schema: new tq_* columns, prompt_mode variant. Design validated via TQ dry-run (Haiku, n=4, full range 0.00-0.80). See `findings/2026-03-02-lite-1.5-structural-audit.md`.
 - [ ] Post-launch: `/.well-known/agent-inbox.json` — inter-agent proposal discovery endpoint. Build-time derived from `.claude/plans/exports/proposals/` frontmatter (status/summary/recipient/date → JSON). Pair with stub `POST /api/webmention` for push notification. Key insight from knock analysis: manifest must be a build artifact (not manually maintained) or it silently drifts. See knock analysis in session 2026-03-02.
+
+### Architecture (evaluate later)
+
+- [ ] **HN comments passthrough (no DB storage)** — evaluate whether comments can be served via passthrough from the HN Firebase API rather than stored in D1. The HN API exposes comment trees per item in real-time; a passthrough endpoint (`/api/story/[id]/comments` → HN Firebase) would eliminate comment storage entirely and keep data always-fresh. Trade-offs: latency on each request, no offline access, no ability to annotate/score comments, rate limit exposure. Worth evaluating after launch — depends on whether comment scoring becomes a feature goal.
 
 ### Standards (M effort — deferred)
 

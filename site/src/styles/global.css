@@ -153,9 +153,9 @@ html[data-theme="light"] {
   --bg-primary:   #fdf6e3;   /* OkSolar base3 (cream) */
   --bg-highlight: #eee8d5;   /* OkSolar base2 */
   --bg-surface:   #dbd2b9;   /* between base2 and base1 */
-  --fg-primary:   #657b83;   /* OkSolar base00 */
-  --fg-emphasis:  #586e75;   /* OkSolar base01 */
-  --fg-secondary: #93a1a1;   /* OkSolar base1 */
+  --fg-primary:   #586e75;   /* OkSolar base01 — shifted one step darker for contrast */
+  --fg-emphasis:  #4a5d64;   /* between base01 and base02 — headings/emphasis */
+  --fg-secondary: #657b83;   /* OkSolar base00 — secondary text, was fg-primary */
   --color-border: #cdc8b1;   /* between base2 and base3 */
 
   /* Accent — Solarized Light equivalents */
