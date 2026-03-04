@@ -9,10 +9,10 @@
  *   2. (no --prompt)    Interactive REPL for manual multi-turn exchanges.
  *
  * Usage:
- *   node scripts/gemini-feedback.mjs --prompt "Review our API design"
- *   node scripts/gemini-feedback.mjs --provider openrouter --model qwen/qwen3-235b-a22b-thinking-2507
- *   node scripts/gemini-feedback.mjs --prompt "..." --resume FILE --save name
- *   node scripts/gemini-feedback.mjs              # interactive REPL
+ *   node scripts/external-feedback.mjs --prompt "Review our API design"
+ *   node scripts/external-feedback.mjs --provider openrouter --model qwen/qwen3-235b-a22b-thinking-2507
+ *   node scripts/external-feedback.mjs --prompt "..." --resume FILE --save name
+ *   node scripts/external-feedback.mjs              # interactive REPL
  *
  * Options:
  *   --prompt TEXT       Send single prompt, output JSON, exit (non-interactive)
@@ -54,11 +54,12 @@ const hasFlag = (flag) => process.argv.includes(flag);
 const PROVIDER_DEFAULTS = {
   gemini: { model: 'gemini-2.0-flash', keyEnv: 'GOOGLE_API_KEY' },
   openrouter: { model: 'qwen/qwen3-235b-a22b-thinking-2507', keyEnv: 'OPENROUTER_API_KEY' },
+  wolfram: { model: 'llm-api', keyEnv: 'WOLFRAMALPHA_APP_ID' },
 };
 
 let PROVIDER = argVal('--provider') || 'openrouter';
 if (!PROVIDER_DEFAULTS[PROVIDER]) {
-  console.error(`Unknown provider: ${PROVIDER}. Use: gemini, openrouter`);
+  console.error(`Unknown provider: ${PROVIDER}. Use: gemini, openrouter, wolfram`);
   process.exit(1);
 }
 
@@ -244,6 +245,9 @@ function toOpenAIMessages(contents) {
 }
 
 async function callLLM(contents, retryCount = 0) {
+  if (PROVIDER === 'wolfram') {
+    return callWolfram(contents);
+  }
   if (PROVIDER === 'openrouter') {
     return callOpenRouter(contents, retryCount);
   }
@@ -326,6 +330,42 @@ async function callOpenRouter(contents, retryCount = 0) {
   return text;
 }
 
+async function callWolfram(contents) {
+  // Wolfram is not a chat model — extract the last user message as a query
+  const lastUser = [...contents].reverse().find(c => c.role === 'user');
+  if (!lastUser) throw new Error('No user message to query Wolfram with');
+  const query = lastUser.parts.map(p => p.text).join('\n');
+
+  // Use LLM API for structured text output, Short Answers for one-liners
+  const endpoint = MODEL === 'short' ? 'v1/result' : 'api/v1/llm-api';
+  const baseUrl = MODEL === 'short'
+    ? `http://api.wolframalpha.com/${endpoint}`
+    : `https://www.wolframalpha.com/${endpoint}`;
+  const url = `${baseUrl}?input=${encodeURIComponent(query)}&appid=${API_KEY}`;
+
+  const res = await fetch(url);
+
+  if (res.status === 501) {
+    return JSON.stringify({
+      findings: [{ category: 'data', claim: 'Wolfram Alpha could not interpret this query', severity: 'info', actionable: false, suggestion: 'Rephrase as a computational or factual question' }],
+      summary: 'Query not understood by Wolfram Alpha'
+    });
+  }
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Wolfram API ${res.status}: ${err}`);
+  }
+
+  const text = await res.text();
+  // Wrap raw Wolfram output in our findings format
+  return JSON.stringify({
+    findings: [{ category: 'data', claim: text, severity: 'info', actionable: false, suggestion: null }],
+    summary: `Wolfram Alpha result for: ${query.slice(0, 100)}`,
+    _raw_wolfram: text
+  });
+}
+
 // --- Conversation state ---
 let contents = []; // Gemini format: [{ role: 'user'|'model', parts: [{ text }] }]
 let saved = false;
@@ -394,7 +434,10 @@ if (RESUME_FILE) {
 // ============================================================
 if (PROMPT) {
   // Build conversation: system context (if fresh) + user prompt
-  if (contents.length === 0 && !FOLLOW_UP) {
+  // Wolfram is a computational engine — no system context, just the query
+  if (PROVIDER === 'wolfram') {
+    addUser(PROMPT);
+  } else if (contents.length === 0 && !FOLLOW_UP) {
     addUser(buildSystemContext() + '\n\n---\n\n' + PROMPT);
   } else {
     addUser(PROMPT);
