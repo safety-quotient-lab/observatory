@@ -442,9 +442,15 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
     }
     const tqScore = tqSum / 5;
     parsed.tq_score = Math.round(tqScore * 1000) / 1000;
-    // Inject as structural proxy: maps [0,1] → [-1,+1] so computeLiteAggregates() works unchanged
-    // 0/5 → -1.0 (opaque), 2-3/5 → ≈0 (neutral), 5/5 → +1.0 (fully transparent)
-    ev.structural = tqScore * 2 - 1;
+    // Inject TQ as structural proxy for article-type content only.
+    // For LP/AD/CO/PR/AC/ME (non-article types), TQ indicators (author, date, sources)
+    // don't apply — a landing page isn't expected to have a byline or corrections policy.
+    // Those types fall through to editorial-only aggregation (structural stays undefined).
+    const TQ_PROXY_TYPES = new Set(['ED', 'HR', 'MI', 'PO']);
+    if (TQ_PROXY_TYPES.has(ev.content_type as string)) {
+      // maps [0,1] → [-1,+1]: 0/5 → -1.0 (opaque), 2-3/5 → ≈0, 5/5 → +1.0 (fully transparent)
+      ev.structural = tqScore * 2 - 1;
+    }
   }
 
   // Validate reasoning field (lite-1.4+): optional, discard if malformed
