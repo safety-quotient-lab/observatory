@@ -107,6 +107,13 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "funding_disclosed": <boolean|null>,
     "td_score": <0.0-1.0>
   },
+  "rights_tensions": [
+    {
+      "article_a": <int: UDHR article number of first right (0=Preamble, 1-30)>,
+      "article_b": <int: UDHR article number of second right>,
+      "label": "<one-sentence: what is in tension and how the content resolves it>"
+    }
+  ],
   "aggregates": {
     "weighted_mean": <number>,
     "unweighted_mean": <number>,
@@ -223,7 +230,14 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
     "conflicts_disclosed": <boolean|null>,
     "funding_disclosed": <boolean|null>,
     "td_score": <0.0-1.0>
-  }
+  },
+  "rights_tensions": [
+    {
+      "article_a": <int: UDHR article number of first right (0=Preamble, 1-30)>,
+      "article_b": <int: UDHR article number of second right>,
+      "label": "<one-sentence: what is in tension and how the content resolves it>"
+    }
+  ]
 }`;
 
 /**

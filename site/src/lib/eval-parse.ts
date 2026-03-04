@@ -292,9 +292,31 @@ export function validateSlimEvalResponse(parsed: any): ValidationResult {
   // Supplementary signals (all optional)
   for (const signal of ['epistemic_quality', 'propaganda_flags', 'solution_orientation',
     'emotional_tone', 'stakeholder_representation', 'temporal_framing',
-    'geographic_scope', 'complexity_level', 'transparency_disclosure']) {
+    'geographic_scope', 'complexity_level', 'transparency_disclosure',
+    'rights_tensions']) {
     if (parsed[signal] === undefined) {
       warnings.push(`Missing supplementary signal: ${signal}`);
+    }
+  }
+
+  // Validate rights_tensions array
+  if (parsed.rights_tensions !== undefined) {
+    if (!Array.isArray(parsed.rights_tensions)) {
+      parsed.rights_tensions = [];
+      repairs.push('rights_tensions: reset to [] (was non-array)');
+    } else {
+      // Clamp to max 3, validate element structure
+      parsed.rights_tensions = parsed.rights_tensions
+        .filter((p: unknown) => {
+          if (typeof p !== 'object' || p === null) return false;
+          const pair = p as Record<string, unknown>;
+          return (
+            typeof pair.article_a === 'number' && pair.article_a >= 0 && pair.article_a <= 30 &&
+            typeof pair.article_b === 'number' && pair.article_b >= 0 && pair.article_b <= 30 &&
+            typeof pair.label === 'string' && pair.label.length > 0
+          );
+        })
+        .slice(0, 3);
     }
   }
 

@@ -15,6 +15,12 @@ export const ALL_SECTIONS = [
 
 // --- Supplementary Signal Interfaces ---
 
+export interface RightsTensionPair {
+  article_a: number;  // UDHR article number (0 = Preamble, 1-30 = articles)
+  article_b: number;
+  label: string;      // one-sentence description of the tension
+}
+
 export interface EpistemicQuality {
   source_quality: number;
   evidence_reasoning: number;
@@ -136,6 +142,7 @@ export interface EvalResult {
   geographic_scope?: GeographicScope;
   complexity_level?: ComplexityLevel;
   transparency_disclosure?: TransparencyDisclosure;
+  rights_tensions?: RightsTensionPair[];
   aggregates: {
     weighted_mean: number;
     unweighted_mean: number;
@@ -269,6 +276,7 @@ export interface RaterEval {
   sr_score: number | null;
   pt_flag_count: number;
   pt_score: number | null;
+  rts_tension_count: number | null;
   td_score: number | null;
   tq_score: number | null;
   tq_author: number | null;

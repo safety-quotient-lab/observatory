@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Construct validity work active.** Tom emailed. HN thread quiet.
+**Construct validity work active + RTS implemented.** Tom emailed. HN thread quiet.
 
 Phase 0 external validation progress:
 - ✓ DB hygiene — 8 gated-pending → skipped, 442 orphaned queued → failed, 107 null-editorial full evals retroactively failed + 28 re-queued
@@ -25,7 +25,9 @@ Phase 0 external validation progress:
 ✓ Phase A automated validation (2026-03-04): SR ✓ TD ✓ GS ✓ | SO ~ | SETL/FW/TF ✗ null | Flags: SO/SR↔HRCB high (0.609/0.582), TD↔EQ high (0.652). Full: `findings/2026-03-04-phase-a-automated-validation.md`
 ✓ REM (Rights Entanglement Map) (2026-03-04): `computeRemClusters()` + `/rights/network` section. `hcb_classification` badge now inline in EvalCard.
 
-Next: Phase B (human raters — ET-valence, PT technique-level, CL expertise, ET-arousal) and Phase C gated on NewsGuard. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`. After validation: RTS (Rights Tension Signature) — new prompt, categorical output.
+✓ RTS (Rights Tension Signature) implementation (2026-03-04): migration 0060, full eval output `rights_tensions` array (max 3 pairs), `stories.rts_tensions_json` + `rater_evals.rts_tension_count`, item page "Rights Tensions" section.
+
+Next: Phase B (human raters — ET-valence, PT technique-level, CL expertise, ET-arousal) and Phase C gated on NewsGuard. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
@@ -132,7 +134,7 @@ See analysis doc Section 8g.
 
 **Combined priority (both perspectives)**:
 - HIGH: TQ, RS, NT, PTD, ESC, REM, ICI
-- CONFLICT (must resolve): RTS
+- ~~CONFLICT (must resolve): RTS~~ — ✓ DONE 2026-03-04. Implemented as dedicated categorical field (not inferred from score deltas). Migration 0060.
 - Infrastructure only: MCC, SRD, AC
 - Defer: NFI, DEI, HA
 

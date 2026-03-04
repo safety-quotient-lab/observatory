@@ -208,6 +208,10 @@ const eqData = storyData.eq_score != null ? {
 } : null;
 const eqScore = storyData.eq_score ?? null;
 const ptFlags = storyData.pt_flags_json ? (() => { try { return JSON.parse(storyData.pt_flags_json); } catch { return null; } })() : null;
+const rtsTensions: Array<{article_a: number; article_b: number; label: string}> | null =
+  storyData.rts_tensions_json
+    ? (() => { try { return JSON.parse(storyData.rts_tensions_json); } catch { return null; } })()
+    : null;
 const ptFlagCount = ptFlags?.length ?? storyData.pt_flag_count ?? 0;
 const soData = storyData.so_score != null ? {
   so_score: storyData.so_score,
@@ -688,6 +692,34 @@ function timeAgo(unixTime: number): string {
               {executiveSummary}
             </div>
           )}
+        </td>
+      </tr>
+    </table>
+  )}
+
+  {rtsTensions && rtsTensions.length > 0 && (
+    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+      <tr>
+        <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <span style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Rights Tensions</span>
+            <span class="badge" style="background: rgba(213,101,0,0.12); color: var(--color-warning); font-size: var(--font-xs);">{rtsTensions.length} {rtsTensions.length === 1 ? 'pair' : 'pairs'}</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            {rtsTensions.map(t => (
+              <div style="font-size: var(--font-sm);">
+                <a href={`/article/${t.article_a}`} style="color: var(--fg-emphasis);">
+                  {t.article_a === 0 ? 'Preamble' : `Art ${t.article_a}`}
+                </a>
+                <span style="color: var(--fg-secondary); margin: 0 6px;">↔</span>
+                <a href={`/article/${t.article_b}`} style="color: var(--fg-emphasis);">
+                  {t.article_b === 0 ? 'Preamble' : `Art ${t.article_b}`}
+                </a>
+                <span style="color: var(--fg-secondary); margin-left: 8px;">—</span>
+                <span style="color: var(--fg-primary); margin-left: 6px;">{t.label}</span>
+              </div>
+            ))}
+          </div>
         </td>
       </tr>
     </table>

@@ -86,6 +86,7 @@ export async function writeEvalResult(
   const gs = result.geographic_scope;
   const cl = result.complexity_level;
   const td = result.transparency_disclosure;
+  const rts = result.rights_tensions ?? null;
 
   await db
     .prepare(
@@ -144,6 +145,7 @@ export async function writeEvalResult(
         td_author_identified = ?,
         td_conflicts_disclosed = ?,
         td_funding_disclosed = ?,
+        rts_tensions_json = ?,
         eval_status = 'done',
         eval_error = NULL,
         evaluated_at = datetime('now')
@@ -213,6 +215,7 @@ export async function writeEvalResult(
       td?.author_identified != null ? (td.author_identified ? 1 : 0) : null,
       td?.conflicts_disclosed != null ? (td.conflicts_disclosed ? 1 : 0) : null,
       td?.funding_disclosed != null ? (td.funding_disclosed ? 1 : 0) : null,
+      rts && rts.length > 0 ? JSON.stringify(rts) : null,
       hnId
     )
     .run();
@@ -830,6 +833,7 @@ export async function writeRaterEvalResult(
   const et = result.emotional_tone;
   const sr = result.stakeholder_representation;
   const td = result.transparency_disclosure;
+  const rts = result.rights_tensions ?? null;
 
   // UPSERT rater_evals
   await db
@@ -845,7 +849,7 @@ export async function writeRaterEvalResult(
         fw_ratio, fw_observable_count, fw_inference_count,
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
         eq_score, so_score, et_primary_tone, et_valence, et_arousal,
-        sr_score, pt_flag_count, pt_score, td_score,
+        sr_score, pt_flag_count, pt_score, rts_tension_count, td_score,
         input_tokens, output_tokens, content_truncation_pct,
         eval_batch_id, evaluated_at
       ) VALUES (
@@ -859,7 +863,7 @@ export async function writeRaterEvalResult(
         ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
-        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
         ?, ?, ?,
         ?, datetime('now')
       )
@@ -897,6 +901,7 @@ export async function writeRaterEvalResult(
         sr_score = excluded.sr_score,
         pt_flag_count = excluded.pt_flag_count,
         pt_score = excluded.pt_score,
+        rts_tension_count = excluded.rts_tension_count,
         td_score = excluded.td_score,
         input_tokens = excluded.input_tokens,
         output_tokens = excluded.output_tokens,
@@ -923,6 +928,7 @@ export async function writeRaterEvalResult(
       sr?.sr_score ?? null,
       pt ? pt.length : 0,
       computePtScore(pt),
+      rts ? rts.length : null,
       td?.td_score ?? null,
       inputTokens, outputTokens, contentTruncationPct,
       batchId,

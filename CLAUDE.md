@@ -21,7 +21,8 @@ This repository contains the UN Universal Declaration of Human Rights (UDHR) tex
 - **Domain Context Profile (DCP)**: Inherited modifiers from domain-level policies (privacy, ToS, accessibility, mission, ownership, access model, ad/tracking).
 - **SETL (Structural-Editorial Tension Level)**: Measures divergence between E and S channel scores. High SETL = "says one thing, does another."
 - **Fair Witness**: Each scored section includes `witness_facts` (observable) and `witness_inferences` (interpretive), enforcing evidence transparency.
-- **Supplementary Signals**: 9 additional dimensions beyond HRCB — epistemic quality, propaganda flags, solution orientation, emotional tone, stakeholder representation, temporal framing, geographic scope, complexity level, transparency/disclosure.
+- **Supplementary Signals**: 10 additional dimensions beyond HRCB — epistemic quality, propaganda flags, solution orientation, emotional tone, stakeholder representation, temporal framing, geographic scope, complexity level, transparency/disclosure, rights tensions (RTS).
+- **RTS (Rights Tension Signature)**: Dedicated field in full eval output — up to 3 pairs of UDHR articles in genuine tension, with a label describing how the content resolves each. Full eval only (lite models excluded). Stored as JSON in `stories.rts_tensions_json`; count in `rater_evals.rts_tension_count`.
 
 ## Architecture
 

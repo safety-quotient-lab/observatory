@@ -180,7 +180,11 @@ Aligned with UDHR's rights-holder/duty-bearer framework:
 - **author_identified** (boolean): Is the author clearly identified by name?
 - **conflicts_disclosed** (boolean|null): Are potential conflicts of interest disclosed? null if not applicable.
 - **funding_disclosed** (boolean|null): Is funding/sponsorship disclosed? null if not applicable.
-- **td_score** (0.0–1.0): Composite transparency. Each applicable true dimension adds equally. Higher = more transparent.`;
+- **td_score** (0.0–1.0): Composite transparency. Each applicable true dimension adds equally. Higher = more transparent.
+
+### 10.10 Rights Tensions (RTS)
+- **rights_tensions**: Array (max 3) of salient rights trade-offs present in this content. Include only genuine tensions — cases where the content's treatment of article_a materially conflicts with, subordinates, or is resolved at the expense of article_b. If no genuine tensions are salient, return []. Do not fabricate tensions.
+- Each entry: **article_a** (int, 0=Preamble, 1-30=UDHR article), **article_b** (int, same), **label** (one sentence describing what is in tension and how the content resolves it).`;
 
 /**
  * Lite methodology — editorial + Transparency Quotient (TQ) binary indicators.
