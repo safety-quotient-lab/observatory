@@ -1,0 +1,239 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import Base from '../layouts/Base.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+
+export const prerender = true;
+
+// Parse the methodology content into structured sections for rendering.
+// Source: methodology-content.ts (CC-BY-SA-4.0) — the operational prompt that
+// LLM evaluators actually receive. This page renders it human-readable.
+import { METHODOLOGY_PREAMBLE, METHODOLOGY_LITE } from '../lib/methodology-content';
+
+interface Section {
+  id: string;
+  title: string;
+  content: string;
+}
+
+function parseMarkdownSections(text: string): Section[] {
+  const lines = text.split('\n');
+  const sections: Section[] = [];
+  let current: Section | null = null;
+  let buffer: string[] = [];
+
+  for (const line of lines) {
+    const h2 = line.match(/^## (\d+(?:\.\d+)?) — (.+)$/);
+    const h3 = line.match(/^### (\d+\.\d+) (.+)$/);
+    if (h2) {
+      if (current) { current.content = buffer.join('\n'); sections.push(current); }
+      const id = `section-${h2[1].replace(/\./g, '-')}`;
+      current = { id, title: `${h2[1]} — ${h2[2]}`, content: '' };
+      buffer = [];
+    } else if (h3) {
+      if (current) { current.content = buffer.join('\n'); sections.push(current); }
+      const id = `section-${h3[1].replace(/\./g, '-')}`;
+      current = { id, title: `${h3[1]} ${h3[2]}`, content: '' };
+      buffer = [];
+    } else {
+      buffer.push(line);
+    }
+  }
+  if (current) { current.content = buffer.join('\n'); sections.push(current); }
+  return sections;
+}
+
+// Split preamble: first paragraph is the intro, rest is sectioned
+const preambleLines = METHODOLOGY_PREAMBLE.split('\n');
+const introEnd = preambleLines.findIndex((l, i) => i > 0 && l.startsWith('## '));
+const intro = preambleLines.slice(0, introEnd).join('\n').trim();
+const sectioned = preambleLines.slice(introEnd).join('\n');
+const sections = parseMarkdownSections(sectioned);
+
+// Parse lite methodology
+const liteSections = parseMarkdownSections(METHODOLOGY_LITE);
+const liteIntroEnd = METHODOLOGY_LITE.split('\n').findIndex((l, i) => i > 0 && l.startsWith('## '));
+const liteIntro = METHODOLOGY_LITE.split('\n').slice(0, liteIntroEnd).join('\n').trim();
+
+// Simple markdown-to-HTML for table/list rendering
+function mdToHtml(text: string): string {
+  let html = '';
+  const lines = text.split('\n');
+  let inTable = false;
+  let inList = false;
+  let tableRows: string[][] = [];
+
+  for (const line of lines) {
+    // Table row
+    if (line.startsWith('|') && line.endsWith('|')) {
+      if (!inTable) { inTable = true; tableRows = []; }
+      const cells = line.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+      // Skip separator rows
+      if (cells.every(c => /^-+$/.test(c))) continue;
+      tableRows.push(cells);
+      continue;
+    }
+    if (inTable) {
+      // Flush table
+      html += '<table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); margin: 10px 0; border-collapse: collapse;">';
+      tableRows.forEach((row, i) => {
+        const tag = i === 0 ? 'th' : 'td';
+        html += '<tr>' + row.map(c => `<${tag} style="border: 1px solid var(--color-border); padding: 4px 8px; color: var(--fg-primary); text-align: left;">${c}</${tag}>`).join('') + '</tr>';
+      });
+      html += '</table>';
+      inTable = false;
+      tableRows = [];
+    }
+
+    // List item
+    if (line.match(/^- \*\*(.+?)\*\*(.*)$/)) {
+      if (!inList) { html += '<ul style="margin: 8px 0; padding-left: 20px;">'; inList = true; }
+      const m = line.match(/^- \*\*(.+?)\*\*(.*)$/)!;
+      html += `<li style="color: var(--fg-secondary); margin: 4px 0;"><b style="color: var(--fg-primary);">${m[1]}</b>${m[2]}</li>`;
+      continue;
+    }
+    if (line.match(/^- (.+)$/)) {
+      if (!inList) { html += '<ul style="margin: 8px 0; padding-left: 20px;">'; inList = true; }
+      const m = line.match(/^- (.+)$/)!;
+      html += `<li style="color: var(--fg-secondary); margin: 4px 0;">${m[1]}</li>`;
+      continue;
+    }
+    if (inList && !line.startsWith('-') && line.trim() === '') {
+      html += '</ul>';
+      inList = false;
+    }
+
+    // Numbered list
+    if (line.match(/^\d+\.\s+\*\*(.+?)\*\*(.*)$/)) {
+      if (!inList) { html += '<ol style="margin: 8px 0; padding-left: 20px;">'; inList = true; }
+      const m = line.match(/^\d+\.\s+\*\*(.+?)\*\*(.*)$/)!;
+      html += `<li style="color: var(--fg-secondary); margin: 4px 0;"><b style="color: var(--fg-primary);">${m[1]}</b>${m[2]}</li>`;
+      continue;
+    }
+    if (line.match(/^\d+\.\s+(.+)$/)) {
+      if (!inList) { html += '<ol style="margin: 8px 0; padding-left: 20px;">'; inList = true; }
+      const m = line.match(/^\d+\.\s+(.+)$/)!;
+      html += `<li style="color: var(--fg-secondary); margin: 4px 0;">${m[1]}</li>`;
+      continue;
+    }
+
+    // Plain text paragraph
+    const trimmed = line.trim();
+    if (trimmed === '') {
+      if (inList) { html += inList ? '</ul>' : '</ol>'; inList = false; }
+      continue;
+    }
+    // Inline bold
+    const processed = trimmed.replace(/\*\*(.+?)\*\*/g, '<b style="color: var(--fg-primary);">$1</b>');
+    html += `<p style="color: var(--fg-secondary); line-height: 1.6; margin: 6px 0;">${processed}</p>`;
+  }
+
+  // Flush any remaining
+  if (inTable) {
+    html += '<table cellpadding="4" cellspacing="0" style="font-size: var(--font-sm); margin: 10px 0; border-collapse: collapse;">';
+    tableRows.forEach((row, i) => {
+      const tag = i === 0 ? 'th' : 'td';
+      html += '<tr>' + row.map(c => `<${tag} style="border: 1px solid var(--color-border); padding: 4px 8px; color: var(--fg-primary);">${c}</${tag}>`).join('') + '</tr>';
+    });
+    html += '</table>';
+  }
+  if (inList) html += '</ul>';
+
+  return html;
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  name: 'HRCB Evaluation Methodology',
+  description: 'The complete scoring methodology used to evaluate web content against the Universal Declaration of Human Rights',
+  url: `${Astro.site?.origin ?? 'https://observatory.unratified.org'}/methodology`,
+  version: '3.7',
+  license: 'https://creativecommons.org/licenses/by-sa/4.0/',
+};
+---
+
+<Base title="Methodology">
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+  <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'methodology' }]} />
+  <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
+    <tr>
+      <td>
+        <div role="heading" aria-level={1} style="font-size: var(--font-md); margin-bottom: 10px; color: var(--fg-primary);">Methodology</div>
+
+        <p style="color: var(--fg-secondary); line-height: 1.6; margin-bottom: 16px;">
+          This page renders the <b style="color: var(--fg-primary);">exact evaluation prompt</b> that LLM evaluators receive when scoring content against the UDHR.
+          What you read below is what the models see — no summarization, no editorial layer. The methodology content is licensed
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" style="color: var(--color-orange);">CC BY-SA 4.0</a>.
+        </p>
+
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 16px;">
+          Current schema version: <b style="color: var(--fg-primary);">3.7</b> (full) / <b style="color: var(--fg-primary);">lite-1.6</b> (lite).
+          Canonical reference: <code style="color: var(--fg-primary);">methodology-v3.4.txt</code>.
+          See <a href="/about#pipeline" style="color: var(--color-orange);">About</a> for how these prompts fit into the evaluation pipeline.
+        </p>
+
+        {/* --- Navigation --- */}
+        <div style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 14px; margin-bottom: 20px;">
+          <div style="color: var(--fg-emphasis); font-size: var(--font-sm); margin-bottom: 6px;">Sections</div>
+          <div style="font-size: var(--font-sm); line-height: 1.8;">
+            {sections.map((s, i) => (
+              <span>
+                <a href={`#${s.id}`} style="color: var(--color-orange); text-decoration: none;">{s.title.split(' — ')[0]}</a>
+                {i < sections.length - 1 && <span style="color: var(--fg-secondary);"> | </span>}
+              </span>
+            ))}
+            <span style="color: var(--fg-secondary);"> | </span>
+            <a href="#lite" style="color: var(--color-orange); text-decoration: none;">Lite</a>
+          </div>
+        </div>
+
+        {/* --- Full Methodology --- */}
+        <div role="heading" aria-level={2} style="font-size: var(--font-base); color: var(--fg-emphasis); margin-bottom: 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">
+          Full Evaluation Prompt
+        </div>
+
+        <div style="background: var(--bg-surface); border-left: 3px solid var(--channel-editorial); padding: 10px 14px; margin-bottom: 16px; border-radius: 0 4px 4px 0;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; font-style: italic;">{intro}</p>
+        </div>
+
+        {sections.map(s => (
+          <details class="collapsible-section" id={s.id} open>
+            <summary style="color: var(--fg-emphasis); cursor: pointer;">{s.title}</summary>
+            <div set:html={mdToHtml(s.content)} />
+          </details>
+        ))}
+
+        {/* --- Lite Methodology --- */}
+        <div role="heading" aria-level={2} id="lite" style="font-size: var(--font-base); color: var(--fg-emphasis); margin: 24px 0 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">
+          Lite Evaluation Prompt
+        </div>
+
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 12px;">
+          Workers AI models (Llama) receive this simplified prompt. Two dimensions only: editorial stance + transparency quotient (TQ).
+        </p>
+
+        <div style="background: var(--bg-surface); border-left: 3px solid var(--channel-structural); padding: 10px 14px; margin-bottom: 16px; border-radius: 0 4px 4px 0;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; font-style: italic;">{liteIntro}</p>
+        </div>
+
+        {liteSections.map(s => (
+          <details class="collapsible-section" id={s.id} open>
+            <summary style="color: var(--fg-emphasis); cursor: pointer;">{s.title}</summary>
+            <div set:html={mdToHtml(s.content)} />
+          </details>
+        ))}
+
+        {/* --- Footer --- */}
+        <div style="margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--color-border);">
+          <p style="color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
+            This methodology text is licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener" style="color: var(--color-orange);">Creative Commons Attribution-ShareAlike 4.0 International</a>.
+            The code that assembles and delivers these prompts is licensed <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener" style="color: var(--color-orange);">Apache 2.0</a>.
+            Source: <code style="color: var(--fg-primary);">methodology-content.ts</code> in the <a href="https://github.com/safety-quotient-lab/observatory" target="_blank" rel="noopener" style="color: var(--color-orange);">observatory repository</a>.
+          </p>
+        </div>
+
+      </td>
+    </tr>
+  </table>
+</Base>

@@ -31,13 +31,15 @@ Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.
 
 ✓ CF Browser Rendering (2026-03-04): `domain_browser_audit` table (migration 0061), `hn-hrcb-browser-audit` worker, `br_*` DCP elements (tracking/security/accessibility/consent). Cron 6-hourly + `sweep=browser_audit`.
 
-Next: `/methodology` page, blog posts.
+Next: OpenAPI 3.x spec, then remaining blog posts.
+
+✓ `/methodology` page (2026-03-04): prerendered page rendering exact LLM evaluation prompt. Full + lite. CC BY-SA 4.0.
+✓ Gap-detection blog post (2026-03-04): published to blog.unratified.org (Pre-Review).
+✓ Flag-don't-fix blog post (2026-03-04): published to blog.unratified.org (Pre-Review).
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
 - [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
-- [ ] **Write gap-detection blog post** — full draft at `.claude/plans/memorized/blog/gap-detection-csp-beacon.md`. Personal note + author review pending. Novelty: MED.
-- [ ] **Flag don't fix post** — full draft at `.claude/plans/memorized/blog/flag-dont-fix-instrument-failure.md`. Novelty: MED, author review before publishing.
 - [ ] **Write `.well-known` for distributed agents blog post** — history and development of RFC 5785 as infrastructure for multi-agent coordination; how this project uses `agent-card.json` (A2A), `agent-inbox.json` (proposals), and `agent-manifest.json` (cognitive architecture) as a three-layer pattern; the shared git access channel (`proposals/` tracked in repo); how agents coordinate across projects without a central registry. The novel angle: `.well-known` was designed for HTTP service metadata; this project uses it for agent identity + construction provenance + inter-agent communication. Scaffold at `.claude/plans/memorized/blog/well-known-agents.md`.
 - [ ] Post-launch: Analyze `lite_reeval` data in eval_history — sweep dispatched (50 stories, 100 queue msgs), longitudinal lite-1.4→1.5 comparison data accumulating
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
