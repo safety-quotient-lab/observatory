@@ -25,8 +25,7 @@ Phase 0 external validation progress:
 Next: Phase 0 complete for core HRCB construct. Remaining open: CL validator (needs human ratings), TQ re-validation (needs n≥40 editorial domains), EQ re-validation (needs n≥50). All gated on data accumulation — no engineering work needed.
 
 Remaining:
-- [ ] **Write accommodation-engine blog post** — draft complete (`.claude/plans/exports/blog/accommodation-engine.md`).
-  Personal note pending (author must write). Timing: 1 week+ after Observatory Show HN.
+- [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/exports/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
 - [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
 - [ ] **Write gap-detection blog post** — full draft at `.claude/plans/exports/blog/gap-detection-csp-beacon.md`. Personal note + author review pending. Novelty: MED.
 - [ ] **Flag don't fix post** — full draft at `.claude/plans/exports/blog/flag-dont-fix-instrument-failure.md`. Novelty: MED, author review before publishing.
