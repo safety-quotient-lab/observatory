@@ -9,11 +9,13 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Show HN posted.** Monitor thread, reply to comments using
-`.claude/plans/hn-comments.md` (6 objection responses + 2 initial context comments).
-Email Tom with HN link if not done.
+**Construct validity work active.** Tom emailed. HN thread quiet.
 
-Next unblocked engineering work: post-launch items below.
+Phase 0 external validation progress:
+- ✓ Discriminant validity (r=0.08, PASS — `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`)
+- ✓ PTD inter-rater reliability (κ=0.325 fair, only `loaded_language` usable — `findings/2026-03-04-ptd-inter-rater-reliability.md`)
+
+Next: TQ (plan first, L effort) or test-retest reliability (M effort, no new infra needed).
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — draft complete (`.claude/plans/exports/blog/accommodation-engine.md`).
@@ -73,8 +75,8 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
   - Decomposes HRCB into "how far from norm" vs "which direction"
 
 - [ ] **Propaganda Technique Density (PTD)** — already measured as `pt_score`
-  - Multi-model agreement on technique *presence* (binary) is tractable for inter-rater reliability
-  - Validate via Fleiss' kappa across models on shared stories
+  - ~~Multi-model agreement on technique *presence* (binary) is tractable for inter-rater reliability~~ — **REVISED 2026-03-04**: Only `loaded_language` has usable κ (0.48). Overall κ=0.325 (fair). Haiku detects 3× more techniques than DeepSeek (45% vs 15% rate). Path forward: consolidate 17 techniques → 3 broad categories (Emotive/Logical/Rhetorical), or defer PTD to internal-only (recommended, given consequential ethics risk). See `findings/2026-03-04-ptd-inter-rater-reliability.md`.
+  - ~~Validate via Fleiss' kappa across models on shared stories~~ — ✓ DONE 2026-03-04.
 
 #### Layer 3 — Aggregate/Temporal (emerge from many evals)
 
@@ -93,7 +95,7 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 #### External Validation (unblocked, highest priority)
 
 - [ ] **Convergent validity** — correlate TQ with RDR disclosure indicators on ~20 overlapping domains
-- [ ] **Discriminant validity** — correlate HRCB with generic sentiment analysis; r > 0.8 = HRCB is just sentiment
+- ~~**Discriminant validity**~~ — ✓ DONE 2026-03-04. Pearson r=+0.08, R²=0.007 (0.7% shared variance). PASS. See `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`.
 - [ ] **Known-groups expansion** — expand calibration beyond 15 URLs to 50+ pre-classified domains
 - [ ] **Test-retest reliability** — re-evaluate 50 stable-content stories for temporal consistency
 
