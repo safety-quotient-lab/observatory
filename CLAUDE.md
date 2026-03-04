@@ -41,7 +41,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 **Workers:**
 - `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`. Dispatches sweeps via `SWEEP_HANDLERS` map in `sweeps.ts`.
-- `site/functions/sweeps.ts` — 12 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
+- `site/functions/sweeps.ts` — 13 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
 - `site/functions/consumer-shared.ts` — Shared types, content prep, result writing. Uses `isFirstFullEval` for first-eval housekeeping (R2 snapshot, content hash, DCP cache, archive).
 - `site/functions/consumer-anthropic.ts` — Anthropic queue handler. Prompt caching, proactive rate limit tracking, 429/529/credit handling, truncation retry.
 - `site/functions/consumer-openrouter.ts` — OpenRouter queue handler (8 model queues). Lite + full prompt modes.
