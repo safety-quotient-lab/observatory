@@ -3,7 +3,7 @@
  * Global middleware: security headers on all responses.
  * NOTE: caches.default (CF Cache API) caused "Can't modify immutable headers"
  * in Astro's SSR adapter when returning cached Responses — removed 2026-03-03.
- * TODO: investigate CF Pages-specific caching approach (e.g., CF Cache Rules).
+ * Edge caching handled via CF Cache Rules (dashboard config, not code).
  */
 import { defineMiddleware } from 'astro:middleware';
 

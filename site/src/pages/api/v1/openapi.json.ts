@@ -267,6 +267,38 @@ const spec = {
         },
       },
     },
+    '/api/v1/export/stories.csv': {
+      get: {
+        summary: 'Export all evaluated stories as CSV (planned)',
+        operationId: 'exportStoriesCsv',
+        tags: ['Exports'],
+        responses: { '501': { description: 'Not yet implemented' } },
+      },
+    },
+    '/api/v1/export/stories.jsonl': {
+      get: {
+        summary: 'Export all evaluated stories as JSONL (planned)',
+        operationId: 'exportStoriesJsonl',
+        tags: ['Exports'],
+        responses: { '501': { description: 'Not yet implemented' } },
+      },
+    },
+    '/api/v1/export/domains.csv': {
+      get: {
+        summary: 'Export all domain signal profiles as CSV (planned)',
+        operationId: 'exportDomainsCsv',
+        tags: ['Exports'],
+        responses: { '501': { description: 'Not yet implemented' } },
+      },
+    },
+    '/api/v1/export/rater-evals.jsonl': {
+      get: {
+        summary: 'Export per-model evaluation records as JSONL (planned)',
+        operationId: 'exportRaterEvalsJsonl',
+        tags: ['Exports'],
+        responses: { '501': { description: 'Not yet implemented' } },
+      },
+    },
     '/api/v0/topstories.json': {
       get: {
         summary: 'Top 500 story IDs by HN score (HN API-compatible)',
@@ -476,6 +508,7 @@ const spec = {
     { name: 'Users', description: 'HN submitter aggregated statistics' },
     { name: 'Signals', description: 'Corpus-wide signal aggregates' },
     { name: 'Badges', description: 'Embeddable SVG score badges' },
+    { name: 'Exports', description: 'Bulk data exports (planned — currently returns 501)' },
     { name: 'V0 Compatibility', description: 'HN Firebase API-compatible endpoints' },
   ],
   externalDocs: {

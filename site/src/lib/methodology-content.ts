@@ -8,8 +8,8 @@
 // signal definitions, and evidence standards. It is separate from the code
 // that assembles and delivers these prompts (licensed Apache 2.0).
 //
-// The canonical human-readable version is methodology-v3.4.txt in the
-// project root. This file operationalizes it for LLM consumption.
+// The canonical human-readable reference is methodology-v3.4.txt in the
+// project root. This file operationalizes it as v3.7 for LLM consumption.
 
 /**
  * Shared methodology preamble — identical across full and slim prompt variants.

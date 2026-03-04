@@ -11,6 +11,7 @@
   },
   "version": "1.0.0",
   "documentationUrl": "https://observatory.unratified.org/data",
+  "openApiUrl": "https://observatory.unratified.org/api/v1/openapi.json",
   "capabilities": {
     "streaming": false,
     "pushNotifications": false,
