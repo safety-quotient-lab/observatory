@@ -113,7 +113,7 @@ Tracks what validation has been done, what's next, and what each check requires.
 ## Checks gated on NewsGuard access
 
 ### 12. EQ — NewsGuard journalism criteria
-**Gate:** NewsGuard research access (email drafted: `.claude/plans/exports/newsguard-research-access-email.md`)
+**Gate:** NewsGuard research access (email drafted: `.claude/plans/memorized/newsguard-research-access-email.md`)
 **Method:** Match our 64 full-eval domains against NewsGuard's 9 per-criterion scores. Primary: "Gathers and presents information responsibly" + "Cites credible sources" criteria → Spearman ρ vs avg_eq. Secondary: overall NewsGuard score.
 **Why better than MBFC:** MBFC covers only ~22 HN domains (ceiling hit). NewsGuard covers 10,000+ outlets, likely 5-10× more HN domain overlap. NewsGuard criteria directly measure epistemic quality, not just political bias.
 **Success threshold:** ρ ≥ 0.40, p < 0.05 (n ≥ 40 expected)

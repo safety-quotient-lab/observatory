@@ -3,7 +3,7 @@
  * build-agent-inbox.mjs
  *
  * Generates site/public/.well-known/agent-inbox.json from YAML frontmatter
- * in .claude/plans/exports/proposals/*.md files.
+ * in .claude/plans/memorized/proposals/*.md files.
  *
  * Called by the Astro build integration in astro.config.mjs at build start.
  * Run standalone: node scripts/build-agent-inbox.mjs [--dry-run]
@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
-const PROPOSALS_DIR = join(REPO_ROOT, '.claude/plans/exports/proposals');
+const PROPOSALS_DIR = join(REPO_ROOT, '.claude/plans/memorized/proposals');
 const OUTPUT_FILE = join(REPO_ROOT, 'site/public/.well-known/agent-inbox.json');
 
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -154,7 +154,7 @@ function main() {
     version: '1',
     description: 'Inter-agent proposal inbox — observatory.unratified.org → other agents',
     updated_at: updatedAt,
-    _generated_from: '.claude/plans/exports/proposals/*.md frontmatter',
+    _generated_from: '.claude/plans/memorized/proposals/*.md frontmatter',
     proposals,
   };
 
