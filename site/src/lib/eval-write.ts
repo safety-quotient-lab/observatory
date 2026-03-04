@@ -283,7 +283,8 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
     const { results } = await db
       .prepare(
         `SELECT re.eval_model, re.hcb_weighted_mean, re.hcb_editorial_mean, re.prompt_mode,
-                re.content_truncation_pct, COALESCE(re.hcb_confidence, 0.5) as confidence
+                re.content_truncation_pct, COALESCE(re.hcb_confidence, 0.5) as confidence,
+                COALESCE(re.editorial_uncertain, 0) as editorial_uncertain
          FROM rater_evals re
          INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.hn_id = ? AND re.eval_status = 'done'
@@ -291,7 +292,7 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
            AND re.schema_version NOT IN ('lite-1.3', 'light-1.3')`
       )
       .bind(hnId)
-      .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null; content_truncation_pct: number | null; confidence: number }>();
+      .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null; content_truncation_pct: number | null; confidence: number; editorial_uncertain: number }>();
 
     if (results.length < 2) return;
 
@@ -307,10 +308,10 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
       // Confidence modulates within prompt mode — floor 0.2 so no model is fully silenced
       const confidenceFactor = Math.max(0.2, r.confidence);
       const truncPct = r.content_truncation_pct ?? 0;
-      // Discount lite evals that score exactly 0.0 with high confidence — the confident-neutral
-      // pattern is the known Llama failure mode (defaults to center instead of evaluating).
-      // Halves their effective weight so they don't pull the consensus toward 0.
-      const neutralDiscount = (isLite && score === 0 && r.confidence >= 0.7) ? 0.5 : 1.0;
+      // Discount lite evals flagged as editorial_uncertain OR scoring exactly 0.0 with high
+      // confidence — both indicate the known Llama lazy-neutral failure mode. The flag persists
+      // even if the numeric score is preserved as-is (no value fabrication).
+      const neutralDiscount = (isLite && (score === 0 || r.editorial_uncertain === 1) && r.confidence >= 0.7) ? 0.5 : 1.0;
       const weight = baseWeight * confidenceFactor * (1 - truncPct * 0.5) * neutralDiscount;
       weightedSum += score * weight;
       totalWeight += weight;
@@ -1126,6 +1127,11 @@ export async function writeLiteRaterEvalResult(
 
   const agg = computeLiteAggregates(lite);
 
+  // Detect lazy-neutral failure mode: model outputs editorial=50 (→ 0.0) with high confidence
+  // despite the prompt spec prohibiting it. Flag preserves the original score (no fabrication)
+  // while making the instrument failure explicit in the audit trail.
+  const editorialUncertain = (agg.editorial_mean === 0 && (lite.evaluation.confidence ?? 0) >= 0.7) ? 1 : 0;
+
   // Evidence counts from single evidence_strength value
   const evStr = lite.evaluation.evidence_strength?.toUpperCase() || 'M';
   const hcbEvidenceH = evStr === 'H' ? 1 : 0;
@@ -1148,7 +1154,7 @@ export async function writeLiteRaterEvalResult(
         eq_score, so_score, et_primary_tone, et_valence, et_arousal,
         sr_score, pt_flag_count, pt_score, td_score,
         input_tokens, output_tokens, content_truncation_pct,
-        eval_batch_id, reasoning, evaluated_at
+        eval_batch_id, reasoning, editorial_uncertain, evaluated_at
       ) VALUES (
         ?, ?, ?, 'done', 'lite',
         ?, ?, ?,
@@ -1162,7 +1168,7 @@ export async function writeLiteRaterEvalResult(
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?,
         ?, ?, ?,
-        ?, ?, datetime('now')
+        ?, ?, ?, datetime('now')
       )
       ON CONFLICT(hn_id, eval_model) DO UPDATE SET
         eval_status = 'done',
@@ -1204,6 +1210,7 @@ export async function writeLiteRaterEvalResult(
         content_truncation_pct = excluded.content_truncation_pct,
         eval_batch_id = excluded.eval_batch_id,
         reasoning = excluded.reasoning,
+        editorial_uncertain = excluded.editorial_uncertain,
         evaluated_at = excluded.evaluated_at`
     )
     .bind(
@@ -1239,6 +1246,7 @@ export async function writeLiteRaterEvalResult(
       inputTokens, outputTokens, contentTruncationPct,
       batchId,
       lite.reasoning ?? null,       // reasoning (lite-1.4+): pre-commit classification string
+      editorialUncertain,           // 1 = lazy-neutral detected (editorial=0.0, high confidence)
     )
     .run();
 

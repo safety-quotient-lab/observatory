@@ -22,6 +22,9 @@ const hasEval = story.hcb_weighted_mean != null || story.hcb_editorial_mean != n
 const isLiteOnly = hasEval && (story.hcb_weighted_mean == null || story.hcb_structural_mean == null);
 // Display HRCB: weighted_mean for full evals, editorial_mean for lite-only
 const displayScore = story.hcb_weighted_mean ?? story.hcb_editorial_mean;
+// Lite-only score of 0.0 is likely the Llama lazy-neutral failure mode (outputs prohibited
+// value 50, yielding 0.0). Flag with ~ prefix to indicate editorial instrument uncertainty.
+const editorialUncertainDisplay = isLiteOnly && displayScore === 0;
 const displayColor = hasEval ? scoreToColor(displayScore) : 'var(--fg-secondary)';
 const structuralScore = story.hcb_structural_mean;
 const classLabel = story.hcb_classification?.split(' — ')[0] || story.hcb_classification;
@@ -71,8 +74,8 @@ function timeAgo(unixTime: number): string {
         <div class="tripartite-score">
           <div class="score-row" data-channel="hrcb">
             <abbr class="score-font score-label" style="text-decoration: none;" title="Human Rights Compatibility Bias: directional lean of content relative to UDHR provisions, from −1.0 to +1.0">HRCB</abbr>
-            <span class="score-font score-value" style={`color: ${isLiteOnly ? 'var(--fg-secondary)' : displayColor};`}>
-              {formatScore(displayScore)}
+            <span class="score-font score-value" style={`color: ${isLiteOnly ? 'var(--fg-secondary)' : displayColor};`} title={editorialUncertainDisplay ? 'Instrument uncertain: model may have defaulted to neutral (0) despite prompt prohibiting it' : undefined}>
+              {editorialUncertainDisplay ? '~' : ''}{formatScore(displayScore)}
             </span>
           </div>
           <div class="score-row" data-channel="editorial">
