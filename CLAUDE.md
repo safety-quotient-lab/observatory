@@ -122,6 +122,10 @@ curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut
 curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=lite_reeval&limit=50"
 
+# Sweep: bulk recompute consensus scores for all stories with ≥2 done rater_evals (202 Accepted, runs in waitUntil)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=refresh_consensus_scores"
+
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health
 
