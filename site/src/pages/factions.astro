@@ -892,11 +892,23 @@ function tierLabel(sim: number): { label: string; color: string } {
       </td>
     </tr>
     <tr>
-      <td style="color: var(--fg-secondary); font-size: var(--font-xs); padding: 4px 0 8px 0; line-height: 1.5;">
+      <td style="color: var(--fg-secondary); font-size: var(--font-xs); padding: 4px 0 6px 0; line-height: 1.5;">
         Domains grouped by <em>editorial character</em> &mdash; how they cover topics, not just what they score.
         Signal landscape shows 13 dimensions: 5 core (HRCB, editorial, structural, confidence, SETL) and
         8 editorial character signals. Clustering uses the 8 editorial dimensions with cosine similarity
         on z-normalized vectors and golden ratio (&#x3C6;) tier thresholds.
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 0 0 10px 0;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: var(--font-xs);">
+          {DIMENSIONS.map(d => (
+            <span style={`background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 2px 7px; color: ${d.color};`}>
+              <span style="font-weight: bold;">{d.code}</span>
+              <span style="color: var(--fg-secondary);"> {d.fullLabel}</span>
+            </span>
+          ))}
+        </div>
       </td>
     </tr>
   </table>
