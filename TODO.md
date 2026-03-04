@@ -22,7 +22,9 @@ Phase 0 external validation progress:
 ✓ TQ implementation (lite-1.6, migration 0059 — 2026-03-04)
 ✓ EQ/TQ external validity vs idiap/MBFC (2026-03-04, re-validated 2026-03-04): EQ ρ=+0.362 marginal (MBFC coverage ceiling ~22 — not a data volume problem), TQ ρ=-0.094 (construct mismatch confirmed at n=24 — MBFC reliability is wrong validator for per-article transparency)
 
-Next: Phase 0 complete for core HRCB construct. Remaining open: CL validator (needs human ratings), TQ re-validation (needs NewsGuard sourcing sub-scores + ED/HR/MI content filter), EQ re-validation (needs NewsGuard — MBFC path fully exhausted at n=25). All gated on NewsGuard research access — email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full validation plan (all 13 signals, 14 checks, 3 phases): `.claude/plans/memorized/signal-validation-plan.md`.
+✓ Phase A automated validation (2026-03-04): SR ✓ TD ✓ GS ✓ | SO ~ | SETL/FW/TF ✗ null | Flags: SO/SR↔HRCB high (0.609/0.582), TD↔EQ high (0.652). Full: `findings/2026-03-04-phase-a-automated-validation.md`
+
+Next: Phase B (human raters — ET-valence, PT technique-level, CL expertise, ET-arousal) and Phase C gated on NewsGuard. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.

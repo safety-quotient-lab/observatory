@@ -134,9 +134,11 @@ Tracks what validation has been done, what's next, and what each check requires.
 
 ## Sequencing
 
-**Phase A — Automated (no human raters, no external data):**
-Run in parallel: SETL internal consistency (check 4), SO/SR/TD known-groups (checks 5-7), FW known-groups (check 8), TF/GS automated proxies (checks 9-10 automated variant).
-Effort: ~2-3 hours. All can be done in one session.
+**Phase A — Automated (no human raters, no external data):** ✓ COMPLETE (2026-03-04)
+Results: `findings/2026-03-04-phase-a-automated-validation.md`
+SR ✓ PASS | TD ✓ PASS | TD/TQ correlation ✓ | GS ✓ (opposite direction) | SETL formula ✓
+SO ~ directional | SETL known-groups ✗ null | FW ✗ null | TF ✗ weak construct
+Flags: SO/SR ↔ HRCB high correlation (0.609/0.582) — story-level partial correlations needed; TD ↔ EQ (0.652) — monitor redundancy
 
 **Phase B — Human raters (requires researcher time):**
 ET-valence ratings (check 1), PT technique-level (check 2), CL expertise ratings (check 3), ET-arousal (check 11), TF/GS inter-rater (checks 9-10 human variant).
