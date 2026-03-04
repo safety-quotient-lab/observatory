@@ -179,79 +179,77 @@ const jsonLd = {
 
   {/* Domain insight cards (page 1 only) */}
   {isFirstPage && hrcbDomains.length > 0 && (
-    <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; margin-bottom: 10px;">
-      <div class="insight-grid">
-        <div style="padding: 4px 8px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Positive</div>
-          {topHrcb.map(d => (
-            <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
-              <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
-            </div>
-          ))}
-        </div>
-        <div style="padding: 4px 8px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most HR-Negative</div>
-          {bottomHrcb.map(d => (
-            <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
-              <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
-            </div>
-          ))}
-        </div>
-        <div style="padding: 4px 8px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
-          {controversial.map(d => (
-            <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
-              <span class="score-font" style="color: var(--color-hn-score); font-size: var(--font-sm); margin-left: 4px;">{d.hrcb_range !== null ? d.hrcb_range.toFixed(2) : '--'}</span>
-            </div>
-          ))}
-        </div>
-        <div style="padding: 4px 8px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Engaging</div>
-          {highEngagement.map(d => (
-            <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
-              <span class="score-font" style="color: var(--channel-editorial); font-size: var(--font-sm); margin-left: 4px;">{d.comment_per_point !== null ? d.comment_per_point.toFixed(2) : '--'}</span>
-              <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">c/pt</span>
-            </div>
-          ))}
-        </div>
-        <div style="padding: 4px 8px;">
-          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
-          {diverse.map(d => (
-            <div style="margin-bottom: 3px;">
-              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
-              <span class="score-font" style="color: var(--channel-structural); font-size: var(--font-sm); margin-left: 4px;">{d.unique_submitters}</span>
-              <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">users</span>
-            </div>
-          ))}
-        </div>
-        {topKarma.length > 0 && (
-          <div style="padding: 4px 8px;">
-            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Highest Karma</div>
-            {topKarma.map(d => (
-              <div style="margin-bottom: 3px;">
-                <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
-                <span class="score-font" style="color: var(--color-sentiment); font-size: var(--font-sm); margin-left: 4px;">{Math.round(d.avg_karma).toLocaleString()}</span>
-                <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">avg</span>
-              </div>
-            ))}
+    <div class="insight-grid" style="margin-bottom: 10px;">
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Rights-Aligned</div>
+        {topHrcb.map(d => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+            <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
           </div>
-        )}
-        {gatekeptDomains.length > 0 && (
-          <div style="padding: 4px 8px;">
-            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Gatekept</div>
-            {gatekeptDomains.map(d => (
-              <div style="margin-bottom: 3px;">
-                <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
-                <span class="score-font" style="color: var(--color-orange); font-size: var(--font-sm); margin-left: 4px;">{d.gate_pct}%</span>
-              </div>
-            ))}
-          </div>
-        )}
+        ))}
       </div>
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Least Rights-Aligned</div>
+        {bottomHrcb.map(d => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+            <span class="score-font" style={`color: ${scoreToColor(d.avg_hrcb)}; font-size: var(--font-sm); margin-left: 4px;`}>{formatScore(d.avg_hrcb)}</span>
+          </div>
+        ))}
+      </div>
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Contested</div>
+        {controversial.map(d => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+            <span class="score-font" style="color: var(--color-hn-score); font-size: var(--font-sm); margin-left: 4px;">{d.hrcb_range !== null ? d.hrcb_range.toFixed(2) : '--'}</span>
+          </div>
+        ))}
+      </div>
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Engaging</div>
+        {highEngagement.map(d => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+            <span class="score-font" style="color: var(--channel-editorial); font-size: var(--font-sm); margin-left: 4px;">{d.comment_per_point !== null ? d.comment_per_point.toFixed(2) : '--'}</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">c/pt</span>
+          </div>
+        ))}
+      </div>
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Diverse</div>
+        {diverse.map(d => (
+          <div style="margin-bottom: 3px;">
+            <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+            <span class="score-font" style="color: var(--channel-structural); font-size: var(--font-sm); margin-left: 4px;">{d.unique_submitters}</span>
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">users</span>
+          </div>
+        ))}
+      </div>
+      {topKarma.length > 0 && (
+        <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Highest Karma</div>
+          {topKarma.map(d => (
+            <div style="margin-bottom: 3px;">
+              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+              <span class="score-font" style="color: var(--color-sentiment); font-size: var(--font-sm); margin-left: 4px;">{Math.round(d.avg_karma).toLocaleString()}</span>
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 2px;">avg</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {gatekeptDomains.length > 0 && (
+        <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Most Gatekept</div>
+          {gatekeptDomains.map(d => (
+            <div style="margin-bottom: 3px;">
+              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+              <span class="score-font" style="color: var(--color-orange); font-size: var(--font-sm); margin-left: 4px;">{d.gate_pct}%</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )}
 
