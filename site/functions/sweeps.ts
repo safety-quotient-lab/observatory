@@ -636,3 +636,56 @@ export async function sweepRefreshConsensusScores({ db, env, ctx }: SweepContext
     description: 'Recomputing consensus scores for all stories with ≥2 evals. Check /status/events for completion.',
   }, 202);
 }
+
+// ─── Sweep: upgrade_lite ─────────────────────────────────────────────────────
+
+/**
+ * Promote lite-only stories (no full eval yet, hn_score >= min_score) to
+ * pending so the full-model pipeline evaluates them. Closes the coverage gap
+ * between stories that received only a Workers AI lite pass and the richer
+ * 31-section full evaluation.
+ *
+ * Defaults: min_score=50, limit=50, max limit=200.
+ */
+export async function sweepUpgradeLite({ db, env, url }: SweepContext): Promise<Response> {
+  const limit = parseLimit(url);
+  const minScore = Math.min(parseInt(url.searchParams.get('min_score') || '50', 10) || 50, 100000);
+
+  const { meta } = await db
+    .prepare(
+      `UPDATE stories SET eval_status = 'pending', eval_error = NULL
+       WHERE hn_id IN (
+         SELECT s.hn_id FROM stories s
+         WHERE s.eval_status = 'done'
+           AND s.hn_score >= ?
+           AND s.gate_category IS NULL
+           AND s.url IS NOT NULL
+           AND NOT EXISTS (
+             SELECT 1 FROM rater_evals re
+             WHERE re.hn_id = s.hn_id AND re.prompt_mode = 'full'
+           )
+           AND EXISTS (
+             SELECT 1 FROM rater_evals re
+             WHERE re.hn_id = s.hn_id AND re.prompt_mode = 'lite'
+           )
+         ORDER BY s.hn_score DESC
+         LIMIT ?
+       )`
+    )
+    .bind(minScore, limit)
+    .run();
+  const promoted = meta?.changes ?? 0;
+
+  if (promoted > 0) {
+    await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
+  }
+
+  await logEvent(db, {
+    event_type: 'trigger',
+    severity: 'info',
+    message: `Sweep: promoted ${promoted} lite-only stories to pending for full eval (min_score=${minScore})`,
+    details: { sweep: 'upgrade_lite', promoted, limit, min_score: minScore },
+  });
+
+  return json({ sweep: 'upgrade_lite', promoted, description: `Promoted ${promoted} lite-only stories (hn_score >= ${minScore}) to pending for full eval` });
+}
