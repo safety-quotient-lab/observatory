@@ -577,7 +577,7 @@ export interface StatusCounts {
   coverageFull: number;       // done + hcb_weighted_mean IS NOT NULL
   coverageLite: number;       // hcb_editorial_mean IS NOT NULL AND hcb_weighted_mean IS NULL
   coverageMultiModel: number; // consensus_model_count >= 2
-  coverageNone: number;       // no scores at all (pending/evaluating/failed with no editorial)
+  coverageNone: number;       // no scores at all, non-skipped (pending/evaluating/failed with no editorial)
 }
 
 export async function getStatusCounts(db: D1Database): Promise<StatusCounts> {
@@ -598,9 +598,9 @@ export async function getStatusCounts(db: D1Database): Promise<StatusCounts> {
   // Coverage spectrum (single query, 3 conditional counts)
   const cov = await db.prepare(
     `SELECT
-       COUNT(CASE WHEN hcb_weighted_mean IS NOT NULL THEN 1 END) as full_coverage,
-       COUNT(CASE WHEN hcb_editorial_mean IS NOT NULL AND hcb_weighted_mean IS NULL THEN 1 END) as light_only,
-       COUNT(CASE WHEN consensus_model_count >= 2 THEN 1 END) as multi_model
+       COUNT(CASE WHEN hcb_weighted_mean IS NOT NULL AND eval_status != 'skipped' THEN 1 END) as full_coverage,
+       COUNT(CASE WHEN hcb_editorial_mean IS NOT NULL AND hcb_weighted_mean IS NULL AND eval_status != 'skipped' THEN 1 END) as light_only,
+       COUNT(CASE WHEN consensus_model_count >= 2 AND eval_status != 'skipped' THEN 1 END) as multi_model
      FROM stories WHERE hn_id > 0`
   ).first<{ full_coverage: number; light_only: number; multi_model: number }>();
 
