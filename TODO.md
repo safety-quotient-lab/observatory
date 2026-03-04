@@ -20,8 +20,9 @@ Phase 0 external validation progress:
 - ✓ CL reading level vs FK (ρ=-0.063, FAIL — FK is wrong validator, CL measures domain expertise not syntax — `findings/2026-03-04-et-cl-convergent-validity.md`)
 
 ✓ TQ implementation (lite-1.6, migration 0059 — 2026-03-04)
+✓ EQ/TQ external validity vs idiap/MBFC (2026-03-04): EQ ρ=+0.362 marginal, TQ null (underpowered + construct mismatch)
 
-Next: TQ convergent validity (TQ → RDR, unblocked) — then EQ → Ad Fontes reliability.
+Next: Known-groups expansion (~50 pre-classified domains) — or accumulate more data and re-run EQ/TQ at n≥50.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — draft complete (`.claude/plans/exports/blog/accommodation-engine.md`).
@@ -39,7 +40,8 @@ Remaining:
 
 ### Standards (M effort — deferred)
 
-- [ ] **OpenAPI 3.x spec** — machine-readable API description at `/api/v1/openapi.json`. ~150 lines YAML covering 8 endpoints (stories, story/[id], domains, domain/[domain], domain/[domain]/history, signals, users, user/[username]). Unlocks: auto-generated client SDKs, agent tool use, Postman/Insomnia import. Serve as prerendered static `.ts` endpoint.
+- [ ] **OpenAPI 3.x spec** — machine-readable API description at `/api/v1/openapi.json`. ~150 lines YAML covering 8 endpoints (stories, story/[id], domains, domain/[domain], domain/[domain]/history, signals, users, user/[username]). Unlocks: auto-generated client SDKs, agent tool use, Postman/Insomnia import. Serve as prerendered static `.ts` endpoint. Prerequisite for API blog post.
+- [ ] **Write API blog post** — announce the public REST API at `observatory.unratified.org/api/v1/`. Angles: what data is available, example queries (top negative domains, rights-under-pressure feed, TQ by domain), use cases (researchers, journalists, feed aggregators, agent tool use). Include OpenAPI link once spec is live. Publish after OpenAPI is done. Personal note + author review before publishing.
 - [ ] **WebSub** (W3C) — real-time push for Atom feed subscribers. Add `Link: <hub>; rel="hub"` to `/feed.xml` response, ping `hub.superfeedr.com` (free) from cron worker on new evaluations. ~30 lines in `cron.ts`. Prerequisite: none.
 - [ ] **ActivityPub** (W3C) — Fediverse federation. Each evaluation → ActivityPub Note/Article. Follow `@observatory@observatory.unratified.org` from Mastodon. Requires: Actor endpoint, outbox, HTTP Signatures (RFC 9421), WebFinger integration (already done). Significant scope — worth a dedicated plan before starting.
 
@@ -97,7 +99,8 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 
 #### External Validation (unblocked, highest priority)
 
-- [ ] **Convergent validity (TQ → RDR)** — correlate avg(tq_score) GROUP BY domain with RDR disclosure indicators on ~20 overlapping domains. Spearman ρ expected ≥ 0.5. Run after TQ data accumulates (lite-1.6 calibration first).
+- ~~**Convergent validity (TQ → RDR)**~~ — DEFERRED. RDR domain overlap with HN corpus negligible. Used idiap/MBFC instead: TQ → MBFC reliability ρ=+0.014 (null — underpowered n=13 + construct mismatch). Re-run when n≥40 editorial-only domains. `findings/2026-03-04-eq-tq-external-validity-mbfc.md`.
+- ~~**Convergent validity (EQ → Ad Fontes)**~~ — DONE 2026-03-04. Ad Fontes paywalled; used idiap/MBFC factual_reporting instead. EQ → MBFC FR: ρ=+0.362, p=0.098, n=22 — MARGINAL (direction confirmed, power-limited). `findings/2026-03-04-eq-tq-external-validity-mbfc.md`.
 - ~~**Convergent validity (ET valence → VADER)**~~ — ✓ DONE 2026-03-04. r=+0.376 (WEAK). Construct divergence explained: rights-alert content is negative ET + high VADER (emotionally charged advocacy). `findings/2026-03-04-et-cl-convergent-validity.md`.
 - ~~**Convergent validity (CL → FK)**~~ — ✓ DONE 2026-03-04. ρ=-0.063 (FAIL). FK is wrong validator: FK=syntactic complexity, CL=domain expertise. Technical jargon is monosyllabic → lower FK. Better validator = human ratings or Wikipedia topic level. `findings/2026-03-04-et-cl-convergent-validity.md`.
 - ~~**Discriminant validity**~~ — ✓ DONE 2026-03-04. Pearson r=+0.08, R²=0.007 (0.7% shared variance). PASS. See `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`.
