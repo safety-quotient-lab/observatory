@@ -18,6 +18,7 @@ Work through each step. Skip any that don't apply to the changes described in $A
 
 - Read the recent git diff or summarize from context what files were modified
 - Note any new features, renamed concepts, changed algorithms, reordered sections, or removed functionality
+- **Gap-detection checkpoint**: For each changed file, list the sections you did NOT read during implementation. Ask: are any of those sections likely to have been affected by the change? For example — changed a component but didn't read its parent template; changed a query but didn't check all call sites; added a new field but didn't check the API response types. Identify any gaps before proceeding.
 
 ### 2. Update the About page (`site/src/pages/about.astro`)
 
