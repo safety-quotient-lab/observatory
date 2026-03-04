@@ -235,7 +235,6 @@ export interface DomainSignalProfile {
 }
 
 export async function getDomainSignalProfiles(db: D1Database): Promise<Map<string, DomainSignalProfile>> {
-  const t0 = Date.now();
   try {
     const { results } = await db
       .prepare(
@@ -254,7 +253,6 @@ export async function getDomainSignalProfiles(db: D1Database): Promise<Map<strin
       )
       .all<DomainSignalProfile>();
 
-    console.log(`[getDomainSignalProfiles] ${results.length} domains in ${Date.now() - t0}ms`);
     const map = new Map<string, DomainSignalProfile>();
     for (const r of results) {
       map.set(r.domain, r);

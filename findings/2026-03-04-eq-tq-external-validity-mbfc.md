@@ -16,6 +16,8 @@
 
 **Result:** ρ = +0.362, p = 0.0983, n = 22 → **MARGINAL at α=0.10**
 
+**Re-validation (2026-03-04, 64 eligible domains):** ρ = +0.362, p = 0.0983, n = 22 — **identical**. MBFC coverage is the ceiling, not our data size. 64 full-eval domains in D1, but only 22 appear in MBFC. Accumulating more D1 data will not improve n. Need broader external dataset.
+
 ### Domain-level data (sorted by avg_eq ascending)
 
 | Domain | avg_eq | MBFC_FR | n |
@@ -55,7 +57,7 @@
 
 Direction confirmed: high-EQ domains cluster at MBFC High/VeryHigh, low-EQ at Mixed. The positive ρ=+0.362 is directionally consistent with the hypothesis. n=22 limits power; marginal result is expected at this sample size. The per-content vs per-outlet mismatch (EQ measures specific stories; MBFC rates outlets) explains part of the variance — this is actually a feature, not a bug.
 
-**Assessment:** Directionally confirmed, insufficient power. With 50+ matched domains (requires accumulating ~6 months of full-eval data), likely to reach p<0.05.
+**Assessment:** Directionally confirmed, MBFC coverage is the hard ceiling (~22 HN/MBFC overlapping domains regardless of D1 accumulation). To reach p<0.05 requires either a larger external dataset (e.g., AllSides + NewsGuard combined) or waiting for HN to naturally surface more MBFC-rated outlets.
 
 ---
 
@@ -65,29 +67,42 @@ Direction confirmed: high-EQ domains cluster at MBFC High/VeryHigh, low-EQ at Mi
 
 **Method:** `AVG(tq_score)` per domain from lite-1.6 rater_evals (`schema_version='lite-1.6'`, `n≥2`). Joined with `golden_truth_dataset.csv` on bare domain. Spearman ρ.
 
-**Result:** ρ = +0.014, p = 0.9626, n = 13 → **NOT SIGNIFICANT**
+**Result (initial, 2026-03-04):** ρ = +0.014, p = 0.9626, n = 13 → **NOT SIGNIFICANT**
 
-### Domain-level data
+**Re-validation (2026-03-04, 130 eligible domains):** ρ = -0.094, p = 0.6631, n = 24 → **NOT SIGNIFICANT**. Construct mismatch confirmed with larger n — direction is slightly negative, not positive.
+
+### Domain-level data (re-validation, n=24)
 
 | Domain | avg_tq | reliability | n |
 |--------|--------|-------------|---|
 | youtube.com | 0.000 | unreliable | 6 |
+| newatlas.com | 0.000 | reliable | 2 |
+| wsbtv.com | 0.000 | reliable | 2 |
 | newyorker.com | 0.100 | reliable | 2 |
-| apple.com | 0.200 | mixed | 10 |
+| apple.com | 0.171 | mixed | 14 |
+| congress.gov | 0.178 | reliable | 18 |
 | forward.com | 0.200 | reliable | 2 |
+| insideclimatenews.org | 0.200 | reliable | 2 |
+| retractionwatch.com | 0.200 | reliable | 2 |
+| aljazeera.com | 0.300 | unreliable | 2 |
 | businessinsider.com | 0.300 | reliable | 2 |
+| aclu.org | 0.367 | mixed | 18 |
 | arstechnica.com | 0.400 | reliable | 4 |
-| theguardian.com | 0.400 | reliable | 4 |
-| techcrunch.com | 0.400 | mixed | 2 |
+| techcrunch.com | 0.400 | mixed | 4 |
+| torrentfreak.com | 0.400 | reliable | 2 |
 | wired.com | 0.400 | reliable | 2 |
 | bbc.com | 0.400 | reliable | 6 |
-| arxiv.org | 0.500 | unreliable | 4 |
+| theguardian.com | 0.400 | reliable | 6 |
+| arxiv.org | 0.500 | unreliable | 6 |
+| theregister.com | 0.500 | reliable | 6 |
+| theverge.com | 0.500 | reliable | 4 |
+| abc15.com | 0.500 | reliable | 2 |
+| aspi.org.au | 0.500 | mixed | 2 |
 | futurism.com | 0.600 | mixed | 2 |
-| theverge.com | 0.600 | reliable | 2 |
 
 ### Root-cause analysis of null result
 
-**1. Sample size (n=13):** Critically underpowered. 13 matched domains cannot reliably detect a moderate correlation. More lite-1.6 accumulation is needed (target n≥40).
+**1. Sample size:** Initial n=13 was underpowered. Re-validation at n=24 (130 eligible D1 domains, 24 in GT) confirms the null — more data doesn't rescue the result. The construct mismatch is the primary issue.
 
 **2. Construct mismatch — the primary issue:**
 - **TQ measures** per-article transparency indicators: author byline present, publication date present, sources cited, correction policy visible, conflict of interest disclosed. This is _content-structural_ transparency.
@@ -106,7 +121,8 @@ Direction confirmed: high-EQ domains cluster at MBFC High/VeryHigh, low-EQ at Mi
 
 ### Secondary check: TQ → MBFC Factual Reporting
 
-ρ = -0.100, p = 0.7708, n = 11 → NOT SIGNIFICANT (same issues, smaller n)
+Initial: ρ = -0.100, p = 0.7708, n = 11 → NOT SIGNIFICANT
+Re-validation: ρ = -0.212, p = 0.3691, n = 20 → NOT SIGNIFICANT (direction unchanged)
 
 ### Interpretation
 
@@ -115,7 +131,7 @@ The null result is **not evidence that TQ is invalid** — it is evidence that:
 2. TQ-as-outlet-average is the wrong construct for comparison against outlet-level reliability labels
 3. A valid TQ external validity check requires: (a) filtering to editorial content types only, (b) larger sample (n≥40), (c) possibly a different external criterion (e.g., a transparency-specific audit like Newsguard's sourcing criterion rather than MBFC's general reliability)
 
-**Assessment:** Null result is expected and uninformative given design limitations. Re-test when: (a) ≥40 lite-1.6 editorial-content domains available, (b) filter applied to `content_type IN ('ED', 'HR', 'MI')`.
+**Assessment:** Re-validation at n=24 confirms the null. Construct mismatch is the root cause — not data volume. Valid TQ external check requires: (a) filter to `content_type IN ('ED', 'HR', 'MI')`, (b) a transparency-specific external criterion (e.g., NewsGuard sourcing sub-score) rather than MBFC general reliability.
 
 ---
 
@@ -127,11 +143,11 @@ The null result is **not evidence that TQ is invalid** — it is evidence that:
 | ET inter-rater reliability (Haiku vs Llama) | Pearson r=0.82, α=0.85 | ✓ PASS |
 | CL convergent validity (CL vs flesch) | ρ=+0.61, p<0.01 | ✓ PASS |
 | PTD inter-rater reliability | Agreement 85.3% | ✓ PASS |
-| EQ → MBFC factual reporting | ρ=+0.36, p=0.098, marginal | ~ MARGINAL |
-| TQ → MBFC reliability | ρ=+0.01, p=0.96, null | ✗ UNDERPOWERED |
+| EQ → MBFC factual reporting | ρ=+0.36, p=0.098, n=22 (MBFC coverage ceiling) | ~ MARGINAL |
+| TQ → MBFC reliability | ρ=-0.09, p=0.66, n=24 (construct mismatch confirmed) | ✗ WRONG VALIDATOR |
 
 ### Next steps for construct validity
 
-1. **EQ accumulation**: Accumulate more full-eval data (~6 months natural growth → 200+ evaluated domains → n≥50 matched with MBFC). Re-run at that point.
-2. **TQ re-validation**: When ≥40 lite-1.6 editorial-content domains available, filter `content_type IN ('ED','HR','MI')`, re-run vs MBFC factual_reporting (not reliability_label — factual reporting is a better proxy for transparency than reliability).
+1. **EQ — different dataset needed**: MBFC covers only ~22 HN domains regardless of D1 size. To improve power, need AllSides + NewsGuard combined, or wait for HN to naturally surface more MBFC-rated outlets. Data accumulation alone won't help.
+2. **TQ — wrong validator**: MBFC reliability is not the right external criterion for per-article transparency. Need a transparency-specific audit (e.g., NewsGuard sourcing/transparency sub-scores, or a byline-rate dataset). Filter to `content_type IN ('ED','HR','MI')` is also required to remove LP/PR noise.
 3. **RDR (Rights Documentation Rate)** convergent validity: deferred — insufficient domain overlap with any available public dataset.
