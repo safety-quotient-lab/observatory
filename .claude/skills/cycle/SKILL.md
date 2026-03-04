@@ -20,6 +20,14 @@ Work through each step. Skip any that don't apply to the changes described in $A
 - Note any new features, renamed concepts, changed algorithms, reordered sections, or removed functionality
 - **Gap-detection checkpoint**: For each changed file, list the sections you did NOT read during implementation. Ask: are any of those sections likely to have been affected by the change? For example — changed a component but didn't read its parent template; changed a query but didn't check all call sites; added a new field but didn't check the API response types. Identify any gaps before proceeding.
 
+### 1.5. Detect cogarch wins (early pass)
+
+Run immediately after the gap-detection checkpoint while the thinking is fresh:
+- `node scripts/detect-cogarch-win.mjs` from repo root
+- Gap-detection wins, T4 (pre-destructive action), and T2 (bare fork) triggers are most visible here
+- If a win is detected: note the scaffold path, continue cycle — the end-of-session pass (step 12.5) may catch additional wins from the full arc
+- Skip for trivial sessions (typo fixes, single-line edits) where no judgment calls occurred
+
 ### 2. Update the About page (`site/src/pages/about.astro`)
 
 - Check if any section descriptions are now stale
