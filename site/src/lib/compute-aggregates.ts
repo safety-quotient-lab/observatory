@@ -323,3 +323,104 @@ export function computeFairWitnessAggregates(scores: EvalScore[]): FairWitnessAg
     fw_inference_count: totalInferences,
   };
 }
+
+// --- Rights Entanglement Map (REM) ---
+
+export interface RemCluster {
+  provisions: string[];      // UDHR article IDs e.g. "Art12"
+  avgInternalCorr: number;   // mean pairwise r within cluster
+  representative: string;    // provision with highest mean r to cluster members
+}
+
+/**
+ * Single-linkage hierarchical clustering on a provision correlation Map.
+ * Merges two provisions into the same cluster when pearson_r >= threshold.
+ * Returns clusters sorted by size descending.
+ */
+export function computeRemClusters(
+  correlation: Map<string, number>,
+  threshold = 0.35
+): RemCluster[] {
+  // Collect all provision IDs from the correlation keys
+  const provisions = new Set<string>();
+  for (const key of correlation.keys()) {
+    const [a, b] = key.split('|');
+    provisions.add(a);
+    provisions.add(b);
+  }
+  if (provisions.size === 0) return [];
+
+  // Union-Find
+  const parent = new Map<string, string>();
+  for (const p of provisions) parent.set(p, p);
+
+  function find(x: string): string {
+    let root = x;
+    while (parent.get(root) !== root) root = parent.get(root)!;
+    // Path compression
+    let cur = x;
+    while (cur !== root) {
+      const next = parent.get(cur)!;
+      parent.set(cur, root);
+      cur = next;
+    }
+    return root;
+  }
+
+  function union(a: string, b: string): void {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent.set(rb, ra);
+  }
+
+  // Build sorted edge list (descending r) and merge above threshold
+  const edges: Array<{ a: string; b: string; r: number }> = [];
+  for (const [key, r] of correlation) {
+    const [a, b] = key.split('|');
+    if (a !== b) edges.push({ a, b, r });
+  }
+  edges.sort((x, y) => y.r - x.r);
+
+  for (const { a, b, r } of edges) {
+    if (r < threshold) break;
+    union(a, b);
+  }
+
+  // Group provisions by root
+  const groups = new Map<string, string[]>();
+  for (const p of provisions) {
+    const root = find(p);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root)!.push(p);
+  }
+
+  // Compute cluster stats
+  const clusters: RemCluster[] = [];
+  for (const members of groups.values()) {
+    let corrSum = 0;
+    let corrCount = 0;
+    const memberCorrs = new Map<string, number>(); // provision → sum of r to cluster members
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
+        const key = `${members[i]}|${members[j]}`;
+        const altKey = `${members[j]}|${members[i]}`;
+        const r = correlation.get(key) ?? correlation.get(altKey) ?? 0;
+        corrSum += r;
+        corrCount++;
+        memberCorrs.set(members[i], (memberCorrs.get(members[i]) ?? 0) + r);
+        memberCorrs.set(members[j], (memberCorrs.get(members[j]) ?? 0) + r);
+      }
+    }
+    const avgInternalCorr = corrCount > 0 ? round(corrSum / corrCount) : 0;
+
+    // Representative: highest mean r to other cluster members
+    let representative = members[0];
+    let maxCorr = -Infinity;
+    for (const [p, sum] of memberCorrs) {
+      if (sum > maxCorr) { maxCorr = sum; representative = p; }
+    }
+
+    clusters.push({ provisions: members.sort(), avgInternalCorr, representative });
+  }
+
+  return clusters.sort((a, b) => b.provisions.length - a.provisions.length);
+}

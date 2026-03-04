@@ -7,6 +7,7 @@ import { SECTIONS, ARTICLE_SHORT_TITLES, ARTICLE_TITLES } from '../../lib/udhr';
 import { getArticlePairStats, getArticleDetailedStats } from '../../lib/db';
 import { scoreToColor, correlationToColor, formatScore } from '../../lib/colors';
 import { readDb } from '../../lib/db-utils';
+import { computeRemClusters } from '../../lib/compute-aggregates';
 
 const db = readDb(Astro.locals.runtime.env.DB);
 
@@ -140,6 +141,12 @@ function getArticleNumber(id: string): number {
   return SECTIONS.find(s => s.id === id)?.number ?? 0;
 }
 
+// --- Rights Entanglement Map (REM) ---
+// allEdges is already sorted asc by weight (= 1 - |r|), so last element = most independent
+const remClusters = computeRemClusters(pairStats.correlation, 0.35);
+const mostIndependent = allEdges[allEdges.length - 1]; // highest weight = lowest |r|
+const mostEntangled = allEdges[0]; // lowest weight = highest |r|
+
 // Serialize for client
 const graphData = JSON.stringify({ nodes, edges: mstEdges });
 const powerData = JSON.stringify(powerRankings);
@@ -247,7 +254,72 @@ const powerData = JSON.stringify(powerRankings);
     </tr>
   </table>
 
-  {/* === Section 3: E/S Channel Comparison (paired under-over bars) === */}
+  {/* === Section 3: Rights Entanglement Map (REM) === */}
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
+    <tr>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+          Rights Entanglement Map
+        </div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 12px;">
+          Which UDHR provisions move together in tech content — single-linkage clusters at r ≥ 0.35
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+          {remClusters.map((cluster, i) => (
+            <div style={`padding: 8px 10px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px; min-width: 160px; flex: ${cluster.provisions.length >= 4 ? '2' : '1'};`}>
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                Cluster {i + 1}
+                {cluster.provisions.length > 1 && (
+                  <span class="score-font" style={`color: ${correlationToColor(cluster.avgInternalCorr)}; margin-left: 6px;`}>
+                    avg r={cluster.avgInternalCorr >= 0 ? '+' : ''}{cluster.avgInternalCorr.toFixed(3)}
+                  </span>
+                )}
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                {cluster.provisions.map(p => (
+                  <a href={`/article/${getArticleNumber(p)}`}
+                     style={`font-size: var(--font-xs); color: var(--fg-emphasis); background: ${p === cluster.representative ? 'rgba(43,144,216,0.12)' : 'var(--bg-primary)'}; border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 5px; text-decoration: none; white-space: nowrap;`}
+                     title={`${ARTICLE_SHORT_TITLES[p] ?? p}${p === cluster.representative ? ' (representative)' : ''}`}>
+                    {p === 'Preamble' ? 'P' : `Art ${getArticleNumber(p)}`}
+                  </a>
+                ))}
+              </div>
+              {cluster.provisions.length === 1 && (
+                <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 4px; font-style: italic;">independent</div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style="display: flex; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--bg-surface); padding-top: 8px; font-size: var(--font-xs); color: var(--fg-secondary);">
+          {mostEntangled && (
+            <div>
+              <span style="color: var(--fg-primary);">Most entangled:</span>{' '}
+              <a href={`/article/${getArticleNumber(mostEntangled.source)}`} style="color: var(--fg-emphasis);">{ARTICLE_SHORT_TITLES[mostEntangled.source] ?? mostEntangled.source}</a>
+              {' '}×{' '}
+              <a href={`/article/${getArticleNumber(mostEntangled.target)}`} style="color: var(--fg-emphasis);">{ARTICLE_SHORT_TITLES[mostEntangled.target] ?? mostEntangled.target}</a>
+              {' '}
+              <span class="score-font" style={`color: ${correlationToColor(mostEntangled.r)};`}>r={mostEntangled.r >= 0 ? '+' : ''}{mostEntangled.r.toFixed(3)}</span>
+            </div>
+          )}
+          {mostIndependent && (
+            <div>
+              <span style="color: var(--fg-primary);">Most independent:</span>{' '}
+              <a href={`/article/${getArticleNumber(mostIndependent.source)}`} style="color: var(--fg-emphasis);">{ARTICLE_SHORT_TITLES[mostIndependent.source] ?? mostIndependent.source}</a>
+              {' '}×{' '}
+              <a href={`/article/${getArticleNumber(mostIndependent.target)}`} style="color: var(--fg-emphasis);">{ARTICLE_SHORT_TITLES[mostIndependent.target] ?? mostIndependent.target}</a>
+              {' '}
+              <span class="score-font" style={`color: ${correlationToColor(mostIndependent.r)};`}>r={mostIndependent.r >= 0 ? '+' : ''}{mostIndependent.r.toFixed(3)}</span>
+            </div>
+          )}
+        </div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 8px; font-style: italic;">
+          All 496 provision pairs show positive correlation. The Privacy ↔ Expression trade-off assumed in tech policy discourse does not appear in this corpus — they co-vary positively.
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {/* === Section 4: E/S Channel Comparison (paired under-over bars) === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0;">
     <tr>
       <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
@@ -298,7 +370,7 @@ const powerData = JSON.stringify(powerRankings);
     </tr>
   </table>
 
-  {/* === Section 4: Power Rankings (sortable table) === */}
+  {/* === Section 5: Power Rankings (sortable table) === */}
   <table cellpadding="0" cellspacing="0" width="100%" style="padding: 5px 0 20px 0;">
     <tr>
       <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">

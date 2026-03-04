@@ -23,8 +23,9 @@ Phase 0 external validation progress:
 ✓ EQ/TQ external validity vs idiap/MBFC (2026-03-04, re-validated 2026-03-04): EQ ρ=+0.362 marginal (MBFC coverage ceiling ~22 — not a data volume problem), TQ ρ=-0.094 (construct mismatch confirmed at n=24 — MBFC reliability is wrong validator for per-article transparency)
 
 ✓ Phase A automated validation (2026-03-04): SR ✓ TD ✓ GS ✓ | SO ~ | SETL/FW/TF ✗ null | Flags: SO/SR↔HRCB high (0.609/0.582), TD↔EQ high (0.652). Full: `findings/2026-03-04-phase-a-automated-validation.md`
+✓ REM (Rights Entanglement Map) (2026-03-04): `computeRemClusters()` + `/rights/network` section. `hcb_classification` badge now inline in EvalCard.
 
-Next: Phase B (human raters — ET-valence, PT technique-level, CL expertise, ET-arousal) and Phase C gated on NewsGuard. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
+Next: Phase B (human raters — ET-valence, PT technique-level, CL expertise, ET-arousal) and Phase C gated on NewsGuard. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`. After validation: RTS (Rights Tension Signature) — new prompt, categorical output.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
@@ -90,9 +91,7 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
   - Emerges from domain-level patterns across many stories, not per-story
   - External validation: RDR corporate accountability, Freedom House
 
-- [ ] **Rights Entanglement Map (REM)** — which rights systematically co-vary
-  - Already partially computed (rights network Pearson correlations)
-  - Property of the information ecosystem, not individual stories
+- ~~**Rights Entanglement Map (REM)**~~ — ✓ DONE 2026-03-04. Single-linkage clustering on 496 provision-pair correlations. `computeRemClusters()` in `compute-aggregates.ts`. Section on `/rights/network`. All pairs positive (min r=+0.187 Art12×Art27). Privacy ↔ Expression co-vary positively — no tech-policy trade-off in this corpus.
 
 - [ ] **Model Consensus Construct (MCC)** — formalize agreement/disagreement patterns
   - `getModelAgreement()` already computes pairwise Pearson r (`@internal`)
@@ -224,7 +223,7 @@ Full 7-perspective analysis in `construct-validity-analysis.md` Section 16.
   - Real-world event annotation layer
 
 - [ ] **Rights network enhancements**
-  - Cluster detection (community finding algorithm)
+  - ~~Cluster detection~~ — ✓ Done (REM single-linkage, 2026-03-04)
   - Temporal network evolution (how correlations shift)
 
 ### Round 7 — Platform

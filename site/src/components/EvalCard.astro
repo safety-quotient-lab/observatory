@@ -186,6 +186,12 @@ function timeAgo(unixTime: number): string {
             {story.hcb_theme_tag}
           </span>
         )}
+        {story.hcb_classification && !isLiteOnly && (
+          <span class="badge" style={`background: ${classificationColor(story.hcb_classification)}; color: ${classificationTextColor(story.hcb_classification)}; font-size: var(--font-xs); margin-left: 4px;`}
+                title={story.hcb_classification}>
+            {classLabel}
+          </span>
+        )}
         {otherModels.length > 0 && otherModels.map(m => (
           <a href={`/item/${story.hn_id}?model=${m.eval_model}`}
              class="badge"
