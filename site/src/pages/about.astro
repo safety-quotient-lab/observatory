@@ -409,9 +409,15 @@ const jsonLd = {
           </p>
 
           <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 12px 0 6px 0;">FW Ratio</p>
-          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 8px;">
             <span class="score-font">FW Ratio = observable_facts / (observable_facts + inferences)</span><br>
             Scale [0, 1]. Higher = evaluation more grounded in verifiable observations; lower = more interpretive weight.
+          </p>
+
+          <p style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 12px 0 6px 0;">E-Prime Constraint</p>
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 15px;">
+            <span class="persona-reader">Observable facts follow an <b style="color: var(--fg-primary);">E-Prime</b> constraint — they cannot use "to be" verbs (is, are, was, were). This forces the evaluator to describe specific actions and behaviors rather than making identity claims. "The site <i>is</i> paywalled" becomes "The site <i>displays</i> a paywall overlay after the first paragraph."</span>
+            <span class="persona-researcher">Observable facts follow an <a href="https://en.wikipedia.org/wiki/E-Prime" target="_blank" rel="noopener" style="color: var(--fg-secondary);">E-Prime</a> constraint — witness_facts must not use "to be" verbs (is, are, was, were, be, been, being). This prevents essentialist claims and forces grounding in specific observable actions, consistent with operationalist epistemology. The constraint applies to facts only; inferences may use "to be" since they are explicitly marked as interpretive.</span>
           </p>
 
           <h2 id="evidence" style="font-size: var(--font-base); margin: 20px 0 8px 0;">Evidence Strength & Confidence</h2>

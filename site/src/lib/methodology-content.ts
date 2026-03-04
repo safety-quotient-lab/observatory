@@ -103,6 +103,7 @@ Rules:
 3. Facts must be strictly observable — no hedging, speculation, or interpretation.
 4. Inferences must be clearly interpretive — they explain WHY the evidence maps to the score.
 5. Aim for 1–3 facts and 1–2 inferences per section. Do not pad with trivial observations.
+6. E-Prime constraint: witness_facts MUST NOT use "to be" verbs (is, are, was, were, be, been, being). Describe observable actions, states, and behaviors instead. Example: NOT "The site is paywalled" → "The site displays a paywall overlay after the first paragraph." This prevents essentialist claims and forces grounding in specific observations.
 
 ## 9 — STORY-LEVEL LABELS
 

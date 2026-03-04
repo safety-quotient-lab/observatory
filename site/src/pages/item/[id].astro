@@ -252,6 +252,26 @@ const tdData = storyData.td_score != null ? {
 } : null;
 const hasSignals = eqScore !== null || ptFlagCount > 0 || soData !== null || etData !== null || srData !== null || tfData !== null || gsData !== null || clData !== null || tdData !== null;
 
+// Inter-rater agreement: compute from done rater_evals with valid HRCB scores
+const doneRaterScores = raterEvals
+  .filter(re => re.eval_status === 'done' && (re.hcb_weighted_mean != null || re.hcb_editorial_mean != null))
+  .map(re => re.hcb_weighted_mean ?? re.hcb_editorial_mean!);
+const interRaterCount = doneRaterScores.length;
+let interRaterAgreement: string | null = null;
+let interRaterSpread: number | null = null;
+if (interRaterCount >= 2) {
+  const mean = doneRaterScores.reduce((a, b) => a + b, 0) / interRaterCount;
+  const variance = doneRaterScores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / interRaterCount;
+  const stdDev = Math.sqrt(variance);
+  interRaterSpread = Math.max(...doneRaterScores) - Math.min(...doneRaterScores);
+  interRaterAgreement = stdDev < 0.05 ? 'High' : stdDev < 0.15 ? 'Moderate' : 'Low';
+}
+
+// Rights-washing flag: editorial positive + structural negative + high SETL
+const rightsWashing = isDone && aggSetl !== null && aggSetl >= 0.25
+  && storyData.hcb_editorial_mean != null && storyData.hcb_structural_mean != null
+  && storyData.hcb_editorial_mean > 0.1 && storyData.hcb_structural_mean < -0.1;
+
 // comments, storyEvents, evalHistory, storyTimeline fetched in parallel above
 
 // Merge events and eval_history into a unified audit trail, sorted newest first
@@ -645,6 +665,24 @@ function timeAgo(unixTime: number): string {
             Contested
           </span>
         )}
+        {interRaterAgreement && (
+          <span
+            class="badge"
+            style={`background: ${interRaterAgreement === 'High' ? 'rgba(52,211,153,0.15)' : interRaterAgreement === 'Moderate' ? 'rgba(43,144,216,0.15)' : 'rgba(217,119,6,0.15)'}; color: ${interRaterAgreement === 'High' ? 'var(--color-positive-medium)' : interRaterAgreement === 'Moderate' ? 'var(--fg-emphasis)' : 'var(--color-warning)'}; font-size: var(--font-xs); margin-left: 4px;`}
+            title={`Inter-rater agreement: ${interRaterAgreement} (${interRaterCount} models, spread: ${interRaterSpread?.toFixed(3) ?? 'N/A'})`}
+          >
+            {interRaterAgreement} agreement ({interRaterCount} models)
+          </span>
+        )}
+        {rightsWashing && (
+          <span
+            class="badge"
+            style="background: rgba(217,119,6,0.15); color: var(--color-warning); font-size: var(--font-xs); margin-left: 4px;"
+            title={`Rights-washing detected: editorial positive (E:${formatScore(storyData.hcb_editorial_mean)}) but structural behavior negative (S:${formatScore(storyData.hcb_structural_mean)}). SETL: ${formatSetl(aggSetl)}`}
+          >
+            ⚠ says≠does
+          </span>
+        )}
         <span style="color: var(--fg-secondary); margin-left: 4px;">
           <span title={`Content type: ${CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}`} style="cursor: help;">
             {CONTENT_TYPE_LABELS[storyData.content_type] || storyData.content_type}
@@ -811,6 +849,15 @@ function timeAgo(unixTime: number): string {
                 <td class="score-font" style={`color: ${fwRatioColor(fwRatio)};`}>{formatFwRatio(fwRatio)}</td>
                 <td style="color: var(--fg-secondary); font-size: var(--font-xs);" title="Observable facts / Inferences" colspan="2">
                   <span style="color: var(--color-positive-vivid);">{fwObservableCount} facts</span> · <span style="color: var(--color-inference);">{fwInferenceCount} inferences</span>
+                </td>
+              </tr>
+            )}
+            {interRaterAgreement && (
+              <tr>
+                <td style="color: var(--fg-secondary);"><abbr title="Inter-rater agreement: consistency of HRCB scores across independent model evaluations">Agreement</abbr></td>
+                <td class="score-font" style={`color: ${interRaterAgreement === 'High' ? 'var(--color-positive-medium)' : interRaterAgreement === 'Moderate' ? 'var(--fg-emphasis)' : 'var(--color-warning)'};`}>{interRaterAgreement}</td>
+                <td style="color: var(--fg-secondary); font-size: var(--font-xs);" colspan="2">
+                  {interRaterCount} models · spread ±{((interRaterSpread ?? 0) / 2).toFixed(3)}
                 </td>
               </tr>
             )}

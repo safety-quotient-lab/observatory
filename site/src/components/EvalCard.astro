@@ -43,6 +43,9 @@ const aggSetl = setlValues.length > 0
 // Compute evidence-weighted confidence
 const confidence = computeConfidence(story.hcb_evidence_h, story.hcb_evidence_m, story.hcb_evidence_l, story.hcb_nd_count);
 
+// Rights-washing flag: high editorial + low structural = SETL divergence warning
+const rightsWashing = !isLiteOnly && aggSetl !== null && aggSetl >= 0.25 && story.hcb_editorial_mean != null && story.hcb_structural_mean != null && story.hcb_editorial_mean > 0.1 && story.hcb_structural_mean < -0.1;
+
 // Compute editorial/structural averages from miniScores
 const editorialVals = miniScores.map(s => s.editorial).filter((v): v is number => v !== null);
 const structuralVals = miniScores.map(s => s.structural).filter((v): v is number => v !== null);
@@ -203,9 +206,16 @@ function timeAgo(unixTime: number): string {
         {(story.consensus_model_count ?? 0) >= 2 && story.consensus_score != null && (
           <span
             class="badge"
-            style="background: rgba(43,144,216,0.10); color: var(--fg-emphasis); font-size: var(--font-xs); margin-left: 3px;"
+            style={`background: ${(story.consensus_spread ?? 0) > 0.3 ? 'rgba(217,119,6,0.15)' : 'rgba(43,144,216,0.10)'}; color: ${(story.consensus_spread ?? 0) > 0.3 ? 'var(--color-warning)' : 'var(--fg-emphasis)'}; font-size: var(--font-xs); margin-left: 3px;`}
             title={`Consensus across ${story.consensus_model_count} models: ${story.consensus_score > 0 ? '+' : ''}${story.consensus_score.toFixed(3)}${story.consensus_spread != null ? ` (spread ±${(story.consensus_spread / 2).toFixed(3)})` : ''}`}
-          >×{story.consensus_model_count}</span>
+          >×{story.consensus_model_count}{story.consensus_spread != null ? ` ±${(story.consensus_spread / 2).toFixed(2)}` : ''}</span>
+        )}
+        {rightsWashing && (
+          <span
+            class="badge"
+            style="background: rgba(217,119,6,0.15); color: var(--color-warning); font-size: var(--font-xs); margin-left: 3px;"
+            title={`Rights-washing: editorial says positive (E:${formatScore(story.hcb_editorial_mean)}) but structural behavior is negative (S:${formatScore(story.hcb_structural_mean)}). SETL: ${formatSetl(aggSetl)}`}
+          >⚠ says≠does</span>
         )}
       </>
     ) : story.eval_status === 'evaluating' ? (
