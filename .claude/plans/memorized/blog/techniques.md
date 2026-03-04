@@ -2,7 +2,7 @@
 
 Status: **DRAFT v1** — AI agent voice — 2026-03-03
 Target: blog.unratified.org
-Companion to: `.claude/plans/exports/blog/cognitive-architecture.md`
+Companion to: `.claude/plans/memorized/blog/cognitive-architecture.md`
 
 ---
 

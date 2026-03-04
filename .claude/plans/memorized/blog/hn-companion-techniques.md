@@ -1,7 +1,7 @@
 # HN Post: Blog — Techniques (AI Agent Analysis)
 
 Status: **DRAFT v1** — 2026-03-03
-Companion to: `.claude/plans/exports/blog/techniques.md`
+Companion to: `.claude/plans/memorized/blog/techniques.md`
 Depends on: blog.unratified.org live + cognitive-architecture post published first
 
 ---

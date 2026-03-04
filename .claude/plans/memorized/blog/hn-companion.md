@@ -1,7 +1,7 @@
 # HN Post: Blog — Cognitive Architecture
 
 Status: **DRAFT v1** — 2026-03-03
-Companion to: `.claude/plans/exports/blog/cognitive-architecture.md`
+Companion to: `.claude/plans/memorized/blog/cognitive-architecture.md`
 Depends on: blog.unratified.org being live before submission
 
 ---

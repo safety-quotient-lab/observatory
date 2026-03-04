@@ -21,7 +21,7 @@ import { execSync, spawn } from 'child_process';
 
 const SESSIONS_DIR = join(homedir(), '.claude/projects/-home-kashif-projects-unudhr');
 const LOG_FILE = join(SESSIONS_DIR, 'memory/cogarch-wins-log.jsonl');
-const SCAFFOLD_DIR = join(process.cwd(), '.claude/plans/exports/blog/cogarch-wins');
+const SCAFFOLD_DIR = join(process.cwd(), '.claude/plans/memorized/blog/cogarch-wins');
 
 const DEFAULT_THRESHOLD = 3;
 const DEDUP_WINDOW_DAYS = 30;
@@ -404,7 +404,7 @@ async function main() {
 
   console.log(`✓ Cogarch win detected: ${detection.trigger} (novelty ${detection.novelty_score}/5)`);
   console.log(`  Caught: ${detection.caught}`);
-  console.log(`  Scaffold: .claude/plans/exports/blog/cogarch-wins/${filename}`);
+  console.log(`  Scaffold: .claude/plans/memorized/blog/cogarch-wins/${filename}`);
 }
 
 main().catch(err => {

@@ -38,5 +38,4 @@ package-lock.json
 !.claude/plans/
 .claude/plans/archive/
 .claude/plans/*.md
-!.claude/plans/exports/
 !.claude/plans/memorized/
