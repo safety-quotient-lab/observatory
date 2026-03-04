@@ -116,22 +116,22 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
           {pctCovNone > 0 && <div style={`width: ${pctCovNone}%; background: var(--bg-surface);`}></div>}
         </div>
 
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 2px;">
-          <div style="flex: 1 1 100px; padding: 8px; background: var(--bg-surface); border-radius: 4px; text-align: center;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-bottom: 2px;">
+          <div style="padding: 8px; background: var(--bg-surface); border-radius: 4px; text-align: center; min-width: 0;">
             <div class="score-font" style="font-size: var(--font-lg); color: var(--channel-hrcb); font-weight: bold;">{status.coverageMultiModel}</div>
-            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">Multi-Model</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; white-space: normal; word-break: break-word;">Multi-Model</div>
           </div>
-          <div style="flex: 1 1 100px; padding: 8px; background: var(--bg-surface); border-radius: 4px; text-align: center;">
+          <div style="padding: 8px; background: var(--bg-surface); border-radius: 4px; text-align: center; min-width: 0;">
             <div class="score-font" style="font-size: var(--font-lg); color: var(--color-positive); font-weight: bold;">{status.coverageFull}</div>
-            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">Full</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; white-space: normal;">Full</div>
           </div>
-          <div style="flex: 1 1 100px; padding: 8px; background: var(--bg-surface); border-radius: 4px; text-align: center;">
+          <div style="padding: 8px; background: var(--bg-surface); border-radius: 4px; text-align: center; min-width: 0;">
             <div class="score-font" style="font-size: var(--font-lg); color: var(--color-orange); font-weight: bold;">{status.coverageLite}</div>
-            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">Lite</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; white-space: normal;">Lite</div>
           </div>
-          <div style="flex: 1 1 100px; padding: 8px; background: var(--bg-surface); border-radius: 4px; text-align: center;">
+          <div style="padding: 8px; background: var(--bg-surface); border-radius: 4px; text-align: center; min-width: 0;">
             <div class="score-font" style="font-size: var(--font-lg); color: var(--fg-secondary); font-weight: bold;">{status.coverageNone}</div>
-            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">No Coverage</div>
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; white-space: normal; word-break: break-word;">No Coverage</div>
           </div>
         </div>
 

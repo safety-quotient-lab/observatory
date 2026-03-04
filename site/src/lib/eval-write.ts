@@ -305,8 +305,11 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
       if (score == null) continue;
       const isLite = r.prompt_mode === 'lite' || r.prompt_mode === 'light';
       const baseWeight = isLite ? 0.5 : 1.0;
-      // Confidence modulates within prompt mode — floor 0.2 so no model is fully silenced
-      const confidenceFactor = Math.max(0.2, r.confidence);
+      // Confidence modulates within prompt mode. Full evals derive confidence from evidence
+      // distribution across 31 sections (most ND → typical values 0.14-0.20), so they need a
+      // higher floor (0.5) to avoid being outweighed by lite evals (avg confidence 0.84).
+      // Lite floor 0.2 still ensures no model is fully silenced.
+      const confidenceFactor = Math.max(isLite ? 0.2 : 0.5, r.confidence);
       const truncPct = r.content_truncation_pct ?? 0;
       // Discount lite evals flagged as editorial_uncertain OR scoring exactly 0.0 with high
       // confidence — both indicate the known Llama lazy-neutral failure mode. The flag persists
