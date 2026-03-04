@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#001a23"/>
+      <stop offset="100%" stop-color="#002d38"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Accent line top -->
+  <rect x="0" y="0" width="1200" height="3" fill="#2b90d8" opacity="0.6"/>
+
+  <!-- Scale icon (centered, subtle) -->
+  <g transform="translate(600, 180) scale(3.5)" opacity="0.35">
+    <line x1="0" y1="-8" x2="0" y2="8" stroke="#2b90d8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-5" y1="8" x2="5" y2="8" stroke="#2b90d8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-10" y1="-5" x2="10" y2="-5" stroke="#2b90d8" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="-10" y1="-5" x2="-12" y2="1" stroke="#7d80d1" stroke-width="1.2"/>
+    <line x1="-10" y1="-5" x2="-8" y2="1" stroke="#7d80d1" stroke-width="1.2"/>
+    <path d="M-13 1 Q-10 4 -7 1" fill="none" stroke="#7d80d1" stroke-width="1.2" stroke-linecap="round"/>
+    <line x1="10" y1="-5" x2="8" y2="1" stroke="#7d80d1" stroke-width="1.2"/>
+    <line x1="10" y1="-5" x2="12" y2="1" stroke="#7d80d1" stroke-width="1.2"/>
+    <path d="M7 1 Q10 4 13 1" fill="none" stroke="#7d80d1" stroke-width="1.2" stroke-linecap="round"/>
+    <polygon points="-2,-9 2,-9 0,-12" fill="#2b90d8"/>
+  </g>
+
+  <!-- Title -->
+  <text x="600" y="320" text-anchor="middle" font-family="monospace, 'Courier New'" font-size="64" font-weight="bold" fill="#e0e0e0" letter-spacing="2">Human Rights Observatory</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="380" text-anchor="middle" font-family="monospace, 'Courier New'" font-size="28" fill="#839496">Hacker News stories scored against the</text>
+  <text x="600" y="416" text-anchor="middle" font-family="monospace, 'Courier New'" font-size="28" fill="#839496">UN Universal Declaration of Human Rights</text>
+
+  <!-- URL -->
+  <text x="600" y="520" text-anchor="middle" font-family="monospace, 'Courier New'" font-size="22" fill="#586e75">observatory.unratified.org</text>
+
+  <!-- Bottom accent -->
+  <rect x="450" y="480" width="300" height="1" fill="#2b90d8" opacity="0.4"/>
+
+  <!-- Accent line bottom -->
+  <rect x="0" y="627" width="1200" height="3" fill="#2b90d8" opacity="0.6"/>
+</svg>

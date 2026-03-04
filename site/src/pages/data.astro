@@ -6,9 +6,44 @@ import Breadcrumb from '../components/Breadcrumb.astro';
 export const prerender = true;
 
 const siteUrl = Astro.site?.origin ?? 'https://observatory.unratified.org';
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: 'Human Rights Observatory Evaluation Dataset',
+  description: 'Automated LLM evaluations of Hacker News stories against the 30 articles and Preamble of the UN Universal Declaration of Human Rights. Each story receives editorial and structural channel scores, supplementary signals (transparency, accessibility, persuasion techniques, temporal framing), and a composite HRCB score.',
+  url: `${siteUrl}/data`,
+  license: 'https://creativecommons.org/licenses/by-sa/4.0/',
+  creator: {
+    '@type': 'Organization',
+    name: 'Safety Quotient Lab',
+    url: 'https://github.com/safety-quotient-lab',
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: 'Human Rights Observatory',
+    url: siteUrl,
+  },
+  measurementTechnique: 'Multi-model LLM ensemble (Claude + Llama) evaluated against 31 UDHR provisions using HRCB methodology v3.7',
+  variableMeasured: [
+    { '@type': 'PropertyValue', name: 'HRCB Score', description: 'Human Rights Compatibility Bias — directional lean of content relative to UDHR provisions, range [-1.0, +1.0]' },
+    { '@type': 'PropertyValue', name: 'SETL', description: 'Structural-Editorial Tension Level — divergence between what content says vs what the site does' },
+    { '@type': 'PropertyValue', name: 'Epistemic Quality', description: 'Source quality, evidence use, and uncertainty handling' },
+    { '@type': 'PropertyValue', name: 'Propaganda Technique Score', description: 'PTC-18 based propaganda technique detection, cumulative weighted score' },
+    { '@type': 'PropertyValue', name: 'Fair Witness Ratio', description: 'Ratio of observable facts to interpretive inferences in evaluation evidence' },
+  ],
+  distribution: [
+    { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/stories`, name: 'Stories API (paginated)' },
+    { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/domains`, name: 'Domain Aggregates API' },
+    { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/signals`, name: 'Corpus Signal Aggregates API' },
+  ],
+  temporalCoverage: '2026-02/..',
+  spatialCoverage: { '@type': 'Place', name: 'Global (Hacker News English-language content)' },
+  isAccessibleForFree: true,
+};
 ---
 
 <Base title="Data — HRO" canonicalUrl={`${siteUrl}/data`}>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'data' }]} />
 
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">

@@ -76,3 +76,69 @@ Gemini drafted a feature request for formalizing SETL with headless browser stru
 
 ## Meta-Observation
 Gemini demonstrated exactly the failure mode it was critiquing: **hallucinated compliance**. It generated plausible-sounding technical details about our architecture that were fabricated, while confidently evaluating our "epistemic quality." This is a useful demonstration of why Fair Witness discipline matters — Gemini's editorial channel (confident prose) diverged massively from structural reality (actual codebase). SETL would flag Gemini's own evaluation at ~60+ tension.
+
+---
+
+# External Evaluation #2: Gemini via unratified.org Agent (2026-03-04)
+
+## Source
+Multi-turn conversation between the unratified.org agent and Google Gemini. Covered ICESCR analysis, G7 treaty comparison, structured data/SEO suggestions, proposed "Gemini Lite" evaluator, Svelte 5 code suggestions, and a beta readiness report.
+
+## Accuracy Assessment
+
+### Correct (high confidence)
+- ICESCR ratification history, G7 comparison data, negative/positive rights framework — textbook-accurate
+- Senate RUD analysis on ICCPR Articles 6, 7, 20 — verifiable and correct
+- Structured data suggestions (FAQ, Dataset, ClaimReview schema) — real schema.org types, applicable
+- OG tag gap — confirmed: Observatory has og:type/title/description/url but **no og:image** (Base.astro verified)
+- `.well-known/` acknowledgment — correctly identified agent-card.json exists
+
+### Confabulated (verified false)
+
+| Claim | Reality |
+|---|---|
+| Observatory uses **Svelte 5** | Astro 5 SSR + vanilla JS inline scripts. 1 Svelte mention in entire codebase (tailwind.config.mjs). Blog uses Svelte for PostList.svelte only. |
+| "Svelte 5.53" version | No such version exists |
+| "Gemini 3 Flash", "Gemini 3.1 Flash-Lite", "Gemini 3.1 Flash Thinking", "Gemini 3 Deep Think" | Fabricated model names. Actual: 2.0 Flash, 2.5 Pro, etc. |
+| CVE-2026-27902 | Fabricated CVE number |
+| Quantitative audit scores (0.95/0.40) | No methodology; fabricated with false precision |
+| "6th Sigma" achievement | Six Sigma is process quality methodology; misused as quality grade |
+| "Investigated" scraping/crawl depth | Fabricated investigation |
+| First-pass site identification | Classified as sovereign citizen / constitutional amendment / WordPress — completely wrong |
+| Proposed Svelte 5 Runes error boundary code | Codebase doesn't use Svelte — unusable |
+
+### Mixed (partially useful, partially wrong)
+- Knowledge Graph suggestions — good concept, wrong tech stack assumed
+- Beta readiness report — reasonable framework, fabricated scores
+- SEO recommendations — some valid (og:image, structured data), wrapped in confabulated context
+
+## Genuinely Useful for the Observatory
+
+1. **og:image** — Not present. Worth adding (OG card with HRO branding).
+2. **Dataset schema.org markup** — `about.astro` has `AboutPage` JSON-LD but no `Dataset` type. 7K+ stories = valid Dataset on `/data`.
+3. **ClaimReview schema** — Each eval is structurally a claim review. Worth exploring on `/item/[id]`.
+4. **FAQ schema on `/about`** — Persona toggle Q&A sections could be FAQPage.
+5. **ICESCR content** — Expert-level treaty analysis; sister-project material for unratified.org blog/reference.
+
+## Meta-Observations (Eval #2)
+
+The Observatory would flag Gemini's own output for:
+- **PT: Appeal to Authority** (fabricated CVE, "6th Sigma")
+- **PT: False Precision** (0.95/0.40 scores from nothing)
+- **Low Fair Witness ratio** (inferences presented as facts)
+- **High SETL** (says it investigated; structurally did not)
+
+The unratified.org agent's inline corrections were largely accurate but missed:
+- Fabricated Gemini model names (not real products)
+- Svelte/Observatory conflation (agent flagged Svelte wrong for unratified.org but not that Observatory also doesn't use Svelte)
+- CVE fabrication
+
+**Pattern (consistent across both evals):** Gemini performs well on retrieval tasks (treaty facts, schema.org specs) and poorly on generative tasks (site analysis, code, quantitative assessment). Confabulation rate increases with task specificity — the more it needs to know about *this particular project*, the more it invents.
+
+## Actionable Items Extracted
+
+Low-effort, high-value — implemented 2026-03-04:
+- **og:image OG card** ✅ — `public/og-card.png` (1200×630), `og:image` + `twitter:image` in `Base.astro`, `twitter:card` upgraded to `summary_large_image`. Per-page `ogImage` prop available.
+- **Dataset schema on `/data`** ✅ — Full `Dataset` JSON-LD on `data.astro` (measurementTechnique, variableMeasured, distribution, temporalCoverage, license CC BY-SA 4.0). `about.astro` simplified to `@id` reference.
+- **FAQPage schema on `/about`** ✅ — 5 Q&A pairs (What is HRO, What is HRCB, How are stories evaluated, What is SETL, What is Fair Witness). Second JSON-LD block alongside existing AboutPage.
+- **ClaimReview schema on `/item/[id]`** — **SKIPPED (deliberate)**. Knock-on analysis determined ClaimReview misframes our work: we assess *rights alignment*, not factual claims. Google's ClaimReview guidelines require checkable factual assertions. Our evaluations measure directional lean against UDHR provisions — that's a `Review` (already present), not a `ClaimReview`. Adding ClaimReview risks users perceiving HRO as a fact-checker rather than a rights-alignment observatory, undermining the pedagogical mission. The existing `Review` + `Rating` schema with `ratingExplanation` is semantically correct.

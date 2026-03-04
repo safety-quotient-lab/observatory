@@ -14,27 +14,62 @@ const jsonLd = {
   description: 'Methodology and documentation for the HN Human Rights Compatibility Bias evaluation system',
   mainEntity: {
     '@type': 'Dataset',
+    '@id': `${siteUrl}/data`,
     name: 'Human Rights Observatory Evaluation Dataset',
-    description: 'Automated LLM evaluations of Hacker News stories against the 30 articles and Preamble of the UN Universal Declaration of Human Rights',
     url: `${siteUrl}/data`,
-    creator: { '@type': 'Organization', name: 'Safety Quotient Lab', url: 'https://github.com/safety-quotient-lab' },
-    measurementTechnique: 'Multi-model LLM ensemble evaluated against 31 UDHR provisions using HRCB methodology v3.4',
-    variableMeasured: [
-      { '@type': 'PropertyValue', name: 'HCB Weighted Mean', description: 'Human Rights Compatibility Bias score, range [-1.0, +1.0]' },
-      { '@type': 'PropertyValue', name: 'SETL', description: 'Structural-Editorial Tension Level — divergence between what content says vs what the site does' },
-      { '@type': 'PropertyValue', name: 'Epistemic Quality', description: 'Source quality, evidence use, and uncertainty handling' },
-      { '@type': 'PropertyValue', name: 'Solution Orientation', description: 'Degree of actionable solutions presented' },
-    ],
-    distribution: [
-      { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/stories`, name: 'Stories API' },
-      { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/domains`, name: 'Domains API' },
-    ],
   },
+};
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What is the Human Rights Observatory?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'The Human Rights Observatory tracks Hacker News stories and evaluates their linked content against the 30 articles and preamble of the UN Universal Declaration of Human Rights. Each evaluation produces an HRCB (Human Rights Compatibility Bias) score showing how content aligns with fundamental human rights provisions.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What is an HRCB score?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'HRCB (Human Rights Compatibility Bias) measures the directional lean of web content relative to UDHR provisions on a scale of -1.0 to +1.0. Positive scores indicate content that supports or advances rights; negative scores indicate content that undermines them. Each score has two independent channels: Editorial (what the content says) and Structural (what the site does — privacy policy, tracking, accessibility).',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'How are stories evaluated?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'A cron worker crawls Hacker News every minute across 6 lists. Evaluable content is cleaned and sent to a multi-model LLM ensemble (Claude as primary, Llama models as supplementary). Each model scores the content against 31 UDHR provisions using the Fair Witness protocol — reporting only what is directly observable, with inferences clearly separated from facts. Results are combined via confidence-weighted consensus.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What is SETL (Structural-Editorial Tension Level)?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'SETL measures the divergence between what content says (editorial channel) and what the site actually does (structural channel). High SETL means a site "says one thing, does another" — for example, an article promoting privacy rights on a site that heavily tracks users. SETL is flagged with a "rights-washing" badge when tension exceeds threshold.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'What is the Fair Witness protocol?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Inspired by Robert Heinlein\'s "Stranger in a Strange Land," the Fair Witness protocol requires the evaluator to separate observable facts (witness_facts) from interpretive inferences (witness_inferences) for every scored UDHR provision. This enforces evidence transparency — readers can see exactly what evidence supports each score.',
+      },
+    },
+  ],
 };
 ---
 
 <Base title="About">
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+  <script type="application/ld+json" set:html={JSON.stringify(faqLd).replace(/</g, '\\u003c')} />
   <script is:inline>(function(){var p=localStorage.getItem('hro_persona')||'reader';document.body.dataset.persona=p;})();</script>
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'about' }]} />
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
