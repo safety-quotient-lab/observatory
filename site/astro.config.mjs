@@ -3,6 +3,24 @@ import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
 import cloudflare from '@astrojs/cloudflare';
 import { execSync } from 'child_process';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/** Astro integration: regenerate agent-inbox.json from proposal frontmatter at each build */
+const agentInboxIntegration = {
+  name: 'agent-inbox',
+  hooks: {
+    'astro:build:start': () => {
+      try {
+        execSync(`node ${join(__dirname, '../scripts/build-agent-inbox.mjs')}`, { stdio: 'inherit' });
+      } catch (e) {
+        console.warn('agent-inbox build failed (non-fatal):', e.message);
+      }
+    },
+  },
+};
 
 let gitHash = 'dev';
 try {
@@ -25,7 +43,7 @@ export default defineConfig({
       enabled: true,
     },
   }),
-  integrations: [tailwind()],
+  integrations: [tailwind(), agentInboxIntegration],
   vite: {
     define: {
       __BUILD_HASH__: JSON.stringify(gitHash),
