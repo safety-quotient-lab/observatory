@@ -1156,6 +1156,7 @@ export async function writeLiteRaterEvalResult(
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
         eq_score, so_score, et_primary_tone, et_valence, et_arousal,
         sr_score, pt_flag_count, pt_score, td_score,
+        tq_score, tq_author, tq_date, tq_sources, tq_corrections, tq_conflicts,
         input_tokens, output_tokens, content_truncation_pct,
         eval_batch_id, reasoning, editorial_uncertain, evaluated_at
       ) VALUES (
@@ -1170,6 +1171,7 @@ export async function writeLiteRaterEvalResult(
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?,
         ?, ?, ?,
         ?, ?, ?, datetime('now')
       )
@@ -1208,6 +1210,12 @@ export async function writeLiteRaterEvalResult(
         pt_flag_count = excluded.pt_flag_count,
         pt_score = excluded.pt_score,
         td_score = excluded.td_score,
+        tq_score = excluded.tq_score,
+        tq_author = excluded.tq_author,
+        tq_date = excluded.tq_date,
+        tq_sources = excluded.tq_sources,
+        tq_corrections = excluded.tq_corrections,
+        tq_conflicts = excluded.tq_conflicts,
         input_tokens = excluded.input_tokens,
         output_tokens = excluded.output_tokens,
         content_truncation_pct = excluded.content_truncation_pct,
@@ -1246,6 +1254,12 @@ export async function writeLiteRaterEvalResult(
       null,                          // PT flag count (not in lite — null, not 0)
       null,                          // PT score (not in lite)
       lite.td_score ?? null,        // TD
+      lite.tq_score ?? null,        // TQ computed score (lite-1.6+)
+      lite.evaluation.tq_author ?? null,
+      lite.evaluation.tq_date ?? null,
+      lite.evaluation.tq_sources ?? null,
+      lite.evaluation.tq_corrections ?? null,
+      lite.evaluation.tq_conflicts ?? null,
       inputTokens, outputTokens, contentTruncationPct,
       batchId,
       lite.reasoning ?? null,       // reasoning (lite-1.4+): pre-commit classification string
@@ -1257,12 +1271,13 @@ export async function writeLiteRaterEvalResult(
   // Lite evals do NOT promote eval_status — stories stay pending/queued until a full eval
   // calls writeEvalResult(). EvalCard.hasEval checks scores directly (not eval_status),
   // so lite-filled stories still display in the feed with editorial scores + [L] icon.
-  // lite-1.5 also fills structural_mean, setl, and weighted_mean when structural is present.
+  // lite-1.6 fills structural_mean (from TQ proxy), setl, and weighted_mean.
   await db.prepare(
     `UPDATE stories SET
        eq_score = COALESCE(eq_score, ?),
        so_score = COALESCE(so_score, ?),
        td_score = COALESCE(td_score, ?),
+       tq_score = COALESCE(tq_score, ?),
        et_primary_tone = COALESCE(et_primary_tone, ?),
        et_valence = COALESCE(et_valence, ?),
        et_arousal = COALESCE(et_arousal, ?),
@@ -1278,6 +1293,7 @@ export async function writeLiteRaterEvalResult(
     lite.eq_score ?? null,   // EQ
     lite.so_score ?? null,   // SO
     lite.td_score ?? null,   // TD
+    lite.tq_score ?? null,   // TQ (lite-1.6+)
     lite.primary_tone ?? null, // tone
     lite.valence ?? null,    // VA
     lite.arousal ?? null,    // AR

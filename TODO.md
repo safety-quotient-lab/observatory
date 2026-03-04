@@ -19,7 +19,9 @@ Phase 0 external validation progress:
 - ✓ ET valence vs VADER (r=+0.376, WEAK — construct divergence explained — `findings/2026-03-04-et-cl-convergent-validity.md`)
 - ✓ CL reading level vs FK (ρ=-0.063, FAIL — FK is wrong validator, CL measures domain expertise not syntax — `findings/2026-03-04-et-cl-convergent-validity.md`)
 
-Next: TQ implementation (plan first, L effort) — highest remaining Phase 0 priority.
+✓ TQ implementation (lite-1.6, migration 0059 — 2026-03-04)
+
+Next: TQ convergent validity (TQ → RDR, unblocked) — then EQ → Ad Fontes reliability.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — draft complete (`.claude/plans/exports/blog/accommodation-engine.md`).
@@ -30,7 +32,6 @@ Remaining:
 - [ ] **Write `.well-known` for distributed agents blog post** — history and development of RFC 5785 as infrastructure for multi-agent coordination; how this project uses `agent-card.json` (A2A), `agent-inbox.json` (proposals), and `agent-manifest.json` (cognitive architecture) as a three-layer pattern; the shared git access channel (`proposals/` tracked in repo); how agents coordinate across projects without a central registry. The novel angle: `.well-known` was designed for HTTP service metadata; this project uses it for agent identity + construction provenance + inter-agent communication. Scaffold at `.claude/plans/exports/blog/well-known-agents.md`.
 - [ ] Post-launch: Analyze `lite_reeval` data in eval_history — sweep dispatched (50 stories, 100 queue msgs), longitudinal lite-1.4→1.5 comparison data accumulating
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
-- [ ] Post-launch: **TQ (Transparency Quotient) implementation** — replace structural channel for Llama with binary/countable verifiability indicators (author, sources, date, corrections, conflicts, methodology). Model-tiered prompt routing: Llama → editorial + TQ; Haiku → editorial + structural. Schema: new tq_* columns, prompt_mode variant. Design validated via TQ dry-run (Haiku, n=4, full range 0.00-0.80). See `findings/2026-03-02-lite-1.5-structural-audit.md`. **Calibration basis**: Haiku-lite vs Llama-lite comparison (n=13, 2026-03-03) confirms gap is model capability, not prompt — Llama lazy-neutral 69% (70b) / 38% (scout), Haiku 0%. Findings: `findings/2026-03-03-haiku-llama-lite-calibration.md`.
 
 ### Architecture (evaluate later)
 
@@ -57,9 +58,7 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 
 #### Layer 1 — Objective Foundation (no LLM, fully reproducible)
 
-- [ ] **Transparency Quotient (TQ)** — author disclosed, sources cited, conflicts stated, corrections policy, funding model
-  - Mostly binary/structural indicators; we already collect `td_*` fields
-  - External validation: RDR disclosure indicators (~20 overlapping domains)
+- ~~**Transparency Quotient (TQ)**~~ — ✓ DONE 2026-03-04. lite-1.6 schema: 5 binary indicators (tq_author/date/sources/corrections/conflicts), tq_score=sum/5, structural proxy injection. Migration 0059. External validation: TQ → RDR (unblocked — see External Validation section).
 
 - [ ] **Accessibility Compliance (AC)** — reading level, jargon density, assumed knowledge, language availability
   - We already collect `jargon_density` and `assumed_knowledge_level`
@@ -98,7 +97,7 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 
 #### External Validation (unblocked, highest priority)
 
-- [ ] **Convergent validity (TQ → RDR)** — correlate TQ with RDR disclosure indicators on ~20 overlapping domains. Blocked by TQ implementation.
+- [ ] **Convergent validity (TQ → RDR)** — correlate avg(tq_score) GROUP BY domain with RDR disclosure indicators on ~20 overlapping domains. Spearman ρ expected ≥ 0.5. Run after TQ data accumulates (lite-1.6 calibration first).
 - ~~**Convergent validity (ET valence → VADER)**~~ — ✓ DONE 2026-03-04. r=+0.376 (WEAK). Construct divergence explained: rights-alert content is negative ET + high VADER (emotionally charged advocacy). `findings/2026-03-04-et-cl-convergent-validity.md`.
 - ~~**Convergent validity (CL → FK)**~~ — ✓ DONE 2026-03-04. ρ=-0.063 (FAIL). FK is wrong validator: FK=syntactic complexity, CL=domain expertise. Technical jargon is monosyllabic → lower FK. Better validator = human ratings or Wikipedia topic level. `findings/2026-03-04-et-cl-convergent-validity.md`.
 - ~~**Discriminant validity**~~ — ✓ DONE 2026-03-04. Pearson r=+0.08, R²=0.007 (0.7% shared variance). PASS. See `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`.

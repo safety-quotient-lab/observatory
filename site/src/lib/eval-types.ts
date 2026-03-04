@@ -198,7 +198,12 @@ export interface LiteEvalResponse {
     domain: string;
     content_type: string;
     editorial: number | null;
-    structural?: number | null;
+    structural?: number | null;     // lite-1.5 and earlier; absent in lite-1.6
+    tq_author?: number | null;      // lite-1.6+: 0 or 1
+    tq_date?: number | null;
+    tq_sources?: number | null;
+    tq_corrections?: number | null;
+    tq_conflicts?: number | null;
     evidence_strength: string;
     confidence: number;
   };
@@ -208,6 +213,7 @@ export interface LiteEvalResponse {
   eq_score: number | null;
   so_score: number | null;
   td_score: number | null;
+  tq_score?: number | null;         // computed by validator from tq_* binaries (lite-1.6+)
   valence: number | null;
   arousal: number | null;
   primary_tone: string | null;
@@ -264,6 +270,12 @@ export interface RaterEval {
   pt_flag_count: number;
   pt_score: number | null;
   td_score: number | null;
+  tq_score: number | null;
+  tq_author: number | null;
+  tq_date: number | null;
+  tq_sources: number | null;
+  tq_corrections: number | null;
+  tq_conflicts: number | null;
   input_tokens: number | null;
   output_tokens: number | null;
   evaluated_at: string | null;

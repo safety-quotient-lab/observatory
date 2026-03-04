@@ -228,18 +228,24 @@ You MUST output a single JSON object (no markdown fences, no explanation before 
 
 /**
  * Output schema for the lite prompt variant.
+ * lite-1.6: replaces structural (0-100 holistic) with 5 TQ binary indicators.
+ * tq_score is computed from binaries by the validator; injected as structural proxy.
  */
 const OUTPUT_SCHEMA_LITE = `Output ONLY a JSON object. No markdown, no explanation.
 
 {
-  "schema_version": "lite-1.5",
-  "reasoning": "<content type, editorial stance, and structural alignment in max 15 words>",
+  "schema_version": "lite-1.6",
+  "reasoning": "<content type, editorial stance, and transparency indicators in max 15 words>",
   "evaluation": {
     "url": "<url>",
     "domain": "<domain>",
     "content_type": "<CODE>",
     "editorial": <0 to 100>,
-    "structural": <0 to 100>,
+    "tq_author": <0 or 1>,
+    "tq_date": <0 or 1>,
+    "tq_sources": <0 or 1>,
+    "tq_corrections": <0 or 1>,
+    "tq_conflicts": <0 or 1>,
     "evidence_strength": "<H|M|L>",
     "confidence": <0.0 to 1.0>
   },
@@ -273,7 +279,7 @@ ${OUTPUT_SCHEMA_SLIM}`;
 
 /**
  * Lite system prompt for small/free models that can't produce full 31-section output.
- * Two-dimension: editorial (explicit discourse) + structural (implicit alignment) scores
+ * lite-1.6: editorial (explicit discourse) + TQ binary indicators (structural proxy)
  * + basic metadata (~200-400 output tokens).
  * No per-article breakdown, no DCP, no Fair Witness evidence.
  */

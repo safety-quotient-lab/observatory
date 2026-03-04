@@ -183,10 +183,10 @@ Aligned with UDHR's rights-holder/duty-bearer framework:
 - **td_score** (0.0–1.0): Composite transparency. Each applicable true dimension adds equally. Higher = more transparent.`;
 
 /**
- * Lite methodology — two-dimension scoring (editorial + structural).
- * Integer 0-100 scale per dimension, 50 = neutral.
+ * Lite methodology — editorial + Transparency Quotient (TQ) binary indicators.
+ * lite-1.6: structural holistic scoring replaced with 5 concrete binary checks.
  */
-export const METHODOLOGY_LITE = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score content on TWO independent dimensions.
+export const METHODOLOGY_LITE = `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Score content on editorial stance and transparency indicators.
 
 ## DIMENSION 1: EDITORIAL (explicit rights discourse)
 Does the content directly discuss, reference, or engage with human rights?
@@ -204,27 +204,23 @@ CRITICAL: Reserve editorial 50 for content with zero explicit rights discussion.
 
 Key rules: Exposing abuses → above 50. Promoting/justifying abuses → below 50.
 
-## DIMENSION 2: STRUCTURAL (implicit rights alignment)
-Does the content embody UDHR provisions through its nature, without using rights vocabulary?
-Score: integer 0-100 where 50 = neutral. Use the full range.
+## DIMENSION 2: TRANSPARENCY QUOTIENT (TQ)
+Score 5 binary indicators (0 or 1 each). Check only what is explicitly visible in the content:
 
-IMPLICIT RIGHTS SIGNALS — most tech content has these. Score structural 52-65, NOT 50:
-  - Access/openness: open source, free tools, public datasets, APIs → Art. 27 (culture/science) → 55-60
-  - Privacy/surveillance: data collection, tracking, encryption → Art. 12 (privacy) → direction depends on stance
-  - Labor/work: hiring, remote work, layoffs, working conditions → Art. 23 (work) → 55-60
-  - Transparency: open data, FOIA, disclosure, accountability → Art. 19 (expression/information) → 55-60
-  - Education: tutorials making knowledge accessible, documentation → Art. 26 (education) → 53-58
-  - Community: forums, shared governance, community standards → Art. 20 (assembly) → 53-55
-  - Health: medical research, public health tools → Art. 25 (health) → 55-60
+- tq_author: 1 if the author is identified by real name (not "Staff", "Editors", or anonymous)
+- tq_date: 1 if a publication or last-updated date is visible in the article
+- tq_sources: 1 if primary sources are cited (named experts, data links, official references, or study citations)
+- tq_corrections: 1 if a correction notice appears in this article OR a visible corrections/editorial policy link is present
+- tq_conflicts: 1 if potential conflicts of interest are explicitly disclosed (e.g. "Disclosure: author holds stock...", "Sponsored by...", "Funded by...")
 
-CRITICAL: Reserve structural 50 for content with literally zero UDHR connection. Most tech content touches access, labor, or transparency and deserves structural 52-60.
-
-Example: An open-source tool README scores editorial 50 (no rights discourse) / structural 58 (embodies Art. 27 access).
+Score 0 if the indicator is absent or unverifiable from the content. Do NOT infer or assume.
+Score tq_corrections=0 for standard blog posts or press releases unless an actual correction is shown.
+Score tq_conflicts=0 unless explicit disclosure text is present — not just apparent absence of conflicts.
 
 ## SCORING RULES
-- Score BOTH dimensions independently. They measure different constructs.
-- editorial = what the content SAYS about rights. structural = what the content IS relative to rights.
-- Content can score high on one and low on the other. A surveillance company's blog about privacy law: editorial 65, structural 35.
+- Score editorial independently from TQ. They measure different constructs.
+- editorial = what the content SAYS about rights. TQ = how transparent and verifiable the content is.
+- A propaganda article can score tq_author=1 (author identified) while scoring editorial=10 (hostile framing).
 
 Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)
 

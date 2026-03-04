@@ -404,24 +404,48 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
   }
 
   // Detect integer format: lite-1.4+ uses 0-100 scale
-  // Accept 'lite-1.4', 'light-1.4', 'lite-1.5' as integer format
-  const isV14Plus = parsed.schema_version === 'lite-1.4' || parsed.schema_version === 'light-1.4' || parsed.schema_version === 'lite-1.5';
+  // Accept 'lite-1.4', 'light-1.4', 'lite-1.5', 'lite-1.6' as integer format
+  const isV14Plus = ['lite-1.4', 'light-1.4', 'lite-1.5', 'lite-1.6'].includes(parsed.schema_version);
   const isV15 = parsed.schema_version === 'lite-1.5';
+  const isV16 = parsed.schema_version === 'lite-1.6';
   const couldBeInteger = typeof ev.editorial === 'number' && ev.editorial > 1.0;
   const integerFormat = isV14Plus || couldBeInteger;
 
   // Editorial score
   ev.editorial = convertLiteScore(ev.editorial, 'editorial', integerFormat, repairs);
 
-  // Structural score (lite-1.5+)
-  if (ev.structural != null) {
+  // Structural score (lite-1.5 and earlier)
+  if (ev.structural != null && !isV16) {
     ev.structural = convertLiteScore(ev.structural, 'structural', integerFormat, repairs);
-  } else if (isV15) {
+  } else if (isV15 && ev.structural == null) {
     // lite-1.5 response missing structural — warn, degrade to editorial-only
     warnings.push('lite-1.5 response missing structural score — falling back to editorial-only');
     ev.structural = null;
   }
   // If structural appears in a lite-1.4 response, accept it (free data)
+
+  // TQ binary indicators (lite-1.6+): replace structural with countable transparency checks
+  parsed.tq_score = null;
+  if (isV16) {
+    const TQ_FIELDS = ['tq_author', 'tq_date', 'tq_sources', 'tq_corrections', 'tq_conflicts'] as const;
+    let tqSum = 0;
+    for (const field of TQ_FIELDS) {
+      const raw = ev[field];
+      let val = 0;
+      if (raw === 1 || raw === true) val = 1;
+      else if (raw === 0 || raw === false) val = 0;
+      else {
+        repairs.push(`${field} missing/invalid — defaulting to 0`);
+      }
+      ev[field] = val;
+      tqSum += val;
+    }
+    const tqScore = tqSum / 5;
+    parsed.tq_score = Math.round(tqScore * 1000) / 1000;
+    // Inject as structural proxy: maps [0,1] → [-1,+1] so computeLiteAggregates() works unchanged
+    // 0/5 → -1.0 (opaque), 2-3/5 → ≈0 (neutral), 5/5 → +1.0 (fully transparent)
+    ev.structural = tqScore * 2 - 1;
+  }
 
   // Validate reasoning field (lite-1.4+): optional, discard if malformed
   if (parsed.reasoning !== null && parsed.reasoning !== undefined) {
@@ -444,8 +468,8 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
     warnings.push(`Suspect lazy neutral: editorial=0.0 with confidence=${ev.confidence} \u2014 model may be defaulting to center`);
   }
 
-  // Flag suspect lazy neutral on structural dimension too
-  if (ev.structural === 0 && typeof ev.confidence === 'number' && ev.confidence >= 0.7) {
+  // Flag suspect lazy neutral on structural dimension (lite-1.5 and earlier only — TQ can't be lazy-neutral)
+  if (!isV16 && ev.structural === 0 && typeof ev.confidence === 'number' && ev.confidence >= 0.7) {
     warnings.push(`Suspect lazy neutral: structural=0.0 with confidence=${ev.confidence} \u2014 model may be defaulting to center`);
   }
 
