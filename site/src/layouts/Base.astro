@@ -93,6 +93,13 @@ try {
         </tr>
       </table>
     </center>
+    {/* Portrait mode hint */}
+    <div id="portrait-hint" style="display:none; position:fixed; bottom:0; left:0; right:0; z-index:8888; background:var(--bg-highlight); border-top:1px solid var(--color-border); padding:8px 16px; font-size:var(--font-xs); color:var(--fg-secondary); align-items:center; gap:10px; justify-content:center;">
+      <span aria-hidden="true" style="font-size:1.1em;">⟳</span>
+      <span>This site works better in landscape mode — try rotating your device.</span>
+      <button id="portrait-hint-close" aria-label="Dismiss" style="background:none; border:none; cursor:pointer; color:var(--fg-secondary); font-size:14pt; padding:0 4px; line-height:1; margin-left:auto;">×</button>
+    </div>
+
     {/* Donate modal */}
     <div id="donate-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
       <div style="background:var(--bg-highlight); border:1px solid var(--color-border); border-radius:8px; padding:24px; max-width:420px; width:90%; text-align:center;">
@@ -288,6 +295,26 @@ try {
           pendingTriggerBtn = null;
         }
       });
+
+      // Portrait mode hint — show on narrow portrait viewports, auto-dismiss on rotate
+      (function () {
+        const hint = document.getElementById('portrait-hint');
+        const closeBtn = document.getElementById('portrait-hint-close');
+        if (!hint || !closeBtn) return;
+        function isMobilePortrait() {
+          return window.innerWidth < 900 && window.innerHeight > window.innerWidth;
+        }
+        function updateHint() {
+          if (sessionStorage.getItem('portrait_hint_dismissed')) return;
+          hint.style.display = isMobilePortrait() ? 'flex' : 'none';
+        }
+        closeBtn.addEventListener('click', () => {
+          sessionStorage.setItem('portrait_hint_dismissed', '1');
+          hint.style.display = 'none';
+        });
+        window.addEventListener('resize', updateHint);
+        updateHint();
+      })();
 
       document.addEventListener('click', async (e) => {
         const btn = (e.target as HTMLElement).closest('.trigger-btn') as HTMLButtonElement | null;

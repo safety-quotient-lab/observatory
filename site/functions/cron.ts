@@ -35,7 +35,7 @@ import {
   sweepFailed, sweepSkipped, sweepCoverage, sweepContentDrift,
   sweepAlgoliaBackfill, sweepRefreshDomainAggregates, sweepBackfillPtScore, sweepSetlSpikes,
   sweepRefreshUserAggregates, sweepExpandFromSubmitted, sweepRefreshArticlePairStats,
-  sweepLiteReeval,
+  sweepLiteReeval, sweepRefreshConsensusScores,
   type SweepContext,
 } from './sweeps';
 
@@ -635,6 +635,7 @@ export default {
         expand_from_submitted: sweepExpandFromSubmitted,
         refresh_article_pair_stats: sweepRefreshArticlePairStats,
         lite_reeval: sweepLiteReeval,
+        refresh_consensus_scores: sweepRefreshConsensusScores,
       };
 
       const handler = SWEEP_HANDLERS[sweep];

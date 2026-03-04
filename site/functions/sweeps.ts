@@ -17,7 +17,7 @@ import {
   searchAlgolia,
   insertAlgoliaHits,
 } from '../src/lib/coverage-crawl';
-import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate } from '../src/lib/eval-write';
+import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate, updateConsensusScore } from '../src/lib/eval-write';
 import { refreshArticlePairStats } from '../src/lib/db-analytics';
 import { getEnabledFreeModels } from '../src/lib/models';
 import { safeBatch } from '../src/lib/db-utils';
@@ -569,4 +569,70 @@ export async function sweepLiteReeval({ db, url }: SweepContext): Promise<Respon
   });
 
   return json({ sweep: 'lite_reeval', candidates: candidates.length, dispatched });
+}
+
+// ─── Sweep: refresh_consensus_scores ────────────────────────────────────────
+
+/**
+ * Recompute consensus_score / consensus_spread / consensus_model_count for all
+ * stories that have ≥2 done rater_evals. Runs in background via waitUntil.
+ *
+ * Use after changing confidence weighting logic — recomputes correct weights
+ * without requiring new model evaluations. Returns 202 immediately.
+ */
+export async function sweepRefreshConsensusScores({ db, env, ctx }: SweepContext): Promise<Response> {
+  const guardKey = 'sweep:refresh_consensus_scores:running';
+  const isRunning = await env.CONTENT_CACHE.get(guardKey).catch(() => null);
+  if (isRunning) {
+    return json({ error: 'Refresh already in progress', retry_after_seconds: 60 }, 429);
+  }
+  await env.CONTENT_CACHE.put(guardKey, new Date().toISOString(), { expirationTtl: 600 });
+
+  ctx.waitUntil(
+    (async () => {
+      let refreshed = 0;
+      let errors = 0;
+      const start = Date.now();
+      try {
+        const { results } = await db
+          .prepare(
+            `SELECT hn_id FROM rater_evals
+             WHERE eval_status = 'done' AND hn_id > 0
+             GROUP BY hn_id HAVING COUNT(*) >= 2`
+          )
+          .all<{ hn_id: number }>();
+
+        for (const { hn_id } of results) {
+          try {
+            await updateConsensusScore(db, hn_id);
+            refreshed++;
+          } catch {
+            errors++;
+          }
+        }
+
+        await logEvent(db, {
+          event_type: 'trigger',
+          severity: 'info',
+          message: `Sweep refresh_consensus_scores: ${refreshed} refreshed, ${errors} errors in ${Date.now() - start}ms`,
+          details: { sweep: 'refresh_consensus_scores', refreshed, errors, durationMs: Date.now() - start },
+        });
+      } catch (err) {
+        await logEvent(db, {
+          event_type: 'cron_error',
+          severity: 'error',
+          message: `Sweep refresh_consensus_scores failed: ${String(err).slice(0, 300)}`,
+          details: { sweep: 'refresh_consensus_scores', error: String(err) },
+        }).catch(() => {});
+      } finally {
+        env.CONTENT_CACHE.delete(guardKey).catch(() => {});
+      }
+    })(),
+  );
+
+  return json({
+    sweep: 'refresh_consensus_scores',
+    status: 'started',
+    description: 'Recomputing consensus scores for all stories with ≥2 evals. Check /status/events for completion.',
+  }, 202);
 }
