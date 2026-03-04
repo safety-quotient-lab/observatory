@@ -47,6 +47,14 @@ Remaining:
 - [ ] Post-launch: Analyze `lite_reeval` data in eval_history — sweep dispatched (50 stories, 100 queue msgs), longitudinal lite-1.4→1.5 comparison data accumulating
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
 
+### Wolfram Alpha Integration (new signals + validation)
+
+- [ ] **Validate all construct validity claims** — run `/validate-stat` against every findings/ document. Verify p-values, effect sizes, kappa values, correlation significance. Produces a ground-truth audit before publishing any more blog posts. Budget: ~50 Wolfram calls.
+- [ ] **Build geographic reference table** — run `/geo-enrich build-table` to query Wolfram for population, internet penetration, HDI, GDP per capita for the top 30 regions in our GS signal. Cache as `geo-reference-data.json`. Enables: weighted geographic coverage gaps on `/signals` (missing India ≠ missing Liechtenstein), Article 19 digital divide framing, Article 25/26 development context. Budget: ~100 calls.
+- [ ] **GS signal enrichment on /signals page** — once reference table exists, surface "X% of evaluated stories cover countries representing Y% of global internet users" on the Geographic Coverage section. Tier 1 mission alignment (invisible pattern → visible statement).
+- [ ] **Verify codebase math** — run `/verify-math` on phi-based clustering thresholds, exp decay, consensus weighting, PCA eigenvalues. One-time audit. Budget: ~15 calls.
+- [ ] **Wolfram-powered confidence intervals** — for key metrics (mean HRCB, mean SETL, domain averages), compute 95% CIs via Wolfram rather than approximating. Surface on `/status/models` or `/signals`.
+
 ### Architecture (evaluate later)
 
 - [ ] **HN comments passthrough (no DB storage)** — evaluate whether comments can be served via passthrough from the HN Firebase API rather than stored in D1. The HN API exposes comment trees per item in real-time; a passthrough endpoint (`/api/story/[id]/comments` → HN Firebase) would eliminate comment storage entirely and keep data always-fresh. Trade-offs: latency on each request, no offline access, no ability to annotate/score comments, rate limit exposure. Worth evaluating after launch — depends on whether comment scoring becomes a feature goal.
