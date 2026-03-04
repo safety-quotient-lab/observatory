@@ -16,6 +16,8 @@ Phase 0 external validation progress:
 - ✓ Discriminant validity (r=0.08, PASS — `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`)
 - ✓ PTD inter-rater reliability (κ=0.325 fair — `findings/2026-03-04-ptd-inter-rater-reliability.md`)
 - ✓ Test-retest preliminary (r=0.984, n=11, same-day — `findings/2026-03-04-test-retest-reliability-haiku-lite.md`)
+- ✓ ET valence vs VADER (r=+0.376, WEAK — construct divergence explained — `findings/2026-03-04-et-cl-convergent-validity.md`)
+- ✓ CL reading level vs FK (ρ=-0.063, FAIL — FK is wrong validator, CL measures domain expertise not syntax — `findings/2026-03-04-et-cl-convergent-validity.md`)
 
 Next: TQ implementation (plan first, L effort) — highest remaining Phase 0 priority.
 
@@ -96,7 +98,9 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 
 #### External Validation (unblocked, highest priority)
 
-- [ ] **Convergent validity** — correlate TQ with RDR disclosure indicators on ~20 overlapping domains
+- [ ] **Convergent validity (TQ → RDR)** — correlate TQ with RDR disclosure indicators on ~20 overlapping domains. Blocked by TQ implementation.
+- ~~**Convergent validity (ET valence → VADER)**~~ — ✓ DONE 2026-03-04. r=+0.376 (WEAK). Construct divergence explained: rights-alert content is negative ET + high VADER (emotionally charged advocacy). `findings/2026-03-04-et-cl-convergent-validity.md`.
+- ~~**Convergent validity (CL → FK)**~~ — ✓ DONE 2026-03-04. ρ=-0.063 (FAIL). FK is wrong validator: FK=syntactic complexity, CL=domain expertise. Technical jargon is monosyllabic → lower FK. Better validator = human ratings or Wikipedia topic level. `findings/2026-03-04-et-cl-convergent-validity.md`.
 - ~~**Discriminant validity**~~ — ✓ DONE 2026-03-04. Pearson r=+0.08, R²=0.007 (0.7% shared variance). PASS. See `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`.
 - [ ] **Known-groups expansion** — expand calibration beyond 15 URLs to 50+ pre-classified domains
 - [ ] **Test-retest reliability** — ✓ Preliminary DONE 2026-03-04 (n=11, hours apart, r=0.984). Formal test still needed: n≥50, 1+ week gap. See `findings/2026-03-04-test-retest-reliability-haiku-lite.md`. Low priority — temporal instability not a primary concern.
