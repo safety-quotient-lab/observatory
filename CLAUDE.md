@@ -42,14 +42,15 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 **Workers:**
 - `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`. Dispatches sweeps via `SWEEP_HANDLERS` map in `sweeps.ts`.
-- `site/functions/sweeps.ts` — 14 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores/UpgradeLite`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
+- `site/functions/sweeps.ts` — 15 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores/UpgradeLite/BrowserAudit`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
 - `site/functions/consumer-shared.ts` — Shared types, content prep, result writing. Uses `isFirstFullEval` for first-eval housekeeping (R2 snapshot, content hash, DCP cache, archive).
 - `site/functions/consumer-anthropic.ts` — Anthropic queue handler. Prompt caching, proactive rate limit tracking, 429/529/credit handling, truncation retry.
 - `site/functions/consumer-openrouter.ts` — OpenRouter queue handler (8 model queues). Lite + full prompt modes.
 - `site/functions/consumer-workers-ai.ts` — Workers AI queue handler. Free tier, no API key.
 - `site/functions/dlq-consumer.ts` — Dead-letter capture. Serves `/replay` and `/replay/:id`.
+- `site/functions/browser-audit.ts` — CF Browser Rendering queue handler. Puppeteer headless audit of domains: tracker counting (CDP network interception), security headers (HSTS/CSP), accessibility (lang/skip-nav/alt), consent patterns (cookie banners, dark patterns). Writes `domain_browser_audit` table, derives `br_*` DCP elements.
 
-**Wrangler configs:** `site/wrangler.toml` (Pages — `compatibility_date` must stay `2024-09-23`), `site/wrangler.cron.toml`, `site/wrangler.consumer-{anthropic,openrouter,workers-ai}.toml`, `site/wrangler.dlq.toml`. Real D1/KV IDs committed (not secrets). Secrets stay in `.dev.vars` (gitignored).
+**Wrangler configs:** `site/wrangler.toml` (Pages — `compatibility_date` must stay `2024-09-23`), `site/wrangler.cron.toml`, `site/wrangler.consumer-{anthropic,openrouter,workers-ai}.toml`, `site/wrangler.dlq.toml`, `site/wrangler.browser-audit.toml`. Real D1/KV IDs committed (not secrets). Secrets stay in `.dev.vars` (gitignored).
 
 **Storage:** D1 (`hrcb-db`), KV (`CONTENT_CACHE`), R2 (`hrcb-content-snapshots`). See `site/CLAUDE.md` for full table/key schema.
 
@@ -68,6 +69,7 @@ npx wrangler deploy --config wrangler.consumer-anthropic.toml   # Anthropic cons
 npx wrangler deploy --config wrangler.consumer-openrouter.toml  # OpenRouter consumer
 npx wrangler deploy --config wrangler.consumer-workers-ai.toml  # Workers AI consumer
 npx wrangler deploy --config wrangler.dlq.toml             # DLQ worker
+npx wrangler deploy --config wrangler.browser-audit.toml   # Browser audit worker
 
 # Migrations
 npx wrangler d1 migrations apply hrcb-db --remote
@@ -130,6 +132,14 @@ curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut
 # Sweep: promote lite-only stories (no full eval yet) with hn_score >= min_score to pending for full eval (default min_score=50, limit=50)
 curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=upgrade_lite&min_score=100&limit=50"
+
+# Sweep: dispatch domains for headless browser audit (CF Browser Rendering)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=browser_audit&limit=20"
+
+# Sweep: audit a single domain
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=browser_audit&domain=example.com"
 
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health

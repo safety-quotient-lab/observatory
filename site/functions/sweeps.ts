@@ -20,7 +20,7 @@ import {
 import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate, updateConsensusScore } from '../src/lib/eval-write';
 import { refreshArticlePairStats } from '../src/lib/db-analytics';
 import { getEnabledFreeModels } from '../src/lib/models';
-import { safeBatch } from '../src/lib/db-utils';
+import { safeBatch, writeDb } from '../src/lib/db-utils';
 import type { Env } from './cron';
 
 export interface SweepContext {
@@ -688,4 +688,59 @@ export async function sweepUpgradeLite({ db, env, url }: SweepContext): Promise<
   });
 
   return json({ sweep: 'upgrade_lite', promoted, description: `Promoted ${promoted} lite-only stories (hn_score >= ${minScore}) to pending for full eval` });
+}
+
+// ─── Sweep: browser_audit ───────────────────────────────────────────────────
+
+/**
+ * Dispatch domains for headless browser audit via CF Browser Rendering.
+ * Audits tracking, security headers, accessibility, and consent patterns.
+ *
+ * Params: domain (single domain), limit (default 20, max 100).
+ */
+export async function sweepBrowserAudit({ db, env, url }: SweepContext): Promise<Response> {
+  if (!env.BROWSER_AUDIT_QUEUE) {
+    return json({ sweep: 'browser_audit', error: 'BROWSER_AUDIT_QUEUE not bound' }, 500);
+  }
+
+  const singleDomain = url.searchParams.get('domain');
+  const limit = parseLimit(url, 20, 100);
+
+  let domains: string[];
+  if (singleDomain) {
+    domains = [singleDomain];
+  } else {
+    const rows = await db
+      .prepare(
+        `SELECT DISTINCT s.domain FROM stories s
+         LEFT JOIN domain_browser_audit ba ON ba.domain = s.domain
+         WHERE s.domain IS NOT NULL
+           AND s.eval_status = 'done'
+           AND (ba.domain IS NULL OR ba.audited_at < datetime('now', '-7 days'))
+         ORDER BY RANDOM()
+         LIMIT ?`
+      )
+      .bind(limit)
+      .all<{ domain: string }>();
+    domains = rows.results.map(r => r.domain);
+  }
+
+  // Dispatch to browser audit queue
+  for (const domain of domains) {
+    await env.BROWSER_AUDIT_QUEUE.send({ domain });
+  }
+
+  await logEvent(db, {
+    event_type: 'trigger',
+    severity: 'info',
+    message: `Sweep: dispatched ${domains.length} domain(s) for browser audit`,
+    details: { sweep: 'browser_audit', count: domains.length, domains: domains.slice(0, 10) },
+  });
+
+  return json({
+    sweep: 'browser_audit',
+    dispatched: domains.length,
+    domains: domains.slice(0, 20),
+    description: `Dispatched ${domains.length} domain(s) for browser audit`,
+  });
 }

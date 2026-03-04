@@ -1,0 +1,24 @@
+name = "hn-hrcb-browser-audit"
+main = "functions/browser-audit.ts"
+compatibility_date = "2026-02-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Browser Rendering binding — requires CF paid plan (10 hrs/mo included).
+# Launches headless Chromium via Puppeteer Workers Binding.
+[browser]
+binding = "BROWSER"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hrcb-db"
+database_id = "8d46e768-e02d-421f-93f6-6dfa06a378c5"
+
+[[kv_namespaces]]
+binding = "CONTENT_CACHE"
+id = "ffe31e8bd21f43169e81f6d6137772bf"
+
+[[queues.consumers]]
+queue = "hrcb-browser-audit"
+max_batch_size = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"

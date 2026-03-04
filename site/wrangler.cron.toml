@@ -66,6 +66,10 @@ binding = "HERMES_QUEUE"
 queue = "hrcb-eval-workers-ai"
 binding = "WORKERS_AI_QUEUE"
 
+[[queues.producers]]
+queue = "hrcb-browser-audit"
+binding = "BROWSER_AUDIT_QUEUE"
+
 # Secrets (set via `wrangler secret put --name hn-hrcb-cron`):
 # ANTHROPIC_API_KEY
 # CRON_SECRET

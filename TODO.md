@@ -27,7 +27,11 @@ Phase 0 external validation progress:
 
 ✓ RTS (Rights Tension Signature) implementation (2026-03-04): migration 0060, full eval output `rights_tensions` array (max 3 pairs), `stories.rts_tensions_json` + `rater_evals.rts_tension_count`, item page "Rights Tensions" section.
 
-Next: Phase B (human raters — ET-valence, PT technique-level, CL expertise, ET-arousal) and Phase C gated on NewsGuard. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
+Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
+
+✓ CF Browser Rendering (2026-03-04): `domain_browser_audit` table (migration 0061), `hn-hrcb-browser-audit` worker, `br_*` DCP elements (tracking/security/accessibility/consent). Cron 6-hourly + `sweep=browser_audit`.
+
+Next: `/methodology` page, blog posts.
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.

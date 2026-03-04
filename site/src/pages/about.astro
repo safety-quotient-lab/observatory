@@ -693,6 +693,21 @@ const jsonLd = {
             Each element shifts per-article scores by up to <b style="color: var(--fg-primary);">&plusmn;0.30</b>.
             DCP profiles cached 7 days in KV, persisted to D1. Only used in <b style="color: var(--fg-primary);">full</b> evaluations (not lite).
           </p>
+
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
+            <b>Browser-verified signals</b> supplement LLM-inferred DCP with machine-observed data:
+          </p>
+          <table cellpadding="3" cellspacing="2" style="font-size: var(--font-sm); margin-bottom: 0;">
+            <tr>
+              {['Tracking', 'Security', 'Accessibility', 'Consent'].map((el) => (
+                <td style="background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 3px; padding: 4px 8px; color: var(--fg-primary); text-align: center;">{el}</td>
+              ))}
+            </tr>
+          </table>
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin: 10px 0;">
+            <span class="persona-reader">A headless browser visits each domain to directly measure tracker scripts, security headers, accessibility attributes, and consent patterns — grounding structural scores in observation.</span>
+            <span class="persona-researcher">Cloudflare Browser Rendering (Puppeteer) audits each domain via CDP network interception (tracker counting), response header extraction (HSTS, CSP), DOM evaluation (lang attr, skip-nav, alt text coverage), and consent UI pattern matching (cookie banners, dark pattern heuristics). Results produce four <code>br_*</code> DCP elements with calibrated modifiers, refreshed every 7 days.</span>
+          </p>
         </details>
 
         <details class="collapsible-section">

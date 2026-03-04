@@ -36,6 +36,7 @@ import {
   sweepAlgoliaBackfill, sweepRefreshDomainAggregates, sweepBackfillPtScore, sweepSetlSpikes,
   sweepRefreshUserAggregates, sweepExpandFromSubmitted, sweepRefreshArticlePairStats,
   sweepLiteReeval, sweepRefreshConsensusScores, sweepUpgradeLite,
+  sweepBrowserAudit,
   type SweepContext,
 } from './sweeps';
 
@@ -51,6 +52,7 @@ export interface Env {
   MISTRAL_QUEUE: Queue;
   HERMES_QUEUE: Queue;
   WORKERS_AI_QUEUE?: Queue;
+  BROWSER_AUDIT_QUEUE?: Queue;
   CONTENT_CACHE: KVNamespace;
   CONTENT_SNAPSHOTS?: R2Bucket;
   CRON_SECRET?: string;
@@ -569,6 +571,33 @@ export default {
       }
     }
 
+    // ─── Browser audit dispatch (every 6 hours) ───
+
+    if (minute === 0 && new Date().getUTCHours() % 6 === 0 && env.BROWSER_AUDIT_QUEUE) {
+      try {
+        const staleRows = await db
+          .prepare(
+            `SELECT DISTINCT s.domain FROM stories s
+             LEFT JOIN domain_browser_audit ba ON ba.domain = s.domain
+             WHERE s.domain IS NOT NULL
+               AND s.eval_status = 'done'
+               AND (ba.domain IS NULL OR ba.audited_at < datetime('now', '-7 days'))
+             ORDER BY RANDOM()
+             LIMIT 20`
+          )
+          .all<{ domain: string }>();
+        const domains = staleRows.results.map(r => r.domain);
+        for (const domain of domains) {
+          await env.BROWSER_AUDIT_QUEUE.send({ domain });
+        }
+        if (domains.length > 0) {
+          console.log(`[cron] Browser audit dispatched: ${domains.length} domains`);
+        }
+      } catch (err) {
+        console.error('[cron] Browser audit dispatch failed (non-fatal):', err);
+      }
+    }
+
     if (minute === 0) {
       const pruned = await pruneEvents(db, 90);
       if (pruned > 0) console.log(`[events] Pruned ${pruned} events older than 90 days`);
@@ -637,6 +666,7 @@ export default {
         lite_reeval: sweepLiteReeval,
         refresh_consensus_scores: sweepRefreshConsensusScores,
         upgrade_lite: sweepUpgradeLite,
+        browser_audit: sweepBrowserAudit,
       };
 
       const handler = SWEEP_HANDLERS[sweep];
