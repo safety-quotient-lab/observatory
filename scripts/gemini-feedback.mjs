@@ -1,20 +1,29 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: Apache-2.0
 /**
- * Gemini Feedback REPL — multi-turn structured feedback exchange with Gemini.
+ * External AI Feedback — structured feedback exchange with external LLMs.
  *
- * Sends site context (agent-card, methodology summary, architecture) and
- * receives structured JSON feedback. Saves exchanges to disk for evaluation.
+ * Two modes:
+ *   1. --prompt "..."   Non-interactive: send prompt, output JSON to stdout, exit.
+ *                        Designed for Claude Code to invoke and parse.
+ *   2. (no --prompt)    Interactive REPL for manual multi-turn exchanges.
  *
  * Usage:
- *   node scripts/gemini-feedback.mjs [options]
+ *   node scripts/gemini-feedback.mjs --prompt "Review our API design"
+ *   node scripts/gemini-feedback.mjs --provider openrouter --model qwen/qwen3-235b-a22b-thinking-2507
+ *   node scripts/gemini-feedback.mjs --prompt "..." --resume FILE --save name
+ *   node scripts/gemini-feedback.mjs              # interactive REPL
  *
  * Options:
- *   --model MODEL     Gemini model (default: gemini-2.0-flash)
- *   --dry-run         Print system context and exit
- *   --resume FILE     Resume a saved conversation
+ *   --prompt TEXT       Send single prompt, output JSON, exit (non-interactive)
+ *   --provider NAME     Provider: gemini | openrouter (default: openrouter)
+ *   --model MODEL       Model ID (default per provider)
+ *   --dry-run           Print system context and exit
+ *   --resume FILE       Resume a saved conversation
+ *   --save NAME         Auto-save with this name (non-interactive mode)
+ *   --follow-up         When resuming, add prompt as follow-up (not fresh context)
  *
- * Requires GOOGLE_API_KEY in site/.dev.vars
+ * API keys in site/.dev.vars: GOOGLE_API_KEY (gemini), OPENROUTER_API_KEY (openrouter)
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -42,14 +51,29 @@ const argVal = (flag) => {
 };
 const hasFlag = (flag) => process.argv.includes(flag);
 
-const API_KEY = process.env.GOOGLE_API_KEY;
-let MODEL = argVal('--model') || 'gemini-2.0-flash';
+const PROVIDER_DEFAULTS = {
+  gemini: { model: 'gemini-2.0-flash', keyEnv: 'GOOGLE_API_KEY' },
+  openrouter: { model: 'qwen/qwen3-235b-a22b-thinking-2507', keyEnv: 'OPENROUTER_API_KEY' },
+};
+
+let PROVIDER = argVal('--provider') || 'openrouter';
+if (!PROVIDER_DEFAULTS[PROVIDER]) {
+  console.error(`Unknown provider: ${PROVIDER}. Use: gemini, openrouter`);
+  process.exit(1);
+}
+
+const API_KEY = process.env[PROVIDER_DEFAULTS[PROVIDER].keyEnv];
+let MODEL = argVal('--model') || PROVIDER_DEFAULTS[PROVIDER].model;
 const DRY_RUN = hasFlag('--dry-run');
 const RESUME_FILE = argVal('--resume');
+const PROMPT = argVal('--prompt');
+const SAVE_NAME = argVal('--save');
+const FOLLOW_UP = hasFlag('--follow-up');
 const EXCHANGES_DIR = join(ROOT, '.claude/plans/memorized/gemini-exchanges');
 
 if (!API_KEY && !DRY_RUN) {
-  console.error('  GOOGLE_API_KEY not found in site/.dev.vars');
+  const keyName = PROVIDER_DEFAULTS[PROVIDER].keyEnv;
+  console.error(`{"error": "${keyName} not found in site/.dev.vars"}`);
   process.exit(1);
 }
 
@@ -147,7 +171,7 @@ function buildSystemContext() {
     '',
     '## Requested Response Format',
     '',
-    'Please respond in JSON with this structure:',
+    'Please respond in JSON (no markdown fences) with this structure:',
     '```json',
     JSON.stringify({
       findings: [{
@@ -192,8 +216,41 @@ function evalResponse(text) {
   return flags;
 }
 
-// --- Gemini API ---
-async function callGemini(contents) {
+// --- Extract JSON from response (handles markdown fences or raw JSON) ---
+function extractJson(text) {
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const raw = fenceMatch ? fenceMatch[1].trim() : text.trim();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // Try to find JSON object in the text
+    const objMatch = raw.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      try { return JSON.parse(objMatch[0]); } catch { /* fall through */ }
+    }
+    return null;
+  }
+}
+
+// --- LLM API (Gemini + OpenRouter) ---
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Convert our internal contents format to OpenAI-style messages
+function toOpenAIMessages(contents) {
+  return contents.map(c => ({
+    role: c.role === 'model' ? 'assistant' : c.role,
+    content: c.parts.map(p => p.text).join('\n'),
+  }));
+}
+
+async function callLLM(contents, retryCount = 0) {
+  if (PROVIDER === 'openrouter') {
+    return callOpenRouter(contents, retryCount);
+  }
+  return callGemini(contents, retryCount);
+}
+
+async function callGemini(contents, retryCount = 0) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
   const res = await fetch(url, {
     method: 'POST',
@@ -207,6 +264,16 @@ async function callGemini(contents) {
     }),
   });
 
+  if (res.status === 429 && retryCount < 1) {
+    const body = await res.text();
+    const delayMatch = body.match(/"retryDelay":\s*"(\d+)(?:\.\d+)?s"/);
+    const waitSec = delayMatch ? parseInt(delayMatch[1]) + 2 : 30;
+    if (!PROMPT) { console.log(`  Rate limited — waiting ${waitSec}s...`); }
+    else { process.stderr.write(`Rate limited — waiting ${waitSec}s...\n`); }
+    await sleep(waitSec * 1000);
+    return callGemini(contents, retryCount + 1);
+  }
+
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`Gemini API ${res.status}: ${err}`);
@@ -218,6 +285,45 @@ async function callGemini(contents) {
     throw new Error(`Gemini returned no content: ${JSON.stringify(data)}`);
   }
   return candidate.content.parts[0].text;
+}
+
+async function callOpenRouter(contents, retryCount = 0) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`,
+      'HTTP-Referer': 'https://observatory.unratified.org',
+      'X-Title': 'Human Rights Observatory Feedback',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages: toOpenAIMessages(contents),
+      temperature: 0.7,
+      max_tokens: 8192,
+    }),
+  });
+
+  if (res.status === 429 && retryCount < 1) {
+    const retryAfter = res.headers.get('retry-after');
+    const waitSec = retryAfter ? parseInt(retryAfter) + 2 : 30;
+    if (!PROMPT) { console.log(`  Rate limited — waiting ${waitSec}s...`); }
+    else { process.stderr.write(`Rate limited — waiting ${waitSec}s...\n`); }
+    await sleep(waitSec * 1000);
+    return callOpenRouter(contents, retryCount + 1);
+  }
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`OpenRouter API ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) {
+    throw new Error(`OpenRouter returned no content: ${JSON.stringify(data)}`);
+  }
+  return text;
 }
 
 // --- Conversation state ---
@@ -239,6 +345,7 @@ function saveConversation(filename) {
   const name = filename || `exchange-${ts}`;
   const outPath = join(EXCHANGES_DIR, `${name}.json`);
   const payload = {
+    provider: PROVIDER,
     model: MODEL,
     saved_at: new Date().toISOString(),
     turn_count: contents.length,
@@ -251,14 +358,11 @@ function saveConversation(filename) {
 
 // --- Pretty print Gemini response ---
 function printResponse(text) {
-  // Try to parse as JSON for pretty printing
-  const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
-  const raw = jsonMatch ? jsonMatch[1].trim() : text;
-  try {
-    const parsed = JSON.parse(raw);
+  const parsed = extractJson(text);
+  if (parsed) {
     console.log('\n\x1b[36mgemini>\x1b[0m');
     console.log(JSON.stringify(parsed, null, 2));
-  } catch {
+  } else {
     console.log(`\n\x1b[36mgemini>\x1b[0m ${text}`);
   }
   console.log();
@@ -270,20 +374,73 @@ if (RESUME_FILE) {
     ? RESUME_FILE
     : join(EXCHANGES_DIR, RESUME_FILE.endsWith('.json') ? RESUME_FILE : `${RESUME_FILE}.json`);
   if (!existsSync(resumePath)) {
-    console.error(`  File not found: ${resumePath}`);
+    const msg = `File not found: ${resumePath}`;
+    if (PROMPT) { console.log(JSON.stringify({ error: msg })); }
+    else { console.error(`  ${msg}`); }
     process.exit(1);
   }
   const data = JSON.parse(readFileSync(resumePath, 'utf8'));
   contents = data.contents || [];
-  MODEL = data.model || MODEL;
-  console.log(`  Resumed ${contents.length} turns from ${resumePath}`);
-  console.log(`  Model: ${MODEL}`);
+  if (!argVal('--model')) MODEL = data.model || MODEL;
+  if (!argVal('--provider') && data.provider) PROVIDER = data.provider;
+  if (!PROMPT) {
+    console.log(`  Resumed ${contents.length} turns from ${resumePath}`);
+    console.log(`  Provider: ${PROVIDER} | Model: ${MODEL}`);
+  }
 }
+
+// ============================================================
+// NON-INTERACTIVE MODE (--prompt)
+// ============================================================
+if (PROMPT) {
+  // Build conversation: system context (if fresh) + user prompt
+  if (contents.length === 0 && !FOLLOW_UP) {
+    addUser(buildSystemContext() + '\n\n---\n\n' + PROMPT);
+  } else {
+    addUser(PROMPT);
+  }
+
+  try {
+    const response = await callLLM(contents);
+    addModel(response);
+
+    // Extract structured JSON
+    const parsed = extractJson(response);
+    const confabulations = evalResponse(response);
+
+    // Build output object for Claude Code to consume
+    const output = {
+      provider: PROVIDER,
+      model: MODEL,
+      raw: response,
+      parsed: parsed || null,
+      findings: parsed?.findings || [],
+      summary: parsed?.summary || null,
+      confabulations,
+      turn_count: contents.length,
+    };
+
+    // Save if requested
+    if (SAVE_NAME) {
+      output.saved_to = saveConversation(SAVE_NAME);
+    }
+
+    console.log(JSON.stringify(output, null, 2));
+  } catch (err) {
+    console.log(JSON.stringify({ error: err.message }));
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+// ============================================================
+// INTERACTIVE REPL MODE (no --prompt)
+// ============================================================
 
 // --- Banner ---
 console.log();
-console.log('\x1b[1m  Gemini Feedback REPL\x1b[0m');
-console.log(`  Model: ${MODEL}`);
+console.log('\x1b[1m  External AI Feedback REPL\x1b[0m');
+console.log(`  Provider: ${PROVIDER} | Model: ${MODEL}`);
 console.log(`  Commands: .save [name] | .context | .eval | .model [name] | .quit`);
 console.log();
 
@@ -300,7 +457,7 @@ if (contents.length === 0) {
   addUser(buildSystemContext());
   console.log('  Sending system context...');
   try {
-    const response = await callGemini(contents);
+    const response = await callLLM(contents);
     addModel(response);
     lastGeminiResponse = response;
     printResponse(response);
@@ -349,7 +506,7 @@ rl.on('line', async (line) => {
       case '.context': {
         addUser(buildSystemContext() + '\n\n(Context re-sent as a reminder. Please acknowledge.)');
         try {
-          const response = await callGemini(contents);
+          const response = await callLLM(contents);
           addModel(response);
           lastGeminiResponse = response;
           printResponse(response);
@@ -402,7 +559,7 @@ rl.on('line', async (line) => {
   // --- Regular message ---
   addUser(input);
   try {
-    const response = await callGemini(contents);
+    const response = await callLLM(contents);
     addModel(response);
     lastGeminiResponse = response;
     printResponse(response);

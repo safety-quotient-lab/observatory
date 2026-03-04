@@ -155,6 +155,23 @@ function main() {
     description: 'Inter-agent proposal inbox — observatory.unratified.org → other agents',
     updated_at: updatedAt,
     _generated_from: '.claude/plans/memorized/proposals/*.md frontmatter',
+    proposal_schema: {
+      required: ['id', 'from', 'to', 'status', 'date', 'summary', 'priority'],
+      properties: {
+        id: 'Unique identifier (format: {source}-{topic}-{date})',
+        from: 'Origin domain',
+        to: 'Target agent domain',
+        status: 'pending | accepted | implemented | rejected',
+        date: 'ISO 8601 date proposed',
+        summary: 'Human-readable description of the proposal',
+        priority: 'high | medium | low',
+        accepted_at: 'ISO 8601 timestamp (set by receiving agent)',
+        accepted_by: 'Domain that accepted',
+        implemented_at: 'ISO 8601 timestamp (set after implementation)',
+        links: 'Object of relevant URLs',
+        live_api: 'Object with endpoint, cors, rate_limit, note (if proposal involves API integration)',
+      },
+    },
     proposals,
   };
 

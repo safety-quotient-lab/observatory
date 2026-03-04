@@ -31,7 +31,8 @@
         "What is the jargon density distribution across evaluated stories?"
       ],
       "inputModes": ["text/plain"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests/hour per IP"
     },
     {
       "id": "query-stories",
@@ -44,7 +45,8 @@
         "Find stories flagged for propaganda techniques"
       ],
       "inputModes": ["text/plain"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests/hour per IP"
     },
     {
       "id": "query-domain-profile",
@@ -57,7 +59,8 @@
         "Does techcrunch.com say one thing and do another (SETL)?"
       ],
       "inputModes": ["text/plain"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests/hour per IP"
     },
     {
       "id": "query-udhr-article-rankings",
@@ -70,7 +73,8 @@
         "Which provisions show the most say-vs-do tension?"
       ],
       "inputModes": ["text/plain"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests/hour per IP"
     },
     {
       "id": "get-domain-badge",
@@ -82,7 +86,8 @@
         "Embed an HRCB badge for my site"
       ],
       "inputModes": ["text/plain"],
-      "outputModes": ["image/svg+xml"]
+      "outputModes": ["image/svg+xml"],
+      "rateLimit": "200 requests/hour per IP"
     },
     {
       "id": "receive-agent-proposals",
@@ -94,7 +99,8 @@
         "Has the observatory proposed any new signal integrations?"
       ],
       "inputModes": ["application/json"],
-      "outputModes": ["application/json"]
+      "outputModes": ["application/json"],
+      "rateLimit": "no limit (static file)"
     }
   ]
 }
