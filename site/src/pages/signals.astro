@@ -6,6 +6,7 @@ import { getStatusCounts, getSignalOverview, getTdSignalAggregates, getComplexit
 import type { PsqAggregates, HomepageBlob } from '../lib/db';
 import { PSQ_THREAT_DIMENSIONS, PSQ_PROTECTIVE_DIMENSIONS } from '../lib/eval-types';
 import { scoreToColor, normalizePsq, formatPsqScore } from '../lib/colors';
+import { computeGeoInsights } from '../lib/geo-reference';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -138,6 +139,9 @@ const scopeEntries = signalData?.scope_distribution
 const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
 const totalScope = scopeEntries.reduce((sum, [, c]) => sum + c, 0);
 
+// Geographic enrichment from Wolfram reference data
+const geoInsights = computeGeoInsights();
+
 // Retro/prospective ratio
 const retroRatio = temporalData?.retrospective_pct != null && temporalData?.prospective_pct != null && temporalData.prospective_pct > 0
   ? (temporalData.retrospective_pct / temporalData.prospective_pct).toFixed(1)
@@ -170,6 +174,12 @@ if (totalPt > 0) {
   findings.push({
     text: `${emotionPct}% of persuasion techniques target emotion, not logic`,
     anchor: '#persuasion',
+  });
+}
+if (geoInsights.usMentionPct > 0) {
+  findings.push({
+    text: `${geoInsights.usMentionPct}% of geographic mentions are US — ${geoInsights.underrepCountries} countries totaling ${Math.round(geoInsights.underrepPop / 1_000_000_000 * 10) / 10}B people have zero coverage`,
+    anchor: '#discourse',
   });
 }
 if (psqAggregates?.avg_psq != null && psqAggregates.story_count > 10) {
@@ -619,7 +629,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
         {/* ═══ 7. DISCOURSE CHARACTER (merged tone + scope) ═══ */}
 
         {(toneEntries.length > 0 || scopeEntries.length > 0) && (
-          <div style="margin-bottom: 20px;">
+          <div id="discourse" style="margin-bottom: 20px;">
             <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
               Discourse Character
             </h2>
@@ -669,6 +679,15 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                       );
                     })}
                   </table>
+                  <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 6px 0 0 0; line-height: 1.5;">
+                    <span style="color: var(--color-warning);">{geoInsights.usMentionPct}%</span> of geographic mentions reference the US.
+                    Covered countries represent <span style="color: var(--fg-primary);">{geoInsights.coveragePct}%</span> of world population — but
+                    {' '}<span style="color: var(--color-negative);">{Math.round(geoInsights.underrepPop / 1_000_000_000 * 10) / 10}B people</span> across
+                    {' '}{geoInsights.underrepCountries} countries (Indonesia, Pakistan, Nigeria, Bangladesh, Ethiopia) have zero coverage.
+                    <span style="color: var(--fg-secondary); font-style: italic; margin-left: 4px;">
+                      Source: <a href="https://www.wolframalpha.com" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Wolfram Alpha</a> 2023 estimates
+                    </span>
+                  </p>
                 </div>
               )}
             </div>
