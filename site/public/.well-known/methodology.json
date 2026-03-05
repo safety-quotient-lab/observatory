@@ -92,8 +92,8 @@
     "weighting": {
       "base_weight_full": 1.0,
       "base_weight_lite": 0.5,
-      "confidence_floor_full": 0.2,
-      "confidence_floor_lite": 0.5,
+      "confidence_floor_full": 0.5,
+      "confidence_floor_lite": 0.2,
       "truncation_discount": "1 - (truncation_pct * 0.5)",
       "neutral_discount": 0.5,
       "neutral_discount_condition": "lite eval with editorial=0 and confidence >= 0.7"
