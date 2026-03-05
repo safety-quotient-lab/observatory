@@ -2,6 +2,7 @@
 import { scoreToColor, formatScore } from './colors';
 import { ALL_SECTIONS } from './eval-types';
 import { ARTICLE_TITLES } from './udhr';
+import { meanCI } from './stats';
 
 // --- Model Agreement ---
 
@@ -382,7 +383,7 @@ export async function getModelComparisonAggregates(db: D1Database): Promise<{
   return raw.results.map(r => {
     const variance = Math.max(0, (r.avg_sq ?? 0) - (r.avg_score ?? 0) ** 2);
     const std_dev = Math.sqrt(variance);
-    const ci_margin = r.story_count > 1 ? 1.96 * std_dev / Math.sqrt(r.story_count) : 0;
+    const { margin: ci_margin } = meanCI(r.avg_score ?? 0, std_dev, r.story_count);
     return { ...r, std_dev: Math.round(std_dev * 1000) / 1000, ci_margin: Math.round(ci_margin * 1000) / 1000 };
   });
 }

@@ -7,6 +7,7 @@ import type { PsqAggregates, HomepageBlob } from '../lib/db';
 import { PSQ_THREAT_DIMENSIONS, PSQ_PROTECTIVE_DIMENSIONS } from '../lib/eval-types';
 import { scoreToColor, normalizePsq, formatPsqScore } from '../lib/colors';
 import { computeGeoInsights } from '../lib/geo-reference';
+import { wilsonCI } from '../lib/stats';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -60,12 +61,13 @@ if (psqAggregates?.dim_averages) {
 const threatAvg = threatDims.length > 0 ? threatDims.reduce((s, d) => s + d.avg, 0) / threatDims.length : null;
 const protectiveAvg = protectiveDims.length > 0 ? protectiveDims.reduce((s, d) => s + d.avg, 0) / protectiveDims.length : null;
 
-// Transparency rows
+// Transparency rows with Wilson CIs
+const tdN = tdData?.td_measured ?? 0;
 const tdRows = tdData ? [
-  { label: 'Any disclosure',      pct: tdData.any_disclosure_pct },
-  { label: 'Author identified',   pct: tdData.author_identified_pct },
-  { label: 'Conflicts disclosed', pct: tdData.conflicts_disclosed_pct },
-  { label: 'Funding disclosed',   pct: tdData.funding_disclosed_pct },
+  { label: 'Any disclosure',      pct: tdData.any_disclosure_pct,      ci: wilsonCI(tdData.any_disclosure_count ?? 0, tdN) },
+  { label: 'Author identified',   pct: tdData.author_identified_pct,   ci: wilsonCI(tdData.author_identified_count ?? 0, tdN) },
+  { label: 'Conflicts disclosed', pct: tdData.conflicts_disclosed_pct, ci: wilsonCI(tdData.conflicts_disclosed_count ?? 0, tdN) },
+  { label: 'Funding disclosed',   pct: tdData.funding_disclosed_pct,   ci: wilsonCI(tdData.funding_disclosed_count ?? 0, tdN) },
 ] : [];
 
 // Persuasion techniques — tier breakdown (A=3 high-severity, B=2 moderate, C=1 low)
@@ -91,27 +93,29 @@ const topTierB = tierB.techniques.sort((a, b) => (techDist[b] ?? 0) - (techDist[
 const topTierC = tierC.techniques.sort((a, b) => (techDist[b] ?? 0) - (techDist[a] ?? 0))[0];
 
 // Jargon / knowledge distributions
+const clN = complexityData?.total_measured ?? 0;
 const jargonRows = complexityData ? [
-  { label: 'Plain language',    count: complexityData.jargon_low,    param: 'low' },
-  { label: 'Some jargon',       count: complexityData.jargon_medium, param: 'medium' },
-  { label: 'Heavy jargon',      count: complexityData.jargon_high,   param: 'high' },
+  { label: 'Plain language',    count: complexityData.jargon_low,    param: 'low',    ci: wilsonCI(complexityData.jargon_low, clN) },
+  { label: 'Some jargon',       count: complexityData.jargon_medium, param: 'medium', ci: wilsonCI(complexityData.jargon_medium, clN) },
+  { label: 'Heavy jargon',      count: complexityData.jargon_high,   param: 'high',   ci: wilsonCI(complexityData.jargon_high, clN) },
 ] : [];
 const maxJargon = jargonRows.length > 0 ? Math.max(...jargonRows.map(r => r.count), 1) : 1;
 
 const knowledgeRows = complexityData ? [
-  { label: 'Self-contained',    count: complexityData.knowledge_none },
-  { label: 'General audience',  count: complexityData.knowledge_general },
-  { label: 'Domain knowledge',  count: complexityData.knowledge_domain_specific },
-  { label: 'Expert only',       count: complexityData.knowledge_expert },
+  { label: 'Self-contained',    count: complexityData.knowledge_none,             ci: wilsonCI(complexityData.knowledge_none, clN) },
+  { label: 'General audience',  count: complexityData.knowledge_general,          ci: wilsonCI(complexityData.knowledge_general, clN) },
+  { label: 'Domain knowledge',  count: complexityData.knowledge_domain_specific,  ci: wilsonCI(complexityData.knowledge_domain_specific, clN) },
+  { label: 'Expert only',       count: complexityData.knowledge_expert,           ci: wilsonCI(complexityData.knowledge_expert, clN) },
 ] : [];
 const maxKnowledge = knowledgeRows.length > 0 ? Math.max(...knowledgeRows.map(r => r.count), 1) : 1;
 
 // Temporal framing
+const tfN = temporalData?.total_measured ?? 0;
 const focusRows = temporalData ? [
-  { label: 'Retrospective', count: temporalData.retrospective, pct: temporalData.retrospective_pct, color: 'var(--color-amber)',         param: 'retrospective' },
-  { label: 'Present',       count: temporalData.present,       pct: temporalData.present_pct,       color: 'var(--channel-editorial)',   param: 'present' },
-  { label: 'Prospective',   count: temporalData.prospective,   pct: temporalData.prospective_pct,   color: 'var(--color-positive)',      param: 'prospective' },
-  { label: 'Mixed',         count: temporalData.mixed,         pct: temporalData.mixed_pct,         color: 'var(--fg-secondary)',        param: 'mixed' },
+  { label: 'Retrospective', count: temporalData.retrospective, pct: temporalData.retrospective_pct, color: 'var(--color-amber)',         param: 'retrospective', ci: wilsonCI(temporalData.retrospective, tfN) },
+  { label: 'Present',       count: temporalData.present,       pct: temporalData.present_pct,       color: 'var(--channel-editorial)',   param: 'present',       ci: wilsonCI(temporalData.present, tfN) },
+  { label: 'Prospective',   count: temporalData.prospective,   pct: temporalData.prospective_pct,   color: 'var(--color-positive)',      param: 'prospective',   ci: wilsonCI(temporalData.prospective, tfN) },
+  { label: 'Mixed',         count: temporalData.mixed,         pct: temporalData.mixed_pct,         color: 'var(--fg-secondary)',        param: 'mixed',         ci: wilsonCI(temporalData.mixed, tfN) },
 ] : [];
 const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count), 1) : 1;
 
@@ -151,14 +155,16 @@ const retroRatio = temporalData?.retrospective_pct != null && temporalData?.pros
 const findings: Array<{ text: string; anchor: string }> = [];
 
 if (complexityData?.expert_pct != null) {
+  const expertCI = wilsonCI(complexityData.knowledge_expert, clN);
   findings.push({
-    text: `${complexityData.expert_pct.toFixed(0)}% of stories assume expert-level knowledge`,
+    text: `${complexityData.expert_pct.toFixed(0)}% \u00b1${Math.ceil(expertCI.margin)} of stories assume expert-level knowledge`,
     anchor: '#accessibility',
   });
 }
 if (tdData?.author_identified_pct != null) {
+  const authorCI = wilsonCI(tdData.author_identified_count ?? 0, tdN);
   findings.push({
-    text: `Only ${tdData.author_identified_pct.toFixed(0)}% of stories identify their author`,
+    text: `Only ${tdData.author_identified_pct.toFixed(0)}% \u00b1${Math.ceil(authorCI.margin)} of stories identify their author`,
     anchor: '#transparency',
   });
 }
@@ -299,7 +305,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                {tdRows.map(({ label, pct }) => (
+                {tdRows.map(({ label, pct, ci }) => (
                   <tr>
                     <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
                     <td style="padding: 0 8px;">
@@ -307,8 +313,12 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                         <div style={`background: var(--color-positive); opacity: 0.5; border-radius: 3px; height: 14px; width: ${pct ?? 0}%;`}></div>
                       </div>
                     </td>
-                    <td style="width: 40px; text-align: right; color: var(--fg-primary);" class="score-font">
-                      {pct !== null ? `${pct.toFixed(0)}%` : 'n/a'}
+                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
+                      {pct !== null ? (
+                        <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${tdN})`}>
+                          {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> \u00b1{Math.ceil(ci.margin)}</span>
+                        </span>
+                      ) : 'n/a'}
                     </td>
                   </tr>
                 ))}
@@ -341,7 +351,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                 <div>
                   <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Jargon Density</p>
                   <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                    {jargonRows.map(({ label, count, param }) => (
+                    {jargonRows.map(({ label, count, param, ci }) => (
                       <tr>
                         <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
                         <td style="padding: 0 6px;">
@@ -349,8 +359,8 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                             <div style={`background: var(--color-amber); opacity: 0.5; border-radius: 3px; height: 12px; width: ${Math.round((count / maxJargon) * 100)}%;`}></div>
                           </div>
                         </td>
-                        <td style="width: 40px; text-align: right; color: var(--fg-secondary);" class="score-font">
-                          <a href={`/stories?jargon=${param}`} style="color: inherit; text-decoration: none;" title={`Stories with ${label.toLowerCase()} jargon density`}>{count.toLocaleString()}</a>
+                        <td style="width: 70px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
+                          <a href={`/stories?jargon=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> \u00b1{Math.ceil(ci.margin)}</span></a>
                         </td>
                       </tr>
                     ))}
@@ -359,7 +369,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                 <div>
                   <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Assumed Knowledge</p>
                   <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                    {knowledgeRows.map(({ label, count }) => (
+                    {knowledgeRows.map(({ label, count, ci }) => (
                       <tr>
                         <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
                         <td style="padding: 0 6px;">
@@ -367,8 +377,8 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                             <div style={`background: var(--channel-hrcb); opacity: 0.5; border-radius: 3px; height: 12px; width: ${Math.round((count / maxKnowledge) * 100)}%;`}></div>
                           </div>
                         </td>
-                        <td style="width: 40px; text-align: right; color: var(--fg-secondary);" class="score-font">
-                          {count.toLocaleString()}
+                        <td style="width: 70px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
+                          <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> \u00b1{Math.ceil(ci.margin)}</span></span>
                         </td>
                       </tr>
                     ))}
@@ -377,7 +387,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
               </div>
               <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
                 {complexityData.expert_pct !== null && (
-                  <><span style="color: var(--color-negative);">{complexityData.expert_pct.toFixed(0)}%</span> of stories assume expert-level knowledge. </>
+                  <><span style="color: var(--color-negative);">{complexityData.expert_pct.toFixed(0)}%</span> <span style="color: var(--fg-secondary); font-size: var(--font-xs);" title={`95% CI (Wilson, n=${clN})`}>&plusmn;{Math.ceil(wilsonCI(complexityData.knowledge_expert, clN).margin)}</span> of stories assume expert-level knowledge. </>
                 )}
                 {complexityData.accessible_pct !== null && (
                   <><span style="color: var(--color-positive);">{complexityData.accessible_pct.toFixed(0)}%</span> are plain-language and self-contained.</>
@@ -481,7 +491,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                {focusRows.map(({ label, count, pct, color, param }) => (
+                {focusRows.map(({ label, count, pct, color, param, ci }) => (
                   <tr>
                     <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
                     <td style="padding: 0 8px;">
@@ -489,8 +499,12 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                         <div style={`background: ${color}; opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((count / maxFocus) * 100)}%;`}></div>
                       </div>
                     </td>
-                    <td style="width: 40px; text-align: right; color: var(--fg-primary);" class="score-font">
-                      {pct !== null ? <a href={`/stories?temporal=${param}`} style="color: inherit; text-decoration: none;" title={`${label} stories`}>{pct.toFixed(0)}%</a> : '\u2014'}
+                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
+                      {pct !== null ? (
+                        <a href={`/stories?temporal=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${tfN})`}>
+                          {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> \u00b1{Math.ceil(ci.margin)}</span>
+                        </a>
+                      ) : '\u2014'}
                     </td>
                   </tr>
                 ))}
@@ -739,6 +753,11 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
           <b style="color: var(--fg-primary);">9 supplementary signals</b>
           <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 6px;">Beyond the core HRCB score: epistemic quality, stakeholder voice, solution orientation, and more.</span>
           <a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; white-space: nowrap;">full reference &rarr;</a>
+        </div>
+
+        <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 10px;">
+          <b style="color: var(--fg-primary);">&plusmn; confidence intervals</b>
+          <span style="color: var(--fg-secondary); font-size: var(--font-sm); margin-left: 6px;">All proportions show 95% Wilson score intervals. t-distribution critical values verified via <a href="https://www.wolframalpha.com" target="_blank" rel="noopener" style="color: var(--channel-editorial);">Wolfram Alpha</a>.</span>
         </div>
 
       </td>

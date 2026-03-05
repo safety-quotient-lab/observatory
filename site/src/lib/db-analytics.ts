@@ -1694,6 +1694,10 @@ export interface TdSignalAggregates {
   total_evaluated: number;          // done stories, hn_id > 0
   td_measured: number;              // stories where td_score IS NOT NULL
   td_measured_pct: number | null;   // % of evaluated stories with TD data
+  author_identified_count: number;        // raw count: author identified
+  conflicts_disclosed_count: number;      // raw count: conflicts disclosed
+  funding_disclosed_count: number;        // raw count: funding disclosed
+  any_disclosure_count: number;           // raw count: any disclosure
   author_identified_pct: number | null;   // of td_measured: % where author was identified
   conflicts_disclosed_pct: number | null; // of td_measured: % where conflicts were disclosed
   funding_disclosed_pct: number | null;   // of td_measured: % where funding was disclosed
@@ -1712,6 +1716,11 @@ export async function getTdSignalAggregates(db: D1Database): Promise<TdSignalAgg
            SUM(CASE WHEN td_score IS NOT NULL THEN 1 ELSE 0 END)            AS td_measured,
            ROUND(100.0 * SUM(CASE WHEN td_score IS NOT NULL THEN 1 ELSE 0 END) /
                  NULLIF(COUNT(*), 0), 1)                                    AS td_measured_pct,
+           SUM(CASE WHEN td_author_identified = 1 THEN 1 ELSE 0 END)       AS author_identified_count,
+           SUM(CASE WHEN td_conflicts_disclosed = 1 THEN 1 ELSE 0 END)     AS conflicts_disclosed_count,
+           SUM(CASE WHEN td_funding_disclosed = 1 THEN 1 ELSE 0 END)       AS funding_disclosed_count,
+           SUM(CASE WHEN (td_author_identified = 1 OR td_conflicts_disclosed = 1
+                          OR td_funding_disclosed = 1) THEN 1 ELSE 0 END)  AS any_disclosure_count,
            ROUND(100.0 * SUM(CASE WHEN td_author_identified = 1 THEN 1 ELSE 0 END) /
                  NULLIF(SUM(CASE WHEN td_author_identified IS NOT NULL THEN 1 ELSE 0 END), 0), 1)
                                                                             AS author_identified_pct,

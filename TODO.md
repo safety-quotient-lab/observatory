@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment done. Blog posts or Wolfram confidence intervals next.
+**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment + Wolfram CIs done. Blog posts next.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
@@ -27,7 +27,7 @@ Remaining:
 - ~~**Build geographic reference table**~~ — ✓ DONE 2026-03-05. 22 countries, 30 Wolfram calls. `.claude/plans/memorized/geo-reference-data.json`.
 - ~~**GS signal enrichment on /signals page**~~ — ✓ DONE 2026-03-05. `geo-reference.ts` + Key Findings one-liner + Discourse Character annotation (US dominance %, coverage %, underrepresented countries).
 - ~~**Verify codebase math**~~ — ✓ DONE 2026-03-05. 10 formulas verified via Wolfram (10 calls). All correct. 1 comment fix (decay half-life mislabeled in hn-bot.ts).
-- [ ] **Wolfram-powered confidence intervals** — for key metrics (mean HRCB, mean SETL, domain averages), compute 95% CIs via Wolfram rather than approximating. Surface on `/status/models` or `/signals`.
+- ~~**Wolfram-powered confidence intervals**~~ — ✓ DONE 2026-03-05. `stats.ts` (Wilson CI + t-distribution LUT, 9 Wolfram queries). Signals page: TD, accessibility, temporal bars + key findings. Models page: t-distribution replaces z=1.96.
 
 ### Architecture (evaluate later)
 
