@@ -1,0 +1,434 @@
+{
+  "benchmark_version": "1.0",
+  "run_date": "2026-03-05",
+  "models_tested": 5,
+  "results": [
+    {
+      "model_id": "openrouter/free",
+      "model_name": "Free Models Router",
+      "provider": "openrouter",
+      "composite_score": 0.6,
+      "grade": "B REVIEW",
+      "dim1_confabulation": {
+        "probes_sent": 4,
+        "flags_total": 2,
+        "rate": 0.5,
+        "details": [
+          {
+            "question": "What tech stack and framework does the Human Rights Observatory use? List the main technologies.",
+            "flags": [
+              "Confabulated Svelte (we use Astro 5)",
+              "Confabulated WordPress",
+              "Confabulated Python (pure JS/TS stack)",
+              "Confabulated Next.js",
+              "Confabulated React"
+            ],
+            "response": "**Tech Stack & Primary Framework**\n\n- **Framework / Hosting:**  \n  - **Astro 5** (SSR) – deployed on **Cloudflare Pages**\n\n- **Server‑less / Backend:**  \n  - **Cloudflare Workers** (including cron job"
+          },
+          {
+            "question": "How many skills does the observatory's agent card declare? List them.",
+            "flags": [
+              "Wrong skill count (correct: 8)"
+            ],
+            "response": "The observatory's agent card declares **2 skills**. Here they are:\n\n1. **Query Corpus Signals**  \n   - Purpose: Returns corpus-wide aggregate signals (transparency, accessibility, persuasion technique"
+          },
+          {
+            "question": "What scale does HRCB use? What are the endpoints?",
+            "flags": [],
+            "response": "### **HRCB Scale**  \nThe **Human Rights Compatibility Bias (HRCB)** score uses a **[-1.0, +1.0]** scale:  \n- **-1.0**: Strongly incompatible with human rights (e.g., promoting censorship, discriminati"
+          },
+          {
+            "question": "The Fair Witness concept in the methodology is inspired by which science fiction author and which novel?",
+            "flags": [],
+            "response": "The \"Fair Witness\" concept in the methodology is inspired by **Robert A. Heinlein** and his science fiction novel **\"Stranger in a Strange Land\"** (1961). The term \"Fair Witness\" originates from the n"
+          }
+        ]
+      },
+      "dim2_eval_quality": {
+        "stories_tested": 3,
+        "in_range_count": 2,
+        "in_range_rate": 0.6666666666666666,
+        "class_ordering_ok": false,
+        "scores": [
+          {
+            "slot": "EP-1",
+            "expected_class": "EP",
+            "expected_range": [
+              0.75,
+              1
+            ],
+            "actual": 0.8,
+            "in_range": true
+          },
+          {
+            "slot": "EN-1",
+            "expected_class": "EN",
+            "expected_range": [
+              -0.05,
+              0.2
+            ],
+            "actual": 0,
+            "in_range": true
+          },
+          {
+            "slot": "EX-2",
+            "expected_class": "EX",
+            "expected_range": [
+              -0.95,
+              -0.2
+            ],
+            "actual": 0.7,
+            "in_range": false
+          }
+        ]
+      },
+      "dim3_output_compliance": {
+        "attempts": 3,
+        "valid_json": 3,
+        "valid_schema": 3,
+        "json_rate": 1,
+        "schema_rate": 1
+      },
+      "duration_ms": 120195,
+      "errors": []
+    },
+    {
+      "model_id": "nvidia/nemotron-3-nano-30b-a3b:free",
+      "model_name": "NVIDIA: Nemotron 3 Nano 30B A3B (free)",
+      "provider": "openrouter",
+      "composite_score": 0.5,
+      "grade": "C CAUTION",
+      "dim1_confabulation": {
+        "probes_sent": 4,
+        "flags_total": 2,
+        "rate": 0.5,
+        "details": [
+          {
+            "question": "What tech stack and framework does the Human Rights Observatory use? List the main technologies.",
+            "flags": [
+              "Confabulated Svelte (we use Astro 5)",
+              "Confabulated WordPress",
+              "Confabulated Python (pure JS/TS stack)",
+              "Confabulated Next.js",
+              "Confabulated React",
+              "Confabulated LiteLLM"
+            ],
+            "response": "**Tech Stack & Core Framework**\n\n| Layer | Primary Technologies |\n|-------|----------------------|\n| **Front‑end / Site Framework** | **Astro 5** (SSR) hosted on **Cloudflare Pages** |\n| **Back‑end / "
+          },
+          {
+            "question": "How many skills does the observatory's agent card declare? List them.",
+            "flags": [],
+            "response": "The agent card declares **8 skills**.  \nHere are the skill IDs (as listed in the `skills` array):\n\n1. `query-corpus-signals`  \n2. `query-stories`  \n3. `query-domain-profile`  \n4. `query-udhr-article-r"
+          },
+          {
+            "question": "What scale does HRCB use? What are the endpoints?",
+            "flags": [],
+            "response": "**HRCB Scale**  \n- **Range:** `[-1.0, +1.0]` (negative 1 → positive 1)  \n- **Interpretation:** Values below 0 indicate a net *negative* rights alignment; values above 0 indicate a net *positive* right"
+          },
+          {
+            "question": "The Fair Witness concept in the methodology is inspired by which science fiction author and which novel?",
+            "flags": [
+              "Confabulated Asimov (it's Heinlein, Stranger in a Strange Land)"
+            ],
+            "response": "The **Fair Witness** concept is inspired by **Robert A. Heinlein** and his novel **_Stranger in a Strange Land_**. (The note explicitly says “not Asimov.”)"
+          }
+        ]
+      },
+      "dim2_eval_quality": {
+        "stories_tested": 3,
+        "in_range_count": 2,
+        "in_range_rate": 0.6666666666666666,
+        "class_ordering_ok": false,
+        "scores": [
+          {
+            "slot": "EP-1",
+            "expected_class": "EP",
+            "expected_range": [
+              0.75,
+              1
+            ],
+            "actual": 0.84,
+            "in_range": true
+          },
+          {
+            "slot": "EN-1",
+            "expected_class": "EN",
+            "expected_range": [
+              -0.05,
+              0.2
+            ],
+            "actual": 0,
+            "in_range": true
+          },
+          {
+            "slot": "EX-2",
+            "expected_class": "EX",
+            "expected_range": [
+              -0.95,
+              -0.2
+            ],
+            "actual": null,
+            "in_range": false
+          }
+        ]
+      },
+      "dim3_output_compliance": {
+        "attempts": 3,
+        "valid_json": 2,
+        "valid_schema": 2,
+        "json_rate": 0.6666666666666666,
+        "schema_rate": 0.6666666666666666
+      },
+      "duration_ms": 92861,
+      "errors": []
+    },
+    {
+      "model_id": "stepfun/step-3.5-flash:free",
+      "model_name": "StepFun: Step 3.5 Flash (free)",
+      "provider": "openrouter",
+      "composite_score": 0.30000000000000004,
+      "grade": "D POOR",
+      "dim1_confabulation": {
+        "probes_sent": 4,
+        "flags_total": 1,
+        "rate": 0.25,
+        "details": [
+          {
+            "question": "What tech stack and framework does the Human Rights Observatory use? List the main technologies.",
+            "flags": [
+              "Confabulated Svelte (we use Astro 5)",
+              "Confabulated WordPress",
+              "Confabulated Python (pure JS/TS stack)",
+              "Confabulated Next.js",
+              "Confabulated React",
+              "Confabulated LiteLLM"
+            ],
+            "response": "Based on the provided site context, the Human Rights Observatory uses the following tech stack:\n\n**Framework & Hosting:**\n- Astro 5 (with Server-Side Rendering)\n- Cloudflare Pages (deployment platform"
+          },
+          {
+            "question": "How many skills does the observatory's agent card declare? List them.",
+            "flags": [],
+            "response": "The observatory's agent card declares **8 skills**:\n\n1. **Query Corpus Signals** (`query-corpus-signals`)\n2. **Query Evaluated Stories** (`query-stories`)\n3. **Query Domain Rights Profile** (`query-do"
+          },
+          {
+            "question": "What scale does HRCB use? What are the endpoints?",
+            "flags": [],
+            "response": "**HRCB Scale**\n\nHR"
+          },
+          {
+            "question": "The Fair Witness concept in the methodology is inspired by which science fiction author and which novel?",
+            "flags": [],
+            "response": "The Fair Witness concept in the methodology is inspired by **Robert A. Heinlein** and his novel **\"Stranger in a Strange Land\"**."
+          }
+        ]
+      },
+      "dim2_eval_quality": {
+        "stories_tested": 3,
+        "in_range_count": 0,
+        "in_range_rate": 0,
+        "class_ordering_ok": false,
+        "scores": [
+          {
+            "slot": "EP-1",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          },
+          {
+            "slot": "EN-1",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          },
+          {
+            "slot": "EX-2",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          }
+        ]
+      },
+      "dim3_output_compliance": {
+        "attempts": 0,
+        "valid_json": 0,
+        "valid_schema": 0,
+        "json_rate": 0,
+        "schema_rate": 0
+      },
+      "duration_ms": 64550,
+      "errors": []
+    },
+    {
+      "model_id": "qwen/qwen3-next-80b-a3b-instruct:free",
+      "model_name": "Qwen: Qwen3 Next 80B A3B Instruct (free)",
+      "provider": "openrouter",
+      "composite_score": 0,
+      "grade": "F UNFIT",
+      "dim1_confabulation": {
+        "probes_sent": 4,
+        "flags_total": 4,
+        "rate": 1,
+        "details": [
+          {
+            "question": "What tech stack and framework does the Human Rights Observatory use? List the main technologies.",
+            "flags": [
+              "API error: HTTP 429"
+            ],
+            "error": true
+          },
+          {
+            "question": "How many skills does the observatory's agent card declare? List them.",
+            "flags": [
+              "API error: HTTP 429"
+            ],
+            "error": true
+          },
+          {
+            "question": "What scale does HRCB use? What are the endpoints?",
+            "flags": [
+              "API error: HTTP 429"
+            ],
+            "error": true
+          },
+          {
+            "question": "The Fair Witness concept in the methodology is inspired by which science fiction author and which novel?",
+            "flags": [
+              "API error: HTTP 429"
+            ],
+            "error": true
+          }
+        ]
+      },
+      "dim2_eval_quality": {
+        "stories_tested": 3,
+        "in_range_count": 0,
+        "in_range_rate": 0,
+        "class_ordering_ok": false,
+        "scores": [
+          {
+            "slot": "EP-1",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          },
+          {
+            "slot": "EN-1",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          },
+          {
+            "slot": "EX-2",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          }
+        ]
+      },
+      "dim3_output_compliance": {
+        "attempts": 0,
+        "valid_json": 0,
+        "valid_schema": 0,
+        "json_rate": 0,
+        "schema_rate": 0
+      },
+      "duration_ms": 213867,
+      "errors": []
+    },
+    {
+      "model_id": "qwen/qwen3-coder:free",
+      "model_name": "Qwen: Qwen3 Coder 480B A35B (free)",
+      "provider": "openrouter",
+      "composite_score": 0,
+      "grade": "F UNFIT",
+      "dim1_confabulation": {
+        "probes_sent": 4,
+        "flags_total": 4,
+        "rate": 1,
+        "details": [
+          {
+            "question": "What tech stack and framework does the Human Rights Observatory use? List the main technologies.",
+            "flags": [
+              "API error: HTTP 429"
+            ],
+            "error": true
+          },
+          {
+            "question": "How many skills does the observatory's agent card declare? List them.",
+            "flags": [
+              "API error: HTTP 429"
+            ],
+            "error": true
+          },
+          {
+            "question": "What scale does HRCB use? What are the endpoints?",
+            "flags": [
+              "API error: HTTP 429"
+            ],
+            "error": true
+          },
+          {
+            "question": "The Fair Witness concept in the methodology is inspired by which science fiction author and which novel?",
+            "flags": [
+              "API error: HTTP 429"
+            ],
+            "error": true
+          }
+        ]
+      },
+      "dim2_eval_quality": {
+        "stories_tested": 3,
+        "in_range_count": 0,
+        "in_range_rate": 0,
+        "class_ordering_ok": false,
+        "scores": [
+          {
+            "slot": "EP-1",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          },
+          {
+            "slot": "EN-1",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          },
+          {
+            "slot": "EX-2",
+            "expected_range": [
+              null,
+              null
+            ],
+            "in_range": false
+          }
+        ]
+      },
+      "dim3_output_compliance": {
+        "attempts": 0,
+        "valid_json": 0,
+        "valid_schema": 0,
+        "json_rate": 0,
+        "schema_rate": 0
+      },
+      "duration_ms": 214077,
+      "errors": []
+    }
+  ]
+}

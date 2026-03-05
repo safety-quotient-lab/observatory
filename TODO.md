@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**All construct validity claims Wolfram-verified (37/37).** Epistemic fitness benchmark is next unblocked item — composite test of all free models against confabulation, eval quality, and structured output compliance.
+**Epistemic fitness benchmark v1.0 shipped.** First run: 5 free models, best=B (openrouter/free, 0.60). No free model reaches A (≥0.80). Blog posts or geographic enrichment next.
 
 Phase 0 external validation progress:
 - ✓ DB hygiene — 8 gated-pending → skipped, 442 orphaned queued → failed, 107 null-editorial full evals retroactively failed + 28 re-queued
@@ -48,7 +48,9 @@ Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.
 
 ✓ Wolfram statistical audit (2026-03-05): 37/37 claims verified, 1 inconsistency fixed (ρ=0.47→r=0.08 in eq-tq summary). `findings/2026-03-05-wolfram-statistical-audit.md`.
 
-Next: Epistemic fitness benchmark or blog posts.
+✓ Epistemic fitness benchmark v1.0 (2026-03-05): `scripts/epistemic-benchmark.mjs` + D1 migration 0064 (`model_epistemic_fitness`). 3-dim composite (confab 0.4 + eval 0.3 + output 0.3). First run: 5 models — openrouter/free B(0.60), Nemotron C(0.50), StepFun D(0.30), Qwen×2 F(0.00 — 429'd). PressTV (state media) consistently misscored positive by all responding models.
+
+Next: Blog posts or geographic enrichment.
 
 ✓ `/methodology` page (2026-03-04): prerendered page rendering exact LLM evaluation prompt. Full + lite. CC BY-SA 4.0.
 ✓ Gap-detection blog post (2026-03-04): published to blog.unratified.org (Pre-Review).
@@ -58,7 +60,6 @@ Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
 - [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
 - [ ] **Write `.well-known` for distributed agents blog post** — history and development of RFC 5785 as infrastructure for multi-agent coordination; how this project uses `agent-card.json` (A2A), `agent-inbox.json` (proposals), and `agent-manifest.json` (cognitive architecture) as a three-layer pattern; the shared git access channel (`proposals/` tracked in repo); how agents coordinate across projects without a central registry. The novel angle: `.well-known` was designed for HTTP service metadata; this project uses it for agent identity + construction provenance + inter-agent communication. Scaffold at `.claude/plans/memorized/blog/well-known-agents.md`.
-- [ ] **Epistemic fitness benchmark** — composite test of all free models (OpenRouter `:free` ~30 models + Workers AI 2 models) against 3 dimensions: (1) confabulation rate (send site context, check against KNOWN_FACTS), (2) HRCB eval quality (run 15-URL calibration set, compare to Claude Haiku baseline ranges), (3) structured output compliance (can model return valid JSON in lite/full eval schema). Output: JSON report + console summary table per run, AND `model_epistemic_fitness` D1 table for longitudinal tracking. Script: `scripts/epistemic-benchmark.mjs`. Uses `external-feedback.mjs` confabulation checker + existing calibration infrastructure.
 - [ ] Post-launch: Analyze `lite_reeval` data in eval_history — sweep dispatched (50 stories, 100 queue msgs), longitudinal lite-1.4→1.5 comparison data accumulating
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
 
