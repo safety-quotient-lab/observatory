@@ -80,6 +80,27 @@ max_concurrency = 1
 max_retries = 2
 dead_letter_queue = "hrcb-eval-dlq"
 
+[[queues.consumers]]
+queue = "hrcb-eval-gpt-oss"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-gemma"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
+[[queues.consumers]]
+queue = "hrcb-eval-qwen-coder"
+max_batch_size = 1
+max_concurrency = 1
+max_retries = 2
+dead_letter_queue = "hrcb-eval-dlq"
+
 [vars]
 RATE_LIMIT_MAX_BACKOFF_SECONDS = "120"
 

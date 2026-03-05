@@ -63,6 +63,18 @@ queue = "hrcb-eval-hermes"
 binding = "HERMES_QUEUE"
 
 [[queues.producers]]
+queue = "hrcb-eval-gpt-oss"
+binding = "GPT_OSS_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-gemma"
+binding = "GEMMA_QUEUE"
+
+[[queues.producers]]
+queue = "hrcb-eval-qwen-coder"
+binding = "QWEN_CODER_QUEUE"
+
+[[queues.producers]]
 queue = "hrcb-eval-workers-ai"
 binding = "WORKERS_AI_QUEUE"
 

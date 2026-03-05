@@ -7,7 +7,8 @@
  * still processed for backward compatibility.
  *
  * Supports both lite and full prompt modes.
- * Error handling: 429 → retry with jitter, other errors → throw → DLQ.
+ * Proactive rate limiting: pre-check KV capacity before API call, track headers on every response.
+ * Error handling: 429 → update KV state + retry with backoff, other errors → throw → DLQ.
  */
 
 import {
@@ -42,7 +43,13 @@ import {
 import { logEvent } from '../src/lib/events';
 import { writeDb } from '../src/lib/db-utils';
 import { callOpenRouterApi } from './providers';
-import { addJitter } from './rate-limit';
+import {
+  addJitter,
+  readOpenRouterRateLimitHeaders,
+  updateRateLimitState,
+  writeRateLimitSnapshot,
+  checkRateLimitCapacity,
+} from './rate-limit';
 
 async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: D1Database): Promise<void> {
   const story = msg.body;
@@ -63,6 +70,17 @@ async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: 
       return;
     }
 
+    // Pre-call: check rate limit capacity
+    const maxBackoffSec = parseInt(env.RATE_LIMIT_MAX_BACKOFF_SECONDS ?? '120', 10);
+    const capacity = await checkRateLimitCapacity(env.CONTENT_CACHE, prep.msgModelId, maxBackoffSec);
+    if (!capacity.ok) {
+      const delay = addJitter(capacity.delaySeconds!);
+      console.warn(`[consumer-openrouter] Self-throttle hn_id=${story.hn_id} model=${prep.msgModelId}: ${capacity.reason}, delaying ${delay}s`);
+      await logEvent(db, { hn_id: story.hn_id, event_type: 'self_throttle', severity: 'info', message: `Self-throttle: ${capacity.reason}`, details: { reason: capacity.reason, delay_seconds: delay, model: prep.msgModelId } });
+      msg.retry({ delaySeconds: delay });
+      return;
+    }
+
     if (prep.evalMode === 'lite-v2' || prep.evalMode === 'lite') {
       const isV2 = prep.evalMode === 'lite-v2';
       const systemPrompt = isV2 ? METHODOLOGY_SYSTEM_PROMPT_LITE_V2 : METHODOLOGY_SYSTEM_PROMPT_LITE;
@@ -74,14 +92,26 @@ async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: 
       if (!res.ok) {
         const body = await res.text();
         if (res.status === 429) {
-          const delaySec = addJitter(60);
-          await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `OpenRouter rate limited (429) model=${prep.msgModelId}`, details: { status: 429, delay_seconds: delaySec, model: prep.msgModelId } });
+          const rlHeaders = readOpenRouterRateLimitHeaders(res);
+          const rlState = await updateRateLimitState(env.CONTENT_CACHE, prep.msgModelId, rlHeaders, true);
+          await writeRateLimitSnapshot(db, prep.msgModelId, rlState);
+
+          const retryAfter = res.headers.get('retry-after');
+          const baseSec = retryAfter ? parseInt(retryAfter, 10) : 60;
+          const delaySec = addJitter(Math.min(Math.max(baseSec, 30), 300));
+          console.warn(`[consumer-openrouter] Rate limited (429) hn_id=${story.hn_id} model=${prep.msgModelId}, delaying ${delaySec}s, consecutive=${rlState.consecutive_429s}`);
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `Rate limited (429), retrying in ${delaySec}s`, details: { status: 429, retry_after: retryAfter, delay_seconds: delaySec, consecutive_429s: rlState.consecutive_429s, requests_remaining: rlState.requests_remaining, model: prep.msgModelId } });
           msg.retry({ delaySeconds: delaySec });
           return;
         }
         await handleApiFailure(env, db, story, prep.msgModelId, prep.provider, res.status, body);
         throw new Error(`OpenRouter API error ${res.status}: ${body}`);
       }
+
+      // Track rate limit headers on success
+      const rlHeaders = readOpenRouterRateLimitHeaders(res);
+      const rlState = await updateRateLimitState(env.CONTENT_CACHE, prep.msgModelId, rlHeaders, false);
+      await writeRateLimitSnapshot(db, prep.msgModelId, rlState);
 
       const rawData = await res.json() as any;
       const rawText = rawData.choices?.[0]?.message?.content || '';
@@ -103,14 +133,26 @@ async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: 
       if (!res.ok) {
         const body = await res.text();
         if (res.status === 429) {
-          const delaySec = addJitter(60);
-          await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `OpenRouter rate limited (429) model=${prep.msgModelId}`, details: { status: 429, delay_seconds: delaySec, model: prep.msgModelId } });
+          const rlHeaders = readOpenRouterRateLimitHeaders(res);
+          const rlState = await updateRateLimitState(env.CONTENT_CACHE, prep.msgModelId, rlHeaders, true);
+          await writeRateLimitSnapshot(db, prep.msgModelId, rlState);
+
+          const retryAfter = res.headers.get('retry-after');
+          const baseSec = retryAfter ? parseInt(retryAfter, 10) : 60;
+          const delaySec = addJitter(Math.min(Math.max(baseSec, 30), 300));
+          console.warn(`[consumer-openrouter] Rate limited (429) hn_id=${story.hn_id} model=${prep.msgModelId}, delaying ${delaySec}s, consecutive=${rlState.consecutive_429s}`);
+          await logEvent(db, { hn_id: story.hn_id, event_type: 'rate_limit', severity: 'warn', message: `Rate limited (429), retrying in ${delaySec}s`, details: { status: 429, retry_after: retryAfter, delay_seconds: delaySec, consecutive_429s: rlState.consecutive_429s, requests_remaining: rlState.requests_remaining, model: prep.msgModelId } });
           msg.retry({ delaySeconds: delaySec });
           return;
         }
         await handleApiFailure(env, db, story, prep.msgModelId, prep.provider, res.status, body);
         throw new Error(`OpenRouter API error ${res.status}: ${body}`);
       }
+
+      // Track rate limit headers on success
+      const rlHeaders = readOpenRouterRateLimitHeaders(res);
+      const rlState = await updateRateLimitState(env.CONTENT_CACHE, prep.msgModelId, rlHeaders, false);
+      await writeRateLimitSnapshot(db, prep.msgModelId, rlState);
 
       const rawData = await res.json() as any;
       const rawText = rawData.choices?.[0]?.message?.content || '';

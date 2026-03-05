@@ -36,6 +36,47 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     supports_json_mode: false,
     prompt_mode: 'full',
   },
+  // --- Active free OpenRouter models ---
+  {
+    id: 'gpt-oss-120b',
+    display_name: 'GPT-OSS 120B',
+    short_name: 'GPO',
+    provider: 'openrouter',
+    api_model_id: 'openai/gpt-oss-120b:free',
+    is_free: true,
+    enabled: true,
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+    prompt_mode: 'lite',
+  },
+  {
+    id: 'gemma-3-27b',
+    display_name: 'Gemma 3 27B',
+    short_name: 'Gem',
+    provider: 'openrouter',
+    api_model_id: 'google/gemma-3-27b-it:free',
+    is_free: true,
+    enabled: true,
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+    prompt_mode: 'lite',
+  },
+  {
+    id: 'qwen3-coder-480b',
+    display_name: 'Qwen3 Coder 480B',
+    short_name: 'QwC',
+    provider: 'openrouter',
+    api_model_id: 'qwen/qwen3-coder:free',
+    is_free: true,
+    enabled: true,
+    max_tokens: 8192,
+    supports_cache_control: false,
+    supports_json_mode: true,
+    prompt_mode: 'lite',
+  },
+  // --- Disabled free OpenRouter models (historical — broken/rate-limited) ---
   {
     id: 'deepseek-v3.2',
     display_name: 'DeepSeek V3.2',
@@ -43,7 +84,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'deepseek/deepseek-v3.2-20251201',
     is_free: true,
-    enabled: false,
+    enabled: false, // disabled: untested since registry overhaul
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -69,7 +110,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'nvidia/nemotron-3-nano-30b-a3b:free',
     is_free: true,
-    enabled: false,  // disabled: returns empty/broken JSON on both full and lite prompts
+    enabled: false, // disabled: returns empty/broken JSON
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -82,7 +123,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'stepfun/step-3.5-flash:free',
     is_free: true,
-    enabled: false,  // disabled: returns empty responses, 100% failure rate
+    enabled: false, // disabled: 100% failure rate
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: false,
@@ -95,7 +136,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'qwen/qwen3-next-80b-a3b-instruct:free',
     is_free: true,
-    enabled: false, // disabled: conserving free tier quota
+    enabled: false, // disabled: conserving quota
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -108,7 +149,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'meta-llama/llama-3.3-70b-instruct:free',
     is_free: true,
-    enabled: false, // disabled: chronic 429s on OpenRouter free tier — use llama-3.3-70b-wai instead
+    enabled: false, // disabled: chronic 429s — use Workers AI variant
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -121,7 +162,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'mistralai/mistral-small-3.1-24b-instruct:free',
     is_free: true,
-    enabled: false, // disabled: conserving free tier quota
+    enabled: false, // disabled: conserving quota
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -134,7 +175,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'nousresearch/hermes-3-llama-3.1-405b:free',
     is_free: true,
-    enabled: false, // disabled: conserving free tier quota
+    enabled: false, // disabled: conserving quota
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -173,8 +214,8 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     display_name: 'Qwen3 30B A3B (WAI)',
     short_name: 'Q3W',
     provider: 'workers-ai',
-    api_model_id: '@cf/qwen/qwen3-30b-a3b',
-    is_free: true,
+    api_model_id: '@cf/qwen/qwen3-30b-a3b-fp8',
+    is_free: false, // paid model ($0.051/M input) — was incorrectly marked free
     enabled: false, // superseded by qwen3-30b-a3b-wai-psq (lite-v2)
     max_tokens: 16384,
     supports_cache_control: false,
@@ -216,8 +257,8 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     display_name: 'Qwen3 30B A3B PSQ (WAI)',
     short_name: 'Q3P',
     provider: 'workers-ai',
-    api_model_id: '@cf/qwen/qwen3-30b-a3b',
-    is_free: true,
+    api_model_id: '@cf/qwen/qwen3-30b-a3b-fp8',
+    is_free: false, // paid model ($0.051/M input) — was incorrectly marked free
     enabled: false, // enable after PSQ pipeline proven in production
     max_tokens: 16384,
     supports_cache_control: false,
@@ -307,6 +348,9 @@ export function isLiteV2Mode(promptModeOrModelId: string | null | undefined): bo
 /** Map model IDs to their queue binding names in wrangler config. */
 export const MODEL_QUEUE_BINDINGS: Record<string, string> = {
   'claude-haiku-4-5-20251001': 'EVAL_QUEUE',
+  'gpt-oss-120b': 'GPT_OSS_QUEUE',
+  'gemma-3-27b': 'GEMMA_QUEUE',
+  'qwen3-coder-480b': 'QWEN_CODER_QUEUE',
   'deepseek-v3.2': 'DEEPSEEK_QUEUE',
   'trinity-large': 'TRINITY_QUEUE',
   'nemotron-nano-30b': 'NEMOTRON_QUEUE',

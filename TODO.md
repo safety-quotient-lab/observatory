@@ -9,52 +9,9 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Stories page data quality shipped.** Zero-score stories (8.4% of corpus) now display `~0.00` with "low signal" label instead of bare `0.00`. Demoted in default sort. Blog posts or geographic enrichment next.
-
-Phase 0 external validation progress:
-- ✓ DB hygiene — 8 gated-pending → skipped, 442 orphaned queued → failed, 107 null-editorial full evals retroactively failed + 28 re-queued
-- ✓ Discriminant validity (r=0.08, PASS — `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`)
-- ✓ PTD inter-rater reliability (κ=0.325 fair — `findings/2026-03-04-ptd-inter-rater-reliability.md`)
-- ✓ Test-retest preliminary (r=0.984, n=11, same-day — `findings/2026-03-04-test-retest-reliability-haiku-lite.md`)
-- ✓ ET valence vs VADER (r=+0.376, WEAK — construct divergence explained — `findings/2026-03-04-et-cl-convergent-validity.md`)
-- ✓ CL reading level vs FK (ρ=-0.063, FAIL — FK is wrong validator, CL measures domain expertise not syntax — `findings/2026-03-04-et-cl-convergent-validity.md`)
-
-✓ TQ implementation (lite-1.6, migration 0059 — 2026-03-04)
-✓ EQ/TQ external validity vs idiap/MBFC (2026-03-04, re-validated 2026-03-04): EQ ρ=+0.362 marginal (MBFC coverage ceiling ~22 — not a data volume problem), TQ ρ=-0.094 (construct mismatch confirmed at n=24 — MBFC reliability is wrong validator for per-article transparency)
-
-✓ Phase A automated validation (2026-03-04): SR ✓ TD ✓ GS ✓ | SO ~ | SETL/FW/TF ✗ null | Flags: SO/SR↔HRCB high (0.609/0.582), TD↔EQ high (0.652). Full: `findings/2026-03-04-phase-a-automated-validation.md`
-✓ REM (Rights Entanglement Map) (2026-03-04): `computeRemClusters()` + `/rights/network` section. `hcb_classification` badge now inline in EvalCard.
-
-✓ RTS (Rights Tension Signature) implementation (2026-03-04): migration 0060, full eval output `rights_tensions` array (max 3 pairs), `stories.rts_tensions_json` + `rater_evals.rts_tension_count`, item page "Rights Tensions" section.
+**Multi-model free pipeline live.** 3 new OpenRouter free models (GPT-OSS 120B, Gemma 3 27B, Qwen3 Coder 480B) + proactive rate limiting for OpenRouter consumer. Front-page stories dispatched every minute to all free models. Blog posts or geographic enrichment next.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
-
-✓ CF Browser Rendering (2026-03-04): `domain_browser_audit` table (migration 0061), `hn-hrcb-browser-audit` worker, `br_*` DCP elements (tracking/security/accessibility/consent). Cron 6-hourly + `sweep=browser_audit`.
-
-✓ OpenAPI 3.x spec (2026-03-04): `/api/v1/openapi.json` — 15 endpoints (incl. methodology), 6 schemas, prerendered. Linked from `/data`.
-
-✓ Site knowledge architecture (2026-03-04): canonical URLs, og:url defaults (Base.astro), methodology.json (.well-known + /api/v1/methodology), WebSub, JSON-LD (WebSite+Org+SoftwareSourceCode), ai-instructions.txt, agent-manifest expansion.
-
-✓ PSQ refocus Phase 1 foundation (2026-03-04): 10-dim rubrics from instruments.json, `buildPsqDimensionRubric()`, `buildLiteV2SystemPrompt()`, `--dims N` flag in standalone eval, `isLiteV2Mode()`, methodology.json PSQ block (experimental), `.psq-experimental` CSS.
-
-✓ PSQ Phase 1 dim-count testing (2026-03-04): 20 evals (4 variants × 5 stories). **Decision: 3-dim** (threat_exposure, trust_conditions, resilience_baseline). 3-dim only variant passing zero-rate <30% (20%). Zero truncation failures. g-PSQ stable across dim counts. resilience_baseline discriminates: AJ=6 vs EFF=8.
-
-✓ PSQ Phase 2 pipeline integration (2026-03-04): D1 migrations 0062+0063, clean-cut model IDs (`-psq` suffix), three-way consumer routing (lite-v2/lite/full), `writePsqRaterEvalResult()` + `updatePsqConsensus()`, hn-bot dispatch reads `model.prompt_mode`, sweeps updated.
-
-✓ PSQ Phase 3 UI refocus (2026-03-04): All 8 batches — data layer, EvalCard, item page, score mode toggle (HRCB|PSQ|E|S), homepage KV blob chart, feed/API/OpenAPI, badge `?signal=psq`, domain/user pages.
-✓ PSQ Phase 4 messaging (2026-03-04): About page (PSQ section + HRCB vs PSQ comparison table), methodology page (PSQ prompt), reference page (PSQ dimensions), agent card (query-psq-signals skill).
-
-✓ PSQ pipeline deployed (2026-03-04): All 5 workers redeployed, migrations applied, `sweep=lite_reeval` triggered. 87 stories scored (avg 5.95/10, range 2.38–8.38), 1K+ evals queued across 2 PSQ models. Domain/user aggregates refreshed.
-
-✓ Wolfram statistical audit (2026-03-05): 37/37 claims verified, 1 inconsistency fixed (ρ=0.47→r=0.08 in eq-tq summary). `findings/2026-03-05-wolfram-statistical-audit.md`.
-
-✓ Epistemic fitness benchmark v1.0 (2026-03-05): `scripts/epistemic-benchmark.mjs` + D1 migration 0064 (`model_epistemic_fitness`). 3-dim composite (confab 0.4 + eval 0.3 + output 0.3). First run: 5 models — openrouter/free B(0.60), Nemotron C(0.50), StepFun D(0.30), Qwen×2 F(0.00 — 429'd). PressTV (state media) consistently misscored positive by all responding models.
-
-Next: Blog posts or geographic enrichment.
-
-✓ `/methodology` page (2026-03-04): prerendered page rendering exact LLM evaluation prompt. Full + lite. CC BY-SA 4.0.
-✓ Gap-detection blog post (2026-03-04): published to blog.unratified.org (Pre-Review).
-✓ Flag-don't-fix blog post (2026-03-04): published to blog.unratified.org (Pre-Review).
 
 Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.

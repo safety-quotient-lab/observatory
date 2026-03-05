@@ -923,21 +923,22 @@ export async function dispatchFreeModelEvals(
 // ─── Front-page free model dispatch (every minute) ───
 
 /**
- * Dispatch front-page stories to ALL free Workers AI models (lite HRCB + PSQ).
- * Runs every minute — ensures front-page stories get scored quickly.
- * Uses getAllFreeModels() filtered to workers-ai provider, ignoring enabled flag.
+ * Dispatch front-page stories to ALL free models every minute.
+ * Workers AI models (enabled or not) + enabled OpenRouter free models.
+ * Ensures front-page stories get scored quickly across all providers.
  */
 export async function dispatchFrontPageFreeEvals(
   db: D1Database,
   env: Record<string, any>,
   limit = 20,
 ): Promise<{ model: string; dispatched: number }[]> {
-  const freeWaiModels = getAllFreeModels().filter(m => m.provider === 'workers-ai');
-  if (freeWaiModels.length === 0) return [];
+  // All WAI free models (regardless of enabled) + enabled OR free models
+  const freeModels = getAllFreeModels().filter(m => m.provider === 'workers-ai' || m.enabled);
+  if (freeModels.length === 0) return [];
 
   const results: { model: string; dispatched: number }[] = [];
 
-  for (const model of freeWaiModels) {
+  for (const model of freeModels) {
     const { results: candidates } = await db
       .prepare(
         `SELECT s.hn_id, s.url, s.title, s.domain, s.hn_text

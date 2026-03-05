@@ -208,6 +208,24 @@ export async function checkRateLimitCapacity(kv: KVNamespace, model: string, max
   return { ok: true };
 }
 
+/** Read OpenRouter standard rate limit headers (x-ratelimit-*). */
+export function readOpenRouterRateLimitHeaders(res: Response): RateLimitHeaders {
+  const getInt = (name: string) => {
+    const v = res.headers.get(name);
+    return v !== null ? parseInt(v, 10) : null;
+  };
+  return {
+    requests_remaining: getInt('x-ratelimit-remaining'),
+    requests_limit: getInt('x-ratelimit-limit'),
+    input_tokens_remaining: null, // OpenRouter doesn't expose token-level limits
+    input_tokens_limit: null,
+    output_tokens_remaining: null,
+    output_tokens_limit: null,
+    requests_reset: res.headers.get('x-ratelimit-reset'),
+    tokens_reset: null,
+  };
+}
+
 export function addJitter(delaySec: number): number {
   return Math.round(delaySec * (0.8 + Math.random() * 0.4));
 }

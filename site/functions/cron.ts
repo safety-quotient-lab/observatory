@@ -51,6 +51,9 @@ export interface Env {
   LLAMA_QUEUE: Queue;
   MISTRAL_QUEUE: Queue;
   HERMES_QUEUE: Queue;
+  GPT_OSS_QUEUE: Queue;
+  GEMMA_QUEUE: Queue;
+  QWEN_CODER_QUEUE: Queue;
   WORKERS_AI_QUEUE?: Queue;
   BROWSER_AUDIT_QUEUE?: Queue;
   CONTENT_CACHE: KVNamespace;
