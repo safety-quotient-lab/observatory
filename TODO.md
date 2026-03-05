@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Epistemic fitness benchmark v1.0 shipped.** First run: 5 free models, best=B (openrouter/free, 0.60). No free model reaches A (≥0.80). Blog posts or geographic enrichment next.
+**Stories page data quality shipped.** Zero-score stories (8.4% of corpus) now display `~0.00` with "low signal" label instead of bare `0.00`. Demoted in default sort. Blog posts or geographic enrichment next.
 
 Phase 0 external validation progress:
 - ✓ DB hygiene — 8 gated-pending → skipped, 442 orphaned queued → failed, 107 null-editorial full evals retroactively failed + 28 re-queued
@@ -66,7 +66,7 @@ Remaining:
 ### Wolfram Alpha Integration (new signals + validation)
 
 - ~~**Validate all construct validity claims**~~ — ✓ DONE 2026-03-05. 37/37 claims verified via Wolfram + scipy. 1 cross-reference error fixed. `findings/2026-03-05-wolfram-statistical-audit.md`.
-- [ ] **Build geographic reference table** — run `/geo-enrich build-table` to query Wolfram for population, internet penetration, HDI, GDP per capita for the top 30 regions in our GS signal. Cache as `geo-reference-data.json`. Enables: weighted geographic coverage gaps on `/signals` (missing India ≠ missing Liechtenstein), Article 19 digital divide framing, Article 25/26 development context. Budget: ~100 calls.
+- ~~**Build geographic reference table**~~ — ✓ DONE 2026-03-05. 22 countries, 30 Wolfram calls. `.claude/plans/memorized/geo-reference-data.json`.
 - [ ] **GS signal enrichment on /signals page** — once reference table exists, surface "X% of evaluated stories cover countries representing Y% of global internet users" on the Geographic Coverage section. Tier 1 mission alignment (invisible pattern → visible statement).
 - [ ] **Verify codebase math** — run `/verify-math` on phi-based clustering thresholds, exp decay, consensus weighting, PCA eigenvalues. One-time audit. Budget: ~15 calls.
 - [ ] **Wolfram-powered confidence intervals** — for key metrics (mean HRCB, mean SETL, domain averages), compute 95% CIs via Wolfram rather than approximating. Surface on `/status/models` or `/signals`.

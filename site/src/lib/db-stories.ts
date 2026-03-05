@@ -300,10 +300,12 @@ export async function getFilteredStoriesWithScores(
   // Score column references differ for alt model (from rater_evals re) vs primary (from stories s)
   const scorePrefix = isAltModel ? 're' : 's';
 
-  let orderBy = 's.hn_time DESC';
+  // Zero-score stories (low signal) sort after meaningful scores in time/top views
+  const zeroScoreDemote = `CASE WHEN s.eval_status = 'done' AND ABS(COALESCE(s.hcb_weighted_mean, s.hcb_editorial_mean, 0)) < 0.005 THEN 1 ELSE 0 END`;
+  let orderBy = `${zeroScoreDemote}, s.hn_time DESC`;
   let joinSetl = false;
   switch (sort) {
-    case 'top': orderBy = 's.hn_rank ASC NULLS LAST, s.hn_time DESC'; break;
+    case 'top': orderBy = `${zeroScoreDemote}, s.hn_rank ASC NULLS LAST, s.hn_time DESC`; break;
     case 'score_desc': orderBy = `COALESCE(${scorePrefix}.hcb_weighted_mean, ${scorePrefix}.hcb_editorial_mean) DESC NULLS LAST`; break;
     case 'score_asc': orderBy = `COALESCE(${scorePrefix}.hcb_weighted_mean, ${scorePrefix}.hcb_editorial_mean) ASC NULLS LAST`; break;
     case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
