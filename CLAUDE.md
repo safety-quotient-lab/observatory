@@ -165,6 +165,7 @@ The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry
 ### Methodology (version chain: v1 → v2 → v3 → v3.3 → v3.4)
 - `methodology-v3.4.txt` — **Current canonical reference**
 - `methodology-v3.1.prompt.md` — Self-contained LLM prompt for running evaluations
+- `site/public/.well-known/methodology.json` — Machine-readable scoring spec (weights, SETL formula, evidence caps, PTC-18 tiers). Also served at `/api/v1/methodology`.
 - Earlier versions: `methodology-v1.txt`, `methodology-v2.txt`, `methodology-v3.txt`, `methodology-v3.3.txt`
 
 ### Calibration

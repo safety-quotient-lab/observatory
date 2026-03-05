@@ -101,6 +101,20 @@
       "inputModes": ["application/json"],
       "outputModes": ["application/json"],
       "rateLimit": "no limit (static file)"
+    },
+    {
+      "id": "get-methodology",
+      "name": "Get Evaluation Methodology",
+      "description": "Returns the complete HRCB evaluation methodology as structured JSON — scoring dimensions, content type weights, evidence strength caps, SETL formula, consensus weighting, propaganda technique tiers, Fair Witness rules, and classification ranges. Available at /api/v1/methodology or /.well-known/methodology.json.",
+      "tags": ["methodology", "scoring", "transparency", "machine-readable"],
+      "examples": [
+        "What weights does the observatory use for editorial vs structural scores?",
+        "How does the SETL tension formula work?",
+        "What are the propaganda technique tiers and weights?"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"],
+      "rateLimit": "no limit (static/prerendered)"
     }
   ]
 }

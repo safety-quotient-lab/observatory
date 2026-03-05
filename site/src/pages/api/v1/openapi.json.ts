@@ -299,6 +299,33 @@ const spec = {
         responses: { '501': { description: 'Not yet implemented' } },
       },
     },
+    '/api/v1/methodology': {
+      get: {
+        summary: 'Get machine-readable evaluation methodology',
+        operationId: 'getMethodology',
+        tags: ['Meta'],
+        description: 'Returns the complete HRCB evaluation methodology — scoring dimensions, content type weights, evidence caps, SETL formula, consensus weighting, propaganda technique tiers, Fair Witness rules, and classification ranges. Also available at /.well-known/methodology.json.',
+        responses: {
+          '200': {
+            description: 'Methodology specification',
+            content: { 'application/json': { schema: {
+              type: 'object',
+              properties: {
+                name: { type: 'string' },
+                version: { type: 'string' },
+                lite_version: { type: 'string' },
+                scoring: { type: 'object' },
+                evidence: { type: 'object' },
+                setl: { type: 'object' },
+                consensus: { type: 'object' },
+                fair_witness: { type: 'object' },
+                propaganda_techniques: { type: 'object' },
+              },
+            } } },
+          },
+        },
+      },
+    },
     '/api/v0/topstories.json': {
       get: {
         summary: 'Top 500 story IDs by HN score (HN API-compatible)',

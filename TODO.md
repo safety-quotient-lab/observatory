@@ -31,7 +31,9 @@ Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.
 
 ✓ CF Browser Rendering (2026-03-04): `domain_browser_audit` table (migration 0061), `hn-hrcb-browser-audit` worker, `br_*` DCP elements (tracking/security/accessibility/consent). Cron 6-hourly + `sweep=browser_audit`.
 
-✓ OpenAPI 3.x spec (2026-03-04): `/api/v1/openapi.json` — 14 endpoints, 6 schemas, prerendered. Linked from `/data`.
+✓ OpenAPI 3.x spec (2026-03-04): `/api/v1/openapi.json` — 15 endpoints (incl. methodology), 6 schemas, prerendered. Linked from `/data`.
+
+✓ Site knowledge architecture (2026-03-04): canonical URLs, og:url defaults (Base.astro), methodology.json (.well-known + /api/v1/methodology), WebSub, JSON-LD (WebSite+Org+SoftwareSourceCode), ai-instructions.txt, agent-manifest expansion.
 
 Next: API blog post (unblocked by OpenAPI), then remaining blog posts.
 
@@ -62,9 +64,9 @@ Remaining:
 
 ### Standards (M effort — deferred)
 
-- ~~**OpenAPI 3.x spec**~~ — ✓ DONE 2026-03-04. `/api/v1/openapi.json` — 14 endpoints (8 v1 + 4 v0 + badge), 6 schemas, OpenAPI 3.1.0, prerendered. Linked from `/data`.
+- ~~**OpenAPI 3.x spec**~~ — ✓ DONE 2026-03-04. `/api/v1/openapi.json` — 15 endpoints (9 v1 incl. methodology + 4 v0 + badge), 6 schemas, OpenAPI 3.1.0, prerendered. Linked from `/data`.
 - [ ] **Write API blog post** — announce the public REST API at `observatory.unratified.org/api/v1/`. Angles: what data is available, example queries (top negative domains, rights-under-pressure feed, TQ by domain), use cases (researchers, journalists, feed aggregators, agent tool use). Include OpenAPI link once spec is live. Publish after OpenAPI is done. Personal note + author review before publishing.
-- [ ] **WebSub** (W3C) — real-time push for Atom feed subscribers. Add `Link: <hub>; rel="hub"` to `/feed.xml` response, ping `hub.superfeedr.com` (free) from cron worker on new evaluations. ~30 lines in `cron.ts`. Prerequisite: none.
+- ~~**WebSub**~~ — ✓ DONE 2026-03-04. `rel="hub"` in Atom XML + HTTP Link header, Superfeedr hub ping in cron.ts on stories_new > 0.
 - [ ] **ActivityPub** (W3C) — Fediverse federation. Each evaluation → ActivityPub Note/Article. Follow `@observatory@observatory.unratified.org` from Mastodon. Requires: Actor endpoint, outbox, HTTP Signatures (RFC 9421), WebFinger integration (already done). Significant scope — worth a dedicated plan before starting.
 
 ---

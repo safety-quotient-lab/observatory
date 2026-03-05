@@ -603,6 +603,27 @@ export default {
       if (pruned > 0) console.log(`[events] Pruned ${pruned} events older than 90 days`);
     }
 
+    // ─── WebSub hub ping (notify subscribers of feed updates) ───
+
+    if (crawlResult.stories_new > 0) {
+      try {
+        const feedUrl = 'https://observatory.unratified.org/feed.xml';
+        const hubUrl = 'https://hub.superfeedr.com/';
+        const resp = await fetch(hubUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `hub.mode=publish&hub.url=${encodeURIComponent(feedUrl)}`,
+        });
+        if (resp.ok) {
+          console.log(`[websub] Hub pinged (${crawlResult.stories_new} new stories)`);
+        } else {
+          console.warn(`[websub] Hub ping returned ${resp.status}`);
+        }
+      } catch (err) {
+        console.warn('[websub] Hub ping failed (non-fatal):', err);
+      }
+    }
+
     // ─── Log cron run event ───
 
     await logEvent(db, {

@@ -96,6 +96,7 @@ function buildFeed(
   <subtitle>${escapeXml(subtitle)}</subtitle>
   <link href="${escapeXml(selfUrl)}" rel="self" />
   <link href="${baseUrl}/" />
+  <link href="https://hub.superfeedr.com/" rel="hub" />
   <id>${escapeXml(selfUrl)}</id>
   <updated>${updated}</updated>
   <icon>${baseUrl}/favicon.ico</icon>
@@ -252,6 +253,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
     headers: {
       'Content-Type': 'application/atom+xml; charset=utf-8',
       'Cache-Control': 'public, max-age=300',
+      'Link': '<https://hub.superfeedr.com/>; rel="hub"',
     },
   });
 };

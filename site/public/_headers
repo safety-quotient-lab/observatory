@@ -1,3 +1,11 @@
 /.well-known/webfinger
   Content-Type: application/jrd+json
   Access-Control-Allow-Origin: *
+
+/.well-known/methodology.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=86400
+
+/.well-known/ai-instructions.txt
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=86400
