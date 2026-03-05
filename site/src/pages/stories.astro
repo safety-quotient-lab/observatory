@@ -1,11 +1,12 @@
 ---
 // SPDX-License-Identifier: Apache-2.0
 import Base from '../layouts/Base.astro';
-import EvalCard from '../components/EvalCard.astro';
+import MiniBar from '../components/MiniBar.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { getFilteredStoriesWithScores, getEvaluatedCount, getDistinctModels, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates, getSignalOverview } from '../lib/db';
 import type { SortOption, FilterOption, TypeOption, ContentTypeOption, ModelOption } from '../lib/db';
-import { modelDisplayName, getModelDef, isLiteMode } from '../lib/shared-eval';
+import { modelDisplayName, getModelDef } from '../lib/shared-eval';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, normalizePsq, formatPsqScore } from '../lib/colors';
 import { readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -29,7 +30,7 @@ const safeJargon = validJargon.includes(jargonRaw) ? jargonRaw : '';
 const safeTemporal = validTemporal.includes(temporalRaw) ? temporalRaw : '';
 const hasSupplFilter = !!(safePt || safeJargon || safeTemporal);
 
-const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'velocity'];
+const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'velocity', 'psq_desc', 'psq_asc', 'editorial_desc', 'editorial_asc', 'structural_desc', 'structural_asc'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
 const validCtypes: ContentTypeOption[] = ['all', 'ED', 'PO', 'LP', 'PR', 'AC', 'MI'];
@@ -166,11 +167,35 @@ const SORT_OPTIONS = [
   { value: 'time', label: 'new' },
   { value: 'score_desc', label: 'top hrcb' },
   { value: 'score_asc', label: 'bottom hrcb' },
+  { value: 'psq_desc', label: 'top psq' },
+  { value: 'editorial_desc', label: 'top E' },
+  { value: 'structural_desc', label: 'top S' },
   { value: 'hn_points', label: 'points' },
   { value: 'conf_desc', label: 'top conf' },
   { value: 'conf_asc', label: 'bottom conf' },
   { value: 'velocity', label: 'velocity' },
 ] as const;
+
+// Column header sort helpers (following users.astro pattern)
+function sortUrl(key: string): string {
+  return buildUrl({ sort: key, p: '1' });
+}
+function thStyle(col: string): string {
+  return safeSort === col
+    ? 'color: var(--color-orange); font-weight: bold; text-decoration: none;'
+    : 'color: var(--fg-secondary); text-decoration: none;';
+}
+
+function timeAgo(unixTime: number): string {
+  const seconds = Math.floor(Date.now() / 1000 - unixTime);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'all' },
@@ -243,23 +268,8 @@ function isLiteModel(id: string): boolean {
       <span class="filter-sep"> | </span>
       <a href="#" id="toggle-advanced-filters" class="filter-link" style="color: var(--fg-secondary);">more ▾</a>
     </div>
-    <div class="filter-row">
-      <span class="filter-label">score:</span>
-      {([
-        { mode: 'hrcb', label: 'HRCB', tip: 'Rights Stance' },
-        { mode: 'psq', label: 'PSQ', tip: 'Reader Safety' },
-        { mode: 'editorial', label: 'E', tip: 'Editorial' },
-        { mode: 'structural', label: 'S', tip: 'Structural' },
-      ] as const).map((opt, i) => (
-        <>
-          {i > 0 && <span class="filter-sep"> | </span>}
-          <button class="score-mode-btn" data-mode={opt.mode} title={opt.tip}>{opt.label}</button>
-        </>
-      ))}
-    </div>
-
     {/* Advanced filters — collapsed by default, auto-open if non-default params active */}
-    <div id="advanced-filters" style={`display: ${safeType !== 'all' || safeCtype !== 'all' || safeModel !== 'any' || safeFilter === 'pending' || safeFilter === 'failed' || !['top', 'time', 'score_desc', 'hn_points'].includes(safeSort) ? 'block' : 'none'};`}>
+    <div id="advanced-filters" style={`display: ${safeType !== 'all' || safeCtype !== 'all' || safeModel !== 'any' || safeFilter === 'pending' || safeFilter === 'failed' || !['top', 'time', 'score_desc', 'hn_points', 'psq_desc', 'editorial_desc', 'structural_desc'].includes(safeSort) ? 'block' : 'none'};`}>
       <div class="filter-row">
         <span class="filter-label">sort:</span>
         {SORT_OPTIONS.map((opt, i) => (
@@ -354,25 +364,158 @@ function isLiteModel(id: string): boolean {
   </div>
 
   <div class="table-wrap">
-  <table cellpadding="0" cellspacing="0" class="itemlist" width="100%">
+  <table cellpadding="0" cellspacing="0" class="itemlist stories-table" width="100%">
+    <thead>
     <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
-      <td style="width: 28px;"></td>
-      <td style="width: 90px; min-width: 90px; white-space: nowrap; padding-left: 2px;">
-        <abbr style="width: 28px; display: inline-block; text-align: right; text-decoration: none;" title="Human Rights Compatibility Bias score">HRCB</abbr>
-        <abbr style="margin-left: 8px; text-decoration: none;" title="Editorial: what the content says">E</abbr>
-        <abbr style="margin-left: 14px; text-decoration: none;" title="Structural: what the site does">S</abbr>
-      </td>
-      <td></td>
+      <th style="width: 28px; text-align: right; padding-right: 5px; font-weight: normal;">#</th>
+      <th style="text-align: left; font-weight: normal;">Title</th>
+      <th width="55" style="text-align: center; font-weight: normal;">
+        <a href={sortUrl('score_desc')} style={thStyle('score_desc')} title="Human Rights Compatibility Bias score">HRCB</a>
+      </th>
+      <th width="55" style="text-align: center; font-weight: normal;">
+        <a href={sortUrl('psq_desc')} style={thStyle('psq_desc')} title="Psychological Safety Quotient">PSQ</a>
+      </th>
+      <th width="55" style="text-align: center; font-weight: normal;">
+        <a href={sortUrl('editorial_desc')} style={thStyle('editorial_desc')} title="Editorial: what the content says">E</a>
+      </th>
+      <th width="55" style="text-align: center; font-weight: normal;">
+        <a href={sortUrl('structural_desc')} style={thStyle('structural_desc')} title="Structural: what the site does">S</a>
+      </th>
+      <th width="45" style="text-align: center; font-weight: normal;">
+        <a href={sortUrl('hn_points')} style={thStyle('hn_points')} title="HN score">Pts</a>
+      </th>
+      <th width="55" style="text-align: center; font-weight: normal;">
+        <a href={sortUrl('time')} style={thStyle('time')} title="Time posted">Age</a>
+      </th>
     </tr>
-    {displayStories.map((story, i) => (
-      <>
-        <EvalCard
-          story={story}
-        />
+    </thead>
+    <tbody>
+    {displayStories.map((story, i) => {
+      const hasEval = story.hcb_weighted_mean != null || story.hcb_editorial_mean != null;
+      const isLiteOnly = hasEval && (story.hcb_weighted_mean == null || story.hcb_structural_mean == null);
+      const displayScore = story.hcb_weighted_mean ?? story.hcb_editorial_mean;
+      const isZero = hasEval && displayScore === 0;
+      const classLabel = story.hcb_classification?.split(' — ')[0] || story.hcb_classification;
+      const miniScores = 'miniScores' in story ? story.miniScores : [];
+      const hnTextPreview = 'hn_text_preview' in story ? (story as any).hn_text_preview : null;
+      const setlValues = miniScores
+        .map(s => computeSetl(s.structural, s.editorial))
+        .filter((v): v is number => v !== null);
+      const aggSetl = setlValues.length > 0
+        ? setlValues.reduce((a, b) => a + b, 0) / setlValues.length
+        : null;
+      const rightsWashing = !isLiteOnly && aggSetl != null && aggSetl >= 0.25 && story.hcb_editorial_mean != null && story.hcb_structural_mean != null && story.hcb_editorial_mean > 0.1 && story.hcb_structural_mean < -0.1;
+      const hasPsq = story.psq_score != null;
+      const psqNorm = normalizePsq(story.psq_score);
+      return (
+        <>
+        <tr style="border-top: 1px solid var(--bg-surface);">
+          <td align="right" class="score-font" style="color: var(--fg-secondary); padding-right: 5px; vertical-align: top; padding-top: 4px;">{offset + i + 1}.</td>
+          <td style="vertical-align: top; padding: 4px 5px 2px 0;">
+            <span class="titleline">
+              <a href={story.url || `https://news.ycombinator.com/item?id=${story.hn_id}`}
+                 target={story.url ? '_blank' : undefined}
+                 rel={story.url ? 'noopener' : undefined}
+              >{story.title}</a>
+            </span>
+            {story.domain && (
+              <span class="sitebit" style="font-size: var(--font-sm); margin-left: 5px;">
+                (<a href={`/domain/${story.domain}`}>{story.domain}</a>)
+              </span>
+            )}
+            {!story.url && hnTextPreview && (
+              <div style="color: var(--fg-secondary); font-size: var(--font-sm); font-style: italic; margin-top: 1px;">
+                {hnTextPreview.length >= 100 ? hnTextPreview + '...' : hnTextPreview}
+              </div>
+            )}
+            <div class="subtext">
+              {story.hn_by && <span>by <a href={`/user/${story.hn_by}`}>{story.hn_by}</a></span>}
+              {story.hn_comments != null && (
+                <>
+                  <span> | </span>
+                  <a href={`https://news.ycombinator.com/item?id=${story.hn_id}`} target="_blank" rel="noopener">
+                    {story.hn_comments} comments
+                  </a>
+                </>
+              )}
+              {hasEval ? (
+                <>
+                  <span> | </span>
+                  <a href={`/item/${story.hn_id}`} style="color: var(--color-orange);">hrcb</a>
+                  {story.schema_version && (
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;"
+                          title={`Schema version ${story.schema_version}`}>
+                      v{story.schema_version}
+                    </span>
+                  )}
+                  {story.hcb_theme_tag && (
+                    <span class="badge" style="background: rgba(43,144,216,0.15); color: var(--color-violet); font-size: var(--font-xs); margin-left: 4px;"
+                          title={`Theme: ${story.hcb_theme_tag}`}>
+                      {story.hcb_theme_tag}
+                    </span>
+                  )}
+                  {story.hcb_classification && !isLiteOnly && (
+                    <span class="badge" style={`background: ${classificationColor(story.hcb_classification)}; color: ${classificationTextColor(story.hcb_classification)}; font-size: var(--font-xs); margin-left: 4px;`}
+                          title={story.hcb_classification}>
+                      {classLabel}
+                    </span>
+                  )}
+                  {(story.consensus_model_count ?? 0) >= 2 && story.consensus_score != null && (
+                    <span
+                      class="badge"
+                      style={`background: ${(story.consensus_spread ?? 0) > 0.3 ? 'rgba(217,119,6,0.15)' : 'rgba(43,144,216,0.10)'}; color: ${(story.consensus_spread ?? 0) > 0.3 ? 'var(--color-warning)' : 'var(--fg-emphasis)'}; font-size: var(--font-xs); margin-left: 3px;`}
+                      title={`Consensus across ${story.consensus_model_count} models: ${story.consensus_score > 0 ? '+' : ''}${story.consensus_score.toFixed(3)}${story.consensus_spread != null ? ` (spread ±${(story.consensus_spread / 2).toFixed(3)})` : ''}`}
+                    >&times;{story.consensus_model_count}{story.consensus_spread != null ? ` ±${(story.consensus_spread / 2).toFixed(2)}` : ''}</span>
+                  )}
+                  {rightsWashing && (
+                    <span
+                      class="badge"
+                      style="background: rgba(217,119,6,0.15); color: var(--color-warning); font-size: var(--font-xs); margin-left: 3px;"
+                      title={`Rights-washing: editorial says positive (E:${formatScore(story.hcb_editorial_mean)}) but structural behavior is negative (S:${formatScore(story.hcb_structural_mean)}). SETL: ${formatSetl(aggSetl)}`}
+                    >&#9888; says≠does</span>
+                  )}
+                </>
+              ) : story.eval_status === 'evaluating' ? (
+                <span> | <span style="color: var(--channel-editorial); font-size: var(--font-sm);">evaluating</span></span>
+              ) : story.eval_status === 'pending' || story.eval_status === 'queued' ? (
+                <span> | <span style="color: var(--color-warning); font-size: var(--font-sm);">queued</span></span>
+              ) : story.eval_status === 'failed' ? (
+                <span> | <a href={`/item/${story.hn_id}`} style="color: var(--color-negative); font-size: var(--font-sm);">failed</a></span>
+              ) : story.eval_status === 'skipped' ? (
+                <span> | <span style="color: var(--fg-secondary); font-size: var(--font-sm);">skipped</span></span>
+              ) : null}
+            </div>
+            {hasEval && miniScores.length > 0 && (
+              <div style="margin-top: 2px;">
+                <a href={`/item/${story.hn_id}`} style="text-decoration: none;">
+                  <MiniBar scores={miniScores} />
+                </a>
+              </div>
+            )}
+          </td>
+          <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${isZero ? 'var(--color-nd)' : hasEval ? scoreToColor(displayScore) : 'var(--fg-secondary)'};`}>
+            {isZero ? 'ND' : hasEval ? <a href={`/item/${story.hn_id}`} style={`color: inherit; text-decoration: none;`}>{formatScore(displayScore)}</a> : '—'}
+          </td>
+          <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${hasPsq ? scoreToColor(psqNorm) : 'var(--fg-secondary)'};`}>
+            {hasPsq ? formatPsqScore(story.psq_score) : '—'}
+          </td>
+          <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${story.hcb_editorial_mean != null ? scoreToColor(story.hcb_editorial_mean) : 'var(--fg-secondary)'};`}>
+            {story.hcb_editorial_mean != null ? formatScore(story.hcb_editorial_mean) : '—'}
+          </td>
+          <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${story.hcb_structural_mean != null ? scoreToColor(story.hcb_structural_mean) : 'var(--fg-secondary)'};`}>
+            {story.hcb_structural_mean != null ? formatScore(story.hcb_structural_mean) : '—'}
+          </td>
+          <td align="center" class="score-font" style="vertical-align: top; padding-top: 4px; color: var(--fg-secondary);">
+            {story.hn_score ?? '—'}
+          </td>
+          <td align="center" class="score-font" style="vertical-align: top; padding-top: 4px; color: var(--fg-secondary); white-space: nowrap;">
+            {timeAgo(story.hn_time)}
+          </td>
+        </tr>
         {/* Pedagogical interstitial after stories 10 and 20 */}
         {i === 9 && selectedInsights[0] && (
           <tr>
-            <td colspan="3" style="padding: 8px 0;">
+            <td colspan="8" style="padding: 8px 0;">
               <div style="border-top: 1px dashed var(--color-border); border-bottom: 1px dashed var(--color-border); padding: 8px 10px; color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
                 <span style="color: var(--color-orange);">&#9670;</span>
                 {' '}{selectedInsights[0].text}
@@ -390,7 +533,7 @@ function isLiteModel(id: string): boolean {
         )}
         {i === 19 && selectedInsights[1] && (
           <tr>
-            <td colspan="3" style="padding: 8px 0;">
+            <td colspan="8" style="padding: 8px 0;">
               <div style="border-top: 1px dashed var(--color-border); border-bottom: 1px dashed var(--color-border); padding: 8px 10px; color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
                 <span style="color: var(--color-orange);">&#9670;</span>
                 {' '}{selectedInsights[1].text}
@@ -406,41 +549,42 @@ function isLiteModel(id: string): boolean {
             </td>
           </tr>
         )}
-      </>
-    ))}
+        </>
+      );
+    })}
+    </tbody>
   </table>
   </div>
 
   {displayStories.length === 0 && (
-    <table width="100%">
-      <tr>
-        <td style="padding: 40px 20px; text-align: center;">
-          <div style="color: var(--fg-secondary); margin-bottom: 12px;">
-            {safeFilter !== 'all' || safeType !== 'all'
-              ? `No stories match the current filters.`
-              : 'No stories yet.'}
-          </div>
-          {safeFilter !== 'all' || safeType !== 'all' ? (
-            <a href="/stories" style="color: var(--color-orange);">clear filters</a>
-          ) : (
-            <span style="color: var(--fg-secondary); font-size: var(--font-sm);">No stories yet. The cron worker will populate them shortly.</span>
-          )}
-        </td>
-      </tr>
-    </table>
+    <div style="padding: 40px 20px; text-align: center;">
+      <div style="color: var(--fg-secondary); margin-bottom: 12px;">
+        {safeFilter !== 'all' || safeType !== 'all'
+          ? `No stories match the current filters.`
+          : 'No stories yet.'}
+      </div>
+      {safeFilter !== 'all' || safeType !== 'all' ? (
+        <a href="/stories" style="color: var(--color-orange);">clear filters</a>
+      ) : (
+        <span style="color: var(--fg-secondary); font-size: var(--font-sm);">No stories yet. The cron worker will populate them shortly.</span>
+      )}
+    </div>
   )}
 
   {/* Pagination */}
-  {hasMore && (
-    <table cellpadding="0" cellspacing="0" width="100%" style="padding: 10px 0 20px 0;">
-      <tr>
-        <td style="padding-left: 40px;">
-          <a href={buildUrl({ p: String(page + 1) })} class="morelink" style="color: var(--fg-secondary); font-size: var(--font-base);">
-            Next → <span style="color: var(--color-border); font-size: var(--font-sm);">(page {page + 1})</span>
-          </a>
-        </td>
-      </tr>
-    </table>
+  {(page > 1 || hasMore) && (
+    <div style="padding: 10px 0 20px 40px; font-size: var(--font-base);">
+      {page > 1 && (
+        <a href={buildUrl({ p: String(page - 1) })} style="color: var(--fg-secondary); margin-right: 16px;">
+          ← Prev
+        </a>
+      )}
+      {hasMore && (
+        <a href={buildUrl({ p: String(page + 1) })} style="color: var(--fg-secondary);">
+          Next → <span style="color: var(--color-border); font-size: var(--font-sm);">(page {page + 1})</span>
+        </a>
+      )}
+    </div>
   )}
 
   <script is:inline>

@@ -183,7 +183,7 @@ function scoreRowToScore(row: ScoreRow): Score {
   };
 }
 
-export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity';
+export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity' | 'psq_desc' | 'psq_asc' | 'editorial_desc' | 'editorial_asc' | 'structural_desc' | 'structural_asc';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show' | 'job';
 export type ContentTypeOption = 'all' | 'ED' | 'PO' | 'LP' | 'PR' | 'AC' | 'MI';
@@ -314,6 +314,12 @@ export async function getFilteredStoriesWithScores(
     case 'setl_desc': joinSetl = true; orderBy = 'story_setl DESC NULLS LAST'; break;
     case 'setl_asc': joinSetl = true; orderBy = 'story_setl ASC NULLS LAST'; break;
     case 'velocity': orderBy = 's.hn_score DESC NULLS LAST'; break; // proxy: highest points = most momentum
+    case 'psq_desc': orderBy = `${scorePrefix === 're' ? 're' : 's'}.psq_score DESC NULLS LAST`; break;
+    case 'psq_asc': orderBy = `${scorePrefix === 're' ? 're' : 's'}.psq_score ASC NULLS LAST`; break;
+    case 'editorial_desc': orderBy = `COALESCE(${scorePrefix}.hcb_editorial_mean) DESC NULLS LAST`; break;
+    case 'editorial_asc': orderBy = `COALESCE(${scorePrefix}.hcb_editorial_mean) ASC NULLS LAST`; break;
+    case 'structural_desc': orderBy = `${scorePrefix}.hcb_structural_mean DESC NULLS LAST`; break;
+    case 'structural_asc': orderBy = `${scorePrefix}.hcb_structural_mean ASC NULLS LAST`; break;
   }
 
   // SETL subquery always uses rater_scores
@@ -341,7 +347,7 @@ export async function getFilteredStoriesWithScores(
               re.hcb_signal_sections, re.hcb_nd_count, re.hcb_evidence_h, re.hcb_evidence_m, re.hcb_evidence_l,
               re.eval_model, s.eval_prompt_hash,
               re.eval_status, re.eval_error, re.evaluated_at, s.created_at, re.schema_version,
-              re.hcb_theme_tag,
+              re.hcb_theme_tag, s.psq_score,
               SUBSTR(s.hn_text, 1, 100) as hn_text_preview${setlSelect}`
     : `s.hn_id, s.url, s.title, s.domain, s.hn_score, s.hn_comments, s.hn_by,
               s.hn_time, s.hn_type, s.content_type, s.hcb_weighted_mean, s.hcb_editorial_mean, s.hcb_structural_mean, s.hcb_classification,
@@ -349,6 +355,7 @@ export async function getFilteredStoriesWithScores(
               s.eval_model, s.eval_prompt_hash,
               s.eval_status, s.eval_error, s.evaluated_at, s.created_at, s.schema_version,
               s.hcb_theme_tag, s.consensus_score, s.consensus_model_count, s.consensus_spread,
+              s.psq_score,
               SUBSTR(s.hn_text, 1, 100) as hn_text_preview${setlSelect}`;
 
   const storyQueryResult = await db

@@ -204,7 +204,8 @@ html[data-theme="light"] .text-gray-300 {
  * brightness(0.74) brings neutral L=0.58 → ~0.43, giving ≥4.5:1 on cream.
  * Applied to specific score display containers — not all .score-font — to avoid
  * over-darkening elements that already use CSS-var-defined semantic colors. */
-html[data-theme="light"] .tripartite-score .score-value {
+html[data-theme="light"] .tripartite-score .score-value,
+html[data-theme="light"] .stories-table td.score-font {
   filter: brightness(0.74);
 }
 html[data-theme="light"] .hm-score,
@@ -576,6 +577,10 @@ html[data-theme="light"] .ev-labels > span { filter: brightness(0.74); }
   .table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .stories-table {
+    min-width: 700px;
   }
 
   /* Tighten padding on small screens */
