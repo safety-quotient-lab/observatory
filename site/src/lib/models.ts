@@ -256,6 +256,11 @@ export function getEnabledFreeModels(): ModelDefinition[] {
   return MODEL_REGISTRY.filter(m => m.enabled && m.is_free);
 }
 
+/** All free models regardless of enabled status — used for front-page priority dispatch. */
+export function getAllFreeModels(): ModelDefinition[] {
+  return MODEL_REGISTRY.filter(m => m.is_free);
+}
+
 /**
  * DB-backed enabled model list. Intersects model_registry table (enabled=1)
  * with MODEL_REGISTRY definitions. Falls back to static getEnabledModels() on error.

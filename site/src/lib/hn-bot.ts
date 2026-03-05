@@ -16,7 +16,7 @@
  * - Re-evaluation triggers for viral stories
  */
 
-import { extractDomain, markSkipped, fetchUrlContent, getEnabledFreeModels, getModelQueue, PRIMARY_MODEL_ID } from './shared-eval';
+import { extractDomain, markSkipped, fetchUrlContent, getEnabledFreeModels, getAllFreeModels, getModelQueue, PRIMARY_MODEL_ID } from './shared-eval';
 import { cleanHtml, hasReadableText } from './html-clean';
 import { classifyContent } from './content-gate';
 import { logEvent } from './events';
@@ -915,6 +915,93 @@ export async function dispatchFreeModelEvals(
 
     results.push({ model: model.id, dispatched: candidates.length });
     console.log(`[multi-model] Inserted ${candidates.length} eval_queue rows for model ${model.id}`);
+  }
+
+  return results;
+}
+
+// ─── Front-page free model dispatch (every minute) ───
+
+/**
+ * Dispatch front-page stories to ALL free Workers AI models (lite HRCB + PSQ).
+ * Runs every minute — ensures front-page stories get scored quickly.
+ * Uses getAllFreeModels() filtered to workers-ai provider, ignoring enabled flag.
+ */
+export async function dispatchFrontPageFreeEvals(
+  db: D1Database,
+  env: Record<string, any>,
+  limit = 20,
+): Promise<{ model: string; dispatched: number }[]> {
+  const freeWaiModels = getAllFreeModels().filter(m => m.provider === 'workers-ai');
+  if (freeWaiModels.length === 0) return [];
+
+  const results: { model: string; dispatched: number }[] = [];
+
+  for (const model of freeWaiModels) {
+    const { results: candidates } = await db
+      .prepare(
+        `SELECT s.hn_id, s.url, s.title, s.domain, s.hn_text
+         FROM stories s
+         WHERE s.hn_rank IS NOT NULL
+           AND s.gate_category IS NULL
+           AND (s.url IS NOT NULL OR s.hn_text IS NOT NULL)
+           AND NOT EXISTS (
+             SELECT 1 FROM rater_evals re
+             WHERE re.hn_id = s.hn_id
+               AND re.eval_model = ?
+               AND re.eval_status IN ('done', 'queued', 'evaluating', 'pending')
+           )
+         ORDER BY s.hn_rank ASC
+         LIMIT ?`
+      )
+      .bind(model.id, limit)
+      .all<{
+        hn_id: number;
+        url: string | null;
+        title: string;
+        domain: string | null;
+        hn_text: string | null;
+      }>();
+
+    if (candidates.length === 0) {
+      results.push({ model: model.id, dispatched: 0 });
+      continue;
+    }
+
+    const raterStmts: D1PreparedStatement[] = [];
+    for (const story of candidates) {
+      raterStmts.push(
+        db
+          .prepare(
+            `INSERT INTO rater_evals (hn_id, eval_model, eval_provider, eval_status, prompt_mode)
+             VALUES (?, ?, ?, 'queued', ?)
+             ON CONFLICT(hn_id, eval_model) DO UPDATE SET eval_status = 'queued', prompt_mode = excluded.prompt_mode`
+          )
+          .bind(story.hn_id, model.id, model.provider, model.prompt_mode ?? 'full')
+      );
+    }
+    if (raterStmts.length > 0) await safeBatch(db, raterStmts);
+
+    const evalStmts = candidates.map(story =>
+      db.prepare(
+        `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority) VALUES (?, ?, ?, ?, 100)`
+      ).bind(story.hn_id, model.provider, model.id, model.prompt_mode ?? 'full')
+    );
+    if (evalStmts.length > 0) await safeBatch(db, evalStmts);
+
+    // Wake consumer (all WAI models share WORKERS_AI_QUEUE)
+    const modelQueue = getModelQueue(model.id, env);
+    if (modelQueue && candidates.length > 0) {
+      const wakeCount = Math.min(Math.ceil(candidates.length / 5) + 1, 3);
+      for (let i = 0; i < wakeCount; i++) {
+        await (modelQueue as any).send({ trigger: 'new_work', provider: model.provider }).catch(() => {});
+      }
+    }
+
+    results.push({ model: model.id, dispatched: candidates.length });
+    if (candidates.length > 0) {
+      console.log(`[fp-free] Queued ${candidates.length} front-page evals for ${model.id}`);
+    }
   }
 
   return results;

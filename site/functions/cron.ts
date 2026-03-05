@@ -28,7 +28,7 @@ import {
   computeFairWitnessAggregates,
   type DcpElement,
 } from '../src/lib/compute-aggregates';
-import { runCrawlCycle, dispatchFreeModelEvals, preloadContentCache } from '../src/lib/hn-bot';
+import { runCrawlCycle, dispatchFreeModelEvals, dispatchFrontPageFreeEvals, preloadContentCache } from '../src/lib/hn-bot';
 import { refreshDomainAggregate } from '../src/lib/eval-write';
 import { getModelQueue, PRIMARY_MODEL_ID } from '../src/lib/shared-eval';
 import {
@@ -109,6 +109,18 @@ export default {
     }
 
     try {
+    // ─── Front-page free model dispatch (every minute) ───
+
+    try {
+      const fpResults = await dispatchFrontPageFreeEvals(db, env as unknown as Record<string, any>, 20);
+      const fpTotal = fpResults.reduce((sum, r) => sum + r.dispatched, 0);
+      if (fpTotal > 0) {
+        console.log(`[fp-free] Dispatched ${fpTotal} evals across ${fpResults.filter(r => r.dispatched > 0).length} models`);
+      }
+    } catch (err) {
+      console.error('[fp-free] Front-page dispatch failed (non-fatal):', err);
+    }
+
     // ─── HN crawl cycle (fetch, diff, insert, refresh, comments, users, re-eval, enqueue) ───
 
     let crawlResult: Awaited<ReturnType<typeof runCrawlCycle>>;
