@@ -765,8 +765,8 @@ export async function enqueueForEvaluation(
     for (const model of waiModels) {
       const waiStmts = enqueuedIds.map(hnId =>
         db.prepare(
-          `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id) VALUES (?, 'workers-ai', ?, 'lite', 0, ?)`
-        ).bind(hnId, model.id, batchId)
+          `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id) VALUES (?, 'workers-ai', ?, ?, 0, ?)`
+        ).bind(hnId, model.id, model.prompt_mode, batchId)
       );
       if (waiStmts.length > 0) await safeBatch(db, waiStmts);
     }

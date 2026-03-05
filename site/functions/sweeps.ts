@@ -17,7 +17,7 @@ import {
   searchAlgolia,
   insertAlgoliaHits,
 } from '../src/lib/coverage-crawl';
-import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate, updateConsensusScore } from '../src/lib/eval-write';
+import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate, updateConsensusScore, updatePsqConsensus } from '../src/lib/eval-write';
 import { refreshArticlePairStats } from '../src/lib/db-analytics';
 import { getEnabledFreeModels } from '../src/lib/models';
 import { safeBatch, writeDb } from '../src/lib/db-utils';
@@ -552,8 +552,8 @@ export async function sweepLiteReeval({ db, url }: SweepContext): Promise<Respon
     const stmts = candidates.map(c =>
       db.prepare(
         `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority, batch_id)
-         VALUES (?, 'workers-ai', ?, 'lite', 0, 'lite_reeval')`
-      ).bind(c.hn_id, model.id)
+         VALUES (?, 'workers-ai', ?, ?, 0, 'lite_reeval')`
+      ).bind(c.hn_id, model.id, model.prompt_mode)
     );
     if (stmts.length > 0) {
       await safeBatch(db, stmts);
@@ -605,6 +605,7 @@ export async function sweepRefreshConsensusScores({ db, env, ctx }: SweepContext
         for (const { hn_id } of results) {
           try {
             await updateConsensusScore(db, hn_id);
+            await updatePsqConsensus(db, hn_id);
             refreshed++;
           } catch {
             errors++;
@@ -666,7 +667,7 @@ export async function sweepUpgradeLite({ db, env, url }: SweepContext): Promise<
            )
            AND EXISTS (
              SELECT 1 FROM rater_evals re
-             WHERE re.hn_id = s.hn_id AND re.prompt_mode = 'lite'
+             WHERE re.hn_id = s.hn_id AND re.prompt_mode IN ('lite', 'lite-v2')
            )
          ORDER BY s.hn_score DESC
          LIMIT ?

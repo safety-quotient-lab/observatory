@@ -13,6 +13,7 @@
 import {
   prepareContent,
   processLiteResult,
+  processLiteV2Result,
   processFullResult,
   handleParseFailure,
   handleValidationFailure,
@@ -30,6 +31,7 @@ import {
 import {
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
   METHODOLOGY_SYSTEM_PROMPT_LITE,
+  METHODOLOGY_SYSTEM_PROMPT_LITE_V2,
   EVAL_MAX_TOKENS_LITE,
   parseOpenRouterResponse,
   validateSlimEvalResponse,
@@ -61,11 +63,13 @@ async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: 
       return;
     }
 
-    if (prep.isLiteMode) {
+    if (prep.evalMode === 'lite-v2' || prep.evalMode === 'lite') {
+      const isV2 = prep.evalMode === 'lite-v2';
+      const systemPrompt = isV2 ? METHODOLOGY_SYSTEM_PROMPT_LITE_V2 : METHODOLOGY_SYSTEM_PROMPT_LITE;
       const liteModelDef = { ...prep.modelDef, max_tokens: EVAL_MAX_TOKENS_LITE };
       const liteUserMessage = buildLiteUserMessage(prep.evalUrl, story.title, prep.content);
 
-      const { response: res } = await callOpenRouterApi(env.OPENROUTER_API_KEY, liteModelDef, METHODOLOGY_SYSTEM_PROMPT_LITE, liteUserMessage);
+      const { response: res } = await callOpenRouterApi(env.OPENROUTER_API_KEY, liteModelDef, systemPrompt, liteUserMessage);
 
       if (!res.ok) {
         const body = await res.text();
@@ -84,7 +88,11 @@ async function processOpenRouterClaim(env: Env, msg: Message<QueueMessage>, db: 
       const inputTokens = rawData.usage?.prompt_tokens ?? 0;
       const outputTokens = rawData.usage?.completion_tokens ?? 0;
 
-      await processLiteResult(env, msg, prep, rawText, inputTokens, outputTokens, evalStartMs);
+      if (isV2) {
+        await processLiteV2Result(env, msg, prep, rawText, inputTokens, outputTokens, evalStartMs);
+      } else {
+        await processLiteResult(env, msg, prep, rawText, inputTokens, outputTokens, evalStartMs);
+      }
 
     } else {
       const cachedDcp = await lookupCachedDcp(env, prep.domain);

@@ -10,13 +10,17 @@ import {
   CONTENT_MAX_CHARS,
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
   METHODOLOGY_SYSTEM_PROMPT_LITE,
+  METHODOLOGY_SYSTEM_PROMPT_LITE_V2,
   extractDomain,
   buildUserMessageWithDcp,
   buildLiteUserMessage,
   extractJsonFromResponse,
   validateLiteEvalResponse,
+  validateLiteEvalResponseV2,
   computeLiteAggregates,
+  computeLiteAggregatesV2,
   writeLiteRaterEvalResult,
+  writePsqRaterEvalResult,
   fetchUrlContent,
   requestArchive,
   writeRaterEvalResult,
@@ -37,6 +41,7 @@ import {
   type RaterHealthState,
   type SlimEvalResponse,
   type LiteEvalResponse,
+  type LiteEvalResponseV2,
 } from '../src/lib/shared-eval';
 
 import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
@@ -68,7 +73,7 @@ export interface QueueMessage {
   domain: string | null;
   eval_model?: string;
   eval_provider?: string;
-  prompt_mode?: 'full' | 'lite';
+  prompt_mode?: 'full' | 'lite' | 'lite-v2';
   batch_id?: string | null;
 }
 
@@ -84,7 +89,7 @@ export interface EvalQueueClaim {
   hn_id: number;
   target_provider: string;
   target_model: string;
-  prompt_mode: 'full' | 'lite';
+  prompt_mode: 'full' | 'lite' | 'lite-v2';
   batch_id: string | null;
 }
 
@@ -303,10 +308,13 @@ export async function handleRaterHealthSuccess(
 
 // --- Content preparation ---
 
+export type EvalMode = 'full' | 'lite' | 'lite-v2';
+
 export interface PreparedContent {
   content: string;
   contentHash: string | null;
   isLiteMode: boolean;
+  evalMode: EvalMode;
   modelDef: ModelDefinition | undefined;
   provider: string;
   modelToUse: string;
@@ -481,7 +489,12 @@ export async function prepareContent(
     content = content.slice(0, modelDef.max_input_chars);
   }
 
-  const isLiteMode = story.prompt_mode === 'lite' || story.prompt_mode === 'light' || modelDef?.prompt_mode === 'lite';
+  // Determine eval mode: message prompt_mode takes priority, then model registry
+  const rawPromptMode = story.prompt_mode || modelDef?.prompt_mode || 'full';
+  const evalMode: EvalMode = rawPromptMode === 'lite-v2' ? 'lite-v2'
+    : (rawPromptMode === 'lite' || rawPromptMode === 'light') ? 'lite'
+    : 'full';
+  const isLiteMode = evalMode === 'lite' || evalMode === 'lite-v2';
   const domain = story.domain || (story.url ? extractDomain(story.url) : null);
 
   // Compute content hash for drift detection (skip self-posts — content is user-mutable)
@@ -496,6 +509,7 @@ export async function prepareContent(
     content,
     contentHash,
     isLiteMode,
+    evalMode,
     modelDef,
     provider,
     modelToUse,
@@ -572,6 +586,79 @@ export async function processLiteResult(
   const evalDurationMs = Date.now() - evalStartMs;
   console.log(`[consumer] Done (lite): hn_id=${story.hn_id} → ${classification} (${weighted_mean}) [${prep.msgModelId}] ${evalDurationMs}ms`);
   await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_success', severity: 'info', message: `Lite evaluated: ${classification} (${weighted_mean.toFixed(2)})`, details: { classification, weighted_mean, model: prep.msgModelId, provider: prep.provider, prompt_mode: 'lite', input_tokens: inputTokens, output_tokens: outputTokens, duration_ms: evalDurationMs } });
+  msg.ack();
+  return true;
+}
+
+// --- Lite v2 (PSQ) result processing ---
+
+export async function processLiteV2Result(
+  env: Env,
+  msg: Message<QueueMessage>,
+  prep: PreparedContent,
+  rawText: string,
+  inputTokens: number,
+  outputTokens: number,
+  evalStartMs: number,
+): Promise<boolean> {
+  const db = writeDb(env.DB);
+  const story = msg.body;
+
+  // Parse
+  let v2Parsed: LiteEvalResponseV2;
+  try {
+    const extracted = extractJsonFromResponse(rawText);
+    v2Parsed = JSON.parse(extracted) as LiteEvalResponseV2;
+  } catch (parseErr) {
+    await handleParseFailure(env, db, story, prep.msgModelId, prep.provider, rawText, parseErr, 'lite');
+    msg.ack();
+    return false;
+  }
+
+  // Validate
+  const v2Validation = validateLiteEvalResponseV2(v2Parsed);
+  if (!v2Validation.valid) {
+    await handleValidationFailure(env, db, story, prep.msgModelId, prep.provider, rawText, v2Validation, 'lite');
+    msg.ack();
+    return false;
+  }
+
+  if (v2Validation.warnings.length > 0 || v2Validation.repairs.length > 0) {
+    await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Lite-v2 validation warnings for model ${prep.msgModelId}: ${v2Validation.warnings.length}W ${v2Validation.repairs.length}R`, details: { model: prep.msgModelId, warnings: v2Validation.warnings, repairs: v2Validation.repairs, prompt_mode: 'lite-v2' } });
+  }
+
+  // Build hashes
+  const v2UserMessage = buildLiteUserMessage(prep.evalUrl, story.title, prep.content);
+  const v2PromptHash = await hashPrompt(METHODOLOGY_SYSTEM_PROMPT_LITE_V2, v2UserMessage);
+  const v2MethodologyHash = await hashString(METHODOLOGY_SYSTEM_PROMPT_LITE_V2);
+
+  // Compute aggregates
+  const v2Agg = computeLiteAggregatesV2(v2Parsed);
+
+  // Write PSQ-specific result
+  await writePsqRaterEvalResult(db, story.hn_id, v2Parsed, v2Agg, prep.msgModelId, prep.provider, v2PromptHash, v2MethodologyHash, inputTokens, outputTokens, prep.contentTruncationPct, story.batch_id ?? null);
+
+  // Invalidate domain caches
+  const cacheKeys = [
+    'q:domainSignalProfiles',
+    'q:allDomainStats:count:50',
+    'q:allDomainStats:count:200',
+    'q:allDomainStats:score:200',
+    'q:allDomainStats:setl:200',
+    'q:allDomainStats:conf:200',
+  ];
+  for (const key of cacheKeys) {
+    env.CONTENT_CACHE.delete(key).catch(() => {});
+  }
+
+  // Health success
+  await handleRaterHealthSuccess(env, db, story, prep.msgModelId);
+
+  const evalDurationMs = Date.now() - evalStartMs;
+  const gPsq = v2Agg.weighted_mean;
+  const dimCount = Object.keys(v2Parsed.psq_dimensions).length;
+  console.log(`[consumer] Done (psq): hn_id=${story.hn_id} → g-PSQ=${gPsq.toFixed(3)} (${dimCount} dims) [${prep.msgModelId}] ${evalDurationMs}ms`);
+  await logEvent(db, { hn_id: story.hn_id, event_type: 'eval_success', severity: 'info', message: `PSQ evaluated: g-PSQ=${gPsq.toFixed(3)} (${dimCount} dims)`, details: { g_psq: gPsq, dim_count: dimCount, model: prep.msgModelId, provider: prep.provider, prompt_mode: 'lite-v2', input_tokens: inputTokens, output_tokens: outputTokens, duration_ms: evalDurationMs } });
   msg.ack();
   return true;
 }

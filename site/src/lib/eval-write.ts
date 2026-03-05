@@ -6,8 +6,8 @@
  */
 
 import { computeSetl, EVIDENCE_WEIGHTS_CONFIDENCE } from './compute-aggregates';
-import { ALL_SECTIONS, type EvalResult, type LiteEvalResponse } from './eval-types';
-import { computeLiteAggregates } from './eval-parse';
+import { ALL_SECTIONS, type EvalResult, type LiteEvalResponse, type LiteEvalResponseV2 } from './eval-types';
+import { computeLiteAggregates, type LiteAggregates } from './eval-parse';
 import { PRIMARY_MODEL_ID } from './models';
 import { logEvent } from './events';
 
@@ -292,7 +292,8 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
          INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.hn_id = ? AND re.eval_status = 'done'
            AND (re.hcb_weighted_mean IS NOT NULL OR re.hcb_editorial_mean IS NOT NULL)
-           AND re.schema_version NOT IN ('lite-1.3', 'light-1.3')`
+           AND re.schema_version NOT IN ('lite-1.3', 'light-1.3')
+           AND COALESCE(re.prompt_mode, 'full') != 'lite-v2'`
       )
       .bind(hnId)
       .all<{ eval_model: string; hcb_weighted_mean: number | null; hcb_editorial_mean: number | null; prompt_mode: string | null; content_truncation_pct: number | null; confidence: number; editorial_uncertain: number }>();
@@ -355,6 +356,54 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
   }
 }
 
+// --- PSQ consensus (separate from HRCB consensus) ---
+
+export async function updatePsqConsensus(db: D1Database, hnId: number): Promise<void> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT re.eval_model, re.psq_score, COALESCE(re.hcb_confidence, 0.5) as confidence,
+                re.content_truncation_pct
+         FROM rater_evals re
+         INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
+         WHERE re.hn_id = ? AND re.eval_status = 'done' AND re.prompt_mode = 'lite-v2'
+           AND re.psq_score IS NOT NULL`
+      )
+      .bind(hnId)
+      .all<{ eval_model: string; psq_score: number; confidence: number; content_truncation_pct: number | null }>();
+
+    if (results.length < 2) return;
+
+    let weightedSum = 0;
+    let totalWeight = 0;
+    const scores: number[] = [];
+
+    for (const r of results) {
+      const confidenceFactor = Math.max(0.2, r.confidence);
+      const truncPct = r.content_truncation_pct ?? 0;
+      const weight = confidenceFactor * (1 - truncPct * 0.5);
+      weightedSum += r.psq_score * weight;
+      totalWeight += weight;
+      scores.push(r.psq_score);
+    }
+
+    if (totalWeight === 0 || scores.length < 2) return;
+
+    const consensusScore = Math.round((weightedSum / totalWeight) * 1000) / 1000;
+    const spread = Math.round((Math.max(...scores) - Math.min(...scores)) * 1000) / 1000;
+
+    await db
+      .prepare(
+        `UPDATE stories SET psq_consensus_score=?, psq_consensus_model_count=?,
+         psq_consensus_spread=? WHERE hn_id=?`
+      )
+      .bind(consensusScore, scores.length, spread, hnId)
+      .run();
+  } catch (err) {
+    console.error(`[eval-write] updatePsqConsensus failed for hn_id=${hnId}:`, err);
+  }
+}
+
 // --- Domain aggregates (materialized per-domain signal summary) ---
 
 export async function refreshDomainAggregate(db: D1Database, domain: string): Promise<void> {
@@ -368,6 +417,7 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
            avg_valence, avg_arousal, avg_dominance, avg_fw_ratio,
            avg_hn_score, avg_hn_comments,
            dominant_tone, dominant_scope, dominant_reading_level, dominant_sentiment,
+           avg_psq,
            last_updated_at
          )
          SELECT
@@ -403,6 +453,7 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
            (SELECT hcb_sentiment_tag FROM stories
             WHERE domain = ? AND eval_status = 'done' AND hcb_sentiment_tag IS NOT NULL
             GROUP BY hcb_sentiment_tag ORDER BY COUNT(*) DESC LIMIT 1),
+           AVG(psq_score),
            datetime('now')
          FROM stories WHERE domain = ?
          ON CONFLICT(domain) DO UPDATE SET
@@ -429,6 +480,7 @@ export async function refreshDomainAggregate(db: D1Database, domain: string): Pr
            dominant_scope = excluded.dominant_scope,
            dominant_reading_level = excluded.dominant_reading_level,
            dominant_sentiment = excluded.dominant_sentiment,
+           avg_psq = excluded.avg_psq,
            last_updated_at = excluded.last_updated_at`
       )
       .bind(domain, domain, domain, domain, domain)
@@ -503,6 +555,7 @@ export async function refreshUserAggregate(db: D1Database, username: string): Pr
            positive_pct, negative_pct, neutral_pct,
            avg_structural, avg_setl,
            avg_editorial_full, avg_editorial_lite,
+           avg_psq,
            avg_eq, avg_so, avg_td,
            total_hn_score, avg_hn_score,
            total_comments, avg_comments,
@@ -530,6 +583,7 @@ export async function refreshUserAggregate(db: D1Database, username: string): Pr
            ROUND(AVG(CASE WHEN eval_status = 'done' THEN hcb_setl END), 4),
            ROUND(AVG(CASE WHEN eval_status = 'done' THEN hcb_editorial_mean END), 4),
            ROUND(AVG(CASE WHEN hcb_editorial_mean IS NOT NULL AND eval_status != 'done' THEN hcb_editorial_mean END), 4),
+           ROUND(AVG(psq_score), 4),
            ROUND(AVG(CASE WHEN eval_status = 'done' THEN eq_score END), 4),
            ROUND(AVG(CASE WHEN eval_status = 'done' THEN so_score END), 4),
            ROUND(AVG(CASE WHEN eval_status = 'done' THEN td_score END), 4),
@@ -565,6 +619,7 @@ export async function refreshUserAggregate(db: D1Database, username: string): Pr
            avg_setl = excluded.avg_setl,
            avg_editorial_full = excluded.avg_editorial_full,
            avg_editorial_lite = excluded.avg_editorial_lite,
+           avg_psq = excluded.avg_psq,
            avg_eq = excluded.avg_eq,
            avg_so = excluded.avg_so,
            avg_td = excluded.avg_td,
@@ -1347,6 +1402,164 @@ export async function writeLiteRaterEvalResult(
       agg.structural_mean ?? null,
       agg.setl ?? null,
       lite.schema_version || 'lite-1.3',
+    )
+    .run();
+}
+
+// --- PSQ (lite-v2) write function ---
+
+/**
+ * Write a PSQ (lite-v2) evaluation result.
+ * Separate from writeLiteRaterEvalResult: PSQ is an independent signal, not HRCB.
+ * Writes psq_score + psq_dimensions_json to rater_evals.
+ * COALESCE fill-in to stories (psq_score, psq_dimensions_json, psq_confidence).
+ * Does NOT write hcb_weighted_mean or hcb_editorial_mean.
+ * Calls updatePsqConsensus() instead of updateConsensusScore().
+ */
+export async function writePsqRaterEvalResult(
+  db: D1Database,
+  hnId: number,
+  v2: LiteEvalResponseV2,
+  agg: LiteAggregates,
+  modelId: string,
+  provider: string,
+  promptHash: string | null,
+  methodologyHash: string | null,
+  inputTokens: number,
+  outputTokens: number,
+  contentTruncationPct: number = 0,
+  batchId: string | null = null,
+): Promise<void> {
+  // FK guard
+  const exists = await db.prepare('SELECT 1 FROM stories WHERE hn_id = ?').bind(hnId).first();
+  if (!exists) {
+    throw new Error(`Story hn_id=${hnId} not found — skipping PSQ eval write (stale message)`);
+  }
+
+  // Compute g-PSQ (0-10 scale) from aggregates
+  // agg.weighted_mean is already in [-1, +1] (editorial normalization)
+  // Reverse: gPsq = (weighted_mean * 5) + 5
+  const gPsq = Math.round(((agg.weighted_mean * 5) + 5) * 1000) / 1000;
+  const psqDimsJson = JSON.stringify(v2.psq_dimensions);
+
+  // Mean confidence across scored dimensions
+  const dimEntries = Object.values(v2.psq_dimensions);
+  const meanConf = dimEntries.length > 0
+    ? dimEntries.reduce((s, d) => s + d.confidence, 0) / dimEntries.length
+    : 0.5;
+
+  // TQ
+  const tqScore = v2.tq_score ?? null;
+
+  // UPSERT rater_evals — PSQ uses psq_score + psq_dimensions_json columns
+  await db
+    .prepare(
+      `INSERT INTO rater_evals (
+        hn_id, eval_model, eval_provider, eval_status, prompt_mode,
+        hcb_json, content_type, schema_version,
+        hcb_confidence,
+        eval_prompt_hash, methodology_hash,
+        tq_score, tq_author, tq_date, tq_sources, tq_corrections, tq_conflicts,
+        input_tokens, output_tokens, content_truncation_pct,
+        eval_batch_id, psq_score, psq_dimensions_json,
+        hcb_executive_summary, evaluated_at
+      ) VALUES (
+        ?, ?, ?, 'done', 'lite-v2',
+        ?, ?, 'lite-2.0',
+        ?,
+        ?, ?,
+        ?, ?, ?, ?, ?, ?,
+        ?, ?, ?,
+        ?, ?, ?,
+        ?, datetime('now')
+      )
+      ON CONFLICT(hn_id, eval_model) DO UPDATE SET
+        eval_status = 'done',
+        eval_error = NULL,
+        prompt_mode = 'lite-v2',
+        hcb_json = excluded.hcb_json,
+        content_type = excluded.content_type,
+        schema_version = excluded.schema_version,
+        hcb_confidence = excluded.hcb_confidence,
+        eval_prompt_hash = excluded.eval_prompt_hash,
+        methodology_hash = excluded.methodology_hash,
+        tq_score = excluded.tq_score,
+        tq_author = excluded.tq_author,
+        tq_date = excluded.tq_date,
+        tq_sources = excluded.tq_sources,
+        tq_corrections = excluded.tq_corrections,
+        tq_conflicts = excluded.tq_conflicts,
+        input_tokens = excluded.input_tokens,
+        output_tokens = excluded.output_tokens,
+        content_truncation_pct = excluded.content_truncation_pct,
+        eval_batch_id = excluded.eval_batch_id,
+        psq_score = excluded.psq_score,
+        psq_dimensions_json = excluded.psq_dimensions_json,
+        hcb_executive_summary = excluded.hcb_executive_summary,
+        evaluated_at = excluded.evaluated_at`
+    )
+    .bind(
+      hnId, modelId, provider,
+      JSON.stringify(v2),
+      v2.content_type || 'MX',
+      meanConf,
+      promptHash, methodologyHash,
+      tqScore,
+      v2.tq_author ?? null,
+      v2.tq_date ?? null,
+      v2.tq_sources ?? null,
+      v2.tq_corrections ?? null,
+      v2.tq_conflicts ?? null,
+      inputTokens, outputTokens, contentTruncationPct,
+      batchId, gPsq, psqDimsJson,
+      v2.executive_summary || null,
+    )
+    .run();
+
+  // COALESCE fill-in: write PSQ signals to stories where not yet set.
+  // PSQ does NOT write hcb_* columns — it's an independent signal.
+  await db.prepare(
+    `UPDATE stories SET
+       psq_score = COALESCE(psq_score, ?),
+       psq_dimensions_json = COALESCE(psq_dimensions_json, ?),
+       psq_confidence = COALESCE(psq_confidence, ?),
+       tq_score = COALESCE(tq_score, ?)
+     WHERE hn_id = ?`
+  ).bind(
+    gPsq,
+    psqDimsJson,
+    meanConf,
+    tqScore,
+    hnId,
+  ).run().catch(() => {});
+
+  // Refresh domain aggregate (includes avg_psq now)
+  const domain = await db.prepare('SELECT domain FROM stories WHERE hn_id = ?')
+    .bind(hnId).first<{ domain: string | null }>();
+  if (domain?.domain) await refreshDomainAggregate(db, domain.domain);
+
+  // Refresh user aggregate
+  const authorRow = await db
+    .prepare('SELECT hn_by FROM stories WHERE hn_id = ?')
+    .bind(hnId)
+    .first<{ hn_by: string | null }>();
+  if (authorRow?.hn_by) await refreshUserAggregate(db, authorRow.hn_by);
+
+  // PSQ consensus (separate from HRCB consensus)
+  await updatePsqConsensus(db, hnId);
+
+  // Write to eval_history
+  await db
+    .prepare(
+      `INSERT INTO eval_history (hn_id, eval_model, hcb_weighted_mean, hcb_classification, hcb_json, input_tokens, output_tokens, schema_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'lite-2.0')`
+    )
+    .bind(
+      hnId, modelId,
+      agg.weighted_mean,
+      agg.classification,
+      JSON.stringify(v2),
+      inputTokens, outputTokens,
     )
     .run();
 }

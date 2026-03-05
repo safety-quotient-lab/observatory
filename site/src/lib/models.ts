@@ -147,7 +147,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
     is_free: true,
-    enabled: true, // replaces llama-3.3-70b (OpenRouter) which was chronic 429s; lite mode via WORKERS_AI_QUEUE
+    enabled: false, // superseded by llama-3.3-70b-wai-psq (lite-v2)
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
@@ -161,7 +161,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-4-scout-17b-16e-instruct',
     is_free: true,
-    enabled: true,
+    enabled: false, // superseded by llama-4-scout-wai-psq (lite-v2)
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
@@ -175,12 +175,55 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/qwen/qwen3-30b-a3b',
     is_free: true,
-    enabled: false, // Phase A: enable after lite-2.0 validation passes
+    enabled: false, // superseded by qwen3-30b-a3b-wai-psq (lite-v2)
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
     prompt_mode: 'lite',
-    max_input_chars: 8000, // MoE: 30B total, 3.3B active — conservative until tested
+    max_input_chars: 8000,
+  },
+  // PSQ models — same LLMs, lite-v2 prompt (3-dim PSQ: threat_exposure, trust_conditions, resilience_baseline)
+  {
+    id: 'llama-3.3-70b-wai-psq',
+    display_name: 'Llama 3.3 70B PSQ (WAI)',
+    short_name: 'L3P',
+    provider: 'workers-ai',
+    api_model_id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
+    is_free: true,
+    enabled: true,
+    max_tokens: 16384,
+    supports_cache_control: false,
+    supports_json_mode: false,
+    prompt_mode: 'lite-v2',
+    max_input_chars: 6000,
+  },
+  {
+    id: 'llama-4-scout-wai-psq',
+    display_name: 'Llama 4 Scout PSQ (WAI)',
+    short_name: 'L4P',
+    provider: 'workers-ai',
+    api_model_id: '@cf/meta/llama-4-scout-17b-16e-instruct',
+    is_free: true,
+    enabled: true,
+    max_tokens: 16384,
+    supports_cache_control: false,
+    supports_json_mode: false,
+    prompt_mode: 'lite-v2',
+    max_input_chars: 12000,
+  },
+  {
+    id: 'qwen3-30b-a3b-wai-psq',
+    display_name: 'Qwen3 30B A3B PSQ (WAI)',
+    short_name: 'Q3P',
+    provider: 'workers-ai',
+    api_model_id: '@cf/qwen/qwen3-30b-a3b',
+    is_free: true,
+    enabled: false, // enable after PSQ pipeline proven in production
+    max_tokens: 16384,
+    supports_cache_control: false,
+    supports_json_mode: false,
+    prompt_mode: 'lite-v2',
+    max_input_chars: 8000,
   },
 ];
 
@@ -270,6 +313,9 @@ export const MODEL_QUEUE_BINDINGS: Record<string, string> = {
   'llama-3.3-70b-wai': 'WORKERS_AI_QUEUE',
   'llama-4-scout-wai': 'WORKERS_AI_QUEUE',
   'qwen3-30b-a3b-wai': 'WORKERS_AI_QUEUE',
+  'llama-3.3-70b-wai-psq': 'WORKERS_AI_QUEUE',
+  'llama-4-scout-wai-psq': 'WORKERS_AI_QUEUE',
+  'qwen3-30b-a3b-wai-psq': 'WORKERS_AI_QUEUE',
 };
 
 /** Get the queue for a given model from the env bindings. Falls back to EVAL_QUEUE. */

@@ -10,6 +10,7 @@
 import {
   prepareContent,
   processLiteResult,
+  processLiteV2Result,
   processFullResult,
   handleParseFailure,
   handleValidationFailure,
@@ -26,6 +27,7 @@ import {
 import {
   METHODOLOGY_SYSTEM_PROMPT_SLIM,
   METHODOLOGY_SYSTEM_PROMPT_LITE,
+  METHODOLOGY_SYSTEM_PROMPT_LITE_V2,
   extractJsonFromResponse,
   validateSlimEvalResponse,
   buildUserMessageWithDcp,
@@ -56,7 +58,11 @@ async function processWaiClaim(env: Env, msg: Message<QueueMessage>, db: D1Datab
       return;
     }
 
-    if (prep.isLiteMode) {
+    if (prep.evalMode === 'lite-v2') {
+      const v2UserMessage = buildLiteUserMessage(prep.evalUrl, story.title, prep.content);
+      const { text: rawText } = await callWorkersAi(env.AI, prep.modelDef, METHODOLOGY_SYSTEM_PROMPT_LITE_V2, v2UserMessage);
+      await processLiteV2Result(env, msg, prep, rawText, 0, 0, evalStartMs);
+    } else if (prep.evalMode === 'lite') {
       const liteUserMessage = buildLiteUserMessage(prep.evalUrl, story.title, prep.content);
       const { text: rawText } = await callWorkersAi(env.AI, prep.modelDef, METHODOLOGY_SYSTEM_PROMPT_LITE, liteUserMessage);
       await processLiteResult(env, msg, prep, rawText, 0, 0, evalStartMs);

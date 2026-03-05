@@ -39,7 +39,9 @@ Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.
 
 ✓ PSQ Phase 1 dim-count testing (2026-03-04): 20 evals (4 variants × 5 stories). **Decision: 3-dim** (threat_exposure, trust_conditions, resilience_baseline). 3-dim only variant passing zero-rate <30% (20%). Zero truncation failures. g-PSQ stable across dim counts. resilience_baseline discriminates: AJ=6 vs EFF=8.
 
-Next: PSQ Phase 2 pipeline integration (D1 migration, routing changes, write functions, consumer switch). Then API blog post.
+✓ PSQ Phase 2 pipeline integration (2026-03-04): D1 migrations 0062+0063, clean-cut model IDs (`-psq` suffix), three-way consumer routing (lite-v2/lite/full), `writePsqRaterEvalResult()` + `updatePsqConsensus()`, hn-bot dispatch reads `model.prompt_mode`, sweeps updated.
+
+Next: Deploy PSQ pipeline (apply migrations, deploy all workers). Then PSQ Phase 3 (UI — EvalCard, score mode toggle, homepage dual chart). Then API blog post.
 
 ✓ `/methodology` page (2026-03-04): prerendered page rendering exact LLM evaluation prompt. Full + lite. CC BY-SA 4.0.
 ✓ Gap-detection blog post (2026-03-04): published to blog.unratified.org (Pre-Review).
