@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Multi-model free pipeline live.** Math audit complete. Signals page rewrite planned (deferred GS enrichment until then). Blog posts, Wolfram confidence intervals, or signals page rewrite next.
+**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). Blog posts, Wolfram confidence intervals, or GS enrichment next.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
@@ -25,7 +25,7 @@ Remaining:
 
 - ~~**Validate all construct validity claims**~~ — ✓ DONE 2026-03-05. 37/37 claims verified via Wolfram + scipy. 1 cross-reference error fixed. `findings/2026-03-05-wolfram-statistical-audit.md`.
 - ~~**Build geographic reference table**~~ — ✓ DONE 2026-03-05. 22 countries, 30 Wolfram calls. `.claude/plans/memorized/geo-reference-data.json`.
-- [ ] **GS signal enrichment on /signals page** — once reference table exists, surface "X% of evaluated stories cover countries representing Y% of global internet users" on the Geographic Coverage section. Tier 1 mission alignment (invisible pattern → visible statement).
+- [ ] **GS signal enrichment on /signals page** — once reference table exists, surface "X% of evaluated stories cover countries representing Y% of global internet users" on the Discourse Character section (geographic scope). Tier 1 mission alignment (invisible pattern → visible statement).
 - ~~**Verify codebase math**~~ — ✓ DONE 2026-03-05. 10 formulas verified via Wolfram (10 calls). All correct. 1 comment fix (decay half-life mislabeled in hn-bot.ts).
 - [ ] **Wolfram-powered confidence intervals** — for key metrics (mean HRCB, mean SETL, domain averages), compute 95% CIs via Wolfram rather than approximating. Surface on `/status/models` or `/signals`.
 

@@ -348,11 +348,13 @@ export async function getModelComparisonAggregates(db: D1Database): Promise<{
   story_count: number;
   avg_score: number;
   avg_abs_score: number;
+  std_dev: number;
+  ci_margin: number;
   positive_pct: number;
   negative_pct: number;
   neutral_pct: number;
 }[]> {
-  const { results } = await db
+  const raw = await db
     .prepare(
       `WITH shared AS (
          SELECT re.hn_id FROM rater_evals re
@@ -365,6 +367,7 @@ export async function getModelComparisonAggregates(db: D1Database): Promise<{
          COUNT(*) AS story_count,
          AVG(re.hcb_weighted_mean) AS avg_score,
          AVG(ABS(re.hcb_weighted_mean)) AS avg_abs_score,
+         AVG(re.hcb_weighted_mean * re.hcb_weighted_mean) AS avg_sq,
          ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean > 0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS positive_pct,
          ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean < -0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS negative_pct,
          ROUND(100.0 * SUM(CASE WHEN re.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END) / COUNT(*), 1) AS neutral_pct
@@ -375,8 +378,13 @@ export async function getModelComparisonAggregates(db: D1Database): Promise<{
        GROUP BY re.eval_model
        ORDER BY re.eval_model`
     )
-    .all<{ model: string; story_count: number; avg_score: number; avg_abs_score: number; positive_pct: number; negative_pct: number; neutral_pct: number }>();
-  return results;
+    .all<{ model: string; story_count: number; avg_score: number; avg_abs_score: number; avg_sq: number; positive_pct: number; negative_pct: number; neutral_pct: number }>();
+  return raw.results.map(r => {
+    const variance = Math.max(0, (r.avg_sq ?? 0) - (r.avg_score ?? 0) ** 2);
+    const std_dev = Math.sqrt(variance);
+    const ci_margin = r.story_count > 1 ? 1.96 * std_dev / Math.sqrt(r.story_count) : 0;
+    return { ...r, std_dev: Math.round(std_dev * 1000) / 1000, ci_margin: Math.round(ci_margin * 1000) / 1000 };
+  });
 }
 
 /** Per-section average scores across all shared stories, per model */
@@ -425,6 +433,8 @@ export interface ModelComparisonBlob {
     story_count: number;
     avg_score: number;
     avg_abs_score: number;
+    std_dev: number;
+    ci_margin: number;
     positive_pct: number;
     negative_pct: number;
     neutral_pct: number;

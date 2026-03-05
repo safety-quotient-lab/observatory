@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getStatusCounts, getDomainSignalProfiles, getGlobalGateStats } from '../lib/db';
+import { getStatusCounts, getDomainSignalProfiles, getGlobalGateStats, HOMEPAGE_BLOB_KEY } from '../lib/db';
+import type { PsqAggregates, HomepageBlob } from '../lib/db';
 import type { DomainSignalProfile } from '../lib/db-entities';
 import { cachedQuery, readDb } from '../lib/db-utils';
-import { scoreToColor, formatScore, setlToColor, formatSetl, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../lib/colors';
+import { scoreToColor, formatScore, setlToColor, formatSetl, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio, normalizePsq, formatPsqScore } from '../lib/colors';
 
 const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
@@ -26,6 +27,13 @@ try {
   statusCounts = sc;
   profiles = cached;
   globalGate = gg;
+} catch {}
+
+// PSQ aggregates — read from homepage KV blob (no new D1 query)
+let psqAggregates: PsqAggregates | null = null;
+try {
+  const blob = await kv.get(HOMEPAGE_BLOB_KEY, 'json') as HomepageBlob | null;
+  if (blob?.psqAggregates) psqAggregates = blob.psqAggregates;
 } catch {}
 
 const domainCount = profiles.length;
@@ -212,6 +220,39 @@ function fmtSig(val: number, note: string): string {
   return val.toFixed(2);
 }
 
+// Key findings — computed from existing metrics (try/catch: frontmatter errors → silent SSR truncation)
+const sourceFindings: Array<{ text: string; anchor: string }> = [];
+try {
+  if (avgSetl != null && avgSetl >= 0.15) {
+    sourceFindings.push({
+      text: `Average source says one thing, does another (SETL ${setlDisplay})`,
+      anchor: '#source-metrics',
+    });
+  }
+  if (hrcbSpreadMin != null && hrcbSpreadMax != null) {
+    sourceFindings.push({
+      text: `Source HRCB ranges from ${formatScore(hrcbSpreadMin)} to ${formatScore(hrcbSpreadMax)} — not all publishers are equal`,
+      anchor: '#hrcb-distribution',
+    });
+  }
+  if (leaders.length > 0) {
+    const ptLeader = leaders.find(l => l.label === 'PT');
+    if (ptLeader && ptLeader.topVal != null && ptLeader.topVal > 1) {
+      sourceFindings.push({
+        text: `${ptLeader.topDomain} averages ${ptLeader.topVal.toFixed(1)} propaganda flags per story`,
+        anchor: '#signal-leaders',
+      });
+    }
+    const tdLeader = leaders.find(l => l.label === 'TD');
+    if (tdLeader && tdLeader.bottomVal != null && tdLeader.topVal != null) {
+      sourceFindings.push({
+        text: `Transparency ranges from ${tdLeader.bottomVal.toFixed(2)} (${tdLeader.bottomDomain}) to ${tdLeader.topVal.toFixed(2)} (${tdLeader.topDomain})`,
+        anchor: '#signal-leaders',
+      });
+    }
+  }
+} catch { /* degrade gracefully — findings just won't show */ }
+
 const siteUrl = new URL(Astro.request.url).origin;
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -249,9 +290,23 @@ const jsonLd = {
           <a href="/about#dcp" style="color: var(--channel-hrcb); font-size: var(--font-xs); white-space: nowrap;">How sources are profiled &rarr;</a>
         </div>
 
+        {/* ═══ KEY FINDINGS ═══ */}
+
+        {sourceFindings.length > 0 && (
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 16px;">
+            {sourceFindings.map((f, i) => (
+              <div style={`padding: 4px 0;${i > 0 ? ' border-top: 1px solid var(--color-border);' : ''}`}>
+                <a href={f.anchor} style="color: var(--fg-primary); font-size: var(--font-sm); text-decoration: none;">
+                  <span style="color: var(--channel-hrcb); margin-right: 6px;">&rsaquo;</span>{f.text}
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* ═══ SECTION 2 — Source Metrics ═══ */}
 
-        <h2 style="font-size: var(--font-base); margin: 0 0 8px 0;">Source Metrics</h2>
+        <div id="source-metrics" role="heading" aria-level="2" style="font-size: var(--font-base); margin: 0 0 8px 0; font-weight: bold;">Source Metrics</div>
 
         <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
           <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
@@ -282,14 +337,28 @@ const jsonLd = {
             <span style={`color: ${confColor}; font-size: var(--font-md);`} class="score-font">{confDisplay}</span><br>
             <span style="color: var(--fg-secondary); font-size: var(--font-xs);">Evidence strength</span>
           </div>
+          {psqAggregates && psqAggregates.avg_psq != null && (
+            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+              <span style="color: var(--color-violet); font-weight: bold;">Avg PSQ</span>
+              <span class="psq-experimental" style="margin-left: 4px;">experimental</span><br>
+              <span style={`color: ${scoreToColor(normalizePsq(psqAggregates.avg_psq))}; font-size: var(--font-md);`} class="score-font">
+                {formatPsqScore(psqAggregates.avg_psq)}<span style="font-size: var(--font-xs); color: var(--fg-secondary);">/10</span>
+              </span><br>
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+                Reader safety ({psqAggregates.story_count} stories)
+              </span>
+            </div>
+          )}
         </div>
 
         {/* ═══ SECTION 3 — Signal Leaders ═══ */}
 
         {leaders.length > 0 && (
-          <div>
-            <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Signal Leaders</h2>
-            <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">Top and bottom domains per editorial signal dimension</p>
+          <div id="signal-leaders">
+            <div role="heading" aria-level="2" style="font-size: var(--font-base); margin: 0 0 4px 0; font-weight: bold;">Signal Leaders</div>
+            <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">
+              Who leads and lags on each editorial dimension? <a href="/article/19" style="color: var(--channel-editorial);">UDHR Article 19</a> protects expression — these signals reveal the character of that expression, source by source.
+            </p>
 
             <div class="insight-grid" style="font-size: var(--font-base); margin-bottom: 20px;">
               {leaders.map((l) => {
@@ -323,8 +392,10 @@ const jsonLd = {
 
         {(toneEntries.length > 0 || scopeEntries.length > 0 || levelEntries.length > 0 || sentimentEntries.length > 0) && (
           <div>
-            <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Editorial Character</h2>
-            <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">How sources distribute across tone, scope, and reading level</p>
+            <div role="heading" aria-level="2" style="font-size: var(--font-base); margin: 0 0 4px 0; font-weight: bold;">Editorial Character</div>
+            <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">
+              How sources sound and who they address. Tone shapes how rights issues land (<a href="/article/19" style="color: var(--channel-editorial);">Art. 19</a>); geographic scope reveals whose "<a href="/article/25" style="color: var(--channel-editorial);">adequate standard of living</a>" gets covered; reading level determines who can participate (<a href="/article/26" style="color: var(--channel-editorial);">Art. 26</a>).
+            </p>
 
             <div class="insight-grid" style="margin-bottom: 20px;">
 
@@ -422,8 +493,10 @@ const jsonLd = {
 
         {/* ═══ SECTION 5 — Source HRCB Distribution ═══ */}
 
-        <h2 style="font-size: var(--font-base); margin: 0 0 4px 0;">Source HRCB Distribution</h2>
-        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">How domains distribute across HRCB classification bands</p>
+        <div id="hrcb-distribution" role="heading" aria-level="2" style="font-size: var(--font-base); margin: 0 0 4px 0; font-weight: bold;">Source HRCB Distribution</div>
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 10px;">
+          Where sources fall on the human rights compatibility spectrum. The spread reveals whether tech media broadly aligns with UDHR principles or clusters in specific bands.
+        </p>
 
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px; margin-bottom: 20px;">
           <table cellpadding="0" cellspacing="0" width="100%">
@@ -446,7 +519,7 @@ const jsonLd = {
 
         {/* ═══ SECTION 6 — Deep Dive Cards ═══ */}
 
-        <h2 style="font-size: var(--font-base); margin: 0 0 8px 0;">Deep Dives</h2>
+        <div role="heading" aria-level="2" style="font-size: var(--font-base); margin: 0 0 8px 0; font-weight: bold;">Deep Dives</div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
           {sections.map(card => (

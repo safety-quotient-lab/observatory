@@ -1118,6 +1118,7 @@ const dcMax = Math.max(0.001, ...dcTotals);
               <td style="padding: 6px 8px; text-align: center; color: var(--fg-secondary);">{a.story_count}</td>
               <td style={`padding: 6px 8px; text-align: center; font-weight: bold; color: ${scoreToColor(a.avg_score)};`}>
                 {formatScore(a.avg_score)}
+                {a.ci_margin > 0 && <span style="color: var(--fg-secondary); font-size: var(--font-xs); font-weight: normal;" title={`95% CI: ${(a.avg_score - a.ci_margin).toFixed(3)} to ${(a.avg_score + a.ci_margin).toFixed(3)} (n=${a.story_count})`}>{' '}±{a.ci_margin.toFixed(3)}</span>}
                 {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: var(--fg-secondary); font-size: var(--font-xs); font-weight: normal; margin-left: 3px;" title="Editorial channel only — not comparable to full model weighted mean">E</span>}
               </td>
               <td style="padding: 6px 8px; text-align: center; color: var(--fg-emphasis);">{a.avg_abs_score.toFixed(3)}</td>

@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getStatusCounts, getSignalOverview, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates } from '../lib/db';
-import { getMeanSetl } from '../lib/db-entities';
+import { getStatusCounts, getSignalOverview, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates, HOMEPAGE_BLOB_KEY } from '../lib/db';
+import type { PsqAggregates, HomepageBlob } from '../lib/db';
+import { PSQ_THREAT_DIMENSIONS, PSQ_PROTECTIVE_DIMENSIONS } from '../lib/eval-types';
+import { scoreToColor, normalizePsq, formatPsqScore } from '../lib/colors';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -36,6 +38,27 @@ try {
   temporalData = await cachedQuery(kv, 'sys:temporalFramingAggregates', () => getTemporalFramingAggregates(db), 600);
 } catch {}
 
+// PSQ aggregates — read from homepage KV blob (no new D1 query)
+let psqAggregates: PsqAggregates | null = null;
+try {
+  const blob = await kv.get(HOMEPAGE_BLOB_KEY, 'json') as HomepageBlob | null;
+  if (blob?.psqAggregates) psqAggregates = blob.psqAggregates;
+} catch {}
+
+// PSQ dimension split
+const threatDims: Array<{ name: string; avg: number }> = [];
+const protectiveDims: Array<{ name: string; avg: number }> = [];
+if (psqAggregates?.dim_averages) {
+  for (const [name, avg] of Object.entries(psqAggregates.dim_averages)) {
+    if (PSQ_THREAT_DIMENSIONS.has(name)) threatDims.push({ name, avg });
+    else if (PSQ_PROTECTIVE_DIMENSIONS.has(name)) protectiveDims.push({ name, avg });
+  }
+  threatDims.sort((a, b) => a.avg - b.avg); // worst threats first
+  protectiveDims.sort((a, b) => b.avg - a.avg); // strongest protections first
+}
+const threatAvg = threatDims.length > 0 ? threatDims.reduce((s, d) => s + d.avg, 0) / threatDims.length : null;
+const protectiveAvg = protectiveDims.length > 0 ? protectiveDims.reduce((s, d) => s + d.avg, 0) / protectiveDims.length : null;
+
 // Transparency rows
 const tdRows = tdData ? [
   { label: 'Any disclosure',      pct: tdData.any_disclosure_pct },
@@ -44,11 +67,27 @@ const tdRows = tdData ? [
   { label: 'Funding disclosed',   pct: tdData.funding_disclosed_pct },
 ] : [];
 
-// Propaganda techniques — top 5
-const techEntries = signalData?.technique_distribution
-  ? Object.entries(signalData.technique_distribution).sort((a, b) => b[1] - a[1]).slice(0, 5)
-  : [];
-const maxTech = techEntries.length > 0 ? techEntries[0][1] : 1;
+// Persuasion techniques — tier breakdown (A=3 high-severity, B=2 moderate, C=1 low)
+const PT_TIER_A = new Set(['reductio_ad_hitlerum', 'appeal_to_fear', 'name_calling', 'false_dilemma', 'thought_terminating_cliche']);
+const PT_TIER_B = new Set(['causal_oversimplification', 'strawman', 'whataboutism', 'bandwagon', 'flag_waving', 'exaggeration', 'doubt']);
+const PT_TIER_C = new Set(['loaded_language', 'repetition', 'appeal_to_authority', 'slogans', 'red_herring', 'obfuscation']);
+
+const techDist = signalData?.technique_distribution ?? {};
+let tierA = { count: 0, techniques: [] as string[] };
+let tierB = { count: 0, techniques: [] as string[] };
+let tierC = { count: 0, techniques: [] as string[] };
+for (const [tech, count] of Object.entries(techDist)) {
+  if (PT_TIER_A.has(tech)) { tierA.count += count; tierA.techniques.push(tech); }
+  else if (PT_TIER_B.has(tech)) { tierB.count += count; tierB.techniques.push(tech); }
+  else if (PT_TIER_C.has(tech)) { tierC.count += count; tierC.techniques.push(tech); }
+}
+const totalPt = tierA.count + tierB.count + tierC.count;
+const maxTier = Math.max(tierA.count, tierB.count, tierC.count, 1);
+
+// Persuasion: top technique per tier for drill-through link
+const topTierA = tierA.techniques.sort((a, b) => (techDist[b] ?? 0) - (techDist[a] ?? 0))[0];
+const topTierB = tierB.techniques.sort((a, b) => (techDist[b] ?? 0) - (techDist[a] ?? 0))[0];
+const topTierC = tierC.techniques.sort((a, b) => (techDist[b] ?? 0) - (techDist[a] ?? 0))[0];
 
 // Jargon / knowledge distributions
 const jargonRows = complexityData ? [
@@ -97,6 +136,119 @@ const scopeEntries = signalData?.scope_distribution
   ? Object.entries(signalData.scope_distribution).sort((a, b) => b[1] - a[1])
   : [];
 const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
+const totalScope = scopeEntries.reduce((sum, [, c]) => sum + c, 0);
+
+// Retro/prospective ratio
+const retroRatio = temporalData?.retrospective_pct != null && temporalData?.prospective_pct != null && temporalData.prospective_pct > 0
+  ? (temporalData.retrospective_pct / temporalData.prospective_pct).toFixed(1)
+  : null;
+
+// Key findings — computed from existing aggregates
+const findings: Array<{ text: string; anchor: string }> = [];
+
+if (complexityData?.expert_pct != null) {
+  findings.push({
+    text: `${complexityData.expert_pct.toFixed(0)}% of stories assume expert-level knowledge`,
+    anchor: '#accessibility',
+  });
+}
+if (tdData?.author_identified_pct != null) {
+  findings.push({
+    text: `Only ${tdData.author_identified_pct.toFixed(0)}% of stories identify their author`,
+    anchor: '#transparency',
+  });
+}
+if (retroRatio) {
+  findings.push({
+    text: `Tech coverage looks backward ${retroRatio}\u00d7 more than forward`,
+    anchor: '#temporal',
+  });
+}
+if (totalPt > 0) {
+  const emotionCount = tierA.count + tierB.count;
+  const emotionPct = Math.round((emotionCount / totalPt) * 100);
+  findings.push({
+    text: `${emotionPct}% of persuasion techniques target emotion, not logic`,
+    anchor: '#persuasion',
+  });
+}
+if (psqAggregates?.avg_psq != null && psqAggregates.story_count > 10) {
+  findings.push({
+    text: `Average reader safety score: ${formatPsqScore(psqAggregates.avg_psq)}/10 across ${psqAggregates.story_count} stories`,
+    anchor: '#reader-safety',
+  });
+}
+
+// Signal tensions — cross-signal patterns from existing data
+interface SignalTension {
+  label: string;
+  description: string;
+  metric1: { name: string; value: string; color: string };
+  metric2: { name: string; value: string; color: string };
+  article: string;
+  articleHref: string;
+}
+
+const tensions: SignalTension[] = [];
+
+// Knowledge gatekeeping: high transparency + low accessibility
+if (tdData?.any_disclosure_pct != null && complexityData?.expert_pct != null) {
+  const highTransparency = tdData.any_disclosure_pct > 50;
+  const lowAccessibility = complexityData.expert_pct > 30;
+  if (highTransparency && lowAccessibility) {
+    tensions.push({
+      label: 'Knowledge gatekeeping',
+      description: 'Sources disclose who they are, but write in ways most people cannot understand. Transparency without accessibility creates an informed elite.',
+      metric1: { name: 'Disclosure rate', value: `${tdData.any_disclosure_pct.toFixed(0)}%`, color: 'var(--color-positive)' },
+      metric2: { name: 'Expert-only', value: `${complexityData.expert_pct.toFixed(0)}%`, color: 'var(--color-negative)' },
+      article: 'Art. 26 vs Art. 19',
+      articleHref: '/article/26',
+    });
+  }
+}
+
+// Backward-looking discourse: high retrospective + low prospective
+if (retroRatio && parseFloat(retroRatio) >= 2.0) {
+  tensions.push({
+    label: 'Retrospective bias',
+    description: 'Tech discourse overwhelmingly analyzes past events rather than advocating for future change. Accountability without forward vision limits rights progress.',
+    metric1: { name: 'Backward focus', value: `${temporalData!.retrospective_pct!.toFixed(0)}%`, color: 'var(--color-amber)' },
+    metric2: { name: 'Forward focus', value: `${temporalData!.prospective_pct!.toFixed(0)}%`, color: 'var(--color-positive)' },
+    article: 'Art. 28',
+    articleHref: '/article/28',
+  });
+}
+
+// Persuasion rewarded: high-severity techniques present at scale
+if (tierA.count > 0 && totalPt > 50) {
+  const tierAPct = Math.round((tierA.count / totalPt) * 100);
+  if (tierAPct >= 5) {
+    tensions.push({
+      label: 'High-severity persuasion at scale',
+      description: 'The most manipulative techniques (name-calling, fear appeals, false dilemmas) appear regularly in tech coverage. Discourse quality suffers when severe persuasion goes unnoted.',
+      metric1: { name: 'High-severity', value: `${tierA.count.toLocaleString()} uses`, color: 'var(--color-negative)' },
+      metric2: { name: 'Share of all PT', value: `${tierAPct}%`, color: 'var(--color-warning)' },
+      article: 'Art. 19',
+      articleHref: '/article/19',
+    });
+  }
+}
+
+// Low disclosure in heavily jargoned content
+if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null) {
+  const lowTransparency = tdData.any_disclosure_pct < 40;
+  const lowAccessibility = complexityData.accessible_pct < 20;
+  if (lowTransparency && lowAccessibility) {
+    tensions.push({
+      label: 'Opaque discourse',
+      description: 'Most stories neither identify their authors nor write for a general audience. When content lacks both transparency and accessibility, it functions as insider communication.',
+      metric1: { name: 'Disclosure rate', value: `${tdData.any_disclosure_pct.toFixed(0)}%`, color: 'var(--color-warning)' },
+      metric2: { name: 'Accessible', value: `${complexityData.accessible_pct.toFixed(0)}%`, color: 'var(--color-warning)' },
+      article: 'Art. 19 + Art. 26',
+      articleHref: '/article/19',
+    });
+  }
+}
 ---
 
 <Base title="Signals">
@@ -105,21 +257,35 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
     <tr>
       <td>
         <h1 style="font-size: var(--font-md); margin-bottom: 4px;">What {storyCount.toLocaleString()} stories reveal</h1>
-        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 20px;">
-          Aggregate patterns across every evaluated Hacker News story, measured against the <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" target="_blank" rel="noopener" style="color: var(--channel-editorial);">Universal Declaration of Human Rights</a>.
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); margin-bottom: 16px;">
+          Invisible rights patterns across every evaluated Hacker News story, measured against the <a href="https://www.un.org/en/about-us/universal-declaration-of-human-rights" target="_blank" rel="noopener" style="color: var(--channel-editorial);">Universal Declaration of Human Rights</a>.
           <a href="/about#supplementary" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 6px;">Methodology &rarr;</a>
         </p>
 
-        {/* ═══ 1. TRANSPARENCY ═══ */}
+        {/* ═══ 1. KEY FINDINGS ═══ */}
+
+        {findings.length > 0 && (
+          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 20px;">
+            {findings.map((f, i) => (
+              <div style={`padding: 4px 0;${i > 0 ? ' border-top: 1px solid var(--color-border);' : ''}`}>
+                <a href={f.anchor} style="color: var(--fg-primary); font-size: var(--font-sm); text-decoration: none;">
+                  <span style="color: var(--channel-hrcb); margin-right: 6px;">&rsaquo;</span>{f.text}
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ═══ 2. TRANSPARENCY ═══ */}
 
         {tdData && tdData.td_measured > 0 && (
-          <div style="margin-bottom: 20px;">
+          <div id="transparency" style="margin-bottom: 20px;">
             <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
               Transparency
             </h2>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
               Who's transparent about what they write? <a href="/article/19" style="color: var(--channel-editorial);">UDHR Article 19</a> protects expression — but expression without disclosure undermines trust.
-              <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">by source →</a>
+              <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">by source &rarr;</a>
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
@@ -142,23 +308,23 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
                 {tdData.high_td_pct !== null && (
                   <> <span style="color: var(--color-positive);">{tdData.high_td_pct.toFixed(0)}%</span> meet high transparency standards.</>
                 )}
-                <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 6px; white-space: nowrap;">data →</a>
+                <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 6px; white-space: nowrap;">data &rarr;</a>
               </p>
             </div>
           </div>
         )}
 
-        {/* ═══ 2. ACCESSIBILITY ═══ */}
+        {/* ═══ 3. ACCESSIBILITY ═══ */}
 
         {complexityData && complexityData.total_measured > 0 && (
-          <div style="margin-bottom: 20px;">
+          <div id="accessibility" style="margin-bottom: 20px;">
             <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
               Accessibility
             </h2>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
               Who can understand this content? <a href="/article/26" style="color: var(--channel-editorial);">UDHR Article 26</a> protects the right to education — jargon and assumed expertise create invisible barriers.
-              <a href="https://unratified.org/covenant" target="_blank" rel="noopener" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">ICESCR Art. 13 →</a>
-              <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data →</a>
+              <a href="https://unratified.org/covenant" target="_blank" rel="noopener" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">ICESCR Art. 13 &rarr;</a>
+              <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data &rarr;</a>
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -211,54 +377,97 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
           </div>
         )}
 
-        {/* ═══ 3. PERSUASION TECHNIQUES ═══ */}
+        {/* ═══ 4. PERSUASION TECHNIQUES (tier breakdown) ═══ */}
 
-        {techEntries.length > 0 && (
-          <div style="margin-bottom: 20px;">
+        {totalPt > 0 && (
+          <div id="persuasion" style="margin-bottom: 20px;">
             <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
               Persuasion Techniques
             </h2>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              Propaganda techniques detected across all stories. Not all flagged content is harmful — loaded language is common in opinion writing — but the distribution reveals how tech discourse persuades.
-              <a href="/stories?show=negative&sort=score" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">flagged stories →</a>
+              How does tech discourse persuade? PTC-18 techniques grouped by severity — high-severity techniques manipulate through fear, identity attacks, and false choices.
+              <a href="/stories?show=negative&sort=score" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">flagged stories &rarr;</a>
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-              <table cellpadding="0" cellspacing="0" width="100%">
-                {techEntries.map(([technique, count]) => {
-                  const pct = maxTech > 0 ? Math.round((count / maxTech) * 100) : 0;
-                  const displayName = technique.replace(/_/g, ' ');
-                  return (
-                    <tr>
-                      <td title={displayName} style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-sm); width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{displayName}</td>
-                      <td style="padding: 2px 8px;">
-                        <div style="height: 10px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
-                          <div style={`width: ${pct}%; height: 100%; background: var(--color-negative-light); border-radius: 3px;`}></div>
-                        </div>
-                      </td>
-                      <td style="width: 50px; text-align: right; color: var(--fg-secondary); font-size: var(--font-sm);" class="score-font">
-                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(technique)}`} style="color: inherit; text-decoration: none;" title={`Stories flagged for ${technique.replace(/_/g, ' ')}`}>{count}</a>
-                      </td>
-                    </tr>
-                  );
-                })}
+              <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+                {tierA.count > 0 && (
+                  <tr>
+                    <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
+                      <span style="color: var(--color-negative); font-weight: bold;">High severity</span>
+                    </td>
+                    <td style="padding: 0 8px;">
+                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+                        <div style={`background: var(--color-negative); opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((tierA.count / maxTier) * 100)}%;`}></div>
+                      </div>
+                    </td>
+                    <td style="width: 50px; text-align: right; color: var(--fg-primary);" class="score-font">
+                      {topTierA ? (
+                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierA)}`} style="color: inherit; text-decoration: none;" title="Stories with high-severity techniques">{tierA.count.toLocaleString()}</a>
+                      ) : tierA.count.toLocaleString()}
+                    </td>
+                  </tr>
+                )}
+                {tierB.count > 0 && (
+                  <tr>
+                    <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
+                      <span style="color: var(--color-warning); font-weight: bold;">Moderate</span>
+                    </td>
+                    <td style="padding: 0 8px;">
+                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+                        <div style={`background: var(--color-warning); opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((tierB.count / maxTier) * 100)}%;`}></div>
+                      </div>
+                    </td>
+                    <td style="width: 50px; text-align: right; color: var(--fg-primary);" class="score-font">
+                      {topTierB ? (
+                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierB)}`} style="color: inherit; text-decoration: none;" title="Stories with moderate techniques">{tierB.count.toLocaleString()}</a>
+                      ) : tierB.count.toLocaleString()}
+                    </td>
+                  </tr>
+                )}
+                {tierC.count > 0 && (
+                  <tr>
+                    <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
+                      <span style="color: var(--fg-secondary); font-weight: bold;">Low severity</span>
+                    </td>
+                    <td style="padding: 0 8px;">
+                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+                        <div style={`background: var(--fg-secondary); opacity: 0.3; border-radius: 3px; height: 14px; width: ${Math.round((tierC.count / maxTier) * 100)}%;`}></div>
+                      </div>
+                    </td>
+                    <td style="width: 50px; text-align: right; color: var(--fg-primary);" class="score-font">
+                      {topTierC ? (
+                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierC)}`} style="color: inherit; text-decoration: none;" title="Stories with low-severity techniques">{tierC.count.toLocaleString()}</a>
+                      ) : tierC.count.toLocaleString()}
+                    </td>
+                  </tr>
+                )}
               </table>
               <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                18 techniques tracked using the PTC-18 taxonomy. <a href="/about#supplementary" style="color: var(--channel-hrcb);">Full methodology &rarr;</a>
+                {tierA.count > 0 && (
+                  <><span style="color: var(--color-negative);">{tierA.count.toLocaleString()}</span> uses of high-severity techniques (name-calling, appeal to fear, false dilemma). </>
+                )}
+                {tierB.count > 0 && (
+                  <><span style="color: var(--color-warning);">{tierB.count.toLocaleString()}</span> moderate (whataboutism, strawman). </>
+                )}
+                {tierC.count > 0 && (
+                  <>{tierC.count.toLocaleString()} low-severity (loaded language, slogans). </>
+                )}
+                <a href="/about#supplementary" style="color: var(--channel-hrcb);">PTC-18 taxonomy &rarr;</a>
               </p>
             </div>
           </div>
         )}
 
-        {/* ═══ 4. TEMPORAL FRAMING ═══ */}
+        {/* ═══ 5. TEMPORAL FRAMING ═══ */}
 
         {temporalData && temporalData.total_measured > 0 && (
-          <div style="margin-bottom: 20px;">
+          <div id="temporal" style="margin-bottom: 20px;">
             <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
               Temporal Framing
             </h2>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
               Does tech coverage look backward or forward? Retrospective analysis and prospective advocacy signal different relationships to change.
-              <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data →</a>
+              <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data &rarr;</a>
             </p>
             <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
@@ -271,7 +480,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
                       </div>
                     </td>
                     <td style="width: 40px; text-align: right; color: var(--fg-primary);" class="score-font">
-                      {pct !== null ? <a href={`/stories?temporal=${param}`} style="color: inherit; text-decoration: none;" title={`${label} stories`}>{pct.toFixed(0)}%</a> : '—'}
+                      {pct !== null ? <a href={`/stories?temporal=${param}`} style="color: inherit; text-decoration: none;" title={`${label} stories`}>{pct.toFixed(0)}%</a> : '\u2014'}
                     </td>
                   </tr>
                 ))}
@@ -295,8 +504,8 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
                 </>
               )}
               <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                {temporalData.retrospective_pct !== null && temporalData.prospective_pct !== null && temporalData.prospective_pct > 0 && (
-                  <>Tech coverage looks backward <span class="score-font">{(temporalData.retrospective_pct / temporalData.prospective_pct).toFixed(1)}×</span> more than forward. </>
+                {retroRatio && (
+                  <>Tech coverage looks backward <span class="score-font">{retroRatio}&times;</span> more than forward. </>
                 )}
                 {temporalData.total_measured.toLocaleString()} stories measured.
               </p>
@@ -304,19 +513,123 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
           </div>
         )}
 
-        {/* ═══ 5. TONE & SCOPE ═══ */}
+        {/* ═══ 6. READER SAFETY (PSQ) ═══ */}
+
+        {psqAggregates && psqAggregates.story_count > 0 && (
+          <div id="reader-safety" style="margin-bottom: 20px;">
+            <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px;">
+              <div role="heading" aria-level="2" style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0;">
+                Reader Safety
+              </div>
+              <span class="psq-experimental">experimental</span>
+            </div>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+              How safe does this content feel to encounter? <a href="/article/3" style="color: var(--channel-editorial);">UDHR Article 3</a> protects security of person; <a href="/article/12" style="color: var(--channel-editorial);">Article 12</a> protects against attacks on reputation. PSQ measures psychoemotional safety across threat exposure and protective factors.
+            </p>
+            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                <div style="text-align: center;">
+                  <div style="color: var(--fg-secondary); font-size: var(--font-xs);">avg PSQ</div>
+                  <span class="score-font" style={`color: ${scoreToColor(normalizePsq(psqAggregates.avg_psq))}; font-size: var(--font-md);`}>
+                    {formatPsqScore(psqAggregates.avg_psq)}
+                  </span>
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs);">/10</span>
+                </div>
+                <div style="color: var(--fg-secondary); font-size: var(--font-xs);">
+                  {psqAggregates.story_count} stories scored
+                </div>
+                {threatAvg != null && protectiveAvg != null && (
+                  <div style="margin-left: auto; display: flex; gap: 12px; font-size: var(--font-xs);">
+                    <span>
+                      <span style="color: var(--fg-secondary);">Threat avg: </span>
+                      <span class="score-font" style={`color: ${scoreToColor(normalizePsq(threatAvg))};`}>{threatAvg.toFixed(1)}</span>
+                    </span>
+                    <span>
+                      <span style="color: var(--fg-secondary);">Protective avg: </span>
+                      <span class="score-font" style={`color: ${scoreToColor(normalizePsq(protectiveAvg))};`}>{protectiveAvg.toFixed(1)}</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {threatDims.length > 0 && (
+                <div style="margin-bottom: 8px;">
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 4px 0; font-weight: bold;">Threat Dimensions</p>
+                  {threatDims.map(({ name, avg }) => {
+                    const dimNorm = normalizePsq(avg);
+                    const dimColor = dimNorm != null ? scoreToColor(dimNorm) : 'var(--fg-secondary)';
+                    return (
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                        <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 120px; text-align: right; white-space: nowrap;">
+                          {name.replace(/_/g, ' ')}
+                        </span>
+                        <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative; max-width: 200px;">
+                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
+                          {dimNorm != null && (dimNorm >= 0 ? (
+                            <div style={`position: absolute; left: 50%; top: 0; width: ${dimNorm * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
+                          ) : (
+                            <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(dimNorm) * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
+                          ))}
+                        </div>
+                        <span class="score-font" style={`color: ${dimColor}; font-size: var(--font-xs); width: 40px; text-align: right;`}>
+                          {avg.toFixed(1)}/10
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {protectiveDims.length > 0 && (
+                <div>
+                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 4px 0; font-weight: bold;">Protective Dimensions</p>
+                  {protectiveDims.map(({ name, avg }) => {
+                    const dimNorm = normalizePsq(avg);
+                    const dimColor = dimNorm != null ? scoreToColor(dimNorm) : 'var(--fg-secondary)';
+                    return (
+                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+                        <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 120px; text-align: right; white-space: nowrap;">
+                          {name.replace(/_/g, ' ')}
+                        </span>
+                        <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative; max-width: 200px;">
+                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
+                          {dimNorm != null && (dimNorm >= 0 ? (
+                            <div style={`position: absolute; left: 50%; top: 0; width: ${dimNorm * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
+                          ) : (
+                            <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(dimNorm) * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
+                          ))}
+                        </div>
+                        <span class="score-font" style={`color: ${dimColor}; font-size: var(--font-xs); width: 40px; text-align: right;`}>
+                          {avg.toFixed(1)}/10
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+                PSQ (Psychoemotional Safety Quotient) — an independent signal measuring reader safety across 10 dimensions.
+                <a href="/about#supplementary" style="color: var(--channel-hrcb); margin-left: 4px;">methodology &rarr;</a>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ 7. DISCOURSE CHARACTER (merged tone + scope) ═══ */}
 
         {(toneEntries.length > 0 || scopeEntries.length > 0) && (
           <div style="margin-bottom: 20px;">
             <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
-              Tone & Geographic Scope
+              Discourse Character
             </h2>
             <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              <a href="/sources" style="color: var(--channel-hrcb); white-space: nowrap;">by source →</a>
+              How does tech discourse sound, and who does it address? Emotional tone shapes how rights issues land; geographic scope reveals whose "<a href="/article/25" style="color: var(--channel-editorial);">adequate standard of living</a>" gets discussed.
+              <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">by source &rarr;</a>
             </p>
-            <div class="insight-grid">
+            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
               {toneEntries.length > 0 && (
-                <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                <div style={scopeEntries.length > 0 ? 'margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--color-border);' : ''}>
                   <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Tone (top 5 of {totalTone})</p>
                   <table cellpadding="0" cellspacing="0" width="100%">
                     {toneEntries.map(([label, count]) => {
@@ -338,7 +651,7 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
               )}
 
               {scopeEntries.length > 0 && (
-                <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+                <div>
                   <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
                   <table cellpadding="0" cellspacing="0" width="100%">
                     {scopeEntries.map(([label, count]) => {
@@ -362,7 +675,40 @@ const maxScope = scopeEntries.length > 0 ? scopeEntries[0][1] : 1;
           </div>
         )}
 
-        {/* ═══ 6. METHODOLOGY NOTES ═══ */}
+        {/* ═══ 7. SIGNAL TENSIONS ═══ */}
+
+        {tensions.length > 0 && (
+          <div style="margin-bottom: 20px;">
+            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+              Signal Tensions
+            </h2>
+            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+              Where signals contradict each other, rights patterns emerge. These cross-signal tensions reveal how the tech ecosystem relates to human rights in ways no single metric captures.
+            </p>
+            {tensions.map((t) => (
+              <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                  <span style="color: var(--fg-primary); font-size: var(--font-sm); font-weight: bold;">{t.label}</span>
+                  <a href={t.articleHref} style="color: var(--channel-editorial); font-size: var(--font-xs); white-space: nowrap;">{t.article}</a>
+                </div>
+                <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">{t.description}</p>
+                <div style="display: flex; gap: 16px; font-size: var(--font-xs);">
+                  <span>
+                    <span style="color: var(--fg-secondary);">{t.metric1.name}: </span>
+                    <span style={`color: ${t.metric1.color}; font-weight: bold;`} class="score-font">{t.metric1.value}</span>
+                  </span>
+                  <span style="color: var(--fg-secondary);">vs</span>
+                  <span>
+                    <span style="color: var(--fg-secondary);">{t.metric2.name}: </span>
+                    <span style={`color: ${t.metric2.color}; font-weight: bold;`} class="score-font">{t.metric2.value}</span>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ═══ 8. METHODOLOGY NOTES ═══ */}
 
         <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 10px;">
           <b style="color: var(--color-positive-vivid);">Fair Witness</b>
