@@ -30,7 +30,7 @@ const safeJargon = validJargon.includes(jargonRaw) ? jargonRaw : '';
 const safeTemporal = validTemporal.includes(temporalRaw) ? temporalRaw : '';
 const hasSupplFilter = !!(safePt || safeJargon || safeTemporal);
 
-const validSorts: SortOption[] = ['top', 'time', 'score_desc', 'score_asc', 'hn_points', 'conf_desc', 'conf_asc', 'velocity', 'psq_desc', 'psq_asc', 'editorial_desc', 'editorial_asc', 'structural_desc', 'structural_asc'];
+const validSorts: SortOption[] = ['top', 'time', 'time_asc', 'score_desc', 'score_asc', 'hn_points', 'hn_points_asc', 'conf_desc', 'conf_asc', 'velocity', 'psq_desc', 'psq_asc', 'editorial_desc', 'editorial_asc', 'structural_desc', 'structural_asc'];
 const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
 const validCtypes: ContentTypeOption[] = ['all', 'ED', 'PO', 'LP', 'PR', 'AC', 'MI'];
@@ -177,13 +177,37 @@ const SORT_OPTIONS = [
 ] as const;
 
 // Column header sort helpers (following users.astro pattern)
+// Pairs: clicking active desc column toggles to asc and vice versa
+const SORT_TOGGLE: Record<string, string> = {
+  score_desc: 'score_asc', score_asc: 'score_desc',
+  psq_desc: 'psq_asc', psq_asc: 'psq_desc',
+  editorial_desc: 'editorial_asc', editorial_asc: 'editorial_desc',
+  structural_desc: 'structural_asc', structural_asc: 'structural_desc',
+  hn_points: 'hn_points_asc', hn_points_asc: 'hn_points',
+  time: 'time_asc', time_asc: 'time',
+};
 function sortUrl(key: string): string {
-  return buildUrl({ sort: key, p: '1' });
+  // If this column is already active, toggle direction
+  const target = safeSort === key && SORT_TOGGLE[key] ? SORT_TOGGLE[key] : key;
+  return buildUrl({ sort: target, p: '1' });
+}
+function isActiveSort(col: string): boolean {
+  return safeSort === col || safeSort === SORT_TOGGLE[col];
+}
+// Columns whose default (no _asc/_desc suffix) sorts descending
+const DESC_BY_DEFAULT = new Set(['hn_points', 'time']);
+function isDescSort(key: string): boolean {
+  return key.endsWith('_desc') || DESC_BY_DEFAULT.has(key);
+}
+function sortArrow(col: string): string {
+  if (safeSort === col) return isDescSort(col) ? ' ▾' : ' ▴';
+  if (safeSort === SORT_TOGGLE[col]) return isDescSort(SORT_TOGGLE[col]) ? ' ▾' : ' ▴';
+  return '';
 }
 function thStyle(col: string): string {
-  return safeSort === col
-    ? 'color: var(--color-orange); font-weight: bold; text-decoration: none;'
-    : 'color: var(--fg-secondary); text-decoration: none;';
+  return isActiveSort(col)
+    ? 'color: var(--color-orange); font-weight: bold; text-decoration: none; cursor: pointer;'
+    : 'color: var(--fg-secondary); text-decoration: none; cursor: pointer;';
 }
 
 function timeAgo(unixTime: number): string {
@@ -370,22 +394,22 @@ function isLiteModel(id: string): boolean {
       <th style="width: 28px; text-align: right; padding-right: 5px; font-weight: normal;">#</th>
       <th style="text-align: left; font-weight: normal;">Title</th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('score_desc')} style={thStyle('score_desc')} title="Human Rights Compatibility Bias score">HRCB</a>
+        <a href={sortUrl('score_desc')} style={thStyle('score_desc')} title="Human Rights Compatibility Bias score — click to sort, click again to reverse">HRCB{sortArrow('score_desc')}</a>
       </th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('psq_desc')} style={thStyle('psq_desc')} title="Psychological Safety Quotient">PSQ</a>
+        <a href={sortUrl('psq_desc')} style={thStyle('psq_desc')} title="Psychological Safety Quotient — click to sort, click again to reverse">PSQ{sortArrow('psq_desc')}</a>
       </th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('editorial_desc')} style={thStyle('editorial_desc')} title="Editorial: what the content says">E</a>
+        <a href={sortUrl('editorial_desc')} style={thStyle('editorial_desc')} title="Editorial: what the content says — click to sort, click again to reverse">E{sortArrow('editorial_desc')}</a>
       </th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('structural_desc')} style={thStyle('structural_desc')} title="Structural: what the site does">S</a>
+        <a href={sortUrl('structural_desc')} style={thStyle('structural_desc')} title="Structural: what the site does — click to sort, click again to reverse">S{sortArrow('structural_desc')}</a>
       </th>
       <th width="45" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('hn_points')} style={thStyle('hn_points')} title="HN score">Pts</a>
+        <a href={sortUrl('hn_points')} style={thStyle('hn_points')} title="HN score — click to sort, click again to reverse">Pts{sortArrow('hn_points')}</a>
       </th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('time')} style={thStyle('time')} title="Time posted">Age</a>
+        <a href={sortUrl('time')} style={thStyle('time')} title="Time posted — click to sort, click again to reverse">Age{sortArrow('time')}</a>
       </th>
     </tr>
     </thead>

@@ -183,7 +183,7 @@ function scoreRowToScore(row: ScoreRow): Score {
   };
 }
 
-export type SortOption = 'top' | 'time' | 'score_desc' | 'score_asc' | 'hn_points' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity' | 'psq_desc' | 'psq_asc' | 'editorial_desc' | 'editorial_asc' | 'structural_desc' | 'structural_asc';
+export type SortOption = 'top' | 'time' | 'time_asc' | 'score_desc' | 'score_asc' | 'hn_points' | 'hn_points_asc' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity' | 'psq_desc' | 'psq_asc' | 'editorial_desc' | 'editorial_asc' | 'structural_desc' | 'structural_asc';
 export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
 export type TypeOption = 'all' | 'ask' | 'show' | 'job';
 export type ContentTypeOption = 'all' | 'ED' | 'PO' | 'LP' | 'PR' | 'AC' | 'MI';
@@ -306,9 +306,11 @@ export async function getFilteredStoriesWithScores(
   let joinSetl = false;
   switch (sort) {
     case 'top': orderBy = `${zeroScoreDemote}, s.hn_rank ASC NULLS LAST, s.hn_time DESC`; break;
+    case 'time_asc': orderBy = `s.hn_time ASC NULLS LAST`; break;
     case 'score_desc': orderBy = `COALESCE(${scorePrefix}.hcb_weighted_mean, ${scorePrefix}.hcb_editorial_mean) DESC NULLS LAST`; break;
     case 'score_asc': orderBy = `COALESCE(${scorePrefix}.hcb_weighted_mean, ${scorePrefix}.hcb_editorial_mean) ASC NULLS LAST`; break;
     case 'hn_points': orderBy = 's.hn_score DESC NULLS LAST'; break;
+    case 'hn_points_asc': orderBy = 's.hn_score ASC NULLS LAST'; break;
     case 'conf_desc': orderBy = `${scorePrefix}.hcb_confidence DESC NULLS LAST`; break;
     case 'conf_asc': orderBy = `${scorePrefix}.hcb_confidence ASC NULLS LAST`; break;
     case 'setl_desc': joinSetl = true; orderBy = 'story_setl DESC NULLS LAST'; break;
