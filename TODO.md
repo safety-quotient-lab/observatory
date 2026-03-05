@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Construct validity work active + RTS implemented.** Tom emailed. HN thread quiet.
+**PSQ Phases 1-4 complete. Deploy pipeline + generate first PSQ evals.** Tom emailed. HN thread quiet.
 
 Phase 0 external validation progress:
 - ✓ DB hygiene — 8 gated-pending → skipped, 442 orphaned queued → failed, 107 null-editorial full evals retroactively failed + 28 re-queued
@@ -41,7 +41,10 @@ Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.
 
 ✓ PSQ Phase 2 pipeline integration (2026-03-04): D1 migrations 0062+0063, clean-cut model IDs (`-psq` suffix), three-way consumer routing (lite-v2/lite/full), `writePsqRaterEvalResult()` + `updatePsqConsensus()`, hn-bot dispatch reads `model.prompt_mode`, sweeps updated.
 
-Next: Deploy PSQ pipeline (apply migrations, deploy all workers). Then PSQ Phase 3 (UI — EvalCard, score mode toggle, homepage dual chart). Then API blog post.
+✓ PSQ Phase 3 UI refocus (2026-03-04): All 8 batches — data layer, EvalCard, item page, score mode toggle (HRCB|PSQ|E|S), homepage KV blob chart, feed/API/OpenAPI, badge `?signal=psq`, domain/user pages.
+✓ PSQ Phase 4 messaging (2026-03-04): About page (PSQ section + HRCB vs PSQ comparison table), methodology page (PSQ prompt), reference page (PSQ dimensions), agent card (query-psq-signals skill).
+
+Next: Deploy site + PSQ pipeline workers (apply migrations 0062+0063, deploy all workers). Then trigger `sweep=lite_reeval` to generate first PSQ data. Then API blog post.
 
 ✓ `/methodology` page (2026-03-04): prerendered page rendering exact LLM evaluation prompt. Full + lite. CC BY-SA 4.0.
 ✓ Gap-detection blog post (2026-03-04): published to blog.unratified.org (Pre-Review).

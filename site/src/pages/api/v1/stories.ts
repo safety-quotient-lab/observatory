@@ -36,7 +36,8 @@ export const GET: APIRoute = async ({ locals, request }) => {
                 s.hcb_weighted_mean, s.hcb_editorial_mean, s.hcb_classification,
                 s.consensus_score, s.eval_model, s.evaluated_at,
                 s.eq_score, s.so_score, s.td_score,
-                s.et_valence, s.et_arousal, s.et_primary_tone
+                s.et_valence, s.et_arousal, s.et_primary_tone,
+                s.psq_score, s.psq_confidence
          FROM stories s
          WHERE s.url NOT LIKE 'item?id=%'
            AND s.hn_id > 0

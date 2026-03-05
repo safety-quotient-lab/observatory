@@ -4,7 +4,7 @@ import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { getUserIntelligence, getHourlyPatterns, getDayOfWeekPatterns, getKarmaHrcbCorrelation } from '../lib/db';
 import type { UserIntelSortOption } from '../lib/db';
-import { scoreToColor, formatScore } from '../lib/colors';
+import { scoreToColor, formatScore, normalizePsq, formatPsqScore } from '../lib/colors';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);

@@ -1748,6 +1748,12 @@ export async function getTdSignalAggregates(db: D1Database): Promise<TdSignalAgg
 export const HOMEPAGE_BLOB_KEY = 'sys:homepage';
 export const HOMEPAGE_BLOB_TTL = 300; // 5 minutes
 
+export interface PsqAggregates {
+  avg_psq: number | null;
+  story_count: number;
+  dim_averages: Record<string, number>;
+}
+
 export interface HomepageBlob {
   articleStats: Awaited<ReturnType<typeof getArticleDetailedStats>>;
   sparklinesRaw: Awaited<ReturnType<typeof getArticleSparklines>>;
@@ -1759,6 +1765,7 @@ export interface HomepageBlob {
   stakeholderData: Awaited<ReturnType<typeof getStakeholderOverview>> | null;
   regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null;
   domainFingerprintsRaw: Record<string, (number | null)[]>;
+  psqAggregates: PsqAggregates | null;
   computedAt: string;
 }
 
@@ -1786,6 +1793,44 @@ export async function computeHomepageBlob(db: D1Database): Promise<HomepageBlob>
 
   const fpMap = await getDomainFingerprints(db, topDomains.map(d => d.domain));
 
+  // PSQ aggregates — parse dimensions from JSON, compute per-dim averages
+  let psqAggregates: PsqAggregates | null = null;
+  try {
+    const psqRows = await db
+      .prepare(
+        `SELECT psq_score, psq_dimensions_json
+         FROM stories
+         WHERE psq_score IS NOT NULL AND psq_dimensions_json IS NOT NULL
+         AND hn_id > 0`
+      )
+      .all<{ psq_score: number; psq_dimensions_json: string }>();
+
+    if (psqRows.results.length > 0) {
+      const dimSums: Record<string, { total: number; count: number }> = {};
+      let psqTotal = 0;
+      for (const row of psqRows.results) {
+        psqTotal += row.psq_score;
+        try {
+          const dims = JSON.parse(row.psq_dimensions_json) as Array<{ name: string; score: number }>;
+          for (const d of dims) {
+            if (!dimSums[d.name]) dimSums[d.name] = { total: 0, count: 0 };
+            dimSums[d.name].total += d.score;
+            dimSums[d.name].count += 1;
+          }
+        } catch { /* skip malformed */ }
+      }
+      const dimAverages: Record<string, number> = {};
+      for (const [name, { total, count }] of Object.entries(dimSums)) {
+        dimAverages[name] = Math.round((total / count) * 100) / 100;
+      }
+      psqAggregates = {
+        avg_psq: Math.round((psqTotal / psqRows.results.length) * 100) / 100,
+        story_count: psqRows.results.length,
+        dim_averages: dimAverages,
+      };
+    }
+  } catch { /* non-fatal */ }
+
   return {
     articleStats,
     sparklinesRaw,
@@ -1797,6 +1842,7 @@ export async function computeHomepageBlob(db: D1Database): Promise<HomepageBlob>
     stakeholderData,
     regionData,
     domainFingerprintsRaw: Object.fromEntries(fpMap),
+    psqAggregates,
     computedAt: new Date().toISOString(),
   };
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { APIContext } from 'astro';
 import { readDb } from '../../../../lib/db-utils';
-import { formatScore } from '../../../../lib/colors';
+import { formatScore, normalizePsq, formatPsqScore } from '../../../../lib/colors';
 
 export const prerender = false;
 
@@ -97,16 +97,18 @@ export async function GET(context: APIContext): Promise<Response> {
     });
   }
 
-  const label = context.url.searchParams.get('label') || 'HRCB';
+  const signal = context.url.searchParams.get('signal');
+  const isPsq = signal === 'psq';
+  const label = context.url.searchParams.get('label') || (isPsq ? 'PSQ' : 'HRCB');
 
   const row = await db
     .prepare(
-      `SELECT avg_hrcb, evaluated_count, story_count
+      `SELECT avg_hrcb, avg_psq, evaluated_count, story_count
        FROM domain_aggregates
        WHERE domain = ?`
     )
     .bind(rawDomain)
-    .first<{ avg_hrcb: number | null; evaluated_count: number; story_count: number }>();
+    .first<{ avg_hrcb: number | null; avg_psq: number | null; evaluated_count: number; story_count: number }>();
 
   if (!row) {
     return new Response(renderBadge(label, 'unknown', '#9f9f9f', null), {
@@ -118,8 +120,15 @@ export async function GET(context: APIContext): Promise<Response> {
     });
   }
 
-  const scoreText = row.avg_hrcb !== null ? formatScore(row.avg_hrcb) : 'ND';
-  const color = scoreToHex(row.avg_hrcb);
+  let scoreText: string;
+  let color: string;
+  if (isPsq) {
+    scoreText = row.avg_psq != null ? `${row.avg_psq.toFixed(1)}/10` : 'ND';
+    color = scoreToHex(normalizePsq(row.avg_psq));
+  } else {
+    scoreText = row.avg_hrcb !== null ? formatScore(row.avg_hrcb) : 'ND';
+    color = scoreToHex(row.avg_hrcb);
+  }
 
   return new Response(renderBadge(label, scoreText, color, row.evaluated_count), {
     headers: {

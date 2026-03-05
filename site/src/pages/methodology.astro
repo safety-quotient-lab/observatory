@@ -8,7 +8,7 @@ export const prerender = true;
 // Parse the methodology content into structured sections for rendering.
 // Source: methodology-content.ts (CC-BY-SA-4.0) — the operational prompt that
 // LLM evaluators actually receive. This page renders it human-readable.
-import { METHODOLOGY_PREAMBLE, METHODOLOGY_LITE } from '../lib/methodology-content';
+import { METHODOLOGY_PREAMBLE, METHODOLOGY_LITE, METHODOLOGY_LITE_V2 } from '../lib/methodology-content';
 
 interface Section {
   id: string;
@@ -54,6 +54,11 @@ const sections = parseMarkdownSections(sectioned);
 const liteSections = parseMarkdownSections(METHODOLOGY_LITE);
 const liteIntroEnd = METHODOLOGY_LITE.split('\n').findIndex((l, i) => i > 0 && l.startsWith('## '));
 const liteIntro = METHODOLOGY_LITE.split('\n').slice(0, liteIntroEnd).join('\n').trim();
+
+// Parse PSQ (lite-v2) methodology
+const psqSections = parseMarkdownSections(METHODOLOGY_LITE_V2);
+const psqIntroEnd = METHODOLOGY_LITE_V2.split('\n').findIndex((l, i) => i > 0 && l.startsWith('## '));
+const psqIntro = psqIntroEnd > 0 ? METHODOLOGY_LITE_V2.split('\n').slice(0, psqIntroEnd).join('\n').trim() : METHODOLOGY_LITE_V2.split('\n').slice(0, 3).join('\n').trim();
 
 // Simple markdown-to-HTML for table/list rendering
 function mdToHtml(text: string): string {
@@ -218,6 +223,27 @@ const jsonLd = {
         </div>
 
         {liteSections.map(s => (
+          <details class="collapsible-section" id={s.id} open>
+            <summary style="color: var(--fg-emphasis); cursor: pointer;">{s.title}</summary>
+            <div set:html={mdToHtml(s.content)} />
+          </details>
+        ))}
+
+        {/* --- PSQ (lite-v2) Methodology --- */}
+        <div role="heading" aria-level={2} id="psq" style="font-size: var(--font-base); color: var(--fg-emphasis); margin: 24px 0 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">
+          PSQ Evaluation Prompt
+          <span class="psq-experimental" style="font-size: var(--font-xs); margin-left: 6px;">experimental</span>
+        </div>
+
+        <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 12px;">
+          Workers AI PSQ models receive this prompt. Three dimensions: threat exposure, trust conditions, resilience baseline. Independent from HRCB.
+        </p>
+
+        <div style="background: var(--bg-surface); border-left: 3px solid var(--color-warning); padding: 10px 14px; margin-bottom: 16px; border-radius: 0 4px 4px 0;">
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; font-style: italic;">{psqIntro}</p>
+        </div>
+
+        {psqSections.length > 0 && psqSections.map(s => (
           <details class="collapsible-section" id={s.id} open>
             <summary style="color: var(--fg-emphasis); cursor: pointer;">{s.title}</summary>
             <div set:html={mdToHtml(s.content)} />

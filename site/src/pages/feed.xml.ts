@@ -23,6 +23,8 @@ interface FeedStory {
   eq_score: number | null;
   consensus_score: number | null;
   fw_ratio: number | null;
+  psq_score: number | null;
+  psq_confidence: number | null;
   section?: string | null;
   section_score?: number | null;
   section_evidence?: string | null;
@@ -45,6 +47,9 @@ function buildEntry(s: FeedStory, baseUrl: string, updated: string, articleLabel
     parts.push('—');
   }
   parts.push(`HRCB: ${formatScore(numericScore)} (${s.hcb_classification || 'Unknown'})`);
+  if (s.psq_score != null) {
+    parts.push(`PSQ: ${s.psq_score.toFixed(1)}/10`);
+  }
   if (articleLabel && s.section_score != null) {
     parts.push(`${articleLabel}: ${formatScore(s.section_score)} [${s.section_evidence || 'ND'}]`);
   }
@@ -167,6 +172,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
                         s.hcb_classification, s.hcb_signal_sections, s.hcb_nd_count, s.evaluated_at,
                         s.hn_by, s.hn_score, s.content_type, s.hcb_theme_tag, s.hcb_sentiment_tag,
                         s.hcb_executive_summary, s.eq_score, s.consensus_score, s.fw_ratio,
+                        s.psq_score, s.psq_confidence,
                         sc.section, sc.final AS section_score, sc.evidence AS section_evidence
                  FROM rater_scores sc
                  JOIN stories s ON s.hn_id = sc.hn_id
@@ -203,7 +209,8 @@ export const GET: APIRoute = async ({ locals, request }) => {
     const sql = `SELECT hn_id, title, url, domain, hcb_weighted_mean, hcb_editorial_mean,
                         hcb_classification, hcb_signal_sections, hcb_nd_count, evaluated_at,
                         hn_by, hn_score, content_type, hcb_theme_tag, hcb_sentiment_tag,
-                        hcb_executive_summary, eq_score, consensus_score, fw_ratio
+                        hcb_executive_summary, eq_score, consensus_score, fw_ratio,
+                        psq_score, psq_confidence
                  FROM stories
                  WHERE ${conditions.join(' AND ')}
                  ORDER BY evaluated_at DESC

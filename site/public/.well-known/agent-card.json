@@ -115,6 +115,20 @@
       "inputModes": ["text/plain"],
       "outputModes": ["application/json"],
       "rateLimit": "no limit (static/prerendered)"
+    },
+    {
+      "id": "query-psq-signals",
+      "name": "Query Psychological Safety Quotient",
+      "description": "Returns PSQ (Psychological Safety Quotient) scores — an independent signal measuring reader psychoemotional safety on a 0-10 scale. Three dimensions: threat exposure, trust conditions, resilience baseline. Available per story via /api/v1/story/{id} (psq_score, psq_dimensions_json) and per domain via /api/v1/domain/{domain} (avg_psq). Status: experimental.",
+      "tags": ["psq", "safety", "psychoemotional", "experimental"],
+      "examples": [
+        "How psychologically safe is this domain's content to read?",
+        "What is the PSQ score breakdown for this story?",
+        "Which domains have the highest reader safety scores?"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests per hour per IP"
     }
   ]
 }

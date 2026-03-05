@@ -338,6 +338,10 @@ html[data-theme="light"] .ev-labels > span { filter: brightness(0.74); }
     font-weight: bold;
   }
 
+  body[data-score-mode="psq"] .score-row[data-channel="psq"] .score-value {
+    font-weight: bold;
+  }
+
   /* Inactive channels in horizontal layout — muted */
   body[data-score-mode="hrcb"] .score-row:not([data-channel="hrcb"]) .score-value,
   body:not([data-score-mode]) .score-row:not([data-channel="hrcb"]) .score-value {
@@ -347,6 +351,9 @@ html[data-theme="light"] .ev-labels > span { filter: brightness(0.74); }
     color: var(--fg-secondary) !important;
   }
   body[data-score-mode="structural"] .score-row:not([data-channel="structural"]) .score-value {
+    color: var(--fg-secondary) !important;
+  }
+  body[data-score-mode="psq"] .score-row:not([data-channel="psq"]) .score-value {
     color: var(--fg-secondary) !important;
   }
 

@@ -4,7 +4,8 @@ import Base from '../layouts/Base.astro';
 import SubNav from '../components/SubNav.astro';
 import { getArticleDetailedStats, getArticleSparklines, getSignalOverview, getDomainStats, getDomainFingerprints, getDailyHrcb, getStatusCounts, getTopPropagandaStories, getStakeholderOverview, getRegionDistribution, HOMEPAGE_BLOB_KEY } from '../lib/db';
 import type { HomepageBlob } from '../lib/db';
-import { scoreToColor, formatScore, fwRatioColor, formatFwRatio } from '../lib/colors';
+import { scoreToColor, formatScore, fwRatioColor, formatFwRatio, normalizePsq, formatPsqScore } from '../lib/colors';
+import type { PsqAggregates } from '../lib/db';
 import { ARTICLE_GROUPS, ARTICLE_TITLES, ALL_SECTIONS, SECTIONS } from '../lib/udhr';
 import { readDb } from '../lib/db-utils';
 
@@ -28,10 +29,12 @@ let signalOverview: Awaited<ReturnType<typeof getSignalOverview>> | null = null;
 let stakeholderData: Awaited<ReturnType<typeof getStakeholderOverview>> | null = null;
 let regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null = null;
 let domainFingerprints: Map<string, (number | null)[]>;
+let psqAggregates: PsqAggregates | null = null;
 
 if (blob) {
   ({ articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories,
      signalOverview, stakeholderData, regionData } = blob);
+  psqAggregates = blob.psqAggregates ?? null;
   domainFingerprints = new Map(Object.entries(blob.domainFingerprintsRaw));
 } else {
   [articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories] = await Promise.all([
@@ -766,6 +769,54 @@ const groupColors: Record<string, string> = {
         </span>
       </div>
     </div>
+
+    <!-- 8b. PSQ Safety Lens -->
+    {psqAggregates && psqAggregates.story_count > 0 && (
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+          <div style="color: var(--color-violet); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">Reader Safety</div>
+          <span class="psq-experimental">experimental</span>
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+            {psqAggregates.story_count} stories scored
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div style="text-align: center;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs);">avg PSQ</div>
+            <span class="score-font" style={`color: ${scoreToColor(normalizePsq(psqAggregates.avg_psq))}; font-size: var(--font-lg);`}>
+              {formatPsqScore(psqAggregates.avg_psq)}
+            </span>
+          </div>
+        </div>
+        {Object.keys(psqAggregates.dim_averages).length > 0 && (
+          <div>
+            {Object.entries(psqAggregates.dim_averages).map(([name, avg]) => {
+              const dimNorm = normalizePsq(avg);
+              const dimColor = dimNorm != null ? scoreToColor(dimNorm) : 'var(--fg-secondary)';
+              const label = name.replace(/_/g, ' ');
+              return (
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 110px; text-align: right; white-space: nowrap;">
+                    {label}
+                  </span>
+                  <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative; max-width: 200px;">
+                    <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
+                    {dimNorm != null && (dimNorm >= 0 ? (
+                      <div style={`position: absolute; left: 50%; top: 0; width: ${dimNorm * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
+                    ) : (
+                      <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(dimNorm) * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
+                    ))}
+                  </div>
+                  <span class="score-font" style={`color: ${dimColor}; font-size: var(--font-xs); width: 36px; text-align: right;`}>
+                    {avg.toFixed(1)}/10
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    )}
 
     <!-- 9. Domain Rights Profiles -->
     <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">

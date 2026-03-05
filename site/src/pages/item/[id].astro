@@ -7,11 +7,11 @@ import DcpTable from '../../components/DcpTable.astro';
 import ArticleDetail from '../../components/ArticleDetail.astro';
 import ModelCompareTable from '../../components/ModelCompareTable.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
-import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio } from '../../lib/colors';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, evidenceColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, fwRatioColor, formatFwRatio, normalizePsq, formatPsqScore } from '../../lib/colors';
 import { getStory, getStoryComments, getDomainDcp, getEventsForStory, getEvalHistoryForStory, getRaterEvalsForStory, getRaterScores, getFairWitnessForStory, getStoryTimeline } from '../../lib/db';
 import { CONTENT_TYPE_LABELS } from '../../lib/types';
 import { computeAggregates, type Aggregates } from '../../lib/compute-aggregates';
-import { modelDisplayName, isLiteMode } from '../../lib/shared-eval';
+import { modelDisplayName, modelShortName, isLiteMode } from '../../lib/shared-eval';
 import { sanitizeHtml } from '../../lib/sanitize';
 import { readDb } from '../../lib/db-utils';
 
@@ -251,6 +251,19 @@ const tdData = storyData.td_score != null ? {
   funding_disclosed: storyData.td_funding_disclosed != null ? !!storyData.td_funding_disclosed : null,
 } : null;
 const hasSignals = eqScore !== null || ptFlagCount > 0 || soData !== null || etData !== null || srData !== null || tfData !== null || gsData !== null || clData !== null || tdData !== null;
+
+// PSQ (Psychological Safety Quotient)
+const hasPsq = storyData.psq_score != null;
+const psqDims: Array<{name: string; score: number; confidence: number; role: string}> | null =
+  storyData.psq_dimensions_json
+    ? (() => { try { return JSON.parse(storyData.psq_dimensions_json); } catch { return null; } })()
+    : null;
+const psqNormalized = normalizePsq(storyData.psq_score);
+const psqColor = psqNormalized != null ? scoreToColor(psqNormalized) : 'var(--fg-secondary)';
+// Per-model PSQ from rater_evals
+const psqRaterEvals = raterEvals.filter(re => re.prompt_mode === 'lite-v2' && re.psq_score != null);
+// PSQ consensus
+const hasPsqConsensus = (storyData.psq_consensus_model_count ?? 0) >= 2 && storyData.psq_consensus_score != null;
 
 // Inter-rater agreement: compute from done rater_evals with valid HRCB scores
 const doneRaterScores = raterEvals
@@ -961,6 +974,86 @@ function timeAgo(unixTime: number): string {
       </td>
     </tr>
   </table>
+
+  {/* PSQ — Psychological Safety */}
+  {hasPsq && (
+    <div style="padding: 5px 0;">
+      <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; border-top: 3px solid var(--color-violet);">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <div role="heading" aria-level={3} style="color: var(--color-violet); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold;">Psychological Safety</div>
+          <span class="psq-experimental">experimental</span>
+        </div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 12px;">How safe this content is to read — independent from rights stance. <a href="/about#psq" style="color: var(--channel-hrcb); text-decoration: none;">Learn more</a></div>
+
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <div style="text-align: center;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 2px;">PSQ</div>
+            <span class="score-font" style={`color: ${psqColor}; font-size: var(--font-lg);`}>{formatPsqScore(storyData.psq_score)}</span>
+          </div>
+          {hasPsqConsensus && (
+            <div style="text-align: center;">
+              <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 2px;">Consensus</div>
+              <span class="score-font" style={`color: ${scoreToColor(normalizePsq(storyData.psq_consensus_score))}; font-size: var(--font-sm);`}>
+                {formatPsqScore(storyData.psq_consensus_score)}
+              </span>
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">
+                ×{storyData.psq_consensus_model_count}
+                {storyData.psq_consensus_spread != null && ` ±${(storyData.psq_consensus_spread / 2).toFixed(2)}`}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Dimension breakdown bars */}
+        {psqDims && psqDims.length > 0 && (
+          <div style="margin-bottom: 8px;">
+            {psqDims.map(dim => {
+              const dimNorm = normalizePsq(dim.score);
+              const dimColor = dimNorm != null ? scoreToColor(dimNorm) : 'var(--fg-secondary)';
+              const label = dim.name.replace(/_/g, ' ');
+              const roleIcon = dim.role === 'threat' ? '⚡' : '🛡';
+              return (
+                <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 120px; text-align: right; white-space: nowrap;" title={`${label} (${dim.role} dimension)`}>
+                    {roleIcon} {label}
+                  </span>
+                  <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative;">
+                    <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
+                    {dimNorm != null && (dimNorm >= 0 ? (
+                      <div style={`position: absolute; left: 50%; top: 0; width: ${dimNorm * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
+                    ) : (
+                      <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(dimNorm) * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
+                    ))}
+                  </div>
+                  <span class="score-font" style={`color: ${dimColor}; font-size: var(--font-xs); width: 36px; text-align: right;`}>
+                    {dim.score}/10
+                  </span>
+                  <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 24px; text-align: right;" title={`Confidence: ${Math.round(dim.confidence * 100)}%`}>
+                    {Math.round(dim.confidence * 100)}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Per-model PSQ in audit trail */}
+        {psqRaterEvals.length > 1 && (
+          <div style="border-top: 1px solid var(--bg-surface); padding-top: 6px; margin-top: 4px;">
+            <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 4px;">Per-model PSQ</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              {psqRaterEvals.map(re => (
+                <span style="font-size: var(--font-xs);">
+                  <span style="color: var(--fg-secondary);">{modelShortName(re.eval_model)}</span>
+                  <span class="score-font" style={`color: ${scoreToColor(normalizePsq(re.psq_score))}; margin-left: 3px;`}>{formatPsqScore(re.psq_score)}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )}
 
   {/* Supplementary Signals */}
   {hasSignals && (

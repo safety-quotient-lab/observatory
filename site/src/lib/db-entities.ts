@@ -104,6 +104,7 @@ export interface DomainIntelligence {
   neutral_pct: number | null;
   avg_editorial: number | null;
   avg_structural: number | null;
+  avg_psq: number | null;
 }
 
 export type DomainIntelSortOption = 'stories' | 'score' | 'comments' | 'hrcb' | 'engagement' | 'submitters' | 'controversy';
@@ -150,7 +151,8 @@ export async function getDomainIntelligence(
         ROUND(100.0 * SUM(CASE WHEN s.eval_status = 'done' AND s.hcb_weighted_mean BETWEEN -0.05 AND 0.05 THEN 1 ELSE 0 END)
               / NULLIF(SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END), 0), 1) as neutral_pct,
         ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_editorial_mean END), 4) as avg_editorial,
-        ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_structural_mean END), 4) as avg_structural
+        ROUND(AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_structural_mean END), 4) as avg_structural,
+        ROUND(AVG(s.psq_score), 4) as avg_psq
       FROM stories s
       WHERE s.domain IS NOT NULL
       GROUP BY s.domain
@@ -228,6 +230,7 @@ export interface DomainSignalProfile {
   avg_editorial: number | null;
   avg_structural: number | null;
   avg_confidence: number | null;
+  avg_psq: number | null;
   dominant_tone: string | null;
   dominant_scope: string | null;
   dominant_reading_level: string | null;
@@ -245,7 +248,7 @@ export async function getDomainSignalProfiles(db: D1Database): Promise<Map<strin
            avg_valence, avg_arousal, avg_dominance, avg_fw_ratio,
            avg_hn_score, avg_hn_comments,
            NULL as avg_poster_karma,
-           avg_setl, avg_hrcb, avg_editorial, avg_structural, avg_confidence,
+           avg_setl, avg_hrcb, avg_editorial, avg_structural, avg_confidence, avg_psq,
            dominant_tone, dominant_scope, dominant_reading_level, dominant_sentiment
          FROM domain_aggregates
          WHERE evaluated_count >= 3
@@ -913,6 +916,7 @@ export interface UserIntelligence {
   avg_eq: number | null;
   avg_so: number | null;
   avg_td: number | null;
+  avg_psq: number | null;
   top_domain: string | null;
   dominant_tone: string | null;
   karma: number | null;
@@ -957,7 +961,7 @@ export async function getUserIntelligence(
                 avg_hrcb, min_hrcb, max_hrcb, hrcb_range,
                 positive_pct, negative_pct, neutral_pct,
                 avg_editorial_full, avg_editorial_lite, avg_structural, avg_setl,
-                avg_eq, avg_so, avg_td,
+                avg_eq, avg_so, avg_td, avg_psq,
                 top_domain, dominant_tone, karma, account_age_days
          FROM user_aggregates
          WHERE stories >= ?
@@ -985,7 +989,7 @@ export async function getUserAggregate(db: D1Database, username: string): Promis
                 avg_hrcb, min_hrcb, max_hrcb, hrcb_range,
                 positive_pct, negative_pct, neutral_pct,
                 avg_editorial_full, avg_editorial_lite, avg_structural, avg_setl,
-                avg_eq, avg_so, avg_td,
+                avg_eq, avg_so, avg_td, avg_psq,
                 top_domain, dominant_tone, karma, account_age_days
          FROM user_aggregates WHERE username = ?`
       )

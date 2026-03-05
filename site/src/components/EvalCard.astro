@@ -1,6 +1,6 @@
 ---
 // SPDX-License-Identifier: Apache-2.0
-import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence } from '../lib/colors';
+import { scoreToColor, formatScore, classificationColor, classificationTextColor, computeSetl, formatSetl, setlToColor, computeConfidence, confidenceToColor, formatConfidence, normalizePsq, formatPsqScore } from '../lib/colors';
 import MiniBar from './MiniBar.astro';
 import type { Story, StoryWithMiniScores } from '../lib/db';
 import { modelShortName, isLiteMode } from '../lib/shared-eval';
@@ -51,6 +51,11 @@ const editorialVals = miniScores.map(s => s.editorial).filter((v): v is number =
 const structuralVals = miniScores.map(s => s.structural).filter((v): v is number => v !== null);
 const avgEditorial = editorialVals.length > 0 ? editorialVals.reduce((a, b) => a + b, 0) / editorialVals.length : null;
 const avgStructural = structuralVals.length > 0 ? structuralVals.reduce((a, b) => a + b, 0) / structuralVals.length : null;
+
+// PSQ (Psychological Safety Quotient) — independent signal
+const hasPsq = story.psq_score != null;
+const psqNormalized = normalizePsq(story.psq_score);
+const psqColor = psqNormalized != null ? scoreToColor(psqNormalized) : 'var(--fg-secondary)';
 
 function timeAgo(unixTime: number): string {
   const seconds = Math.floor(Date.now() / 1000 - unixTime);
@@ -104,6 +109,15 @@ function timeAgo(unixTime: number): string {
                 aria-label="Run full evaluation"
                 style="background: none; border: none; cursor: pointer; padding: 0; font-size: var(--font-xs); color: var(--color-orange); line-height: 1.4;"
               >&#9654;</button>
+            </div>
+          )}
+          {hasPsq && (
+            <div class="score-row" data-channel="psq">
+              <abbr class="score-font score-label" style="text-decoration: none;" title="Psychological Safety Quotient: how safe the content is to read, from −1.0 to +1.0">PSQ</abbr>
+              <span class="score-font score-value" style={`color: ${psqColor};`}>
+                {formatPsqScore(story.psq_score)}
+              </span>
+              <span class="psq-experimental">experimental</span>
             </div>
           )}
         </div>

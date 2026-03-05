@@ -6,7 +6,7 @@ import DcpTable from '../../components/DcpTable.astro';
 import { ARTICLE_SHORT_TITLES } from '../../lib/udhr';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { getStoriesByDomain, getDomainSetl, getDomainDetailStats, getDomainFingerprints, getDomainDcp, getDomainSetlHistory, getDomainSignals, getDomainGateStats } from '../../lib/db';
-import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence, gateToColor } from '../../lib/colors';
+import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence, gateToColor, normalizePsq, formatPsqScore } from '../../lib/colors';
 import { readDb } from '../../lib/db-utils';
 
 const { domain } = Astro.params;
@@ -21,7 +21,7 @@ const page = Math.max(1, parseInt(url.searchParams.get('p') || '1', 10));
 const PER_PAGE = 30;
 const offset = (page - 1) * PER_PAGE;
 
-const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, setlHistory, signals, gateStats, karmaRow] = await Promise.all([
+const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, setlHistory, signals, gateStats, karmaRow, domainAgg] = await Promise.all([
   getStoriesByDomain(db, domain, PER_PAGE + 1, offset),
   getDomainSetl(db, domain),
   getDomainDetailStats(db, domain),
@@ -35,6 +35,8 @@ const [{ stories, total, avgScore }, domainSetl, detail, fingerprints, dcpJson, 
      FROM stories s JOIN hn_users u ON u.username = s.hn_by
      WHERE s.domain = ? AND u.karma > 0 AND s.hn_id > 0`
   ).bind(domain).first<{ avg_karma: number | null; user_count: number }>(),
+  db.prepare(`SELECT avg_psq FROM domain_aggregates WHERE domain = ?`)
+    .bind(domain).first<{ avg_psq: number | null }>(),
 ]);
 const avgPosterKarma = karmaRow?.avg_karma ?? null;
 const hasMore = stories.length > PER_PAGE;
@@ -115,6 +117,16 @@ if (dcpJson) {
                 <td class="score-font" style={`color: ${scoreToColor(detail.avgEditorial)};`}>{formatScore(detail.avgEditorial)}</td>
                 <td style="color: var(--fg-secondary);">Avg Structural</td>
                 <td class="score-font" style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</td>
+              </tr>
+            )}
+            {domainAgg?.avg_psq != null && (
+              <tr>
+                <td style="color: var(--fg-secondary);">Avg PSQ</td>
+                <td class="score-font" style={`color: ${scoreToColor(normalizePsq(domainAgg.avg_psq))};`}>
+                  {formatPsqScore(domainAgg.avg_psq)}
+                  <span class="psq-experimental" style="font-size: var(--font-xs); color: var(--fg-secondary); margin-left: 4px;">experimental</span>
+                </td>
+                <td colspan="2"></td>
               </tr>
             )}
             {avgPosterKarma !== null && (

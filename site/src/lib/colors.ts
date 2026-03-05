@@ -214,6 +214,20 @@ export function gateToColor(category: string): string {
   }
 }
 
+/** Normalize PSQ score (0-10) to [-1, +1] for display alongside E/S */
+export function normalizePsq(psq: number | null | undefined): number | null {
+  if (psq == null) return null;
+  return (Math.max(0, Math.min(10, psq)) - 5) / 5;
+}
+
+/** Format PSQ score for display — shows normalized [-1, +1] */
+export function formatPsqScore(psq: number | null | undefined): string {
+  const n = normalizePsq(psq);
+  if (n == null) return 'ND';
+  const sign = n > 0 ? '+' : '';
+  return `${sign}${n.toFixed(2)}`;
+}
+
 /** Fair Witness ratio color: maps 0–1 to purple(0) → green(1) */
 export function fwRatioColor(ratio: number | null | undefined): string {
   if (ratio == null) return '#4b5563';

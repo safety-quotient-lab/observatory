@@ -243,6 +243,20 @@ function isLiteModel(id: string): boolean {
       <span class="filter-sep"> | </span>
       <a href="#" id="toggle-advanced-filters" class="filter-link" style="color: var(--fg-secondary);">more ▾</a>
     </div>
+    <div class="filter-row">
+      <span class="filter-label">score:</span>
+      {([
+        { mode: 'hrcb', label: 'HRCB', tip: 'Rights Stance' },
+        { mode: 'psq', label: 'PSQ', tip: 'Reader Safety' },
+        { mode: 'editorial', label: 'E', tip: 'Editorial' },
+        { mode: 'structural', label: 'S', tip: 'Structural' },
+      ] as const).map((opt, i) => (
+        <>
+          {i > 0 && <span class="filter-sep"> | </span>}
+          <button class="score-mode-btn" data-mode={opt.mode} title={opt.tip}>{opt.label}</button>
+        </>
+      ))}
+    </div>
 
     {/* Advanced filters — collapsed by default, auto-open if non-default params active */}
     <div id="advanced-filters" style={`display: ${safeType !== 'all' || safeCtype !== 'all' || safeModel !== 'any' || safeFilter === 'pending' || safeFilter === 'failed' || !['top', 'time', 'score_desc', 'hn_points'].includes(safeSort) ? 'block' : 'none'};`}>

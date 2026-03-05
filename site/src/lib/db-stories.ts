@@ -73,6 +73,13 @@ export interface Story {
   td_funding_disclosed: number | null;
   tq_score: number | null;
   rts_tensions_json: string | null;
+  // PSQ (Psychological Safety Quotient) — independent signal
+  psq_score: number | null;
+  psq_dimensions_json: string | null;
+  psq_confidence: number | null;
+  psq_consensus_score: number | null;
+  psq_consensus_model_count: number | null;
+  psq_consensus_spread: number | null;
   // Ensemble consensus
   consensus_score: number | null;
   consensus_model_count: number | null;
@@ -107,6 +114,8 @@ const STORY_LIST_COLS = `hn_id, url, title, domain, hn_score, hn_comments, hn_by
   cl_reading_level, cl_jargon_density, cl_assumed_knowledge,
   td_score, td_author_identified, td_conflicts_disclosed, td_funding_disclosed,
   tq_score, rts_tensions_json,
+  psq_score, psq_dimensions_json, psq_confidence,
+  psq_consensus_score, psq_consensus_model_count, psq_consensus_spread,
   consensus_score, consensus_model_count, consensus_spread, consensus_updated_at,
   content_hash, content_last_fetched, eval_priority_score`;
 

@@ -130,6 +130,8 @@ export interface RaterEvalRow {
   eval_batch_id: string | null;
   content_truncation_pct: number | null;
   reasoning: string | null;
+  psq_score: number | null;
+  psq_dimensions_json: string | null;
 }
 
 export interface RaterScore {

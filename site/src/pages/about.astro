@@ -578,6 +578,44 @@ const faqLd = {
             Lite item pages display an editorial+structural summary card instead of the full heatmap.
             Lite scores use holistic two-dimension scoring (editorial + structural) blended with content-type weights.
           </p>
+
+          <h2 id="psq" style="font-size: var(--font-base); margin: 20px 0 8px 0;">
+            Psychological Safety Quotient (PSQ)
+            <span class="psq-experimental" style="font-size: var(--font-xs); margin-left: 6px;">experimental</span>
+          </h2>
+
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
+            <span class="persona-reader">PSQ measures how safe content feels to read — separate from whether it supports human rights. Torture exposés score high on HRCB (rights-affirming) but low on PSQ (threatening to read). A privacy-violating app landing page scores low on HRCB but high on PSQ (pleasant to read).</span>
+            <span class="persona-researcher">PSQ is an independent signal measuring reader psychoemotional safety on a 0-10 scale, orthogonal to HRCB's rights-stance construct. The instrument adapts Kline's Psychological Safety Quotient framework (originally validated on social media content against LLM scores, not human ground truth) to news content. Construct independence confirmed by Phase A validation: PSQ <code>threat_exposure</code> and HRCB editorial showed expected divergence on known-construct stories.</span>
+          </p>
+
+          <p style="color: var(--fg-primary); line-height: 1.6; margin-bottom: 10px;">
+            Three dimensions are scored per story:
+          </p>
+          <ul style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 10px; padding-left: 20px;">
+            <li><strong style="color: var(--fg-primary);">Threat Exposure</strong> — intensity of harmful content the reader encounters (violence, exploitation, psychological manipulation). Lower = safer.</li>
+            <li><strong style="color: var(--fg-primary);">Trust Conditions</strong> — whether the content creates conditions for reader trust (source transparency, logical coherence, respect for autonomy). Higher = safer.</li>
+            <li><strong style="color: var(--fg-primary);">Resilience Baseline</strong> — whether the content leaves readers more or less psychologically equipped (empowerment, coping resources, constructive framing). Higher = safer.</li>
+          </ul>
+
+          <p style="color: var(--fg-secondary); font-size: var(--font-sm); line-height: 1.6; margin-bottom: 10px;">
+            <span class="persona-researcher">
+              PSQ is <strong>experimental</strong> until validation criteria are met: (1) pilot distribution across ≥50 stories without clustering, (2) inter-rater ICC > 0.7 across 3 models on 30 stories, (3) CFA factor structure confirmation on N≥100, (4) criterion validity r > 0.4 against human "felt reading safety" ratings, (5) test-retest ICC > 0.8.
+              Scores are displayed normalized to [-1, +1] (via <code>(psq-5)/5</code>) for visual consistency with E and S channels.
+            </span>
+          </p>
+
+          <div class="table-wrap">
+          <table cellpadding="6" cellspacing="0" width="100%" style="font-size: var(--font-sm); margin-bottom: 10px; background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: 4px;">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;"><td style="padding: 4px 8px;"></td><td style="padding: 4px 8px;">HRCB</td><td style="padding: 4px 8px;">PSQ</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Construct</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Rights stance (does content advance or undermine UDHR?)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Reader safety (how safe is this to read?)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Scale</td><td style="color: var(--fg-secondary); padding: 4px 8px;">-1.0 to +1.0</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">0-10 (displayed as -1.0 to +1.0)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Dimensions</td><td style="color: var(--fg-secondary); padding: 4px 8px;">31 UDHR provisions × E+S channels</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">3 (threat, trust, resilience)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Consensus</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Shared (full + lite models)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Separate (PSQ models only)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Haiku 4.5, Llama, Scout</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Llama 3.3 70B PSQ, Llama 4 Scout PSQ</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Status</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Validated (known-groups, discriminant)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Experimental (unvalidated domain transfer)</td></tr>
+          </table>
+          </div>
         </details>
 
         {/* ═══ TIER 3 — Collapsed by default ═══ */}

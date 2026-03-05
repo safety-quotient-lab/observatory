@@ -4,7 +4,7 @@ import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
 import { getAllDomainStats, getDomainIntelligence, getMostGatekeptDomains, getDomainKarmaMap } from '../lib/db';
 import type { DomainSortOption } from '../lib/db';
-import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../lib/colors';
+import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence, normalizePsq, formatPsqScore } from '../lib/colors';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -55,6 +55,8 @@ const controversial = [...hrcbDomains].filter(d => d.hrcb_range !== null).sort((
 const highEngagement = intelDomains.filter(d => d.stories >= 3 && d.comment_per_point !== null).sort((a, b) => (b.comment_per_point || 0) - (a.comment_per_point || 0)).slice(0, 5);
 const diverse = intelDomains.filter(d => d.stories >= 3).sort((a, b) => b.unique_submitters - a.unique_submitters).slice(0, 5);
 const topKarma = [...karmaMap.values()].sort((a, b) => b.avg_karma - a.avg_karma).slice(0, 5);
+const psqDomains = intelDomains.filter(d => d.avg_psq != null && d.stories >= 3);
+const topPsq = [...psqDomains].sort((a, b) => (b.avg_psq || 0) - (a.avg_psq || 0)).slice(0, 5);
 
 // Scatter data: merge karma + HRCB per domain (page 1 only)
 const scatterDomains = intelDomains
@@ -227,6 +229,19 @@ const jsonLd = {
           </div>
         ))}
       </div>
+      {topPsq.length > 0 && (
+        <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+            Safest to Read <span class="psq-experimental" style="text-transform: none; letter-spacing: 0;">experimental</span>
+          </div>
+          {topPsq.map(d => (
+            <div style="margin-bottom: 3px;">
+              <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); font-size: var(--font-sm);">{d.domain}</a>
+              <span class="score-font" style={`color: ${scoreToColor(normalizePsq(d.avg_psq))}; font-size: var(--font-sm); margin-left: 4px;`}>{formatPsqScore(d.avg_psq)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {topKarma.length > 0 && (
         <div style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
           <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Highest Karma</div>

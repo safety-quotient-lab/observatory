@@ -29,7 +29,8 @@ export const GET: APIRoute = async ({ locals, request, params }) => {
                 hcb_weighted_mean, hcb_editorial_mean, hcb_classification,
                 consensus_score, eval_model, evaluated_at,
                 eq_score, so_score, td_score,
-                et_valence, et_arousal, et_primary_tone
+                et_valence, et_arousal, et_primary_tone,
+                psq_score, psq_confidence
          FROM stories WHERE hn_id = ?`
       )
       .bind(hnId)
@@ -37,7 +38,8 @@ export const GET: APIRoute = async ({ locals, request, params }) => {
     db
       .prepare(
         `SELECT re.eval_model, re.eval_provider, re.prompt_mode, re.eval_status,
-                re.hcb_editorial_mean, re.hcb_weighted_mean, re.evaluated_at
+                re.hcb_editorial_mean, re.hcb_weighted_mean, re.evaluated_at,
+                re.psq_score, re.psq_dimensions_json
          FROM rater_evals re
          INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.hn_id = ? AND re.eval_status = 'done'

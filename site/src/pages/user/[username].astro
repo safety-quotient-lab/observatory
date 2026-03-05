@@ -5,7 +5,7 @@ import EvalCard from '../../components/EvalCard.astro';
 import Breadcrumb from '../../components/Breadcrumb.astro';
 import { ARTICLE_SHORT_TITLES } from '../../lib/udhr';
 import { getStoriesByUser, getUserSetl, getUserDetailStats, getHnUser, getUserFingerprint, getUserSetlHistory, getUserAggregate } from '../../lib/db';
-import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence } from '../../lib/colors';
+import { scoreToColor, formatScore, formatSetl, setlToColor, confidenceToColor, formatConfidence, normalizePsq, formatPsqScore } from '../../lib/colors';
 import { sanitizeHtml } from '../../lib/sanitize';
 import { readDb } from '../../lib/db-utils';
 
@@ -172,6 +172,15 @@ const showDivergence = divergence !== null && divergence > 0.15;
                   <span style="color: var(--fg-secondary);"> / </span>
                   <span style={`color: ${scoreToColor(detail.avgStructural)};`}>{formatScore(detail.avgStructural)}</span>
                   <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 6px;">SETL {formatSetl(userSetl)}</span>
+                </td>
+              </tr>
+            )}
+            {agg?.avg_psq != null && (
+              <tr>
+                <td style="color: var(--fg-secondary);">PSQ</td>
+                <td class="score-font">
+                  <span style={`color: ${scoreToColor(normalizePsq(agg.avg_psq))};`}>{formatPsqScore(agg.avg_psq)}</span>
+                  <span class="psq-experimental" style="font-size: var(--font-xs); color: var(--fg-secondary); margin-left: 4px;">experimental</span>
                 </td>
               </tr>
             )}
