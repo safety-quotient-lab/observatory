@@ -158,14 +158,16 @@
     "scoring_scale": [0, 10],
     "g_psq": "confidence-weighted protective/threat split",
     "display_normalization": "(psq - 5) / 5 → [-1, +1]",
-    "dimensions": [
+    "active_dimensions": ["threat_exposure", "trust_conditions", "resilience_baseline"],
+    "active_dimension_count": 3,
+    "all_dimensions": [
       "threat_exposure", "hostility_index", "authority_dynamics",
       "energy_dissipation", "regulatory_capacity", "resilience_baseline",
       "trust_conditions", "cooling_capacity", "defensive_architecture",
       "contractual_clarity"
     ],
-    "threat_dimensions": ["threat_exposure", "hostility_index", "authority_dynamics", "energy_dissipation"],
-    "protective_dimensions": ["regulatory_capacity", "resilience_baseline", "trust_conditions", "cooling_capacity", "defensive_architecture", "contractual_clarity"],
+    "threat_dimensions": ["threat_exposure"],
+    "protective_dimensions": ["trust_conditions", "resilience_baseline"],
     "transparency_quotient": {
       "indicators": ["tq_author", "tq_date", "tq_sources", "tq_corrections", "tq_conflicts"],
       "tq_score": "sum / 5"

@@ -298,8 +298,8 @@ if (dimsArg && ![1, 2, 3, 5, 10].includes(dimsArg)) {
   process.exit(1);
 }
 
-// Resolve PSQ dims: --dims N overrides, default is 1
-const activeDims = dimsArg ? PSQ_DIM_VARIANTS[dimsArg] : PSQ_DIM_VARIANTS[1];
+// Resolve PSQ dims: --dims N overrides, default is 3 (Phase 1 decision)
+const activeDims = dimsArg ? PSQ_DIM_VARIANTS[dimsArg] : PSQ_DIM_VARIANTS[3];
 const LITE_V2_SYSTEM_PROMPT = buildLiteV2Prompt(activeDims);
 
 // --- Load full system prompt from methodology file ---

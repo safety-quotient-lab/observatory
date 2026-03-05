@@ -37,7 +37,9 @@ Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.
 
 ✓ PSQ refocus Phase 1 foundation (2026-03-04): 10-dim rubrics from instruments.json, `buildPsqDimensionRubric()`, `buildLiteV2SystemPrompt()`, `--dims N` flag in standalone eval, `isLiteV2Mode()`, methodology.json PSQ block (experimental), `.psq-experimental` CSS.
 
-Next: Run 20 PSQ dim-count evals (4 variants × 5 stories), pick optimal dim count → Phase 2 pipeline integration. Then API blog post.
+✓ PSQ Phase 1 dim-count testing (2026-03-04): 20 evals (4 variants × 5 stories). **Decision: 3-dim** (threat_exposure, trust_conditions, resilience_baseline). 3-dim only variant passing zero-rate <30% (20%). Zero truncation failures. g-PSQ stable across dim counts. resilience_baseline discriminates: AJ=6 vs EFF=8.
+
+Next: PSQ Phase 2 pipeline integration (D1 migration, routing changes, write functions, consumer switch). Then API blog post.
 
 ✓ `/methodology` page (2026-03-04): prerendered page rendering exact LLM evaluation prompt. Full + lite. CC BY-SA 4.0.
 ✓ Gap-detection blog post (2026-03-04): published to blog.unratified.org (Pre-Review).

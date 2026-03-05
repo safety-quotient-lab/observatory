@@ -335,7 +335,8 @@ export function buildLiteV2Prompt(dims: string[]): string {
 }
 
 /**
- * Lite v2 system prompt — PSQ-based single-dimension (Phase A) + TQ.
+ * Lite v2 system prompt — PSQ-based 3-dimension (Phase 1 decision) + TQ.
+ * Dimensions: threat_exposure, trust_conditions, resilience_baseline.
  * Uses instrument-grounded scoring rubrics from PSQ project.
  */
-export const METHODOLOGY_SYSTEM_PROMPT_LITE_V2 = buildLiteV2Prompt(['threat_exposure']);
+export const METHODOLOGY_SYSTEM_PROMPT_LITE_V2 = buildLiteV2Prompt(['threat_exposure', 'trust_conditions', 'resilience_baseline']);
