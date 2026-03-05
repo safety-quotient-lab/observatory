@@ -165,7 +165,39 @@ const groupColors: Record<string, string> = {
 };
 ---
 
-<Base title="Human Rights Observatory, Hacker News Edition">
+<Base title="Human Rights Observatory, Hacker News Edition" ogUrl="https://observatory.unratified.org/">
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Human Rights Observatory',
+    alternateName: 'HRO',
+    url: 'https://observatory.unratified.org',
+    description: 'Hacker News stories scored against all 31 provisions of the UN Universal Declaration of Human Rights. Editorial and structural channel analysis with Fair Witness evidence transparency.',
+    publisher: {
+      '@type': 'Organization',
+      name: 'Safety Quotient Lab',
+      url: 'https://github.com/safety-quotient-lab',
+      knowsAbout: [
+        'Universal Declaration of Human Rights',
+        'International Covenant on Economic, Social and Cultural Rights',
+        'Human rights compatibility analysis',
+        'Structural-editorial tension in tech media',
+        'AI-assisted content evaluation',
+        'Fair Witness evidence methodology',
+      ],
+    },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://observatory.unratified.org/search?q={search_term_string}',
+      'query-input': 'required name=search_term_string',
+    },
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'Unratified',
+      url: 'https://unratified.org',
+      description: 'The U.S. signed the ICESCR in 1977 and has never ratified it. Exploring why — and what it means for economic and social rights.',
+    },
+  }).replace(/</g, '\\u003c')} />
   <SubNav items={[{ label: 'Articles', href: '/rights/articles' }, { label: 'Observatory', href: '/' }, { label: 'Network', href: '/rights/network' }]} current="/" />
   <div style="padding: 8px 0 16px 0;">
 

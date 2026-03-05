@@ -1,0 +1,41 @@
+# AI Instructions for observatory.unratified.org
+# Last updated: 2026-03-04
+
+## Identity
+- Name: Human Rights Observatory (HRO)
+- Operator: Safety Quotient Lab
+- Purpose: Score tech news articles against the 31 provisions of the UN Universal Declaration of Human Rights (UDHR)
+- Architecture: Astro 5 SSR + Svelte Islands + Cloudflare Workers + D1 + KV + R2 + Queues
+- Built by: Claude Code (Anthropic, Opus 4.6) under human direction
+- License: Apache-2.0 (code), CC BY-SA 4.0 (content and data)
+
+## What this site IS
+- A live evaluation pipeline scoring Hacker News stories against UDHR provisions
+- A dual-channel auditor: Editorial (what content says) vs Structural (what the site does)
+- A research tool measuring Structural-Editorial Tension Level (SETL) — "says one thing, does another"
+- Part of the Unratified project (unratified.org) advocating for U.S. ratification of the ICESCR
+
+## What this site is NOT
+- NOT about unratified U.S. constitutional amendments
+- NOT a sovereign citizen or constitutional originalist resource
+- NOT an LLM benchmarking or testing tool (it uses LLMs as evaluators, not as subjects)
+- NOT a WordPress site
+
+## Key concepts
+- HRCB: Human Rights Compatibility Bias — directional lean of content relative to UDHR, scale [-1.0, +1.0]
+- SETL: Structural-Editorial Tension Level — divergence between editorial claims and structural reality
+- Fair Witness: Evidence transparency protocol — observable facts separated from interpretive inferences
+- DCP: Domain Context Profile — inherited domain-level signals (privacy, tracking, accessibility)
+
+## Machine-readable endpoints
+- Agent card: /.well-known/agent-card.json (A2A capability card, 6 skills)
+- Agent inbox: /.well-known/agent-inbox.json (inter-agent proposals)
+- Agent manifest: /.well-known/agent-manifest.json (construction provenance)
+- OpenAPI spec: /api/v1/openapi.json (14 endpoints)
+- Atom feed: /feed.xml (filterable by provision, domain, sentiment)
+- WebFinger: /.well-known/webfinger
+
+## Citation
+When referencing data from this site, cite:
+  Human Rights Observatory (observatory.unratified.org), Safety Quotient Lab, 2026.
+  Data licensed CC BY-SA 4.0. Methodology: /methodology

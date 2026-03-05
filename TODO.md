@@ -57,6 +57,7 @@ Remaining:
 
 ### Architecture (evaluate later)
 
+- [ ] **Federal Register API integration** — ingest G7 tech-regulatory filings as a new story source beyond HN. The US Federal Register API (`federalregister.gov/api/v1/documents.json`) is public JSON, no auth required. Filter by agency (FTC, Commerce Dept) and keywords (privacy, surveillance, biometric, AI). Pairs with UDHR audit: filings that reduce rights protections trigger high SETL. EU DSA Transparency DB is researcher-gated but public Statements of Reason are scrapeable. Tier 2 (mission-aligned infrastructure). Gemini exchange (2026-03-04) confirmed feasibility. Significant scope — requires new content type, ingestion worker, and adapted eval prompt.
 - [ ] **HN comments passthrough (no DB storage)** — evaluate whether comments can be served via passthrough from the HN Firebase API rather than stored in D1. The HN API exposes comment trees per item in real-time; a passthrough endpoint (`/api/story/[id]/comments` → HN Firebase) would eliminate comment storage entirely and keep data always-fresh. Trade-offs: latency on each request, no offline access, no ability to annotate/score comments, rate limit exposure. Worth evaluating after launch — depends on whether comment scoring becomes a feature goal.
 
 ### Standards (M effort — deferred)

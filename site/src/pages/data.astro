@@ -40,10 +40,32 @@ const jsonLd = {
   spatialCoverage: { '@type': 'Place', name: 'Global (Hacker News English-language content)' },
   isAccessibleForFree: true,
 };
+const sourceCodeLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareSourceCode',
+  name: 'Human Rights Observatory',
+  description: 'Evaluation pipeline scoring tech news against 31 UDHR provisions using multi-model LLM ensemble with Fair Witness evidence transparency.',
+  codeRepository: 'https://github.com/safety-quotient-lab/observatory',
+  programmingLanguage: ['TypeScript', 'Astro', 'Svelte'],
+  runtimePlatform: 'Cloudflare Workers',
+  license: 'https://www.apache.org/licenses/LICENSE-2.0',
+  author: {
+    '@type': 'Organization',
+    name: 'Safety Quotient Lab',
+    url: 'https://github.com/safety-quotient-lab',
+  },
+  about: {
+    '@type': 'Legislation',
+    name: 'Universal Declaration of Human Rights',
+    legislationIdentifier: 'A/RES/217(III)',
+    datePublished: '1948-12-10',
+  },
+};
 ---
 
 <Base title="Data — HRO" canonicalUrl={`${siteUrl}/data`}>
   <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, '\\u003c')} />
+  <script type="application/ld+json" set:html={JSON.stringify(sourceCodeLd).replace(/</g, '\\u003c')} />
   <Breadcrumb crumbs={[{ label: 'home', href: '/' }, { label: 'data' }]} />
 
   <table cellpadding="0" cellspacing="0" width="100%" style="max-width: 680px; padding: 10px 0;">
