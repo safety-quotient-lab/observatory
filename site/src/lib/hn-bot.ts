@@ -450,7 +450,7 @@ export function determineEvalDepth(
  * Higher score = evaluate sooner.
  *
  * Components:
- *   base:     HN score * time-decay (24h half-life)
+ *   base:     HN score * time-decay (τ=24h, half-life ≈16.6h)
  *   comments: HN comments * 0.5 * time-decay
  *   karma:    log10(submitter karma) * 10
  *   feeds:    number of HN feeds story appeared on * 5
@@ -463,7 +463,7 @@ function computePriorityScore(
   feedCount: number,
 ): number {
   const hoursOld = (Date.now() / 1000 - hnTime) / 3600;
-  const decay = Math.exp(-hoursOld / 24);
+  const decay = Math.exp(-hoursOld / 24); // τ=24h (half-life ≈16.6h)
   const base = (hnScore ?? 0) * decay;
   const comments = (hnComments ?? 0) * 0.5 * decay;
   const karma = Math.log10(Math.max(submitterKarma ?? 1, 1)) * 10;

@@ -509,7 +509,7 @@ function isLiteModel(id: string): boolean {
           </td>
         </tr>
         {/* Pedagogical interstitial after stories 10 and 20 */}
-        {i === 9 && selectedInsights[0] && (
+        {i === 9 && selectedInsights[0] && (<>
           <tr>
             <td colspan="8" style="padding: 8px 0;">
               <div style="border-top: 1px dashed var(--color-border); border-bottom: 1px dashed var(--color-border); padding: 8px 10px; color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
@@ -526,8 +526,18 @@ function isLiteModel(id: string): boolean {
               </div>
             </td>
           </tr>
-        )}
-        {i === 19 && selectedInsights[1] && (
+          <tr class="interstitial-header" style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <td style="width: 28px; text-align: right; padding-right: 5px;">#</td>
+            <td style="text-align: left;">Title</td>
+            <td width="55" style="text-align: center;">HRCB</td>
+            <td width="55" style="text-align: center;">PSQ</td>
+            <td width="55" style="text-align: center;">E</td>
+            <td width="55" style="text-align: center;">S</td>
+            <td width="45" style="text-align: center;">Pts</td>
+            <td width="55" style="text-align: center;">Age</td>
+          </tr>
+        </>)}
+        {i === 19 && selectedInsights[1] && (<>
           <tr>
             <td colspan="8" style="padding: 8px 0;">
               <div style="border-top: 1px dashed var(--color-border); border-bottom: 1px dashed var(--color-border); padding: 8px 10px; color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
@@ -544,7 +554,17 @@ function isLiteModel(id: string): boolean {
               </div>
             </td>
           </tr>
-        )}
+          <tr class="interstitial-header" style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <td style="width: 28px; text-align: right; padding-right: 5px;">#</td>
+            <td style="text-align: left;">Title</td>
+            <td width="55" style="text-align: center;">HRCB</td>
+            <td width="55" style="text-align: center;">PSQ</td>
+            <td width="55" style="text-align: center;">E</td>
+            <td width="55" style="text-align: center;">S</td>
+            <td width="45" style="text-align: center;">Pts</td>
+            <td width="55" style="text-align: center;">Age</td>
+          </tr>
+        </>)}
         </>
       );
     })}
