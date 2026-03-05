@@ -8,9 +8,12 @@ import {
   ALL_SECTIONS,
   CLASSIFICATIONS,
   CONTENT_TYPE_WEIGHTS,
+  PSQ_THREAT_DIMENSIONS,
+  PSQ_PROTECTIVE_DIMENSIONS,
   type EvalResult,
   type SlimEvalResponse,
   type LiteEvalResponse,
+  type LiteEvalResponseV2,
   type ValidationResult,
 } from './eval-types';
 import { computeSetl } from './compute-aggregates';
@@ -619,6 +622,173 @@ export function computeLiteAggregates(lite: LiteEvalResponse): LiteAggregates {
     weighted_mean: weightedMean,
     editorial_mean: editorialMean,
     structural_mean: structuralMean,
+    setl,
+    classification,
+  };
+}
+
+// --- Lite v2 (PSQ-based) Validation ---
+
+/** Valid PSQ score values (0-10 integer) */
+const VALID_PSQ_SCORE_RANGE = { min: 0, max: 10 };
+
+/** Valid content type codes (shared with v1). */
+const VALID_CONTENT_TYPES_V2 = new Set(['ED', 'PO', 'LP', 'PR', 'AC', 'MI', 'AD', 'HR', 'CO', 'ME', 'MX']);
+
+export function validateLiteEvalResponseV2(parsed: any): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const repairs: string[] = [];
+
+  // Content type
+  if (!parsed.content_type || !VALID_CONTENT_TYPES_V2.has(parsed.content_type)) {
+    if (parsed.content_type) {
+      const upper = String(parsed.content_type).toUpperCase();
+      if (VALID_CONTENT_TYPES_V2.has(upper)) {
+        parsed.content_type = upper;
+        repairs.push(`Normalized content_type to "${upper}"`);
+      } else {
+        parsed.content_type = 'MX';
+        repairs.push('Set content_type to MX (was invalid)');
+      }
+    } else {
+      parsed.content_type = 'MX';
+      repairs.push('Set content_type to MX (was missing)');
+    }
+  }
+
+  // PSQ dimensions
+  if (!parsed.psq_dimensions || typeof parsed.psq_dimensions !== 'object') {
+    errors.push('Missing "psq_dimensions" object');
+    return { valid: false, errors, warnings, repairs };
+  }
+
+  const dimKeys = Object.keys(parsed.psq_dimensions);
+  if (dimKeys.length === 0) {
+    errors.push('psq_dimensions is empty — need at least 1 dimension');
+    return { valid: false, errors, warnings, repairs };
+  }
+
+  for (const dimId of dimKeys) {
+    const dim = parsed.psq_dimensions[dimId];
+    if (!dim || typeof dim !== 'object') {
+      errors.push(`psq_dimensions.${dimId} is not an object`);
+      continue;
+    }
+
+    // Score: must be integer 0-10
+    if (typeof dim.score !== 'number' || !Number.isInteger(dim.score)) {
+      const parsed_num = parseInt(dim.score, 10);
+      if (!isNaN(parsed_num)) {
+        dim.score = Math.max(VALID_PSQ_SCORE_RANGE.min, Math.min(VALID_PSQ_SCORE_RANGE.max, parsed_num));
+        repairs.push(`Coerced ${dimId}.score to integer ${dim.score}`);
+      } else {
+        errors.push(`${dimId}.score is not a valid integer`);
+        continue;
+      }
+    } else {
+      dim.score = Math.max(VALID_PSQ_SCORE_RANGE.min, Math.min(VALID_PSQ_SCORE_RANGE.max, dim.score));
+    }
+
+    // Confidence: 0.0-1.0
+    if (dim.confidence == null || typeof dim.confidence !== 'number') {
+      dim.confidence = 0.5;
+      repairs.push(`Set ${dimId}.confidence to 0.5 (was missing/invalid)`);
+    } else {
+      dim.confidence = Math.max(0.0, Math.min(1.0, dim.confidence));
+    }
+
+    // Rationale: optional string
+    if (dim.rationale != null && typeof dim.rationale !== 'string') {
+      dim.rationale = String(dim.rationale);
+      repairs.push(`Coerced ${dimId}.rationale to string`);
+    }
+  }
+
+  // TQ binary indicators
+  const TQ_FIELDS = ['tq_author', 'tq_date', 'tq_sources', 'tq_corrections', 'tq_conflicts'] as const;
+  let tqSum = 0;
+  for (const field of TQ_FIELDS) {
+    const raw = parsed[field];
+    let val = 0;
+    if (raw === 1 || raw === true) val = 1;
+    else if (raw === 0 || raw === false) val = 0;
+    else {
+      repairs.push(`${field} missing/invalid — defaulting to 0`);
+    }
+    parsed[field] = val;
+    tqSum += val;
+  }
+  parsed.tq_score = Math.round((tqSum / 5) * 1000) / 1000;
+
+  return { valid: errors.length === 0, errors, warnings, repairs };
+}
+
+/**
+ * Compute HRCB-compatible aggregates from PSQ-based lite v2 response.
+ * PSQ dimensions (0-10) → g-PSQ (confidence-weighted mean) → editorial [-1, +1].
+ * TQ → structural (same as lite-1.6).
+ */
+export function computeLiteAggregatesV2(lite: LiteEvalResponseV2): LiteAggregates {
+  const dims = lite.psq_dimensions;
+  const dimEntries = Object.entries(dims);
+
+  // Confidence-weighted mean across all dimensions (g-PSQ)
+  let sumWeighted = 0;
+  let sumConf = 0;
+  for (const [, dim] of dimEntries) {
+    sumWeighted += dim.score * dim.confidence;
+    sumConf += dim.confidence;
+  }
+  const gPsq = sumConf > 0 ? sumWeighted / sumConf : 5; // default neutral
+
+  // Map g-PSQ (0-10) → editorial [-1, +1]
+  const editorialMean = Math.max(-1.0, Math.min(1.0, (gPsq - 5) / 5));
+
+  // TQ → structural (same as lite-1.6)
+  const tqScore = lite.tq_score ?? (
+    ((lite.tq_author ? 1 : 0) + (lite.tq_date ? 1 : 0) + (lite.tq_sources ? 1 : 0) +
+     (lite.tq_corrections ? 1 : 0) + (lite.tq_conflicts ? 1 : 0)) / 5
+  );
+  const TQ_PROXY_TYPES = new Set(['ED', 'HR', 'MI', 'PO']);
+  const structuralMean = TQ_PROXY_TYPES.has(lite.content_type?.toUpperCase() || '')
+    ? tqScore * 2 - 1
+    : null;
+
+  // Weighted mean (blend editorial + structural if both present)
+  let weightedMean: number;
+  let setl: number | null = null;
+
+  if (structuralMean != null) {
+    const ct = lite.content_type?.toUpperCase() || 'MX';
+    const [wE, wS] = CONTENT_TYPE_WEIGHTS[ct] || CONTENT_TYPE_WEIGHTS['MX'];
+    weightedMean = wE * editorialMean + wS * structuralMean;
+    setl = computeSetl([{ editorial: editorialMean, structural: structuralMean }]);
+  } else {
+    weightedMean = editorialMean;
+  }
+
+  weightedMean = Math.max(-1.0, Math.min(1.0, weightedMean));
+  weightedMean = Math.round(weightedMean * 1000) / 1000;
+
+  let classification = 'Neutral';
+  if (weightedMean >= 1.0) {
+    classification = 'Strong positive';
+  } else if (weightedMean <= -1.0) {
+    classification = 'Strong negative';
+  } else {
+    for (const c of CLASSIFICATIONS) {
+      if (weightedMean >= c.min && weightedMean < c.max) {
+        classification = c.label;
+        break;
+      }
+    }
+  }
+
+  return {
+    weighted_mean: weightedMean,
+    editorial_mean: Math.round(editorialMean * 1000) / 1000,
+    structural_mean: structuralMean != null ? Math.round(structuralMean * 1000) / 1000 : null,
     setl,
     classification,
   };

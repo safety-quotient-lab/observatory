@@ -5,7 +5,7 @@
 
 export type ModelProvider = 'anthropic' | 'openrouter' | 'workers-ai';
 
-export type PromptMode = 'full' | 'lite';
+export type PromptMode = 'full' | 'lite' | 'lite-v2';
 
 export interface ModelDefinition {
   id: string;                    // DB identifier (eval_model column)
@@ -168,6 +168,20 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     prompt_mode: 'lite',
     max_input_chars: 12000,
   },
+  {
+    id: 'qwen3-30b-a3b-wai',
+    display_name: 'Qwen3 30B A3B (WAI)',
+    short_name: 'Q3W',
+    provider: 'workers-ai',
+    api_model_id: '@cf/qwen/qwen3-30b-a3b',
+    is_free: true,
+    enabled: false, // Phase A: enable after lite-2.0 validation passes
+    max_tokens: 16384,
+    supports_cache_control: false,
+    supports_json_mode: false,
+    prompt_mode: 'lite',
+    max_input_chars: 8000, // MoE: 30B total, 3.3B active — conservative until tested
+  },
 ];
 
 export const PRIMARY_MODEL_ID = 'claude-haiku-4-5-20251001';
@@ -224,14 +238,22 @@ export function modelShortName(modelId: string): string {
   return getModelDef(modelId)?.short_name ?? modelId.slice(0, 3);
 }
 
-/** Returns true if the model (or eval row) used lite prompt mode. */
+/** Returns true if the model (or eval row) used any lite prompt mode (lite or lite-v2). */
 export function isLiteMode(promptModeOrModelId: string | null | undefined): boolean {
   if (promptModeOrModelId === 'lite') return true;
+  if (promptModeOrModelId === 'lite-v2') return true;
   // Also accept legacy 'light' value for backward compat during transition
   if (promptModeOrModelId === 'light') return true;
   // Check registry definition as fallback
   const def = getModelDef(promptModeOrModelId ?? '');
-  return def?.prompt_mode === 'lite';
+  return def?.prompt_mode === 'lite' || def?.prompt_mode === 'lite-v2';
+}
+
+/** Returns true if the model (or eval row) used the PSQ-based lite-v2 prompt mode. */
+export function isLiteV2Mode(promptModeOrModelId: string | null | undefined): boolean {
+  if (promptModeOrModelId === 'lite-v2') return true;
+  const def = getModelDef(promptModeOrModelId ?? '');
+  return def?.prompt_mode === 'lite-v2';
 }
 
 /** Map model IDs to their queue binding names in wrangler config. */
@@ -247,6 +269,7 @@ export const MODEL_QUEUE_BINDINGS: Record<string, string> = {
   'hermes-3-405b': 'HERMES_QUEUE',
   'llama-3.3-70b-wai': 'WORKERS_AI_QUEUE',
   'llama-4-scout-wai': 'WORKERS_AI_QUEUE',
+  'qwen3-30b-a3b-wai': 'WORKERS_AI_QUEUE',
 };
 
 /** Get the queue for a given model from the env bindings. Falls back to EVAL_QUEUE. */

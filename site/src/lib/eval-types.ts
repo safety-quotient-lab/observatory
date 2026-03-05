@@ -226,6 +226,48 @@ export interface LiteEvalResponse {
   primary_tone: string | null;
 }
 
+// --- PSQ-based Lite v2 Types ---
+
+/** PSQ dimension IDs (ordered by factor structure) */
+export const PSQ_DIMENSIONS = [
+  'threat_exposure', 'hostility_index', 'authority_dynamics',
+  'energy_dissipation', 'regulatory_capacity', 'resilience_baseline',
+  'trust_conditions', 'cooling_capacity', 'defensive_architecture',
+  'contractual_clarity',
+] as const;
+
+export type PsqDimensionId = typeof PSQ_DIMENSIONS[number];
+
+/** Score for a single PSQ dimension (0-10 integer, anchored scale) */
+export interface PsqDimensionScore {
+  score: number;        // 0-10 integer
+  confidence: number;   // 0.0-1.0
+  rationale: string;    // 1-2 sentence evidence citation
+}
+
+/** PSQ dimension role classification */
+export const PSQ_THREAT_DIMENSIONS: ReadonlySet<string> = new Set([
+  'threat_exposure', 'hostility_index', 'authority_dynamics', 'energy_dissipation',
+]);
+export const PSQ_PROTECTIVE_DIMENSIONS: ReadonlySet<string> = new Set([
+  'regulatory_capacity', 'resilience_baseline', 'trust_conditions',
+  'cooling_capacity', 'defensive_architecture', 'contractual_clarity',
+]);
+
+/** Lite v2 eval response — PSQ-based decomposed scoring */
+export interface LiteEvalResponseV2 {
+  schema_version: string;              // 'lite-2.0'
+  content_type: string;
+  psq_dimensions: Record<string, PsqDimensionScore>;
+  tq_author: boolean | number;         // 0/1 or true/false
+  tq_date: boolean | number;
+  tq_sources: boolean | number;
+  tq_corrections: boolean | number;
+  tq_conflicts: boolean | number;
+  executive_summary: string;
+  tq_score?: number | null;             // computed by validator from tq_* binaries
+}
+
 /** Content-type channel weights: [editorial_weight, structural_weight] */
 export const CONTENT_TYPE_WEIGHTS: Record<string, [number, number]> = {
   ED: [0.6, 0.4],

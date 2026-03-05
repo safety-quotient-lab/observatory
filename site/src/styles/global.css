@@ -495,6 +495,21 @@ html[data-theme="light"] .ev-labels > span { filter: brightness(0.74); }
   .badge-hrcb       { background: rgba(37, 157, 148, 0.15); color: var(--channel-hrcb); }
   .badge-neutral    { background: rgba(107, 114, 128, 0.15); color: var(--color-muted); }
 
+  /* PSQ experimental badge */
+  .psq-experimental {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-warning);
+    border: 1px dashed var(--color-warning);
+    border-radius: 3px;
+    padding: 1px 5px;
+    vertical-align: middle;
+    opacity: 0.85;
+  }
+
   /* Text semantic shortcuts */
   .text-positive { color: var(--color-positive); }
   .text-negative { color: var(--color-negative); }

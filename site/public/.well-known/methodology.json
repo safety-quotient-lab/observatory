@@ -148,5 +148,27 @@
       "structural_proxy": "tq_score * 2 - 1",
       "structural_proxy_content_types": ["ED", "HR", "MI", "PO"]
     }
+  },
+
+  "psq": {
+    "version": "1.0",
+    "status": "experimental",
+    "framework": "PSQ (Psychoemotional Safety Quotient)",
+    "description": "Independent reader psychoemotional safety signal — measures how safe content is to consume, distinct from HRCB (rights stance)",
+    "scoring_scale": [0, 10],
+    "g_psq": "confidence-weighted protective/threat split",
+    "display_normalization": "(psq - 5) / 5 → [-1, +1]",
+    "dimensions": [
+      "threat_exposure", "hostility_index", "authority_dynamics",
+      "energy_dissipation", "regulatory_capacity", "resilience_baseline",
+      "trust_conditions", "cooling_capacity", "defensive_architecture",
+      "contractual_clarity"
+    ],
+    "threat_dimensions": ["threat_exposure", "hostility_index", "authority_dynamics", "energy_dissipation"],
+    "protective_dimensions": ["regulatory_capacity", "resilience_baseline", "trust_conditions", "cooling_capacity", "defensive_architecture", "contractual_clarity"],
+    "transparency_quotient": {
+      "indicators": ["tq_author", "tq_date", "tq_sources", "tq_corrections", "tq_conflicts"],
+      "tq_score": "sum / 5"
+    }
   }
 }

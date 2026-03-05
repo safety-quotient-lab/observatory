@@ -35,7 +35,9 @@ Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.
 
 ✓ Site knowledge architecture (2026-03-04): canonical URLs, og:url defaults (Base.astro), methodology.json (.well-known + /api/v1/methodology), WebSub, JSON-LD (WebSite+Org+SoftwareSourceCode), ai-instructions.txt, agent-manifest expansion.
 
-Next: API blog post (unblocked by OpenAPI), then remaining blog posts.
+✓ PSQ refocus Phase 1 foundation (2026-03-04): 10-dim rubrics from instruments.json, `buildPsqDimensionRubric()`, `buildLiteV2SystemPrompt()`, `--dims N` flag in standalone eval, `isLiteV2Mode()`, methodology.json PSQ block (experimental), `.psq-experimental` CSS.
+
+Next: Run 20 PSQ dim-count evals (4 variants × 5 stories), pick optimal dim count → Phase 2 pipeline integration. Then API blog post.
 
 ✓ `/methodology` page (2026-03-04): prerendered page rendering exact LLM evaluation prompt. Full + lite. CC BY-SA 4.0.
 ✓ Gap-detection blog post (2026-03-04): published to blog.unratified.org (Pre-Review).

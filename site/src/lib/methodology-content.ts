@@ -230,3 +230,333 @@ Score tq_conflicts=0 unless explicit disclosure text is present — not just app
 Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)
 
 Evidence strength: H=explicit rights discussion | M=implicit | L=tangential`;
+
+/**
+ * PSQ dimension rubric definitions — condensed from instruments.json (~100 tokens/dim).
+ * Each rubric has: name, description, psq_role, scoring anchors, and key textual indicators.
+ * Source: SafetyQuotient Instrument Library v0.3.0 (23 validated instruments).
+ *
+ * @license CC-BY-SA-4.0
+ */
+export const PSQ_DIMENSION_RUBRICS: Record<string, {
+  name: string;
+  description: string;
+  role: 'threat' | 'protective';
+  anchors: Record<string, string>;
+  indicators_negative: string[];
+  indicators_positive: string[];
+}> = {
+  threat_exposure: {
+    name: 'Threat Exposure',
+    description: 'Nature, intensity, and proximity of psychoemotional threats',
+    role: 'threat',
+    anchors: {
+      '0': 'extreme direct threat — violence, severe abuse, sustained targeted harassment',
+      '2': 'clear threat — insults, contempt, hostile framing directed at individuals/groups',
+      '5': 'neutral — no discernible threat or safety signals',
+      '8': 'clear safety — warm, inclusive language with active care for others',
+      '10': 'maximum safety — active prevention of threat with structural safeguards',
+    },
+    indicators_negative: [
+      'deliberate omission or gatekeeping of information',
+      'public mockery, ridicule, humiliation',
+      'threats, intimidation, coercion',
+      'dehumanizing language, contempt, hostile framing',
+      'surveillance or control language',
+    ],
+    indicators_positive: [
+      'inclusive language, active care for wellbeing',
+      'protection advocacy, threat mitigation',
+      'structural safeguards discussed or promoted',
+      'respectful engagement, good-faith communication',
+    ],
+  },
+  hostility_index: {
+    name: 'Hostility Index',
+    description: 'Overt aggression, passive undermining, or structural antagonism',
+    role: 'threat',
+    anchors: {
+      '0': 'extreme hostility — direct threats, slurs, violent language, dehumanization',
+      '2': 'clear hostility — insults, derision, aggressive dismissiveness',
+      '5': 'neutral — no hostile or anti-hostile signals',
+      '8': 'clear warmth — friendly, affirming, inclusive language',
+      '10': 'maximum anti-hostility — exemplary non-hostile engagement, conflict resolution',
+    },
+    indicators_negative: [
+      'overt aggression, contempt, targeted verbal abuse',
+      'passive aggression, sarcasm with hostile intent, mockery',
+      'cynical hostility, suspicion of motives',
+      'anger-driven communication, rage',
+    ],
+    indicators_positive: [
+      'polite, respectful engagement',
+      'active de-escalation, empathy, reconciliation',
+      'friendly, affirming language',
+    ],
+  },
+  authority_dynamics: {
+    name: 'Authority Dynamics',
+    description: 'How power is distributed, exercised, contested, and checked',
+    role: 'threat',
+    anchors: {
+      '0': 'extreme abuse — unchecked power wielded to harm, dominate, or silence',
+      '2': 'clear imbalance — authority used to dismiss, override, or marginalize',
+      '5': 'neutral — no power dynamics present or relevant',
+      '8': 'clear equity — actively distributes power, elevates others',
+      '10': 'maximum equity — exemplary power-sharing with structural checks',
+    },
+    indicators_negative: [
+      'coercive authority, intimidation, control',
+      'condescension, gatekeeping, epistemic positioning',
+      'unacknowledged privilege, authoritarian tone',
+    ],
+    indicators_positive: [
+      'egalitarian communication, shared decision-making',
+      'accountable authority, invites challenge',
+      'elevates others, invites epistemic contribution',
+    ],
+  },
+  energy_dissipation: {
+    name: 'Energy Dissipation',
+    description: 'Whether healthy dissipation pathways exist or energy is trapped toward rupture',
+    role: 'threat',
+    anchors: {
+      '0': 'extreme entrapment — traps all energy with no outlet, demands relentless engagement',
+      '2': 'clear entrapment — blocks healthy dissipation pathways',
+      '5': 'neutral — no energy impact',
+      '8': 'clear dissipation — actively supports recovery, rest, or creative outlet',
+      '10': 'maximum dissipation — exemplary support for rest, expression, and recovery',
+    },
+    indicators_negative: [
+      'demands relentless engagement without relief',
+      'blocks expression or recovery pathways',
+      'sustained pressure with limited relief',
+      'resource depletion without replenishment',
+    ],
+    indicators_positive: [
+      'supports expression, creates breathing room',
+      'facilitates healthy release and renewal',
+      'models work-life boundaries',
+    ],
+  },
+  regulatory_capacity: {
+    name: 'Regulatory Capacity',
+    description: 'Capacity to modulate emotional states without collapse, suppression, or overflow',
+    role: 'protective',
+    anchors: {
+      '0': 'extreme dysregulation demand — forces suppression or triggers emotional collapse',
+      '2': 'clear dysregulation — models or demands poor emotional management',
+      '5': 'neutral — no regulatory demand or support',
+      '8': 'clear support — actively supports healthy emotional processing',
+      '10': 'maximum support — exemplary emotional regulation modeling with explicit guidance',
+    },
+    indicators_negative: [
+      'provokes overwhelming emotional response',
+      'models poor emotional management',
+      'demands emotional suppression',
+    ],
+    indicators_positive: [
+      'models composed emotional engagement',
+      'teaches or reinforces regulatory strategies',
+      'supports healthy emotional processing',
+    ],
+  },
+  resilience_baseline: {
+    name: 'Resilience Baseline',
+    description: 'Capacity to absorb disruption and return to functional equilibrium',
+    role: 'protective',
+    anchors: {
+      '0': 'extreme erosion — induces helplessness, despair, or total defeat',
+      '2': 'clear erosion — models fragility or learned helplessness',
+      '5': 'neutral — no resilience impact',
+      '8': 'clear reinforcement — actively builds confidence or agency',
+      '10': 'maximum reinforcement — exemplary resilience modeling with structural support',
+    },
+    indicators_negative: [
+      'undermines agency or coping capacity',
+      'discouraging tone, hopelessness',
+      'models fragility or learned helplessness',
+    ],
+    indicators_positive: [
+      'models persistence or adaptive coping',
+      'celebrates overcoming adversity',
+      'builds confidence or agency',
+    ],
+  },
+  trust_conditions: {
+    name: 'Trust Conditions',
+    description: 'Reasonable expectation that others will not exploit vulnerability',
+    role: 'protective',
+    anchors: {
+      '0': 'extreme betrayal — active deception, exploitation of vulnerability, gaslighting',
+      '2': 'clear trust damage — cynicism, dishonesty cues, unreliability',
+      '5': 'neutral — no trust signals either way',
+      '8': 'clear trust building — active vulnerability, honesty, reliability',
+      '10': 'maximum trust — exemplary mutual trust with structural accountability',
+    },
+    indicators_negative: [
+      'deception, manipulation, breach of confidence',
+      'cynicism, veiled motives, inconsistency',
+      'exploitation of vulnerability',
+    ],
+    indicators_positive: [
+      'transparency, consistency, good faith signals',
+      'active vulnerability, honesty, reliability',
+      'deep reciprocity, trust repair',
+    ],
+  },
+  cooling_capacity: {
+    name: 'Cooling Capacity',
+    description: 'Availability and effectiveness of de-escalation mechanisms',
+    role: 'protective',
+    anchors: {
+      '0': 'extreme escalation — actively inflames, removes all de-escalation options',
+      '2': 'clear escalation — raises emotional temperature significantly',
+      '5': 'neutral — no escalation or de-escalation signals',
+      '8': 'clear cooling — actively lowers temperature, offers temporal buffers',
+      '10': 'maximum cooling — exemplary de-escalation with structural cooling mechanisms',
+    },
+    indicators_negative: [
+      'provokes fight-or-flight response',
+      'raises stakes or urgency artificially',
+      'narrows response options',
+    ],
+    indicators_positive: [
+      'provides space for reflection or pause',
+      'explicit de-escalation, mediation, soothing',
+      'offers temporal buffers',
+    ],
+  },
+  defensive_architecture: {
+    name: 'Defensive Architecture',
+    description: 'Degree to which content supports or undermines interpersonal boundaries',
+    role: 'protective',
+    anchors: {
+      '0': 'extreme stripping — completely removes defenses, punishes all self-protection',
+      '2': 'clear stripping — stigmatizes defensive responses or boundary-setting',
+      '5': 'neutral — no impact on defensive capacity',
+      '8': 'clear support — actively reinforces healthy boundaries',
+      '10': 'maximum support — exemplary boundary modeling with structural protections',
+    },
+    indicators_negative: [
+      'punishes or retaliates against boundary-setting',
+      'pressures against boundaries, dismisses self-protection',
+      'shames defensive responses',
+    ],
+    indicators_positive: [
+      'respects personal space and limits',
+      'validates self-protection, reinforces boundaries',
+      'advocates for protective mechanisms',
+    ],
+  },
+  contractual_clarity: {
+    name: 'Contractual Clarity',
+    description: 'Degree to which expectations, obligations, and consequences are explicit and mutual',
+    role: 'protective',
+    anchors: {
+      '0': 'extreme violation — gaslighting, total term-shifting, deliberate betrayal of agreements',
+      '2': 'clear ambiguity — hidden agendas, unstated rules, misleading framing',
+      '5': 'neutral — no contractual signals',
+      '8': 'clear clarity — transparent terms, mutual understanding',
+      '10': 'maximum clarity — exemplary contractual transparency with structural enforcement',
+    },
+    indicators_negative: [
+      'hidden agendas, unstated rules, misleading framing',
+      'vague expectations, shifting goalposts',
+      'breach of expectations, unilateral redefinition',
+    ],
+    indicators_positive: [
+      'explicit expectations, consistent framing',
+      'transparent terms, mutual understanding',
+      'mutual agreements with accountability',
+    ],
+  },
+};
+
+/** Dimension sets for each variant count */
+export const PSQ_DIM_VARIANTS: Record<number, string[]> = {
+  1: ['threat_exposure'],
+  2: ['threat_exposure', 'trust_conditions'],
+  3: ['threat_exposure', 'trust_conditions', 'resilience_baseline'],
+  5: ['hostility_index', 'trust_conditions', 'resilience_baseline', 'authority_dynamics', 'energy_dissipation'],
+  10: [
+    'threat_exposure', 'hostility_index', 'authority_dynamics', 'energy_dissipation',
+    'regulatory_capacity', 'resilience_baseline', 'trust_conditions',
+    'cooling_capacity', 'defensive_architecture', 'contractual_clarity',
+  ],
+};
+
+/**
+ * Build a PSQ dimension rubric block for the given dimension IDs.
+ * Returns a prompt fragment with condensed scoring anchors and textual indicators per dimension.
+ * ~100 tokens per dimension.
+ */
+export function buildPsqDimensionRubric(dims: string[]): string {
+  const sections: string[] = [];
+  for (const dimId of dims) {
+    const rubric = PSQ_DIMENSION_RUBRICS[dimId];
+    if (!rubric) continue;
+
+    const anchorLines = Object.entries(rubric.anchors)
+      .map(([score, desc]) => `  ${score} = ${desc}`)
+      .join('\n');
+
+    const negIndicators = rubric.indicators_negative.map(i => `  - ${i}`).join('\n');
+    const posIndicators = rubric.indicators_positive.map(i => `  - ${i}`).join('\n');
+
+    sections.push(`## ${rubric.name.toUpperCase()} (${dimId})
+${rubric.description}. Role: ${rubric.role}.
+Scoring (0-10 integer):
+${anchorLines}
+Negative indicators (0-4):
+${negIndicators}
+Positive indicators (6-10):
+${posIndicators}`);
+  }
+
+  return sections.join('\n\n');
+}
+
+/**
+ * Build a complete lite-v2 system prompt for the given dimensions.
+ * Combines the PSQ preamble, dimension rubrics, scoring rules, and TQ section.
+ */
+export function buildLiteV2SystemPrompt(dims: string[]): string {
+  const dimRubrics = buildPsqDimensionRubric(dims);
+  const dimNames = dims.map(d => PSQ_DIMENSION_RUBRICS[d]?.name ?? d).join(', ');
+
+  return `You are a psychoemotional impact evaluator using the PSQ (Psychoemotional Safety Quotient) framework. Score content on specific safety dimensions using validated psychological instruments as rubrics.
+
+${dimRubrics}
+
+## SCORING RULES
+1. Start at 5. Adjust only when specific textual evidence justifies it.
+2. Below 5 REQUIRES specific evidence of negative impact.
+3. Above 5 REQUIRES specific evidence of positive impact.
+4. ABSENCE of signal = score 5, confidence below 0.4.
+5. Use the full 0-10 range. 0 and 10 are extremes. Differentiate severity.
+6. Score each dimension independently — they measure different constructs.
+
+## TRANSPARENCY QUOTIENT (TQ)
+Score 5 binary indicators (0 or 1 each). Check only what is explicitly visible:
+
+- tq_author: 1 if the author is identified by real name (not "Staff", "Editors", or anonymous)
+- tq_date: 1 if a publication or last-updated date is visible
+- tq_sources: 1 if primary sources are cited (named experts, data links, study citations)
+- tq_corrections: 1 if a correction notice or visible corrections policy link is present
+- tq_conflicts: 1 if conflicts of interest are explicitly disclosed
+
+Score 0 if absent or unverifiable. Do NOT infer.
+
+Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)`;
+}
+
+/**
+ * Lite v2 methodology — PSQ (Psychoemotional Safety Quotient) dimensions + TQ.
+ * Replaces holistic 0-100 editorial scoring with instrument-grounded dimension scoring.
+ * PSQ dimensions are validated against ~100 psychological instruments (ICC=0.935, held-out r=0.402).
+ * lite-2.0: Phase A — single dimension (threat_exposure) + TQ.
+ *
+ * @license CC-BY-SA-4.0
+ */
+export const METHODOLOGY_LITE_V2 = buildLiteV2SystemPrompt(['threat_exposure']);

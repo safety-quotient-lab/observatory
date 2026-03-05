@@ -4,7 +4,7 @@
 // This file composes the methodology content (CC BY-SA 4.0, in methodology-content.ts)
 // with variant-specific output schemas to produce the final system prompts.
 
-import { METHODOLOGY_PREAMBLE, METHODOLOGY_LITE } from './methodology-content.js';
+import { METHODOLOGY_PREAMBLE, METHODOLOGY_LITE, METHODOLOGY_LITE_V2, buildLiteV2SystemPrompt, PSQ_DIM_VARIANTS } from './methodology-content.js';
 
 /**
  * Output schema for the full prompt variant (includes aggregates).
@@ -300,3 +300,42 @@ ${OUTPUT_SCHEMA_SLIM}`;
 export const METHODOLOGY_SYSTEM_PROMPT_LITE = `${METHODOLOGY_LITE}
 
 ${OUTPUT_SCHEMA_LITE}`;
+
+/**
+ * Build the output schema for lite v2 with the given PSQ dimensions.
+ * Flexible dimensions record — scales from 1 to 10 dimensions without schema change.
+ */
+function buildOutputSchemaLiteV2(dims: string[]): string {
+  const dimExamples = dims.map(d =>
+    `    "${d}": {\n      "score": <integer 0-10>,\n      "confidence": <0.0 to 1.0>,\n      "rationale": "<1-2 sentences citing specific textual evidence>"\n    }`
+  ).join(',\n');
+
+  return `Output ONLY a JSON object. No markdown, no explanation.
+
+{
+  "schema_version": "lite-2.0",
+  "content_type": "<CODE>",
+  "psq_dimensions": {
+${dimExamples}
+  },
+  "tq_author": <0 or 1>,
+  "tq_date": <0 or 1>,
+  "tq_sources": <0 or 1>,
+  "tq_corrections": <0 or 1>,
+  "tq_conflicts": <0 or 1>,
+  "executive_summary": "<one sentence, max 20 words>"
+}`;
+}
+
+/**
+ * Build a complete lite v2 system prompt with methodology + output schema for given dims.
+ */
+export function buildLiteV2Prompt(dims: string[]): string {
+  return `${buildLiteV2SystemPrompt(dims)}\n\n${buildOutputSchemaLiteV2(dims)}`;
+}
+
+/**
+ * Lite v2 system prompt — PSQ-based single-dimension (Phase A) + TQ.
+ * Uses instrument-grounded scoring rubrics from PSQ project.
+ */
+export const METHODOLOGY_SYSTEM_PROMPT_LITE_V2 = buildLiteV2Prompt(['threat_exposure']);

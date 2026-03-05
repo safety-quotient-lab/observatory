@@ -126,6 +126,152 @@ Output ONLY a JSON object. No markdown, no explanation.
   "primary_tone": "<measured|urgent|alarmist|hopeful|cynical|detached|empathetic|confrontational|celebratory|solemn>"
 }`;
 
+// Lite v2 prompt — PSQ-based decomposed scoring (lite-2.0)
+// Keep in sync with site/src/lib/methodology-content.ts (PSQ_DIMENSION_RUBRICS, buildLiteV2SystemPrompt) +
+// site/src/lib/prompts.ts (buildLiteV2Prompt, buildOutputSchemaLiteV2).
+
+// PSQ dimension rubrics — condensed from instruments.json (~100 tokens/dim)
+const PSQ_RUBRICS = {
+  threat_exposure: {
+    name: 'Threat Exposure', role: 'threat',
+    desc: 'Nature, intensity, and proximity of psychoemotional threats',
+    anchors: { 0: 'extreme direct threat — violence, severe abuse, sustained targeted harassment', 2: 'clear threat — insults, contempt, hostile framing', 5: 'neutral — no discernible threat or safety signals', 8: 'clear safety — warm, inclusive language with active care', 10: 'maximum safety — active prevention of threat with structural safeguards' },
+    neg: ['deliberate omission or gatekeeping', 'public mockery, ridicule, humiliation', 'threats, intimidation, coercion', 'dehumanizing language, contempt', 'surveillance or control language'],
+    pos: ['inclusive language, active care', 'protection advocacy, threat mitigation', 'structural safeguards discussed', 'respectful engagement, good-faith communication'],
+  },
+  hostility_index: {
+    name: 'Hostility Index', role: 'threat',
+    desc: 'Overt aggression, passive undermining, or structural antagonism',
+    anchors: { 0: 'extreme hostility — direct threats, slurs, violent language', 2: 'clear hostility — insults, derision, aggressive dismissiveness', 5: 'neutral — no hostile or anti-hostile signals', 8: 'clear warmth — friendly, affirming, inclusive language', 10: 'maximum anti-hostility — exemplary conflict resolution' },
+    neg: ['overt aggression, contempt, verbal abuse', 'passive aggression, sarcasm with hostile intent', 'cynical hostility, suspicion of motives'],
+    pos: ['polite, respectful engagement', 'active de-escalation, empathy', 'friendly, affirming language'],
+  },
+  authority_dynamics: {
+    name: 'Authority Dynamics', role: 'threat',
+    desc: 'How power is distributed, exercised, contested, and checked',
+    anchors: { 0: 'extreme abuse — unchecked power to harm, dominate, or silence', 2: 'clear imbalance — authority to dismiss, override, marginalize', 5: 'neutral — no power dynamics present', 8: 'clear equity — distributes power, elevates others', 10: 'maximum equity — exemplary power-sharing with structural checks' },
+    neg: ['coercive authority, intimidation, control', 'condescension, gatekeeping', 'authoritarian tone, unacknowledged privilege'],
+    pos: ['egalitarian communication, shared decision-making', 'accountable authority, invites challenge', 'elevates others'],
+  },
+  energy_dissipation: {
+    name: 'Energy Dissipation', role: 'threat',
+    desc: 'Whether healthy dissipation pathways exist or energy is trapped toward rupture',
+    anchors: { 0: 'extreme entrapment — traps all energy, demands relentless engagement', 2: 'clear entrapment — blocks healthy dissipation pathways', 5: 'neutral — no energy impact', 8: 'clear dissipation — supports recovery, rest, creative outlet', 10: 'maximum dissipation — exemplary support for rest and recovery' },
+    neg: ['demands relentless engagement without relief', 'blocks expression or recovery', 'sustained pressure, resource depletion'],
+    pos: ['supports expression, creates breathing room', 'facilitates healthy release', 'models work-life boundaries'],
+  },
+  regulatory_capacity: {
+    name: 'Regulatory Capacity', role: 'protective',
+    desc: 'Capacity to modulate emotional states without collapse or overflow',
+    anchors: { 0: 'extreme dysregulation demand — forces suppression or triggers collapse', 2: 'clear dysregulation — models poor emotional management', 5: 'neutral — no regulatory demand or support', 8: 'clear support — supports healthy emotional processing', 10: 'maximum support — exemplary regulation modeling with guidance' },
+    neg: ['provokes overwhelming emotional response', 'models poor emotional management', 'demands emotional suppression'],
+    pos: ['models composed engagement', 'teaches regulatory strategies', 'supports healthy processing'],
+  },
+  resilience_baseline: {
+    name: 'Resilience Baseline', role: 'protective',
+    desc: 'Capacity to absorb disruption and return to functional equilibrium',
+    anchors: { 0: 'extreme erosion — induces helplessness, despair, total defeat', 2: 'clear erosion — models fragility or learned helplessness', 5: 'neutral — no resilience impact', 8: 'clear reinforcement — builds confidence or agency', 10: 'maximum reinforcement — exemplary resilience modeling' },
+    neg: ['undermines agency or coping capacity', 'discouraging tone, hopelessness', 'models fragility'],
+    pos: ['models persistence or adaptive coping', 'celebrates overcoming adversity', 'builds confidence'],
+  },
+  trust_conditions: {
+    name: 'Trust Conditions', role: 'protective',
+    desc: 'Reasonable expectation that others will not exploit vulnerability',
+    anchors: { 0: 'extreme betrayal — deception, exploitation, gaslighting', 2: 'clear trust damage — cynicism, dishonesty, unreliability', 5: 'neutral — no trust signals', 8: 'clear trust building — vulnerability, honesty, reliability', 10: 'maximum trust — exemplary mutual trust with accountability' },
+    neg: ['deception, manipulation, breach of confidence', 'cynicism, veiled motives', 'exploitation of vulnerability'],
+    pos: ['transparency, consistency, good faith', 'active vulnerability, honesty', 'deep reciprocity, trust repair'],
+  },
+  cooling_capacity: {
+    name: 'Cooling Capacity', role: 'protective',
+    desc: 'Availability and effectiveness of de-escalation mechanisms',
+    anchors: { 0: 'extreme escalation — inflames, removes de-escalation options', 2: 'clear escalation — raises emotional temperature significantly', 5: 'neutral — no escalation or de-escalation signals', 8: 'clear cooling — lowers temperature, offers temporal buffers', 10: 'maximum cooling — exemplary de-escalation with structural mechanisms' },
+    neg: ['provokes fight-or-flight', 'raises stakes artificially', 'narrows response options'],
+    pos: ['provides space for reflection', 'explicit de-escalation, mediation', 'offers temporal buffers'],
+  },
+  defensive_architecture: {
+    name: 'Defensive Architecture', role: 'protective',
+    desc: 'Degree to which content supports or undermines interpersonal boundaries',
+    anchors: { 0: 'extreme stripping — removes defenses, punishes self-protection', 2: 'clear stripping — stigmatizes boundary-setting', 5: 'neutral — no impact on defensive capacity', 8: 'clear support — reinforces healthy boundaries', 10: 'maximum support — exemplary boundary modeling with protections' },
+    neg: ['punishes boundary-setting', 'pressures against boundaries', 'shames defensive responses'],
+    pos: ['respects personal space and limits', 'validates self-protection', 'advocates for protective mechanisms'],
+  },
+  contractual_clarity: {
+    name: 'Contractual Clarity', role: 'protective',
+    desc: 'Degree to which expectations, obligations, and consequences are explicit and mutual',
+    anchors: { 0: 'extreme violation — gaslighting, term-shifting, betrayal', 2: 'clear ambiguity — hidden agendas, unstated rules', 5: 'neutral — no contractual signals', 8: 'clear clarity — transparent terms, mutual understanding', 10: 'maximum clarity — exemplary transparency with enforcement' },
+    neg: ['hidden agendas, misleading framing', 'vague expectations, shifting goalposts', 'breach of expectations'],
+    pos: ['explicit expectations, consistent framing', 'transparent terms', 'mutual agreements with accountability'],
+  },
+};
+
+const PSQ_DIM_VARIANTS = {
+  1: ['threat_exposure'],
+  2: ['threat_exposure', 'trust_conditions'],
+  3: ['threat_exposure', 'trust_conditions', 'resilience_baseline'],
+  5: ['hostility_index', 'trust_conditions', 'resilience_baseline', 'authority_dynamics', 'energy_dissipation'],
+  10: Object.keys(PSQ_RUBRICS),
+};
+
+function buildLiteV2Prompt(dims) {
+  // Build dimension rubric sections
+  const rubricSections = dims.map(dimId => {
+    const r = PSQ_RUBRICS[dimId];
+    if (!r) return '';
+    const anchors = Object.entries(r.anchors).map(([s, d]) => `  ${s} = ${d}`).join('\n');
+    const neg = r.neg.map(i => `  - ${i}`).join('\n');
+    const pos = r.pos.map(i => `  - ${i}`).join('\n');
+    return `## ${r.name.toUpperCase()} (${dimId})\n${r.desc}. Role: ${r.role}.\nScoring (0-10 integer):\n${anchors}\nNegative indicators (0-4):\n${neg}\nPositive indicators (6-10):\n${pos}`;
+  }).filter(Boolean).join('\n\n');
+
+  // Build output schema with all dimensions
+  const dimExamples = dims.map(d =>
+    `    "${d}": {\n      "score": <integer 0-10>,\n      "confidence": <0.0 to 1.0>,\n      "rationale": "<1-2 sentences citing specific textual evidence>"\n    }`
+  ).join(',\n');
+
+  return `You are a psychoemotional impact evaluator using the PSQ (Psychoemotional Safety Quotient) framework. Score content on specific safety dimensions using validated psychological instruments as rubrics.
+
+${rubricSections}
+
+## SCORING RULES
+1. Start at 5. Adjust only when specific textual evidence justifies it.
+2. Below 5 REQUIRES specific evidence of negative impact.
+3. Above 5 REQUIRES specific evidence of positive impact.
+4. ABSENCE of signal = score 5, confidence below 0.4.
+5. Use the full 0-10 range. 0 and 10 are extremes. Differentiate severity.
+6. Score each dimension independently — they measure different constructs.
+
+## TRANSPARENCY QUOTIENT (TQ)
+Score 5 binary indicators (0 or 1 each). Check only what is explicitly visible:
+
+- tq_author: 1 if the author is identified by real name (not "Staff", "Editors", or anonymous)
+- tq_date: 1 if a publication or last-updated date is visible
+- tq_sources: 1 if primary sources are cited (named experts, data links, study citations)
+- tq_corrections: 1 if a correction notice or visible corrections policy link is present
+- tq_conflicts: 1 if conflicts of interest are explicitly disclosed
+
+Score 0 if absent or unverifiable. Do NOT infer.
+
+Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)
+
+Output ONLY a JSON object. No markdown, no explanation.
+
+{
+  "schema_version": "lite-2.0",
+  "content_type": "<CODE>",
+  "psq_dimensions": {
+${dimExamples}
+  },
+  "tq_author": <0 or 1>,
+  "tq_date": <0 or 1>,
+  "tq_sources": <0 or 1>,
+  "tq_corrections": <0 or 1>,
+  "tq_conflicts": <0 or 1>,
+  "executive_summary": "<one sentence, max 20 words>"
+}`;
+}
+
+// activeDims and LITE_V2_SYSTEM_PROMPT resolved after CLI args parsed (see below)
+
 if (!INGEST_URL) { console.error('Missing INGEST_URL'); process.exit(1); }
 if (!INGEST_SECRET) { console.error('Missing INGEST_SECRET (or TRIGGER_SECRET)'); process.exit(1); }
 if (!existsSync(CLAUDE_BIN)) { console.error(`claude binary not found at ${CLAUDE_BIN}`); process.exit(1); }
@@ -140,12 +286,21 @@ const limit = parseInt(argVal('--limit') ?? '10');
 const singleUrl = argVal('--url');
 const singleHnId = parseInt(argVal('--hn-id') ?? '0');
 const dryRun = args.includes('--dry-run');
-const mode = argVal('--mode') ?? 'full'; // 'full' | 'lite'
+const mode = argVal('--mode') ?? 'full'; // 'full' | 'lite' | 'lite-v2'
 const concurrency = parseInt(argVal('--concurrency') ?? '3');
-if (mode !== 'full' && mode !== 'lite' && mode !== 'light') {
-  console.error(`Invalid --mode "${mode}". Must be "full" or "lite".`);
+const dimsArg = parseInt(argVal('--dims') ?? '0'); // PSQ dimension count: 1, 2, 3, 5, 10
+if (mode !== 'full' && mode !== 'lite' && mode !== 'light' && mode !== 'lite-v2') {
+  console.error(`Invalid --mode "${mode}". Must be "full", "lite", or "lite-v2".`);
   process.exit(1);
 }
+if (dimsArg && ![1, 2, 3, 5, 10].includes(dimsArg)) {
+  console.error(`Invalid --dims "${dimsArg}". Must be 1, 2, 3, 5, or 10.`);
+  process.exit(1);
+}
+
+// Resolve PSQ dims: --dims N overrides, default is 1
+const activeDims = dimsArg ? PSQ_DIM_VARIANTS[dimsArg] : PSQ_DIM_VARIANTS[1];
+const LITE_V2_SYSTEM_PROMPT = buildLiteV2Prompt(activeDims);
 
 // --- Load full system prompt from methodology file ---
 const methodologyPath = new URL('../methodology-v3.4.txt', import.meta.url).pathname;
@@ -161,7 +316,9 @@ function buildFallbackPrompt() {
   return `You are a Fair Witness evaluator for Human Rights Compatibility Bias (HRCB). Evaluate the URL provided against the UDHR. Output ONLY a JSON object matching the HRCB evaluation schema (schema_version, evaluation, domain_context_profile, scores array with 31 entries for Preamble + Articles 1-30, supplementary signals, theme_tag, sentiment_tag, executive_summary).`;
 }
 
-const SYSTEM_PROMPT = (mode === 'lite' || mode === 'light') ? LITE_SYSTEM_PROMPT : FULL_SYSTEM_PROMPT;
+const SYSTEM_PROMPT = mode === 'lite-v2' ? LITE_V2_SYSTEM_PROMPT
+  : (mode === 'lite' || mode === 'light') ? LITE_SYSTEM_PROMPT
+  : FULL_SYSTEM_PROMPT;
 const METHODOLOGY_HASH = createHash('sha256').update(SYSTEM_PROMPT).digest('hex').slice(0, 32);
 
 // --- Helpers ---
@@ -428,7 +585,24 @@ async function evaluateOne(hnId, url) {
   if (dryRun) {
     console.log(`  [dry-run] Would POST result for hn_id=${hnId}`);
     console.log(`  schema_version: ${slim.schema_version}`);
-    if (mode === 'lite' || mode === 'light') {
+    if (mode === 'lite-v2') {
+      const dims = slim.psq_dimensions ?? {};
+      for (const [dim, val] of Object.entries(dims)) {
+        console.log(`  ${dim}: score=${val?.score} conf=${val?.confidence} rationale="${val?.rationale?.slice(0, 80)}"`);
+      }
+      const tqBits = [slim.tq_author, slim.tq_date, slim.tq_sources, slim.tq_corrections, slim.tq_conflicts];
+      console.log(`  tq: [${tqBits.join(',')}] = ${tqBits.filter(Boolean).length}/5`);
+      console.log(`  content_type: ${slim.content_type}`);
+      console.log(`  summary: ${slim.executive_summary}`);
+      // Derive HRCB editorial from PSQ
+      const dimVals = Object.values(dims).filter(d => d?.confidence >= 0.3);
+      if (dimVals.length > 0) {
+        const totalW = dimVals.reduce((s, d) => s + d.confidence, 0);
+        const gPsq = dimVals.reduce((s, d) => s + d.score * d.confidence, 0) / totalW;
+        const editorial = (gPsq - 5) / 5;
+        console.log(`  → g_psq: ${gPsq.toFixed(2)} → editorial: ${editorial.toFixed(3)}`);
+      }
+    } else if (mode === 'lite' || mode === 'light') {
       console.log(`  editorial: ${slim.evaluation?.editorial}`);
       console.log(`  structural: ${slim.evaluation?.structural}`);
       console.log(`  content_type: ${slim.evaluation?.content_type}`);
@@ -450,7 +624,8 @@ async function evaluateOne(hnId, url) {
 }
 
 async function main() {
-  console.log(`HRCB Standalone Evaluator — model: ${MODEL_ID} — mode: ${mode} — concurrency: ${concurrency}`);
+  const dimsLabel = mode === 'lite-v2' ? ` — dims: ${activeDims.length} (${activeDims.join(', ')})` : '';
+  console.log(`HRCB Standalone Evaluator — model: ${MODEL_ID} — mode: ${mode}${dimsLabel} — concurrency: ${concurrency}`);
   console.log(`Target: ${INGEST_URL}${dryRun ? ' [DRY RUN]' : ''}\n`);
 
   if (singleUrl && singleHnId) {
