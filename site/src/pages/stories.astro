@@ -491,7 +491,7 @@ function isLiteModel(id: string): boolean {
                   : story.eval_status === 'evaluating'
                     ? <span style="color: var(--channel-editorial);" title="Evaluating...">&#9881;</span>
                     : story.eval_status === 'pending' || story.eval_status === 'queued'
-                      ? <span style="color: var(--color-warning);" title="Queued for evaluation">&#183;&#183;</span>
+                      ? <span style="color: var(--color-warning);" title="Queued for evaluation">&hellip;</span>
                       : '—'}
           </td>
           <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${hasPsq ? scoreToColor(psqNorm) : 'var(--fg-secondary)'};`}>
