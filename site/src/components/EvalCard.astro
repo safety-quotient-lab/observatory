@@ -82,10 +82,9 @@ function timeAgo(unixTime: number): string {
         <div class="tripartite-score">
           <div class="score-row" data-channel="hrcb">
             <abbr class="score-font score-label" style="text-decoration: none;" title="Human Rights Compatibility Bias: directional lean of content relative to UDHR provisions, from −1.0 to +1.0">HRCB</abbr>
-            <span class="score-font score-value" style={`color: ${editorialUncertainDisplay ? 'var(--fg-secondary)' : (isLiteOnly ? 'var(--fg-secondary)' : displayColor)};`} title={editorialUncertainDisplay ? 'Score indeterminate: content may lack sufficient signal for meaningful evaluation' : undefined}>
-              {editorialUncertainDisplay ? '~' : ''}{formatScore(displayScore)}
+            <span class="score-font score-value" style={`color: ${editorialUncertainDisplay ? 'var(--color-nd)' : (isLiteOnly ? 'var(--fg-secondary)' : displayColor)};`} title={editorialUncertainDisplay ? 'Score indeterminate: content lacked sufficient signal for meaningful evaluation' : undefined}>
+              {editorialUncertainDisplay ? 'ND' : formatScore(displayScore)}
             </span>
-            {editorialUncertainDisplay && <span class="low-signal-label">low signal</span>}
           </div>
           <div class="score-row" data-channel="editorial">
             <abbr class="score-font score-label" style="text-decoration: none;" title="Editorial channel: what the content says about rights">E</abbr>

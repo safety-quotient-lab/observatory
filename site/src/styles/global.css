@@ -502,18 +502,6 @@ html[data-theme="light"] .ev-labels > span { filter: brightness(0.74); }
   .badge-hrcb       { background: rgba(37, 157, 148, 0.15); color: var(--channel-hrcb); }
   .badge-neutral    { background: rgba(107, 114, 128, 0.15); color: var(--color-muted); }
 
-  /* Low-signal indicator for zero-score stories */
-  .low-signal-label {
-    display: inline-block;
-    font-size: 0.6rem;
-    color: var(--fg-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-left: 2px;
-    vertical-align: middle;
-    opacity: 0.75;
-  }
-
   /* PSQ experimental badge */
   .psq-experimental {
     display: inline-block;
