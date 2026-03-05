@@ -143,7 +143,7 @@ The null result is **not evidence that TQ is invalid** — it is evidence that:
 
 | Check | Result | Status |
 |-------|--------|--------|
-| HRCB discriminant validity (vs sentiment) | ρ=+0.47, distinct constructs | ✓ PASS |
+| HRCB discriminant validity (vs sentiment) | r=+0.08, distinct constructs | ✓ PASS |
 | ET inter-rater reliability (Haiku vs Llama) | Pearson r=0.82, α=0.85 | ✓ PASS |
 | CL convergent validity (CL vs flesch) | ρ=+0.61, p<0.01 | ✓ PASS |
 | PTD inter-rater reliability | Agreement 85.3% | ✓ PASS |

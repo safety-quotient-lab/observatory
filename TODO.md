@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**PSQ shipped end-to-end. Pipeline producing evals (87 stories scored, 1K+ queued).** Blog posts and Wolfram validation are next unblocked items. Tom emailed. HN thread quiet.
+**All construct validity claims Wolfram-verified (37/37).** Epistemic fitness benchmark is next unblocked item — composite test of all free models against confabulation, eval quality, and structured output compliance.
 
 Phase 0 external validation progress:
 - ✓ DB hygiene — 8 gated-pending → skipped, 442 orphaned queued → failed, 107 null-editorial full evals retroactively failed + 28 re-queued
@@ -46,7 +46,9 @@ Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.
 
 ✓ PSQ pipeline deployed (2026-03-04): All 5 workers redeployed, migrations applied, `sweep=lite_reeval` triggered. 87 stories scored (avg 5.95/10, range 2.38–8.38), 1K+ evals queued across 2 PSQ models. Domain/user aggregates refreshed.
 
-Next: Blog posts (accommodation-engine, cognitive-architecture, .well-known-agents) or Wolfram validation audit.
+✓ Wolfram statistical audit (2026-03-05): 37/37 claims verified, 1 inconsistency fixed (ρ=0.47→r=0.08 in eq-tq summary). `findings/2026-03-05-wolfram-statistical-audit.md`.
+
+Next: Epistemic fitness benchmark or blog posts.
 
 ✓ `/methodology` page (2026-03-04): prerendered page rendering exact LLM evaluation prompt. Full + lite. CC BY-SA 4.0.
 ✓ Gap-detection blog post (2026-03-04): published to blog.unratified.org (Pre-Review).
@@ -62,7 +64,7 @@ Remaining:
 
 ### Wolfram Alpha Integration (new signals + validation)
 
-- [ ] **Validate all construct validity claims** — run `/validate-stat` against every findings/ document. Verify p-values, effect sizes, kappa values, correlation significance. Produces a ground-truth audit before publishing any more blog posts. Budget: ~50 Wolfram calls.
+- ~~**Validate all construct validity claims**~~ — ✓ DONE 2026-03-05. 37/37 claims verified via Wolfram + scipy. 1 cross-reference error fixed. `findings/2026-03-05-wolfram-statistical-audit.md`.
 - [ ] **Build geographic reference table** — run `/geo-enrich build-table` to query Wolfram for population, internet penetration, HDI, GDP per capita for the top 30 regions in our GS signal. Cache as `geo-reference-data.json`. Enables: weighted geographic coverage gaps on `/signals` (missing India ≠ missing Liechtenstein), Article 19 digital divide framing, Article 25/26 development context. Budget: ~100 calls.
 - [ ] **GS signal enrichment on /signals page** — once reference table exists, surface "X% of evaluated stories cover countries representing Y% of global internet users" on the Geographic Coverage section. Tier 1 mission alignment (invisible pattern → visible statement).
 - [ ] **Verify codebase math** — run `/verify-math` on phi-based clustering thresholds, exp decay, consensus weighting, PCA eigenvalues. One-time audit. Budget: ~15 calls.
