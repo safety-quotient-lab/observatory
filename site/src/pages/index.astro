@@ -352,8 +352,9 @@ const groupColors: Record<string, string> = {
                       <td style={`width: 22px; padding: 3px 4px; color: ${score !== null ? color : 'var(--bg-surface)'}; font-weight: bold;`} class="score-font hm-score">
                         <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{label}</a>
                       </td>
-                      <td title={title} class="hm-title" style={`padding: 3px 4px; color: ${score !== null ? 'var(--fg-primary)' : 'var(--fg-secondary)'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
+                      <td title={`${title} (n=${count})`} class="hm-title" style={`padding: 3px 4px; color: ${score !== null ? 'var(--fg-primary)' : 'var(--fg-secondary)'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
                         <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{title}</a>
+                        {count > 0 && <span style="color: var(--fg-secondary); font-size: 9px; margin-left: 4px;">n={count}</span>}
                       </td>
                       <td class="hm-data" style="width: 140px; padding: 3px 4px;">
                         {score !== null ? (
