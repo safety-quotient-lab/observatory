@@ -16,14 +16,14 @@
  *
  * Options:
  *   --prompt TEXT       Send single prompt, output JSON, exit (non-interactive)
- *   --provider NAME     Provider: gemini | openrouter (default: openrouter)
+ *   --provider NAME     Provider: gemini | openrouter | kagi (default: openrouter)
  *   --model MODEL       Model ID (default per provider)
  *   --dry-run           Print system context and exit
  *   --resume FILE       Resume a saved conversation
  *   --save NAME         Auto-save with this name (non-interactive mode)
  *   --follow-up         When resuming, add prompt as follow-up (not fresh context)
  *
- * API keys in site/.dev.vars: GOOGLE_API_KEY (gemini), OPENROUTER_API_KEY (openrouter)
+ * API keys in site/.dev.vars: GOOGLE_API_KEY (gemini), OPENROUTER_API_KEY (openrouter), KAGI_API_KEY (kagi)
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -55,11 +55,12 @@ const PROVIDER_DEFAULTS = {
   gemini: { model: 'gemini-2.0-flash', keyEnv: 'GOOGLE_API_KEY' },
   openrouter: { model: 'qwen/qwen3-235b-a22b-thinking-2507', keyEnv: 'OPENROUTER_API_KEY' },
   wolfram: { model: 'llm-api', keyEnv: 'WOLFRAMALPHA_APP_ID' },
+  kagi: { model: 'fastgpt', keyEnv: 'KAGI_API_KEY' },
 };
 
 let PROVIDER = argVal('--provider') || 'openrouter';
 if (!PROVIDER_DEFAULTS[PROVIDER]) {
-  console.error(`Unknown provider: ${PROVIDER}. Use: gemini, openrouter, wolfram`);
+  console.error(`Unknown provider: ${PROVIDER}. Use: gemini, openrouter, wolfram, kagi`);
   process.exit(1);
 }
 
@@ -248,6 +249,9 @@ async function callLLM(contents, retryCount = 0) {
   if (PROVIDER === 'wolfram') {
     return callWolfram(contents);
   }
+  if (PROVIDER === 'kagi') {
+    return callKagi(contents);
+  }
   if (PROVIDER === 'openrouter') {
     return callOpenRouter(contents, retryCount);
   }
@@ -364,6 +368,54 @@ async function callWolfram(contents) {
     summary: `Wolfram Alpha result for: ${query.slice(0, 100)}`,
     _raw_wolfram: text
   });
+}
+
+async function callKagi(contents) {
+  // Extract the last user message as query (like Wolfram — Kagi is not a chat model)
+  const lastUser = [...contents].reverse().find(c => c.role === 'user');
+  if (!lastUser) throw new Error('No user message to query Kagi with');
+  const query = lastUser.parts.map(p => p.text).join('\n');
+
+  if (MODEL === 'summarize') {
+    // Summarizer mode: expects a URL in the query
+    const urlMatch = query.match(/https?:\/\/\S+/);
+    const endpoint = urlMatch
+      ? `https://kagi.com/api/v0/summarize?url=${encodeURIComponent(urlMatch[0])}&summary_type=takeaway`
+      : 'https://kagi.com/api/v0/summarize';
+    const opts = { headers: { 'Authorization': `Bot ${API_KEY}` } };
+    if (!urlMatch) {
+      opts.method = 'POST';
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify({ text: query, summary_type: 'takeaway' });
+    }
+    const res = await fetch(endpoint, opts);
+    if (!res.ok) throw new Error(`Kagi Summarizer ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return data.data?.output || JSON.stringify(data);
+  }
+
+  // Default: FastGPT (AI search with citations)
+  const res = await fetch('https://kagi.com/api/v0/fastgpt', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bot ${API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query }),
+  });
+
+  if (!res.ok) throw new Error(`Kagi FastGPT ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const output = data.data?.output;
+  const refs = data.data?.references || [];
+
+  if (!output) throw new Error(`Kagi returned no output: ${JSON.stringify(data)}`);
+
+  // Format with citations for downstream consumption
+  const citationBlock = refs.length > 0
+    ? '\n\n---\nSources:\n' + refs.map((r, i) => `[${i + 1}] ${r.title} — ${r.url}`).join('\n')
+    : '';
+  return output + citationBlock;
 }
 
 // --- Conversation state ---
