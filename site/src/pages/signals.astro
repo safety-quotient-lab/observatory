@@ -157,20 +157,20 @@ const findings: Array<{ text: string; anchor: string }> = [];
 if (complexityData?.expert_pct != null) {
   const expertCI = wilsonCI(complexityData.knowledge_expert, clN);
   findings.push({
-    text: `${complexityData.expert_pct.toFixed(0)}% \u00b1${Math.ceil(expertCI.margin)} of stories assume expert-level knowledge`,
+    text: `${complexityData.expert_pct.toFixed(0)}% ±${Math.ceil(expertCI.margin)} of stories assume expert-level knowledge`,
     anchor: '#accessibility',
   });
 }
 if (tdData?.author_identified_pct != null) {
   const authorCI = wilsonCI(tdData.author_identified_count ?? 0, tdN);
   findings.push({
-    text: `Only ${tdData.author_identified_pct.toFixed(0)}% \u00b1${Math.ceil(authorCI.margin)} of stories identify their author`,
+    text: `Only ${tdData.author_identified_pct.toFixed(0)}% ±${Math.ceil(authorCI.margin)} of stories identify their author`,
     anchor: '#transparency',
   });
 }
 if (retroRatio) {
   findings.push({
-    text: `Tech coverage looks backward ${retroRatio}\u00d7 more than forward`,
+    text: `Tech coverage looks backward ${retroRatio}× more than forward`,
     anchor: '#temporal',
   });
 }
@@ -316,7 +316,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                     <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
                       {pct !== null ? (
                         <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${tdN})`}>
-                          {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> \u00b1{Math.ceil(ci.margin)}</span>
+                          {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(ci.margin)}</span>
                         </span>
                       ) : 'n/a'}
                     </td>
@@ -360,7 +360,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                           </div>
                         </td>
                         <td style="width: 70px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
-                          <a href={`/stories?jargon=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> \u00b1{Math.ceil(ci.margin)}</span></a>
+                          <a href={`/stories?jargon=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></a>
                         </td>
                       </tr>
                     ))}
@@ -378,7 +378,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                           </div>
                         </td>
                         <td style="width: 70px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
-                          <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> \u00b1{Math.ceil(ci.margin)}</span></span>
+                          <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></span>
                         </td>
                       </tr>
                     ))}
@@ -502,7 +502,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                     <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
                       {pct !== null ? (
                         <a href={`/stories?temporal=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${tfN})`}>
-                          {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> \u00b1{Math.ceil(ci.margin)}</span>
+                          {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(ci.margin)}</span>
                         </a>
                       ) : '\u2014'}
                     </td>
