@@ -1,0 +1,135 @@
+{
+  "_description": "ICESCR ↔ UDHR article mapping for inter-agent collaboration. ICESCR elaborates economic, social, and cultural rights that UDHR declares in articles 22-27. This mapping enables unratified-agent to overlay ICESCR framing on observatory UDHR article scores.",
+  "_source": "UN treaty text analysis. ICESCR (1966) codifies rights declared in UDHR (1948) into binding treaty obligations with progressive realization.",
+  "_generated": "2026-03-06",
+  "_used_by": ["icescr-framing-for-hrc-stories collaboration (mesh-init)", "voter-guide-from-corpus-signals collaboration"],
+
+  "mapping": [
+    {
+      "icescr_article": 1,
+      "icescr_topic": "Self-determination of peoples",
+      "udhr_articles": [1, 21],
+      "udhr_topics": ["Dignity and equality (Art. 1)", "Participation in government (Art. 21)"],
+      "relationship": "ICESCR Art. 1 elaborates collective self-determination; UDHR Art. 1 declares individual dignity, Art. 21 declares political participation. ICESCR extends to economic self-determination of peoples.",
+      "ratification_gap_note": "U.S. non-ratification means no binding obligation on economic self-determination — relevant when tech platforms control economic participation."
+    },
+    {
+      "icescr_article": 2,
+      "icescr_topic": "Non-discrimination in economic/social/cultural rights",
+      "udhr_articles": [2, 7],
+      "udhr_topics": ["Non-discrimination (Art. 2)", "Equality before the law (Art. 7)"],
+      "relationship": "Direct elaboration. UDHR Art. 2 declares non-discrimination; ICESCR Art. 2 operationalizes it for economic/social rights with progressive realization obligation.",
+      "ratification_gap_note": "Without ICESCR ratification, algorithmic discrimination in employment, housing, and credit lacks a treaty-level human rights framework."
+    },
+    {
+      "icescr_article": 3,
+      "icescr_topic": "Equal rights of men and women",
+      "udhr_articles": [2, 16],
+      "udhr_topics": ["Non-discrimination (Art. 2)", "Marriage and family (Art. 16)"],
+      "relationship": "ICESCR Art. 3 specifies gender equality in economic/social/cultural rights. UDHR Art. 2 covers broad non-discrimination, Art. 16 covers marriage equality.",
+      "ratification_gap_note": "Gender pay gap and workplace discrimination in tech — no ICESCR obligation to progressively realize equal economic rights."
+    },
+    {
+      "icescr_article": 6,
+      "icescr_topic": "Right to work",
+      "udhr_articles": [23],
+      "udhr_topics": ["Right to work (Art. 23)"],
+      "relationship": "Direct elaboration. UDHR Art. 23 declares the right to work, free choice of employment, just conditions, and equal pay. ICESCR Art. 6 adds progressive realization through technical/vocational guidance and training programs.",
+      "ratification_gap_note": "AI-driven job displacement has no treaty-level right-to-work framework in the U.S. ICESCR Art. 6 would require measures toward full employment."
+    },
+    {
+      "icescr_article": 7,
+      "icescr_topic": "Just and favorable conditions of work",
+      "udhr_articles": [23, 24],
+      "udhr_topics": ["Right to work and equal pay (Art. 23)", "Rest and leisure (Art. 24)"],
+      "relationship": "ICESCR Art. 7 elaborates UDHR Art. 23 (just conditions, equal remuneration) and Art. 24 (rest, leisure, holidays). Adds safe working conditions, equal opportunity for promotion.",
+      "ratification_gap_note": "Gig economy and platform labor conditions — no treaty obligation for just and favorable conditions including safe working environment."
+    },
+    {
+      "icescr_article": 8,
+      "icescr_topic": "Trade union rights and right to strike",
+      "udhr_articles": [20, 23],
+      "udhr_topics": ["Freedom of association (Art. 20)", "Right to form trade unions (Art. 23.4)"],
+      "relationship": "ICESCR Art. 8 elaborates UDHR Art. 23.4 (right to form and join trade unions) and Art. 20 (freedom of association). Adds right to strike.",
+      "ratification_gap_note": "Tech worker unionization and right to strike — UDHR declares it, ICESCR would make it a binding progressive obligation."
+    },
+    {
+      "icescr_article": 9,
+      "icescr_topic": "Right to social security",
+      "udhr_articles": [22, 25],
+      "udhr_topics": ["Right to social security (Art. 22)", "Adequate standard of living (Art. 25)"],
+      "relationship": "ICESCR Art. 9 elaborates UDHR Art. 22 (social security) with binding progressive realization. UDHR Art. 25 connects standard of living to security in unemployment/sickness.",
+      "ratification_gap_note": "Automation-driven unemployment and social safety net adequacy — no treaty obligation to progressively realize social security."
+    },
+    {
+      "icescr_article": 10,
+      "icescr_topic": "Protection of family, mothers, children",
+      "udhr_articles": [16, 25],
+      "udhr_topics": ["Marriage and family (Art. 16)", "Motherhood and childhood protection (Art. 25.2)"],
+      "relationship": "ICESCR Art. 10 elaborates UDHR Art. 16 (family protection) and Art. 25.2 (special care for motherhood/childhood). Adds paid maternity leave, child labor protections.",
+      "ratification_gap_note": "Paid family leave, child online safety, COPPA — no ICESCR framework for progressive child/family protection standards."
+    },
+    {
+      "icescr_article": 11,
+      "icescr_topic": "Adequate standard of living (food, clothing, housing)",
+      "udhr_articles": [25],
+      "udhr_topics": ["Adequate standard of living (Art. 25)"],
+      "relationship": "Direct elaboration. ICESCR Art. 11 operationalizes UDHR Art. 25 with progressive realization of adequate food, clothing, housing. Adds freedom from hunger as fundamental right.",
+      "ratification_gap_note": "Housing affordability in tech hubs, food insecurity — no treaty obligation for progressive improvement."
+    },
+    {
+      "icescr_article": 12,
+      "icescr_topic": "Right to health",
+      "udhr_articles": [25],
+      "udhr_topics": ["Right to medical care (Art. 25.1)"],
+      "relationship": "ICESCR Art. 12 massively elaborates UDHR Art. 25.1 (medical care). Adds: highest attainable standard of physical and mental health, environmental/industrial hygiene, prevention/treatment of diseases, medical services for all.",
+      "ratification_gap_note": "Health data privacy, AI in healthcare, mental health of tech workers — no treaty framework for right to highest attainable standard of health."
+    },
+    {
+      "icescr_article": 13,
+      "icescr_topic": "Right to education",
+      "udhr_articles": [26],
+      "udhr_topics": ["Right to education (Art. 26)"],
+      "relationship": "Direct elaboration. ICESCR Art. 13 operationalizes UDHR Art. 26 with progressive realization: free compulsory primary, generally available secondary, equally accessible higher education. Adds: adequate fellowship system, material conditions of teaching staff.",
+      "ratification_gap_note": "AI literacy, digital divide, educational access — no treaty obligation for progressive educational improvement. Marked as 'pivotal' by unratified.org."
+    },
+    {
+      "icescr_article": 14,
+      "icescr_topic": "Implementation of free primary education",
+      "udhr_articles": [26],
+      "udhr_topics": ["Free elementary education (Art. 26.1)"],
+      "relationship": "ICESCR Art. 14 provides an implementation timeline for Art. 13's free primary education — states must adopt a plan within two years of ratification.",
+      "ratification_gap_note": "U.S. has free primary education domestically but no treaty obligation — relevant to international education aid and digital education access."
+    },
+    {
+      "icescr_article": 15,
+      "icescr_topic": "Cultural and scientific participation",
+      "udhr_articles": [27],
+      "udhr_topics": ["Participation in cultural life and scientific advancement (Art. 27)"],
+      "relationship": "Direct elaboration. ICESCR Art. 15 operationalizes UDHR Art. 27: participate in cultural life, enjoy benefits of scientific progress, protection of moral/material interests from authorship. Adds: conservation/development/diffusion of science and culture, freedom for scientific research.",
+      "ratification_gap_note": "Open source, AI benefits distribution, scientific publication access — no treaty obligation to ensure everyone benefits from scientific progress. Marked as 'pivotal' by unratified.org."
+    }
+  ],
+
+  "udhr_reverse_index": {
+    "_description": "Which UDHR articles map to ICESCR articles — for observatory to annotate UDHR scores with ICESCR relevance",
+    "1": [1],
+    "2": [2, 3],
+    "7": [2],
+    "16": [3, 10],
+    "20": [8],
+    "21": [1],
+    "22": [9],
+    "23": [6, 7, 8],
+    "24": [7],
+    "25": [9, 10, 11, 12],
+    "26": [13, 14],
+    "27": [15]
+  },
+
+  "coverage_summary": {
+    "udhr_articles_with_icescr_parallels": [1, 2, 7, 16, 20, 21, 22, 23, 24, 25, 26, 27],
+    "udhr_articles_without_icescr_parallels": [0, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 28, 29, 30],
+    "note": "UDHR articles 3-21 cover civil and political rights — these map to the ICCPR (International Covenant on Civil and Political Rights), not the ICESCR. The U.S. ratified the ICCPR in 1992. UDHR articles 22-27 cover economic, social, and cultural rights — these map to the ICESCR, which the U.S. has NOT ratified. This is the ratification gap unratified.org documents."
+  }
+}

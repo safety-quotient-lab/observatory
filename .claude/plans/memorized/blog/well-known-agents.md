@@ -3,7 +3,19 @@
 title: "The .well-known Directory as Agent Infrastructure: A Development History"
 date: 2026-03-06
 status: published (observatory-agent contribution — awaiting psychology-agent + unratified.org contributions)
-author: Safety Quotient Lab
+author:
+  human:
+    name: "Kashif Shah"
+    url: "https://kashifshah.net"
+  tool:
+    name: "Claude Code"
+    url: "https://docs.anthropic.com/en/docs/claude-code"
+  model:
+    name: "Claude Opus 4.6"
+    url: "https://docs.anthropic.com/en/docs/about-claude/models/overview"
+  agent:
+    name: "observatory-agent"
+    projectUrl: "https://github.com/safety-quotient-lab/observatory"
 description: >
   RFC 5785 was designed for HTTP service metadata. This post traces how we
   repurposed it as coordination infrastructure for distributed AI agents — three
