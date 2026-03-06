@@ -17,17 +17,12 @@ Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
 - [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
 - [ ] **Write Claude Code as OS blog post** — technical companion: skills, memory, cognitive triggers, agent identity, federation. 40+ features only possible with Claude Code's architecture. Scaffold at `.claude/plans/memorized/blog/claude-code-as-os.md`. Blocked on: psychology-agent's cognitive architecture analysis (provides T1-T14 detail). Timing: after cogarch personal post establishes context.
-- [ ] **Write `.well-known` for distributed agents blog post** — history and development of RFC 5785 as infrastructure for multi-agent coordination; how this project uses `agent-card.json` (A2A), `agent-inbox.json` (proposals), and `agent-manifest.json` (cognitive architecture) as a three-layer pattern; the shared git access channel (`proposals/` tracked in repo); how agents coordinate across projects without a central registry. The novel angle: `.well-known` was designed for HTTP service metadata; this project uses it for agent identity + construction provenance + inter-agent communication. Scaffold at `.claude/plans/memorized/blog/well-known-agents.md`.
+- [x] **Write `.well-known` for distributed agents blog post** — ✓ PUBLISHED 2026-03-06 (observatory-agent contribution). Contribution points open for psychology-agent (consumer perspective, epistemic extension derivation) and unratified.org agent (proposal lifecycle, receiving-side experience). `blog.unratified.org/2026-03-06-well-known-agent-infrastructure/`.
 - [ ] Post-launch: Analyze `lite_reeval` data in eval_history — sweep dispatched (50 stories, 100 queue msgs), longitudinal lite-1.4→1.5 comparison data accumulating
 - [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
 
-### Wolfram Alpha Integration (new signals + validation)
-
-- ~~**Validate all construct validity claims**~~ — ✓ DONE 2026-03-05. 37/37 claims verified via Wolfram + scipy. 1 cross-reference error fixed. `findings/2026-03-05-wolfram-statistical-audit.md`.
-- ~~**Build geographic reference table**~~ — ✓ DONE 2026-03-05. 22 countries, 30 Wolfram calls. `.claude/plans/memorized/geo-reference-data.json`.
-- ~~**GS signal enrichment on /signals page**~~ — ✓ DONE 2026-03-05. `geo-reference.ts` + Key Findings one-liner + Discourse Character annotation (US dominance %, coverage %, underrepresented countries).
-- ~~**Verify codebase math**~~ — ✓ DONE 2026-03-05. 10 formulas verified via Wolfram (10 calls). All correct. 1 comment fix (decay half-life mislabeled in hn-bot.ts).
-- ~~**Wolfram-powered confidence intervals**~~ — ✓ DONE 2026-03-05. `stats.ts` (Wilson CI + t-distribution LUT, 9 Wolfram queries). Signals page: **all sections** — TD, accessibility, PT tiers, temporal focus + horizon, tone, scope (Wilson), PSQ (t-dist meanCI via `psq_stddev`), key findings. Models page: t-distribution replaces z=1.96.
+### Wolfram Alpha Integration — ✓ COMPLETE 2026-03-05
+All 5 items done: construct validity audit (37/37), geo reference (22 countries), GS enrichment, math verification (10 formulas), confidence intervals (Wilson + t-dist).
 
 ### Architecture (evaluate later)
 

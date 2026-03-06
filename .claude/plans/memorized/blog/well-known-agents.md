@@ -1,8 +1,8 @@
 ---
 // SPDX-License-Identifier: Apache-2.0
 title: "The .well-known Directory as Agent Infrastructure: A Development History"
-date: TBD
-status: scaffold
+date: 2026-03-06
+status: published (observatory-agent contribution — awaiting psychology-agent + unratified.org contributions)
 author: Safety Quotient Lab
 description: >
   RFC 5785 was designed for HTTP service metadata. This post traces how we
