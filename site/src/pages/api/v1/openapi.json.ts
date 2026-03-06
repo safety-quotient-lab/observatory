@@ -189,6 +189,30 @@ const spec = {
         },
       },
     },
+    '/api/v1/articles': {
+      get: {
+        summary: 'Get per-UDHR-article aggregate scores',
+        operationId: 'getArticles',
+        tags: ['Articles'],
+        description: 'Returns per-article (UDHR provision) aggregate statistics — editorial and structural channel averages, story counts, trigger counts, evidence distribution, SETL, and standard deviation. Covers all 31 provisions (Preamble + Articles 1-30).',
+        responses: {
+          '200': {
+            description: 'Per-article aggregate statistics',
+            content: { 'application/json': { schema: {
+              type: 'object',
+              properties: {
+                articles: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/ArticleStats' },
+                },
+                generated_at: { type: 'string', format: 'date-time' },
+              },
+            } } },
+          },
+          '429': { $ref: '#/components/responses/RateLimited' },
+        },
+      },
+    },
     '/api/v1/signals': {
       get: {
         summary: 'Get corpus-wide signal aggregates',
@@ -513,6 +537,28 @@ const spec = {
           evaluated_at: { type: ['string', 'null'], format: 'date-time' },
         },
       },
+      ArticleStats: {
+        type: 'object',
+        properties: {
+          article: { type: 'integer', description: 'UDHR provision number (0 = Preamble, 1-30 = Articles)' },
+          name: { type: 'string', description: 'Provision name' },
+          avg_editorial: { type: ['number', 'null'], description: 'Mean editorial channel score [-1, +1]' },
+          avg_structural: { type: ['number', 'null'], description: 'Mean structural channel score [-1, +1]' },
+          stddev_final: { type: 'number', description: 'Standard deviation of combined scores' },
+          story_count: { type: 'integer', description: 'Number of distinct stories triggering this provision' },
+          trigger_count: { type: 'integer', description: 'Total scored signals (a story may trigger multiple provisions)' },
+          nd_count: { type: 'integer', description: 'Not-determined signals (triggered but no score)' },
+          avg_setl: { type: 'number', description: 'Mean structural-editorial tension level for this provision' },
+          evidence: {
+            type: 'object',
+            properties: {
+              high: { type: 'integer' },
+              medium: { type: 'integer' },
+              low: { type: 'integer' },
+            },
+          },
+        },
+      },
       Error: {
         type: 'object',
         description: 'RFC 7807 Problem Details',
@@ -539,6 +585,7 @@ const spec = {
     { name: 'Stories', description: 'Evaluated Hacker News stories with HRCB scores' },
     { name: 'Domains', description: 'Domain-level aggregated rights profiles' },
     { name: 'Users', description: 'HN submitter aggregated statistics' },
+    { name: 'Articles', description: 'Per-UDHR-provision aggregate scores and statistics' },
     { name: 'Signals', description: 'Corpus-wide signal aggregates' },
     { name: 'Badges', description: 'Embeddable SVG score badges' },
     { name: 'Exports', description: 'Bulk data exports (planned — currently returns 501)' },

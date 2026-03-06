@@ -72,7 +72,7 @@
     {
       "id": "query-udhr-article-rankings",
       "name": "Query UDHR Article Rankings",
-      "description": "Returns all 31 UDHR provisions ranked by corpus engagement frequency and average directional lean. Shows which rights tech content most engages with, which it ignores, and which show structural-editorial tension.",
+      "description": "Returns all 31 UDHR provisions with per-article aggregate scores — editorial/structural channel averages, story counts, trigger counts, evidence distribution, SETL tension, and standard deviation. GET /api/v1/articles. Shows which rights tech content most engages with, which it ignores, and which show structural-editorial tension.",
       "tags": ["human-rights", "udhr", "rights-ranking", "corpus-analytics", "pedagogy"],
       "examples": [
         "Which UDHR articles appear most in tech news?",
@@ -81,6 +81,7 @@
       ],
       "inputModes": ["text/plain"],
       "outputModes": ["application/json"],
+      "endpoint": "/api/v1/articles",
       "rateLimit": "200 requests/hour per IP"
     },
     {

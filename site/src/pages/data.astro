@@ -34,6 +34,7 @@ const jsonLd = {
   distribution: [
     { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/stories`, name: 'Stories API (paginated)' },
     { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/domains`, name: 'Domain Aggregates API' },
+    { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/articles`, name: 'Per-UDHR-Provision Article Scores API' },
     { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `${siteUrl}/api/v1/signals`, name: 'Corpus Signal Aggregates API' },
   ],
   temporalCoverage: '2026-02/..',
@@ -87,6 +88,7 @@ const sourceCodeLd = {
           </tr>
           <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font"><a href="/api/v1/stories" style="color: var(--color-orange);">/api/v1/stories</a></td><td style="color: var(--fg-secondary); padding: 2px 8px;">Paginated evaluated story feed with HRCB scores</td></tr>
           <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">/api/v1/story/{'{id}'}</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Single story with per-model rater evaluations</td></tr>
+          <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font"><a href="/api/v1/articles" style="color: var(--color-orange);">/api/v1/articles</a></td><td style="color: var(--fg-secondary); padding: 2px 8px;">Per-UDHR-provision aggregate scores: editorial/structural averages, story counts, trigger counts, evidence distribution, SETL tension</td></tr>
           <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font"><a href="/api/v1/signals" style="color: var(--color-orange);">/api/v1/signals</a></td><td style="color: var(--fg-secondary); padding: 2px 8px;">Corpus-wide signal aggregates: transparency disclosure rates, accessibility metrics, temporal framing, tone/scope distributions. Includes <code>generated_at</code> timestamp for build-time consumers.</td></tr>
           <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font"><a href="/api/v1/domains" style="color: var(--color-orange);">/api/v1/domains</a></td><td style="color: var(--fg-secondary); padding: 2px 8px;">Domain signal aggregates (HRCB, EQ, SO, TD, valence, arousal)</td></tr>
           <tr><td style="color: var(--color-orange); padding: 2px 8px;" class="score-font">/api/v1/domain/{'{domain}'}</td><td style="color: var(--fg-secondary); padding: 2px 8px;">Domain profile with recent evaluated stories</td></tr>
