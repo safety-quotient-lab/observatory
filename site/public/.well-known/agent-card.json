@@ -23,6 +23,25 @@
   },
   "defaultInputModes": ["text/plain", "application/json"],
   "defaultOutputModes": ["application/json"],
+  "mesh": {
+    "transport": "git-pr",
+    "protocol": "interagent/v1",
+    "peers": [
+      {
+        "agent_id": "unratified-agent",
+        "discovery_url": "https://unratified.org/.well-known/agent-card.json",
+        "repo": "safety-quotient-lab/unratified"
+      },
+      {
+        "agent_id": "psychology-agent",
+        "repo": "safety-quotient-lab/psychology-agent"
+      },
+      {
+        "agent_id": "psq-agent",
+        "repo": "safety-quotient-lab/safety-quotient"
+      }
+    ]
+  },
   "extensions": [
     {
       "uri": "https://github.com/safety-quotient-lab/interagent-epistemic/v1",
