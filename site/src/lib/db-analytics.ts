@@ -935,6 +935,55 @@ export async function getSignalCompleteness(db: D1Database): Promise<SignalCompl
   }
 }
 
+// --- Corpus-level signal coverage (for /status) ---
+
+export interface SignalCoverageRow {
+  signal: string;
+  measured: number;
+  total: number;
+  pct: number;
+}
+
+export async function getCorpusSignalCoverage(db: D1Database): Promise<SignalCoverageRow[]> {
+  try {
+    const { results } = await db
+      .prepare(
+        `SELECT
+           COUNT(*) as total,
+           COUNT(CASE WHEN tf_primary_focus IS NOT NULL THEN 1 END) as tf_measured,
+           COUNT(CASE WHEN cl_jargon_density IS NOT NULL THEN 1 END) as jargon_measured,
+           COUNT(CASE WHEN cl_reading_level IS NOT NULL THEN 1 END) as reading_measured,
+           COUNT(CASE WHEN gs_scope IS NOT NULL THEN 1 END) as gs_measured,
+           COUNT(CASE WHEN pt_flags_json IS NOT NULL THEN 1 END) as pt_measured,
+           COUNT(CASE WHEN td_author_identified IS NOT NULL THEN 1 END) as td_measured,
+           COUNT(CASE WHEN psq_score IS NOT NULL THEN 1 END) as psq_measured
+         FROM stories
+         WHERE eval_status = 'done' AND hn_id > 0`
+      )
+      .first<Record<string, number>>();
+
+    if (!results) return [];
+    const total = results.total;
+    const signals: [string, number][] = [
+      ['Temporal Framing', results.tf_measured],
+      ['Jargon Density', results.jargon_measured],
+      ['Reading Level', results.reading_measured],
+      ['Geographic Scope', results.gs_measured],
+      ['Propaganda Techniques', results.pt_measured],
+      ['Transparency', results.td_measured],
+      ['PSQ', results.psq_measured],
+    ];
+    return signals.map(([signal, measured]) => ({
+      signal,
+      measured,
+      total,
+      pct: total > 0 ? Math.round(1000 * measured / total) / 10 : 0,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // --- Model Trust Snapshots (Phase 37B) ---
 
 export interface ModelTrustSnapshot {

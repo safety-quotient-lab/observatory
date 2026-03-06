@@ -333,7 +333,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                 ))}
               </table>
               <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                {tdData.td_measured.toLocaleString()} stories measured.
+                <a href="/status#signal-coverage" style="color: var(--fg-secondary); text-decoration: none; border-bottom: 1px dotted var(--color-border);" title={`${tdData.td_measured} of ${status.done} evaluated stories have transparency data`}>{tdData.td_measured.toLocaleString()} stories measured.</a>
                 {tdData.high_td_pct !== null && (
                   <> <span style="color: var(--color-positive);">{tdData.high_td_pct.toFixed(0)}%</span> meet high transparency standards.</>
                 )}
@@ -542,7 +542,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                 {retroRatio && (
                   <>Tech coverage looks backward <span class="score-font">{retroRatio}&times;</span> more than forward. </>
                 )}
-                {temporalData.total_measured.toLocaleString()} stories measured.
+                <a href="/status#signal-coverage" style="color: var(--fg-secondary); text-decoration: none; border-bottom: 1px dotted var(--color-border);" title={`${temporalData.total_measured} of ${status.done} evaluated stories have temporal framing data — remainder lacked classifiable temporal focus`}>{temporalData.total_measured.toLocaleString()} stories measured.</a>
               </p>
             </div>
           </div>

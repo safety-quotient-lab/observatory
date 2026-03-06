@@ -1075,6 +1075,25 @@ export async function writeRaterEvalResult(
   const story = await db.prepare(
     `SELECT eval_status FROM stories WHERE hn_id = ?`
   ).bind(hnId).first<{ eval_status: string }>();
+  // Warn on NULL supplementary fields in done full evals (Option C: write-time validation)
+  const nullSuppl: string[] = [];
+  if ((result.temporal_framing?.primary_focus ?? null) == null) nullSuppl.push('tf_primary_focus');
+  if ((result.complexity_level?.jargon_density ?? null) == null) nullSuppl.push('jargon_density');
+  if ((result.complexity_level?.reading_level ?? null) == null) nullSuppl.push('reading_level');
+  if ((result.geographic_scope?.scope ?? null) == null) nullSuppl.push('gs_scope');
+  if ((td?.td_score ?? null) == null) nullSuppl.push('td_score');
+  if ((eq?.eq_score ?? null) == null) nullSuppl.push('eq_score');
+  if ((et?.primary_tone ?? null) == null) nullSuppl.push('et_primary_tone');
+  if ((sr?.sr_score ?? null) == null) nullSuppl.push('sr_score');
+  if (nullSuppl.length > 0) {
+    await logEvent(db, {
+      hn_id: hnId,
+      event_type: 'rater_validation_warn',
+      model: modelId,
+      detail: `Full eval missing ${nullSuppl.length} supplementary field(s): ${nullSuppl.join(', ')}`,
+    });
+  }
+
   const promoted = story && story.eval_status !== 'done' && story.eval_status !== 'rescoring' && !missingStructural;
   if (missingStructural) {
     await logEvent(db, {
