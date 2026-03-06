@@ -210,6 +210,21 @@ SYNC COMPLETE
   Waiting on: {what we expect from each peer | "nothing pending"}
 ```
 
+## Epistemic Flag → Task Pipeline
+
+After sync completes, review all epistemic flags (from inbound messages AND from our own sync output). For each **actionable** flag — one that requires a code change, doc update, config fix, or investigation — create a task using `TaskCreate`:
+
+- **Subject**: concise imperative (e.g., "Add machine-response/v1 to agent card")
+- **Description**: include the source (which message/turn), the flag text, and what resolution looks like
+- **activeForm**: present continuous (e.g., "Updating agent card schemas")
+
+Skip task creation for:
+- Informational-only flags (no action needed)
+- Flags already tracked in TODO.md or an existing task
+- Flags the sync itself resolved (e.g., merged a PR that closed the gap)
+
+This ensures epistemic flags don't evaporate after the sync dashboard scrolls past.
+
 ## Epistemic Posture
 
 Every ACK from observatory-agent must:
