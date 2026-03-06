@@ -33,7 +33,7 @@ All 5 items done: construct validity audit (37/37), geo reference (22 countries)
 - ~~**OpenAPI 3.x spec**~~ — ✓ DONE 2026-03-04. `/api/v1/openapi.json` — 15 endpoints (9 v1 incl. methodology + 4 v0 + badge), 6 schemas, OpenAPI 3.1.0, prerendered. Linked from `/data`.
 - [ ] **Write API blog post** — announce the public REST API at `observatory.unratified.org/api/v1/`. Angles: what data is available, example queries (top negative domains, rights-under-pressure feed, TQ by domain), use cases (researchers, journalists, feed aggregators, agent tool use). Include OpenAPI link once spec is live. Publish after OpenAPI is done. Personal note + author review before publishing.
 - ~~**WebSub**~~ — ✓ DONE 2026-03-04. `rel="hub"` in Atom XML + HTTP Link header, Superfeedr hub ping in cron.ts on stories_new > 0.
-- [ ] **ActivityPub** (W3C) — Fediverse federation. Each evaluation → ActivityPub Note/Article. Follow `@observatory@observatory.unratified.org` from Mastodon. Requires: Actor endpoint, outbox, HTTP Signatures (RFC 9421), WebFinger integration (already done). Significant scope — worth a dedicated plan before starting.
+- [ ] **ActivityPub** (W3C) — Fediverse federation as `@observatory@unratified.org`. Multi-actor AP server built by unratified-agent on unratified.org (spec sent: PR #9). Observatory adds ~20-line webhook to cron.ts posting to `/ap/publish`. **Blocked on:** unratified.org implementing AP server. Plan: `.claude/plans/activitypub-federation.md`.
 
 ---
 
