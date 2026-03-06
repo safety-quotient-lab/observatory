@@ -592,7 +592,7 @@ function timeAgo(unixTime: number): string {
                 class="trigger-btn"
                 data-hn-id={storyData.hn_id}
                 title="Retry evaluation"
-                style="background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 4px 12px; font-size: var(--font-sm); color: var(--color-negative); border-radius: 4px;"
+                style="background: var(--bg-negative); border: 1px solid rgba(220,38,38,0.3); cursor: pointer; padding: 4px 12px; font-size: var(--font-sm); color: var(--color-negative); border-radius: 4px;"
               >
                 &#9654; Retry Evaluation
               </button>
@@ -681,7 +681,7 @@ function timeAgo(unixTime: number): string {
         {interRaterAgreement && (
           <span
             class="badge"
-            style={`background: ${interRaterAgreement === 'High' ? 'rgba(52,211,153,0.15)' : interRaterAgreement === 'Moderate' ? 'rgba(43,144,216,0.15)' : 'rgba(217,119,6,0.15)'}; color: ${interRaterAgreement === 'High' ? 'var(--color-positive-medium)' : interRaterAgreement === 'Moderate' ? 'var(--fg-emphasis)' : 'var(--color-warning)'}; font-size: var(--font-xs); margin-left: 4px;`}
+            style={`background: ${interRaterAgreement === 'High' ? 'var(--bg-positive)' : interRaterAgreement === 'Moderate' ? 'rgba(43,144,216,0.15)' : 'rgba(217,119,6,0.15)'}; color: ${interRaterAgreement === 'High' ? 'var(--color-positive-medium)' : interRaterAgreement === 'Moderate' ? 'var(--fg-emphasis)' : 'var(--color-warning)'}; font-size: var(--font-xs); margin-left: 4px;`}
             title={`Inter-rater agreement: ${interRaterAgreement} (${interRaterCount} models, spread: ${interRaterSpread?.toFixed(3) ?? 'N/A'})`}
           >
             {interRaterAgreement} agreement ({interRaterCount} models)
@@ -1076,7 +1076,7 @@ function timeAgo(unixTime: number): string {
                     <>
                       <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                         <span class="score-font" style={`color: ${eqData.eq_score >= 0.7 ? 'var(--color-positive)' : eqData.eq_score >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-md);`}>{eqData.eq_score.toFixed(2)}</span>
-                        <span class="badge" style={`background: ${eqData.claim_density === 'low' ? 'rgba(22,163,106,0.15)' : eqData.claim_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${eqData.claim_density === 'low' ? 'var(--color-positive)' : eqData.claim_density === 'medium' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{eqData.claim_density} claims</span>
+                        <span class="badge" style={`background: ${eqData.claim_density === 'low' ? 'var(--bg-positive)' : eqData.claim_density === 'medium' ? 'var(--bg-warning)' : 'var(--bg-negative)'}; color: ${eqData.claim_density === 'low' ? 'var(--color-positive)' : eqData.claim_density === 'medium' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{eqData.claim_density} claims</span>
                       </div>
                       <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
                         <tr><td style="color: var(--fg-secondary); width: 55%;">Sources</td><td><div style={`height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;`}><div style={`width: ${eqData.source_quality * 100}%; height: 100%; background: var(--channel-editorial);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right; width: 30px;">{eqData.source_quality.toFixed(1)}</td></tr>
@@ -1101,14 +1101,14 @@ function timeAgo(unixTime: number): string {
                   </div>
                   <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">{ptFlagCount === 0 ? 'No manipulative rhetoric detected' : `${ptFlagCount} manipulative rhetoric technique${ptFlagCount !== 1 ? 's' : ''} found`}</div>
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
-                    <span class="badge" style={`background: ${ptFlagCount === 0 ? 'rgba(22,163,106,0.15)' : ptFlagCount <= 2 ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${ptFlagCount === 0 ? 'var(--color-positive)' : ptFlagCount <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-sm);`}>{ptFlagCount}</span>
+                    <span class="badge" style={`background: ${ptFlagCount === 0 ? 'var(--bg-positive)' : ptFlagCount <= 2 ? 'var(--bg-warning)' : 'var(--bg-negative)'}; color: ${ptFlagCount === 0 ? 'var(--color-positive)' : ptFlagCount <= 2 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-sm);`}>{ptFlagCount}</span>
                     <span style="color: var(--fg-secondary); font-size: var(--font-xs);">techniques detected</span>
                   </div>
                   {ptFlags && ptFlags.length > 0 && (
                     <div style="font-size: var(--font-xs);">
                       {ptFlags.map((f: any) => (
                         <div style="padding: 3px 0; border-top: 1px solid var(--bg-surface);">
-                          <span class="badge" style={`background: ${f.severity === 'high' ? 'rgba(220,38,38,0.15)' : f.severity === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(107,114,128,0.15)'}; color: ${f.severity === 'high' ? 'var(--color-negative)' : f.severity === 'medium' ? 'var(--color-warning)' : 'var(--color-muted)'}; font-size: var(--font-xs);`}>{f.technique.replace(/_/g, ' ')}</span>
+                          <span class="badge" style={`background: ${f.severity === 'high' ? 'var(--bg-negative)' : f.severity === 'medium' ? 'var(--bg-warning)' : 'rgba(107,114,128,0.15)'}; color: ${f.severity === 'high' ? 'var(--color-negative)' : f.severity === 'medium' ? 'var(--color-warning)' : 'var(--color-muted)'}; font-size: var(--font-xs);`}>{f.technique.replace(/_/g, ' ')}</span>
                           <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-top: 2px; font-style: italic;">{f.evidence}</div>
                         </div>
                       ))}
@@ -1181,7 +1181,7 @@ function timeAgo(unixTime: number): string {
                   <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">Does this content offer solutions or only describe problems?</div>
                   <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
                     <span class="score-font" style={`color: ${soData.so_score >= 0.7 ? 'var(--color-positive)' : soData.so_score >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-md);`}>{soData.so_score.toFixed(2)}</span>
-                    <span class="badge" style={`background: ${soData.framing === 'solution_oriented' ? 'rgba(22,163,106,0.15)' : soData.framing === 'mixed' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${soData.framing === 'solution_oriented' ? 'var(--color-positive)' : soData.framing === 'mixed' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{soData.framing.replace(/_/g, ' ')}</span>
+                    <span class="badge" style={`background: ${soData.framing === 'solution_oriented' ? 'var(--bg-positive)' : soData.framing === 'mixed' ? 'var(--bg-warning)' : 'var(--bg-negative)'}; color: ${soData.framing === 'solution_oriented' ? 'var(--color-positive)' : soData.framing === 'mixed' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{soData.framing.replace(/_/g, ' ')}</span>
                   </div>
                   <table cellpadding="2" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
                     <tr><td style="color: var(--fg-secondary);">Reader Agency</td><td><div style="height: 4px; background: var(--bg-surface); border-radius: 2px; overflow: hidden;"><div style={`width: ${soData.reader_agency * 100}%; height: 100%; background: var(--channel-editorial);`}></div></div></td><td style="color: var(--fg-secondary); text-align: right; width: 30px;">{soData.reader_agency.toFixed(1)}</td></tr>
@@ -1207,7 +1207,7 @@ function timeAgo(unixTime: number): string {
                     <div style="font-size: var(--font-xs); margin-bottom: 3px;">
                       <span style="color: var(--fg-secondary);">Speaks: </span>
                       {srData.who_speaks.map((s: string) => (
-                        <span class="badge" style="background: rgba(22,163,106,0.15); color: var(--color-positive); font-size: var(--font-xs); margin-right: 2px;">{s}</span>
+                        <span class="badge" style="background: var(--bg-positive); color: var(--color-positive); font-size: var(--font-xs); margin-right: 2px;">{s}</span>
                       ))}
                     </div>
                   )}
@@ -1269,8 +1269,8 @@ function timeAgo(unixTime: number): string {
                   </div>
                   <div style="color: var(--fg-secondary); font-size: 7px; margin-bottom: 6px;">How accessible is this content to a general audience?</div>
                   <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-                    <span class="badge" style={`background: ${clData.reading_level === 'accessible' ? 'rgba(22,163,106,0.15)' : clData.reading_level === 'moderate' ? 'rgba(96,165,250,0.15)' : clData.reading_level === 'technical' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.reading_level === 'accessible' ? 'var(--color-positive)' : clData.reading_level === 'moderate' ? 'var(--channel-editorial)' : clData.reading_level === 'technical' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{clData.reading_level}</span>
-                    <span class="badge" style={`background: ${clData.jargon_density === 'low' ? 'rgba(22,163,106,0.15)' : clData.jargon_density === 'medium' ? 'rgba(234,179,8,0.15)' : 'rgba(220,38,38,0.15)'}; color: ${clData.jargon_density === 'low' ? 'var(--color-positive)' : clData.jargon_density === 'medium' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{clData.jargon_density} jargon</span>
+                    <span class="badge" style={`background: ${clData.reading_level === 'accessible' ? 'var(--bg-positive)' : clData.reading_level === 'moderate' ? 'rgba(96,165,250,0.15)' : clData.reading_level === 'technical' ? 'var(--bg-warning)' : 'var(--bg-negative)'}; color: ${clData.reading_level === 'accessible' ? 'var(--color-positive)' : clData.reading_level === 'moderate' ? 'var(--channel-editorial)' : clData.reading_level === 'technical' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{clData.reading_level}</span>
+                    <span class="badge" style={`background: ${clData.jargon_density === 'low' ? 'var(--bg-positive)' : clData.jargon_density === 'medium' ? 'var(--bg-warning)' : 'var(--bg-negative)'}; color: ${clData.jargon_density === 'low' ? 'var(--color-positive)' : clData.jargon_density === 'medium' ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-xs);`}>{clData.jargon_density} jargon</span>
                     <span class="badge" style="background: rgba(107,114,128,0.15); color: var(--fg-secondary); font-size: var(--font-xs);">{clData.assumed_knowledge.replace(/_/g, ' ')}</span>
                   </div>
                 </div>
@@ -1648,8 +1648,8 @@ function timeAgo(unixTime: number): string {
                     } else if (evType === 'done') {
                       btn.textContent = 'Done: ' + (d.score !== undefined ? d.score.toFixed(2) : '?');
                       btn.style.color = 'var(--color-positive)';
-                      btn.style.borderColor = 'rgba(22,163,106,0.3)';
-                      btn.style.background = 'rgba(22,163,106,0.15)';
+                      btn.style.borderColor = 'rgba(68, 167, 130, 0.3)';
+                      btn.style.background = 'var(--bg-positive)';
                       setTimeout(function() { location.reload(); }, 1500);
                     } else if (evType === 'error') {
                       btn.textContent = 'Error: ' + (d.error || 'unknown');

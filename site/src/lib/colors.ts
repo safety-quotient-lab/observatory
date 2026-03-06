@@ -208,7 +208,7 @@ export function gateToColor(category: string): string {
     case 'rate_limited': return '#f97316';
     case 'error_page': return '#5b7279';
     case 'age_gate': return '#e879f9';
-    case 'app_gate': return '#34d399';
+    case 'app_gate': return '#5aad8f';
     case 'redirect_or_js_required': return '#5b7279';
     default: return '#5b7279';
   }

@@ -476,7 +476,7 @@ const showDivergence = divergence !== null && divergence > 0.15;
                   } else if (evType === 'done') {
                     succeeded++;
                     var score = typeof d.score === 'number' ? d.score.toFixed(2) : '?';
-                    addLog('#' + hnId + ': ' + score + ' (' + d.classification + ')', d.score > 0 ? '#16a34a' : d.score < 0 ? '#dc2626' : '#9ca3af');
+                    addLog('#' + hnId + ': ' + score + ' (' + d.classification + ')', d.score > 0 ? '#44a782' : d.score < 0 ? '#dc2626' : '#9ca3af');
                   } else if (evType === 'error') {
                     failed++;
                     addLog('#' + hnId + ': ' + (d.error || 'error'), '#dc2626');
@@ -513,12 +513,12 @@ const showDivergence = divergence !== null && divergence > 0.15;
             await new Promise(function(r) { setTimeout(r, DELAY_MS); });
           }
         }
-        bar.style.background = stopped ? '#dc2626' : '#16a34a';
+        bar.style.background = stopped ? '#dc2626' : '#44a782';
         status.textContent = stopped ? 'Stopped — ' + done + ' processed' : 'Complete — ' + succeeded + ' evaluated, ' + failed + ' failed';
         btn.textContent = 'Done';
-        btn.style.color = '#16a34a';
-        btn.style.borderColor = 'rgba(22,163,106,0.3)';
-        btn.style.background = 'rgba(22,163,106,0.15)';
+        btn.style.color = '#44a782';
+        btn.style.borderColor = 'rgba(68, 167, 130, 0.3)';
+        btn.style.background = 'var(--bg-positive)';
         stopBtn.style.display = 'none';
       }
 

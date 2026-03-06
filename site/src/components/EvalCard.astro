@@ -212,7 +212,7 @@ function timeAgo(unixTime: number): string {
         {otherModels.length > 0 && otherModels.map(m => (
           <a href={`/item/${story.hn_id}?model=${m.eval_model}`}
              class="badge"
-             style={`background: ${isLiteMode(m.prompt_mode) ? 'rgba(213,101,0,0.15)' : 'rgba(52,211,153,0.15)'}; color: ${isLiteMode(m.prompt_mode) ? 'var(--color-orange)' : 'var(--color-positive-medium)'}; font-size: var(--font-xs); margin-left: 3px; text-decoration: none;`}
+             style={`background: ${isLiteMode(m.prompt_mode) ? 'rgba(213,101,0,0.15)' : 'var(--bg-positive)'}; color: ${isLiteMode(m.prompt_mode) ? 'var(--color-orange)' : 'var(--color-positive-medium)'}; font-size: var(--font-xs); margin-left: 3px; text-decoration: none;`}
              title={`Also evaluated by ${m.eval_model}${isLiteMode(m.prompt_mode) ? ' (lite — editorial only)' : ''}`}>
             {modelShortName(m.eval_model)}{isLiteMode(m.prompt_mode) && <span class="lite-icon" style="margin-left: 2px; vertical-align: middle;" title="Lite eval — click for details" onclick="event.preventDefault();event.stopPropagation();window.location.href='/about#eval-modes'" role="link">L</span>}
           </a>

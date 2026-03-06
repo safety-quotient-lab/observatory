@@ -23,7 +23,7 @@ const groupColors: Record<string, string> = {
   'Foundation': '#a78bfa',
   'Security': '#f87171',
   'Legal': '#22d3ee',
-  'Personal': '#34d399',
+  'Personal': '#5aad8f',
   'Political': '#fbbf24',
   'Economic': '#fb923c',
   'Limits': '#7d80d1',
@@ -201,7 +201,7 @@ const powerData = JSON.stringify(powerRankings);
         <div style="display: flex; gap: 16px; flex-wrap: wrap;">
           {/* Harmony (left) */}
           <div style="flex: 1; min-width: 280px;">
-            <div style="color: var(--color-positive-medium); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; border-bottom: 1px solid rgba(52, 211, 153, 0.2); padding-bottom: 4px;">
+            <div style="color: var(--color-positive-medium); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; border-bottom: 1px solid rgba(90, 173, 143, 0.2); padding-bottom: 4px;">
               Harmony — Top 10 Positive
             </div>
             <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
@@ -209,7 +209,7 @@ const powerData = JSON.stringify(powerRankings);
                 <td>Article A</td><td>Article B</td><td style="text-align: right;">r</td><td style="text-align: right;">n</td>
               </tr>
               {harmonyPairs.map(e => (
-                <tr style="border-top: 1px solid var(--bg-surface); background: rgba(52, 211, 153, 0.03);">
+                <tr style="border-top: 1px solid var(--bg-surface); background: rgba(90, 173, 143, 0.03);">
                   <td>
                     <a href={`/article/${getArticleNumber(e.source)}`} style="color: var(--fg-emphasis);">{ARTICLE_SHORT_TITLES[e.source] ?? e.source}</a>
                   </td>
@@ -592,7 +592,7 @@ const powerData = JSON.stringify(powerRankings);
     }
 
     function edgeColor(r) {
-      if (r > 0.1) return { stroke: 'rgba(52, 211, 153,', base: '#34d399' };  // green
+      if (r > 0.1) return { stroke: 'rgba(90, 173, 143,', base: '#5aad8f' };  // green
       if (r < -0.1) return { stroke: 'rgba(248, 113, 113,', base: '#f87171' }; // red
       return { stroke: 'rgba(96, 165, 250,', base: '#60a5fa' };                // blue (neutral)
     }

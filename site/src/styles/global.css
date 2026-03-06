@@ -24,14 +24,14 @@
     --channel-editorial: #60a5fa;
     --channel-structural: #a78bfa;
 
-    /* Semantic status colors */
+    /* Semantic status colors — OkSolar teal-green (hue 158°, desaturated) */
     --color-negative: #dc2626;
     --color-negative-light: #f87171;
     --color-warning: #eab308;
     --color-warning-light: #fbbf24;
-    --color-positive: #16a34a;
-    --color-positive-medium: #34d399;
-    --color-positive-light: #4ade80;
+    --color-positive: #44a782;         /* hsl(158, 42%, 46%) — primary status, ~5:1 on dark bg */
+    --color-positive-medium: #5aad8f;  /* hsl(158, 35%, 52%) — secondary status, ~5.8:1 */
+    --color-positive-light: #73b9a2;   /* hsl(158, 30%, 58%) — light/decorative, ~7:1 */
     --color-neutral: #9ca3af;
     --color-neutral-light: #d1d5db;
     --color-nd: #4b5563;
@@ -43,9 +43,14 @@
     --color-amber-light:    #fb923c;   /* AR/arousal signal, orange-400 */
     --color-hn-score:       #e2b340;   /* HN engagement metrics display */
     --color-disabled:       #3a6272;   /* Greyed-out/coming-soon content */
-    --color-positive-vivid: #22c55e;   /* Observable facts, score gains, resolved markers */
-    --color-positive-faint: #86efac;   /* Leaning positive tier (about page) */
+    --color-positive-vivid: #3da87a;   /* hsl(158, 48%, 44%) — emphasis, ~4.7:1 on dark bg */
+    --color-positive-faint: #8ac4ad;   /* hsl(158, 25%, 64%) — faint/decorative, ~8.3:1 */
     --color-negative-faint: #fca5a5;   /* Leaning negative tier (about page) */
+
+    /* Badge/tint backgrounds (15% opacity of the status color) */
+    --bg-positive: rgba(68, 167, 130, 0.15);
+    --bg-negative: rgba(220, 38, 38, 0.15);
+    --bg-warning:  rgba(234, 179, 8, 0.15);
 
     /* Categorical colors */
     --color-sentiment: #22d3ee;
@@ -172,13 +177,18 @@ html[data-theme="light"] {
   /* Semantic — adjusted for light bg legibility */
   --color-warning:       #ca8a04;
   --color-warning-light: #d97706;
-  --color-nd:            #374151;
-  --color-muted:         #708890;
-  --color-disabled:      #9aacb0;
-  --color-hn-score:      #92661c;
-  --color-inference:     #7c3aed;
-  --color-amber:         #d97706;
-  --color-amber-light:   #c2410c;
+  --color-positive:        #2a7e5f;   /* hsl(158, 50%, 33%) — ~4.7:1 on cream */
+  --color-positive-medium: #358a6b;   /* hsl(158, 44%, 37%) — ~4.1:1 */
+  --color-positive-light:  #469277;   /* hsl(158, 35%, 42%) — ~3.4:1 */
+  --color-positive-vivid:  #23704f;   /* hsl(158, 55%, 29%) — ~5.5:1 */
+  --color-positive-faint:  #5a9e83;   /* hsl(158, 28%, 48%) — ~3.0:1 */
+  --color-nd:              #374151;
+  --color-muted:           #708890;
+  --color-disabled:        #9aacb0;
+  --color-hn-score:        #92661c;
+  --color-inference:       #7c3aed;
+  --color-amber:           #d97706;
+  --color-amber-light:     #c2410c;
 }
 
 /* Tailwind hardcoded surface utilities — override for light theme */
@@ -493,7 +503,7 @@ html[data-theme="light"] .ev-labels > span { filter: brightness(0.74); }
   }
 
   /* Semantic badge variants (replaces inline rgba+color pattern) */
-  .badge-positive   { background: rgba(22, 163, 74, 0.15);  color: var(--color-positive); }
+  .badge-positive   { background: rgba(68, 167, 130, 0.15);  color: var(--color-positive); }
   .badge-negative   { background: rgba(220, 38, 38, 0.15);  color: var(--color-negative); }
   .badge-warning    { background: rgba(234, 179, 8, 0.15);  color: var(--color-warning); }
   .badge-theme      { background: rgba(125, 128, 209, 0.15); color: var(--color-violet); }

@@ -41,20 +41,20 @@ const scoringConcepts = [
 
 const psqDimensions = [
   { code: 'TE', name: 'Threat Exposure', role: 'threat', color: 'var(--color-negative)', bg: 'rgba(220,38,38,0.12)', def: 'Intensity of harmful content the reader encounters — violence, exploitation, psychological manipulation. Lower = safer. Inverted in PSQ aggregation.' },
-  { code: 'TC', name: 'Trust Conditions', role: 'protective', color: 'var(--color-positive)', bg: 'rgba(22,163,106,0.12)', def: 'Whether content creates conditions for reader trust — source transparency, logical coherence, respect for reader autonomy. Higher = safer.' },
-  { code: 'RB', name: 'Resilience Baseline', role: 'protective', color: 'var(--color-positive)', bg: 'rgba(22,163,106,0.12)', def: 'Whether content leaves readers more or less psychologically equipped — empowerment, coping resources, constructive framing. Higher = safer.' },
+  { code: 'TC', name: 'Trust Conditions', role: 'protective', color: 'var(--color-positive)', bg: 'var(--bg-positive)', def: 'Whether content creates conditions for reader trust — source transparency, logical coherence, respect for reader autonomy. Higher = safer.' },
+  { code: 'RB', name: 'Resilience Baseline', role: 'protective', color: 'var(--color-positive)', bg: 'var(--bg-positive)', def: 'Whether content leaves readers more or less psychologically equipped — empowerment, coping resources, constructive framing. Higher = safer.' },
 ];
 
 const supplementarySignals = [
   { code: 'EQ', name: 'Epistemic Quality', color: 'var(--color-amber)', bg: 'rgba(245,158,11,0.12)', def: 'Source quality, evidence reasoning, uncertainty handling, purpose transparency. Composite of 4 CRAAP Test dimensions.', href: '/about#eq' },
   { code: 'PT', name: 'Propaganda Flags', color: 'var(--color-negative)', bg: 'rgba(220,38,38,0.12)', def: '18-technique detection (loaded language, strawman, whataboutism, appeal to fear…). Based on Da San Martino et al. PTC-18 corpus.', href: '/about#pt' },
-  { code: 'SO', name: 'Solution Orientation', color: 'var(--color-positive)', bg: 'rgba(22,163,106,0.12)', def: 'Problem-only vs solution-oriented framing + reader agency score. How much the content empowers vs passivises the reader.', href: '/about#so' },
+  { code: 'SO', name: 'Solution Orientation', color: 'var(--color-positive)', bg: 'var(--bg-positive)', def: 'Problem-only vs solution-oriented framing + reader agency score. How much the content empowers vs passivises the reader.', href: '/about#so' },
   { code: 'ET', name: 'Emotional Tone', color: 'var(--color-inference)', bg: 'rgba(168,85,247,0.12)', def: 'Valence (−1.0 to +1.0), arousal (0–1), dominance (0–1), primary tone. Based on Russell\'s Circumplex Model of Affect.', href: '/about#et' },
   { code: 'SR', name: 'Stakeholder Representation', color: 'var(--channel-editorial)', bg: 'rgba(96,165,250,0.12)', def: 'Who speaks vs who is spoken about. Voice balance, perspective count, power-axis analysis. Aligned with UDHR rights-holder/duty-bearer framework.', href: '/about#sr' },
   { code: 'TF', name: 'Temporal Framing', color: 'var(--channel-editorial)', bg: 'rgba(96,165,250,0.12)', def: 'Retrospective / present / prospective / mixed. Time horizon: immediate → historical. Does tech coverage look backward or forward?', href: '/about#tf' },
   { code: 'GS', name: 'Geographic Scope', color: 'var(--channel-editorial)', bg: 'rgba(96,165,250,0.12)', def: 'Local / national / regional / global / unspecified. Regions mentioned. Whose rights are centred?', href: '/about#gs' },
   { code: 'CL', name: 'Complexity Level', color: 'var(--color-warning)', bg: 'rgba(234,179,8,0.12)', def: 'Reading level, jargon density, assumed knowledge. Tracks invisible access barriers — relevant to Article 26 (education).', href: '/about#cl' },
-  { code: 'TD', name: 'Transparency & Disclosure', color: 'var(--color-positive)', bg: 'rgba(22,163,106,0.12)', def: 'Author identified, conflicts disclosed, funding disclosed. Composite transparency score. Relevant to Article 19 (expression).', href: '/about#td' },
+  { code: 'TD', name: 'Transparency & Disclosure', color: 'var(--color-positive)', bg: 'var(--bg-positive)', def: 'Author identified, conflicts disclosed, funding disclosed. Composite transparency score. Relevant to Article 19 (expression).', href: '/about#td' },
   { code: 'RTS', name: 'Rights Tensions', color: 'var(--color-warning)', bg: 'rgba(213,101,0,0.12)', def: 'Up to 3 salient rights trade-offs in the content: which UDHR provisions are in genuine tension and how the content resolves each pair. Full eval only.', href: '/about#rts' },
 ];
 ---

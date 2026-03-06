@@ -1507,7 +1507,7 @@ function tierLabel(sim: number): { label: string; color: string } {
                 {/* Left: cross-cluster closest */}
                 {crossClusterPairs.length > 0 && (
                   <div style="flex: 1; min-width: 280px;">
-                    <div style="color: var(--color-positive-medium); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; border-bottom: 1px solid rgba(52, 211, 153, 0.2); padding-bottom: 4px;">
+                    <div style="color: var(--color-positive-medium); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; border-bottom: 1px solid rgba(90, 173, 143, 0.2); padding-bottom: 4px;">
                       Cross-Cluster Harmony
                     </div>
                     <div class="table-wrap">
@@ -1516,7 +1516,7 @@ function tierLabel(sim: number): { label: string; color: string } {
                           <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Sim</td><td>Clusters</td>
                         </tr>
                         {crossClusterPairs.map(p => (
-                          <tr style="border-top: 1px solid var(--bg-surface); background: rgba(52, 211, 153, 0.03);">
+                          <tr style="border-top: 1px solid var(--bg-surface); background: rgba(90, 173, 143, 0.03);">
                             <td><a href={`/domain/${p.a}`} style="color: var(--fg-emphasis); text-decoration: none;">{p.a}</a></td>
                             <td><a href={`/domain/${p.b}`} style="color: var(--fg-emphasis); text-decoration: none;">{p.b}</a></td>
                             <td style="text-align: right; color: var(--color-positive-medium);" class="score-font">{p.similarity.toFixed(3)}</td>
