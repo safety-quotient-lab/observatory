@@ -47,10 +47,18 @@ Run in parallel for all in-scope repos:
 # Check for open PRs on our repo (inbound from peers)
 gh pr list --repo safety-quotient-lab/observatory --state open
 
+# Check for recently merged PRs on our repo (may contain unprocessed transport messages)
+gh pr list --repo safety-quotient-lab/observatory --state merged --limit 5
+
 # Check for open PRs on each peer repo (our outbound, waiting for merge)
 gh pr list --repo safety-quotient-lab/unratified --state open
 gh pr list --repo safety-quotient-lab/psychology-agent --state open
 gh pr list --repo safety-quotient-lab/safety-quotient --state open
+
+# Check for recently merged PRs on peer repos (our outbound that was accepted)
+gh pr list --repo safety-quotient-lab/unratified --state merged --limit 5
+gh pr list --repo safety-quotient-lab/psychology-agent --state merged --limit 5
+gh pr list --repo safety-quotient-lab/safety-quotient --state merged --limit 5
 ```
 
 Also check local proposal inboxes:
