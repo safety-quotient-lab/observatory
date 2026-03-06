@@ -136,10 +136,17 @@ Use this template for all outbound transport messages:
     "gate_status": "open | blocked",
     "gate_note": "..."
   },
+  "urgency": "immediate | high | normal | low",
   "setl": 0.0,
   "epistemic_flags": ["..."]
 }
 ```
+
+**Urgency guidance** (adopted from unratified-agent amendment, 2026-03-06):
+- `immediate`: Blocks active work — respond before next session
+- `high`: Process this session or next
+- `normal`: Process at next sync (default if omitted)
+- `low`: No time pressure
 
 **SETL guidance:**
 - 0.00–0.02: Perfect fidelity, direct observation

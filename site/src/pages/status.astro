@@ -221,7 +221,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
                   <span style={`color: ${dot.color}; font-size: 8px;`} title={dot.title}>●</span>
                 </td>
                 <td style="padding: 4px 6px; color: var(--fg-primary); font-weight: bold;">hn-hrcb-dlq</td>
-                <td style="padding: 4px 6px; color: var(--fg-secondary);">dead letter handler</td>
+                <td style="padding: 4px 6px; color: var(--fg-secondary);" title="Captures unevaluable pages (paywalls, bot-blocked, gated). Total grows over time — this is expected.">dead letter handler</td>
                 <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary); white-space: nowrap;">{relativeTime(lastActive)}</td>
                 <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary);">—</td>
                 <td style="padding: 4px 6px; text-align: right; color: var(--fg-secondary);">—</td>
@@ -307,7 +307,7 @@ const pctCovNone = Math.max(0, 100 - pctCovMulti - pctCovFull - pctCovLite);
                   {dlqStats.pending > 0 ? `${dlqStats.pending}` : '—'}
                 </td>
                 <td style="padding: 3px 6px; text-align: right; color: var(--color-border);">—</td>
-                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">
+                <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);" title="DLQ accumulates unevaluable pages (paywalled, bot-blocked, gated content). This count is expected to grow over time.">
                   {dlqStats.total > 0 ? dlqStats.total : '—'}
                 </td>
               </tr>

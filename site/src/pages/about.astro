@@ -104,6 +104,7 @@ const faqLd = {
           before dispatch. Evaluable content is cleaned and sent via a Cloudflare Queue. A separate consumer worker
           evaluates each URL against the UDHR <a href="/methodology" style="color: var(--color-orange);">methodology</a> (v3.7) using Claude, with DCP caching per domain
           and content snapshots stored in R2. Results are displayed alongside standard HN metadata.
+          Evaluation velocity varies with API credit availability — <a href="/status" style="color: var(--color-orange);">check pipeline status</a> for current throughput.
           The evaluator operates as a <b style="color: var(--color-orange);">Fair Witness</b> <span style="color: var(--fg-secondary);">(evidence breakdown)</span> — reporting only what is
           directly observable, with no inference beyond the evidence.
         </p>

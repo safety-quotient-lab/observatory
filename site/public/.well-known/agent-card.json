@@ -15,7 +15,11 @@
   "capabilities": {
     "streaming": false,
     "pushNotifications": false,
-    "stateTransitionHistory": false
+    "stateTransitionHistory": false,
+    "schemas_supported": [
+      "interagent/v1",
+      "observatory-agent/machine-response/v1"
+    ]
   },
   "defaultInputModes": ["text/plain", "application/json"],
   "defaultOutputModes": ["application/json"],
