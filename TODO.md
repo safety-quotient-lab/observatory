@@ -27,7 +27,7 @@ Remaining:
 - ~~**Build geographic reference table**~~ — ✓ DONE 2026-03-05. 22 countries, 30 Wolfram calls. `.claude/plans/memorized/geo-reference-data.json`.
 - ~~**GS signal enrichment on /signals page**~~ — ✓ DONE 2026-03-05. `geo-reference.ts` + Key Findings one-liner + Discourse Character annotation (US dominance %, coverage %, underrepresented countries).
 - ~~**Verify codebase math**~~ — ✓ DONE 2026-03-05. 10 formulas verified via Wolfram (10 calls). All correct. 1 comment fix (decay half-life mislabeled in hn-bot.ts).
-- ~~**Wolfram-powered confidence intervals**~~ — ✓ DONE 2026-03-05. `stats.ts` (Wilson CI + t-distribution LUT, 9 Wolfram queries). Signals page: TD, accessibility, temporal bars + key findings. Models page: t-distribution replaces z=1.96.
+- ~~**Wolfram-powered confidence intervals**~~ — ✓ DONE 2026-03-05. `stats.ts` (Wilson CI + t-distribution LUT, 9 Wolfram queries). Signals page: **all sections** — TD, accessibility, PT tiers, temporal focus + horizon, tone, scope (Wilson), PSQ (t-dist meanCI via `psq_stddev`), key findings. Models page: t-distribution replaces z=1.96.
 
 ### Architecture (evaluate later)
 

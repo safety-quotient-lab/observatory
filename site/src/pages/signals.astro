@@ -7,7 +7,7 @@ import type { PsqAggregates, HomepageBlob } from '../lib/db';
 import { PSQ_THREAT_DIMENSIONS, PSQ_PROTECTIVE_DIMENSIONS } from '../lib/eval-types';
 import { scoreToColor, normalizePsq, formatPsqScore } from '../lib/colors';
 import { computeGeoInsights } from '../lib/geo-reference';
-import { wilsonCI } from '../lib/stats';
+import { wilsonCI, meanCI } from '../lib/stats';
 import { cachedQuery, readDb } from '../lib/db-utils';
 
 const db = readDb(Astro.locals.runtime.env.DB);
@@ -60,6 +60,9 @@ if (psqAggregates?.dim_averages) {
 }
 const threatAvg = threatDims.length > 0 ? threatDims.reduce((s, d) => s + d.avg, 0) / threatDims.length : null;
 const protectiveAvg = protectiveDims.length > 0 ? protectiveDims.reduce((s, d) => s + d.avg, 0) / protectiveDims.length : null;
+const psqCI = psqAggregates?.avg_psq != null && psqAggregates.psq_stddev != null && psqAggregates.story_count > 1
+  ? meanCI(psqAggregates.avg_psq, psqAggregates.psq_stddev, psqAggregates.story_count)
+  : null;
 
 // Transparency rows with Wilson CIs
 const tdN = tdData?.td_measured ?? 0;
@@ -86,6 +89,9 @@ for (const [tech, count] of Object.entries(techDist)) {
 }
 const totalPt = tierA.count + tierB.count + tierC.count;
 const maxTier = Math.max(tierA.count, tierB.count, tierC.count, 1);
+const tierACI = wilsonCI(tierA.count, totalPt);
+const tierBCI = wilsonCI(tierB.count, totalPt);
+const tierCCI = wilsonCI(tierC.count, totalPt);
 
 // Persuasion: top technique per tier for drill-through link
 const topTierA = tierA.techniques.sort((a, b) => (techDist[b] ?? 0) - (techDist[a] ?? 0))[0];
@@ -119,13 +125,14 @@ const focusRows = temporalData ? [
 ] : [];
 const maxFocus = focusRows.length > 0 ? Math.max(...focusRows.map(r => r.count), 1) : 1;
 
+const horizonTotal = temporalData ? (temporalData.horizon_immediate + temporalData.horizon_short_term + temporalData.horizon_medium_term + temporalData.horizon_long_term + temporalData.horizon_historical + temporalData.horizon_unspecified) : 0;
 const horizonRows = temporalData ? [
-  { label: 'Immediate',   count: temporalData.horizon_immediate },
-  { label: 'Short-term',  count: temporalData.horizon_short_term },
-  { label: 'Medium-term', count: temporalData.horizon_medium_term },
-  { label: 'Long-term',   count: temporalData.horizon_long_term },
-  { label: 'Historical',  count: temporalData.horizon_historical },
-  { label: 'Unspecified', count: temporalData.horizon_unspecified },
+  { label: 'Immediate',   count: temporalData.horizon_immediate,   ci: wilsonCI(temporalData.horizon_immediate, horizonTotal) },
+  { label: 'Short-term',  count: temporalData.horizon_short_term,  ci: wilsonCI(temporalData.horizon_short_term, horizonTotal) },
+  { label: 'Medium-term', count: temporalData.horizon_medium_term, ci: wilsonCI(temporalData.horizon_medium_term, horizonTotal) },
+  { label: 'Long-term',   count: temporalData.horizon_long_term,   ci: wilsonCI(temporalData.horizon_long_term, horizonTotal) },
+  { label: 'Historical',  count: temporalData.horizon_historical,  ci: wilsonCI(temporalData.horizon_historical, horizonTotal) },
+  { label: 'Unspecified', count: temporalData.horizon_unspecified,  ci: wilsonCI(temporalData.horizon_unspecified, horizonTotal) },
 ].filter(r => r.count > 0) : [];
 const maxHorizon = horizonRows.length > 0 ? Math.max(...horizonRows.map(r => r.count), 1) : 1;
 
@@ -177,8 +184,9 @@ if (retroRatio) {
 if (totalPt > 0) {
   const emotionCount = tierA.count + tierB.count;
   const emotionPct = Math.round((emotionCount / totalPt) * 100);
+  const emotionCI = wilsonCI(emotionCount, totalPt);
   findings.push({
-    text: `${emotionPct}% of persuasion techniques target emotion, not logic`,
+    text: `${emotionPct}% ±${Math.ceil(emotionCI.margin)} of persuasion techniques target emotion, not logic`,
     anchor: '#persuasion',
   });
 }
@@ -189,8 +197,9 @@ if (geoInsights.usMentionPct > 0) {
   });
 }
 if (psqAggregates?.avg_psq != null && psqAggregates.story_count > 10) {
+  const psqFindingCI = psqCI ? ` ±${psqCI.margin.toFixed(1)}` : '';
   findings.push({
-    text: `Average reader safety score: ${formatPsqScore(psqAggregates.avg_psq)}/10 across ${psqAggregates.story_count} stories`,
+    text: `Average reader safety score: ${formatPsqScore(psqAggregates.avg_psq)}${psqFindingCI}/10 across ${psqAggregates.story_count} stories`,
     anchor: '#reader-safety',
   });
 }
@@ -420,10 +429,10 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                         <div style={`background: var(--color-negative); opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((tierA.count / maxTier) * 100)}%;`}></div>
                       </div>
                     </td>
-                    <td style="width: 50px; text-align: right; color: var(--fg-primary);" class="score-font">
+                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
                       {topTierA ? (
-                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierA)}`} style="color: inherit; text-decoration: none;" title="Stories with high-severity techniques">{tierA.count.toLocaleString()}</a>
-                      ) : tierA.count.toLocaleString()}
+                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierA)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierACI.lower * 100).toFixed(1)}–${(tierACI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierA.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierACI.margin)}</span></a>
+                      ) : <span title={`95% CI: ${(tierACI.lower * 100).toFixed(1)}–${(tierACI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierA.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierACI.margin)}</span></span>}
                     </td>
                   </tr>
                 )}
@@ -437,10 +446,10 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                         <div style={`background: var(--color-warning); opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((tierB.count / maxTier) * 100)}%;`}></div>
                       </div>
                     </td>
-                    <td style="width: 50px; text-align: right; color: var(--fg-primary);" class="score-font">
+                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
                       {topTierB ? (
-                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierB)}`} style="color: inherit; text-decoration: none;" title="Stories with moderate techniques">{tierB.count.toLocaleString()}</a>
-                      ) : tierB.count.toLocaleString()}
+                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierB)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierBCI.lower * 100).toFixed(1)}–${(tierBCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierB.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierBCI.margin)}</span></a>
+                      ) : <span title={`95% CI: ${(tierBCI.lower * 100).toFixed(1)}–${(tierBCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierB.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierBCI.margin)}</span></span>}
                     </td>
                   </tr>
                 )}
@@ -454,10 +463,10 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                         <div style={`background: var(--fg-secondary); opacity: 0.3; border-radius: 3px; height: 14px; width: ${Math.round((tierC.count / maxTier) * 100)}%;`}></div>
                       </div>
                     </td>
-                    <td style="width: 50px; text-align: right; color: var(--fg-primary);" class="score-font">
+                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
                       {topTierC ? (
-                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierC)}`} style="color: inherit; text-decoration: none;" title="Stories with low-severity techniques">{tierC.count.toLocaleString()}</a>
-                      ) : tierC.count.toLocaleString()}
+                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierC)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierCCI.lower * 100).toFixed(1)}–${(tierCCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierC.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierCCI.margin)}</span></a>
+                      ) : <span title={`95% CI: ${(tierCCI.lower * 100).toFixed(1)}–${(tierCCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierC.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierCCI.margin)}</span></span>}
                     </td>
                   </tr>
                 )}
@@ -513,7 +522,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                 <>
                   <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 10px 0 4px 0; font-weight: bold;">Time Horizon</p>
                   <table cellpadding="2" cellspacing="0" style="font-size: var(--font-xs); width: 100%;">
-                    {horizonRows.map(({ label, count }) => (
+                    {horizonRows.map(({ label, count, ci }) => (
                       <tr>
                         <td style="width: 90px; color: var(--fg-secondary); white-space: nowrap;">{label}</td>
                         <td style="padding: 0 6px;">
@@ -521,7 +530,9 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                             <div style={`background: var(--fg-secondary); opacity: 0.3; border-radius: 2px; height: 10px; width: ${Math.round((count / maxHorizon) * 100)}%;`}></div>
                           </div>
                         </td>
-                        <td style="width: 40px; text-align: right; color: var(--fg-secondary);" class="score-font">{count.toLocaleString()}</td>
+                        <td style="width: 60px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
+                          <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${horizonTotal})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></span>
+                        </td>
                       </tr>
                     ))}
                   </table>
@@ -558,6 +569,9 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                     {formatPsqScore(psqAggregates.avg_psq)}
                   </span>
                   <span style="color: var(--fg-secondary); font-size: var(--font-xs);">/10</span>
+                  {psqCI && (
+                    <span style="color: var(--fg-secondary); font-size: var(--font-xs);" title={`95% CI: ${psqCI.lower.toFixed(2)}–${psqCI.upper.toFixed(2)} (t-dist, n=${psqAggregates.story_count})`}> ±{psqCI.margin.toFixed(1)}</span>
+                  )}
                 </div>
                 <div style="color: var(--fg-secondary); font-size: var(--font-xs);">
                   {psqAggregates.story_count} stories scored
@@ -658,6 +672,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                   <table cellpadding="0" cellspacing="0" width="100%">
                     {toneEntries.map(([label, count]) => {
                       const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
+                      const toneCI = wilsonCI(count, totalTone);
                       return (
                         <tr>
                           <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
@@ -666,7 +681,9 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                               <div style={`width: ${pct}%; height: 100%; background: var(--color-inference); border-radius: 3px;`}></div>
                             </div>
                           </td>
-                          <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
+                          <td style="width: 56px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs); white-space: nowrap;" class="score-font">
+                            <span title={`95% CI: ${(toneCI.lower * 100).toFixed(1)}–${(toneCI.upper * 100).toFixed(1)}% (Wilson, n=${totalTone})`}>{count}<span style="opacity: 0.7;"> ±{Math.ceil(toneCI.margin)}</span></span>
+                          </td>
                         </tr>
                       );
                     })}
@@ -680,6 +697,7 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                   <table cellpadding="0" cellspacing="0" width="100%">
                     {scopeEntries.map(([label, count]) => {
                       const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
+                      const scopeCI = wilsonCI(count, totalScope);
                       return (
                         <tr>
                           <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
@@ -688,7 +706,9 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
                               <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
                             </div>
                           </td>
-                          <td style="width: 36px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{count}</td>
+                          <td style="width: 56px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs); white-space: nowrap;" class="score-font">
+                            <span title={`95% CI: ${(scopeCI.lower * 100).toFixed(1)}–${(scopeCI.upper * 100).toFixed(1)}% (Wilson, n=${totalScope})`}>{count}<span style="opacity: 0.7;"> ±{Math.ceil(scopeCI.margin)}</span></span>
+                          </td>
                         </tr>
                       );
                     })}

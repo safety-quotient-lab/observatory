@@ -1759,6 +1759,7 @@ export const HOMEPAGE_BLOB_TTL = 300; // 5 minutes
 
 export interface PsqAggregates {
   avg_psq: number | null;
+  psq_stddev: number | null;
   story_count: number;
   dim_averages: Record<string, number>;
 }
@@ -1832,8 +1833,11 @@ export async function computeHomepageBlob(db: D1Database): Promise<HomepageBlob>
       for (const [name, { total, count }] of Object.entries(dimSums)) {
         dimAverages[name] = Math.round((total / count) * 100) / 100;
       }
+      const psqMean = psqTotal / psqRows.results.length;
+      const psqVariance = psqRows.results.reduce((sum, r) => sum + (r.psq_score - psqMean) ** 2, 0) / (psqRows.results.length - 1);
       psqAggregates = {
-        avg_psq: Math.round((psqTotal / psqRows.results.length) * 100) / 100,
+        avg_psq: Math.round(psqMean * 100) / 100,
+        psq_stddev: psqRows.results.length > 1 ? Math.round(Math.sqrt(psqVariance) * 100) / 100 : null,
         story_count: psqRows.results.length,
         dim_averages: dimAverages,
       };
