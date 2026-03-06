@@ -1,0 +1,233 @@
+{
+  "generated_at": "2026-03-05",
+  "source": "Wolfram Alpha (2023 estimates unless noted)",
+  "wolfram_calls_used": 30,
+  "notes": {
+    "population": "2023 estimates",
+    "internet_penetration": "2023 estimates, fraction of population (0-1)",
+    "hdi": "2015 estimates (latest available in Wolfram)",
+    "gdp_per_capita": "nominal USD, latest available",
+    "corpus_mentions": "count of stories mentioning this region in gs_regions_json (355 stories with data, 310 unique regions)"
+  },
+  "alias_map": {
+    "USA": "United States",
+    "UK": "United Kingdom",
+    "California": "United States",
+    "San Francisco": "United States",
+    "New York": "United States",
+    "Washington": "United States",
+    "Colorado": "United States",
+    "Florida": "United States",
+    "Silicon Valley": "United States",
+    "Texas": "United States",
+    "Illinois": "United States",
+    "London": "United Kingdom",
+    "European Union": "Europe",
+    "EU": "Europe"
+  },
+  "countries": {
+    "United States": {
+      "population": 343000000,
+      "internet_penetration": 0.931,
+      "hdi": 0.920,
+      "gdp_per_capita": 84534,
+      "corpus_mentions": 222,
+      "corpus_mentions_with_aliases": 300
+    },
+    "United Kingdom": {
+      "population": 68700000,
+      "internet_penetration": 0.963,
+      "hdi": 0.910,
+      "gdp_per_capita": 53246,
+      "corpus_mentions": 37,
+      "corpus_mentions_with_aliases": 48
+    },
+    "China": {
+      "population": 1420000000,
+      "internet_penetration": 0.920,
+      "hdi": 0.738,
+      "gdp_per_capita": 13303,
+      "corpus_mentions": 25,
+      "corpus_mentions_with_aliases": 25
+    },
+    "Japan": {
+      "population": 124000000,
+      "internet_penetration": 0.870,
+      "hdi": 0.903,
+      "gdp_per_capita": 32487,
+      "corpus_mentions": 19,
+      "corpus_mentions_with_aliases": 19
+    },
+    "Germany": {
+      "population": 84500000,
+      "internet_penetration": 0.935,
+      "hdi": 0.926,
+      "gdp_per_capita": 56104,
+      "corpus_mentions": 15,
+      "corpus_mentions_with_aliases": 15
+    },
+    "Canada": {
+      "population": 39300000,
+      "internet_penetration": 0.940,
+      "hdi": 0.920,
+      "gdp_per_capita": 54340,
+      "corpus_mentions": 14,
+      "corpus_mentions_with_aliases": 14
+    },
+    "France": {
+      "population": 66400000,
+      "internet_penetration": 0.887,
+      "hdi": 0.897,
+      "gdp_per_capita": 46103,
+      "corpus_mentions": 13,
+      "corpus_mentions_with_aliases": 13
+    },
+    "Australia": {
+      "population": 26500000,
+      "internet_penetration": 0.971,
+      "hdi": 0.939,
+      "gdp_per_capita": 64604,
+      "corpus_mentions": 12,
+      "corpus_mentions_with_aliases": 12
+    },
+    "Israel": {
+      "population": 9260000,
+      "internet_penetration": 0.882,
+      "hdi": 0.899,
+      "gdp_per_capita": 54177,
+      "corpus_mentions": 11,
+      "corpus_mentions_with_aliases": 11
+    },
+    "Netherlands": {
+      "population": 18100000,
+      "internet_penetration": 0.970,
+      "hdi": 0.924,
+      "gdp_per_capita": 67520,
+      "corpus_mentions": 10,
+      "corpus_mentions_with_aliases": 10
+    },
+    "Iran": {
+      "population": 90600000,
+      "internet_penetration": 0.796,
+      "hdi": 0.774,
+      "gdp_per_capita": 5190,
+      "corpus_mentions": 9,
+      "corpus_mentions_with_aliases": 9
+    },
+    "India": {
+      "population": 1440000000,
+      "internet_penetration": 0.559,
+      "hdi": 0.624,
+      "gdp_per_capita": 2695,
+      "corpus_mentions": 9,
+      "corpus_mentions_with_aliases": 9
+    },
+    "Ukraine": {
+      "population": 37700000,
+      "internet_penetration": 0.824,
+      "hdi": 0.743,
+      "gdp_per_capita": 5389,
+      "corpus_mentions": 7,
+      "corpus_mentions_with_aliases": 7
+    },
+    "Russia": {
+      "population": 145000000,
+      "internet_penetration": 0.944,
+      "hdi": 0.804,
+      "gdp_per_capita": 14889,
+      "corpus_mentions": 7,
+      "corpus_mentions_with_aliases": 7
+    },
+    "Brazil": {
+      "population": 211000000,
+      "internet_penetration": 0.845,
+      "hdi": 0.754,
+      "gdp_per_capita": 10311,
+      "corpus_mentions": 6,
+      "corpus_mentions_with_aliases": 6
+    },
+    "Spain": {
+      "population": 47900000,
+      "internet_penetration": 0.958,
+      "hdi": 0.884,
+      "gdp_per_capita": 35327,
+      "corpus_mentions": 5,
+      "corpus_mentions_with_aliases": 5
+    },
+    "South Korea": {
+      "population": 51700000,
+      "internet_penetration": 0.979,
+      "hdi": 0.901,
+      "gdp_per_capita": 36239,
+      "corpus_mentions": 5,
+      "corpus_mentions_with_aliases": 5
+    },
+    "Vietnam": {
+      "population": 100000000,
+      "internet_penetration": 0.842,
+      "hdi": 0.683,
+      "gdp_per_capita": 4717,
+      "corpus_mentions": 5,
+      "corpus_mentions_with_aliases": 5
+    },
+    "Iraq": {
+      "population": 45100000,
+      "internet_penetration": 0.817,
+      "hdi": 0.649,
+      "gdp_per_capita": 6074,
+      "corpus_mentions": 4,
+      "corpus_mentions_with_aliases": 4
+    },
+    "Turkey": {
+      "population": 87300000,
+      "internet_penetration": 0.873,
+      "hdi": 0.767,
+      "gdp_per_capita": 15893,
+      "corpus_mentions": 4,
+      "corpus_mentions_with_aliases": 4
+    },
+    "Poland": {
+      "population": 38800000,
+      "internet_penetration": 0.886,
+      "hdi": 0.855,
+      "gdp_per_capita": 25104,
+      "corpus_mentions": 4,
+      "corpus_mentions_with_aliases": 4
+    },
+    "Italy": {
+      "population": 59500000,
+      "internet_penetration": 0.892,
+      "hdi": 0.887,
+      "gdp_per_capita": 40385,
+      "corpus_mentions": 4,
+      "corpus_mentions_with_aliases": 4
+    }
+  },
+  "derived_insights": {
+    "corpus_population_coverage": {
+      "description": "Population of countries mentioned in corpus vs world population",
+      "total_population_mentioned": 4579560000,
+      "world_population_approx": 8100000000,
+      "coverage_pct": 56.5,
+      "note": "56.5% of world population represented, but 62% of mentions are US alone"
+    },
+    "underrepresented_by_population": {
+      "description": "Large-population countries with few or zero corpus mentions",
+      "examples": ["Indonesia (277M, 0 mentions)", "Pakistan (240M, 0 mentions)", "Bangladesh (173M, 0 mentions)", "Nigeria (224M, 0 mentions)", "Ethiopia (126M, 0 mentions)"],
+      "note": "Global South severely underrepresented — these 5 countries alone = 1.04B people with zero coverage"
+    },
+    "digital_divide_context": {
+      "description": "Internet penetration ranges in corpus countries",
+      "highest": {"country": "South Korea", "rate": 0.979},
+      "lowest": {"country": "India", "rate": 0.559},
+      "median": 0.889,
+      "note": "India (55.9%) and Iraq (81.7%) are the only countries below 82% — but both are underrepresented in mentions too"
+    },
+    "hdi_range": {
+      "description": "Human Development Index range in corpus countries",
+      "highest": {"country": "Australia", "hdi": 0.939},
+      "lowest": {"country": "India", "hdi": 0.624},
+      "note": "HDI data from 2015 — current values likely higher for India, China, Vietnam"
+    }
+  }
+}
