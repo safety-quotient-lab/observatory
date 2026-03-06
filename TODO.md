@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment + Wolfram CIs done. Blog posts next.
+**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment + Wolfram CIs done. Lite reeval analysis complete (2026-03-06) — lazy-neutral resolved, legacy data epoched. Blog posts next.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
@@ -17,8 +17,8 @@ Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
 - [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
 - [ ] **Write Claude Code as OS blog post** — technical companion: skills, memory, cognitive triggers, agent identity, federation. 40+ features only possible with Claude Code's architecture. Scaffold at `.claude/plans/memorized/blog/claude-code-as-os.md`. Blocked on: psychology-agent's cognitive architecture analysis (provides T1-T14 detail). Timing: after cogarch personal post establishes context.
-- [ ] Post-launch: Analyze `lite_reeval` data in eval_history — sweep dispatched (50 stories, 100 queue msgs), longitudinal lite-1.4→1.5 comparison data accumulating
-- [ ] Post-launch: `sweep=upgrade_lite` — retroactively queue lite-only stories (hn_score > 50) for Claude full eval. Self-healing coverage bias. See `model-divergence-analysis.md` option 6. Justified by `findings/2026-03-02-llama-neutral-50-bias.md` (79% of Llama zeros have measurable UDHR signal per Haiku cross-validation).
+- [x] ~~Post-launch: Analyze `lite_reeval` data~~ — ✓ DONE 2026-03-06. lite-1.5 fixed lazy-neutral (66%→2% zeros). Old models disabled, superseded by PSQ. See `findings/2026-03-06-lite-reeval-analysis.md`. Historical evals epoched (`data_epoch = 'legacy-lite-1.x'`, migration 0065).
+- [x] ~~Post-launch: `sweep=upgrade_lite`~~ — ✓ MOOT 2026-03-06. Zero candidates — all stories with hn_score >= 50 already have full evals.
 
 ### Wolfram Alpha Integration — ✓ COMPLETE 2026-03-05
 All 5 items done: construct validity audit (37/37), geo reference (22 countries), GS enrichment, math verification (10 formulas), confidence intervals (Wilson + t-dist).
