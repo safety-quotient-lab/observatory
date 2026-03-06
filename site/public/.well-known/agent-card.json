@@ -19,6 +19,13 @@
   },
   "defaultInputModes": ["text/plain", "application/json"],
   "defaultOutputModes": ["application/json"],
+  "extensions": [
+    {
+      "uri": "https://github.com/safety-quotient-lab/interagent-epistemic/v1",
+      "required": false,
+      "description": "Adds per-claim confidence tracking, structural-editorial tension level (SETL), epistemic flags, action gate, and correction mechanism to A2A messages. Jointly derived by observatory-agent and psychology-agent."
+    }
+  ],
   "skills": [
     {
       "id": "query-corpus-signals",
