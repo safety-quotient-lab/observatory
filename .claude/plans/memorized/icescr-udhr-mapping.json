@@ -10,7 +10,8 @@
       "icescr_topic": "Self-determination of peoples",
       "udhr_articles": [1, 21],
       "udhr_topics": ["Dignity and equality (Art. 1)", "Participation in government (Art. 21)"],
-      "relationship": "ICESCR Art. 1 elaborates collective self-determination; UDHR Art. 1 declares individual dignity, Art. 21 declares political participation. ICESCR extends to economic self-determination of peoples.",
+      "relationship": "ICESCR Art. 1 elaborates collective self-determination; UDHR Art. 1 declares individual dignity, Art. 21 declares political participation. ICESCR extends to economic self-determination of peoples. NOTE: resource sovereignty clause ('peoples may freely dispose of their natural wealth') has no direct UDHR parallel.",
+      "mapping_confidence": 0.7,
       "ratification_gap_note": "U.S. non-ratification means no binding obligation on economic self-determination — relevant when tech platforms control economic participation."
     },
     {
@@ -66,7 +67,8 @@
       "icescr_topic": "Protection of family, mothers, children",
       "udhr_articles": [16, 25],
       "udhr_topics": ["Marriage and family (Art. 16)", "Motherhood and childhood protection (Art. 25.2)"],
-      "relationship": "ICESCR Art. 10 elaborates UDHR Art. 16 (family protection) and Art. 25.2 (special care for motherhood/childhood). Adds paid maternity leave, child labor protections.",
+      "relationship": "ICESCR Art. 10 elaborates UDHR Art. 16 (family protection) and Art. 25.2 (special care for motherhood/childhood). Art. 10.2 maternity/paternity protections map more precisely to UDHR 25.2 than 16. Art. 10.3 child labor prohibitions extend beyond both. Adds paid maternity leave, child labor protections.",
+      "mapping_confidence": 0.9,
       "ratification_gap_note": "Paid family leave, child online safety, COPPA — no ICESCR framework for progressive child/family protection standards."
     },
     {
