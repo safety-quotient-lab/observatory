@@ -37,6 +37,7 @@ import {
   sweepRefreshUserAggregates, sweepExpandFromSubmitted, sweepRefreshArticlePairStats,
   sweepLiteReeval, sweepRefreshConsensusScores, sweepUpgradeLite,
   sweepBrowserAudit,
+  sweepKagiScoreAudit, sweepKagiUrlCheck, sweepKagiDomainEnrich, sweepKagiCalibrationOracle,
   type SweepContext,
 } from './sweeps';
 
@@ -60,6 +61,7 @@ export interface Env {
   CONTENT_SNAPSHOTS?: R2Bucket;
   CRON_SECRET?: string;
   DAILY_EVAL_BUDGET?: string;
+  KAGI_API_KEY?: string;
 }
 
 // --- Main cron handler ---
@@ -703,6 +705,10 @@ export default {
         refresh_consensus_scores: sweepRefreshConsensusScores,
         upgrade_lite: sweepUpgradeLite,
         browser_audit: sweepBrowserAudit,
+        kagi_score_audit: sweepKagiScoreAudit,
+        kagi_url_check: sweepKagiUrlCheck,
+        kagi_domain_enrich: sweepKagiDomainEnrich,
+        kagi_calibration_oracle: sweepKagiCalibrationOracle,
       };
 
       const handler = SWEEP_HANDLERS[sweep];

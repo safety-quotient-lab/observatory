@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment + Wolfram CIs done. Lite reeval analysis complete (2026-03-06) — lazy-neutral resolved, legacy data epoched. Blog posts next.
+**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment + Wolfram CIs done. Lite reeval analysis complete (2026-03-06) — lazy-neutral resolved, legacy data epoched. Kagi API integrated (2026-03-06) — 4 sweep handlers (score audit, URL check, domain enrich, calibration oracle). Blog posts next.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 

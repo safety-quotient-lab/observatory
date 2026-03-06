@@ -21,6 +21,7 @@ import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates,
 import { refreshArticlePairStats } from '../src/lib/db-analytics';
 import { getEnabledFreeModels } from '../src/lib/models';
 import { safeBatch, writeDb } from '../src/lib/db-utils';
+import { CALIBRATION_SET } from '../src/lib/calibration';
 import type { Env } from './cron';
 
 export interface SweepContext {
@@ -743,5 +744,328 @@ export async function sweepBrowserAudit({ db, env, url }: SweepContext): Promise
     dispatched: domains.length,
     domains: domains.slice(0, 20),
     description: `Dispatched ${domains.length} domain(s) for browser audit`,
+  });
+}
+
+// ─── Kagi API Helpers ────────────────────────────────────────────────────────
+
+interface KagiFastGPTResponse {
+  data: { output: string; tokens: number; references?: { title: string; url: string; snippet: string }[] };
+  meta?: { id: string; node: string; ms: number };
+}
+
+interface KagiSummarizerResponse {
+  data: { output: string; tokens: number };
+  meta?: { id: string; node: string; ms: number };
+}
+
+interface KagiEnrichResponse {
+  data: { title: string; url: string; description: string; published?: string }[];
+  meta?: { id: string; node: string; ms: number };
+}
+
+async function kagiFastGPT(apiKey: string, query: string): Promise<KagiFastGPTResponse> {
+  const res = await fetch('https://kagi.com/api/v0/fastgpt', {
+    method: 'POST',
+    headers: { 'Authorization': `Bot ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  if (!res.ok) throw new Error(`Kagi FastGPT ${res.status}: ${await res.text()}`);
+  return res.json() as Promise<KagiFastGPTResponse>;
+}
+
+async function kagiSummarize(apiKey: string, url: string): Promise<KagiSummarizerResponse> {
+  const res = await fetch(`https://kagi.com/api/v0/summarize?url=${encodeURIComponent(url)}`, {
+    headers: { 'Authorization': `Bot ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`Kagi Summarizer ${res.status}: ${await res.text()}`);
+  return res.json() as Promise<KagiSummarizerResponse>;
+}
+
+async function kagiEnrichNews(apiKey: string, query: string): Promise<KagiEnrichResponse> {
+  const res = await fetch(`https://kagi.com/api/v0/enrich/news?q=${encodeURIComponent(query)}`, {
+    headers: { 'Authorization': `Bot ${apiKey}` },
+  });
+  if (!res.ok) throw new Error(`Kagi Enrich ${res.status}: ${await res.text()}`);
+  return res.json() as Promise<KagiEnrichResponse>;
+}
+
+type DirectionalAssessment = 'positive' | 'neutral' | 'negative';
+
+function parseDirectionalAssessment(output: string): DirectionalAssessment {
+  const lower = output.toLowerCase();
+  const posSignals = ['rights-positive', 'promotes human rights', 'supports human rights', 'positive impact', 'upholds', 'advances rights', 'protects rights'];
+  const negSignals = ['rights-negative', 'violates', 'undermines', 'negative impact', 'threatens rights', 'restricts rights', 'harms'];
+  let posCount = 0;
+  let negCount = 0;
+  for (const s of posSignals) if (lower.includes(s)) posCount++;
+  for (const s of negSignals) if (lower.includes(s)) negCount++;
+  if (posCount > negCount) return 'positive';
+  if (negCount > posCount) return 'negative';
+  return 'neutral';
+}
+
+function assessmentToNumeric(a: DirectionalAssessment): number {
+  return a === 'positive' ? 1 : a === 'negative' ? -1 : 0;
+}
+
+function classifyDivergence(ourScore: number, kagiDir: DirectionalAssessment): 'aligned' | 'minor' | 'major' {
+  const ourDir = ourScore > 0.05 ? 'positive' : ourScore < -0.05 ? 'negative' : 'neutral';
+  if (ourDir === kagiDir) return 'aligned';
+  if (ourDir === 'neutral' || kagiDir === 'neutral') return 'minor';
+  return 'major';
+}
+
+// ─── Sweep: kagi_score_audit ─────────────────────────────────────────────────
+
+/** Cross-validate HRCB scores against Kagi FastGPT UDHR assessment. */
+export async function sweepKagiScoreAudit({ db, env, url }: SweepContext): Promise<Response> {
+  const apiKey = env.KAGI_API_KEY;
+  if (!apiKey) return json({ error: 'KAGI_API_KEY not configured' }, 500);
+
+  const limit = parseLimit(url, 10, 50);
+
+  const { results: stories } = await db
+    .prepare(
+      `SELECT s.hn_id, s.title, s.domain, s.hcb_weighted_mean
+       FROM stories s
+       WHERE s.eval_status = 'done'
+         AND s.hcb_weighted_mean IS NOT NULL
+         AND ABS(s.hcb_weighted_mean) > 0.15
+         AND NOT EXISTS (
+           SELECT 1 FROM events e
+           WHERE e.hn_id = s.hn_id
+             AND e.event_type = 'kagi_audit'
+             AND json_extract(e.details, '$.audit_type') = 'score_audit'
+         )
+       ORDER BY ABS(s.hcb_weighted_mean) DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ hn_id: number; title: string; domain: string | null; hcb_weighted_mean: number }>();
+
+  if (stories.length === 0) return json({ sweep: 'kagi_score_audit', audited: 0, description: 'No unaudited stories with |score| > 0.15' });
+
+  const results: { hn_id: number; title: string; our_score: number; kagi_dir: DirectionalAssessment; divergence: string }[] = [];
+
+  for (const story of stories) {
+    try {
+      const query = `What UDHR (Universal Declaration of Human Rights) provisions does "${story.title}" (${story.domain || 'unknown domain'}) implicate? Is the content rights-positive, neutral, or rights-negative?`;
+      const resp = await kagiFastGPT(apiKey, query);
+      const kagiDir = parseDirectionalAssessment(resp.data.output);
+      const divergence = classifyDivergence(story.hcb_weighted_mean, kagiDir);
+
+      results.push({ hn_id: story.hn_id, title: story.title, our_score: story.hcb_weighted_mean, kagi_dir: kagiDir, divergence });
+
+      await logEvent(db, {
+        hn_id: story.hn_id,
+        event_type: 'kagi_audit',
+        severity: divergence === 'major' ? 'warn' : 'info',
+        message: `Kagi score audit: ${divergence} (ours=${story.hcb_weighted_mean.toFixed(3)}, kagi=${kagiDir})`,
+        details: { audit_type: 'score_audit', our_score: story.hcb_weighted_mean, kagi_direction: kagiDir, divergence, kagi_output: resp.data.output.slice(0, 500), tokens: resp.data.tokens },
+      });
+    } catch (err) {
+      console.error(`[kagi_score_audit] Error for hn_id=${story.hn_id}:`, err);
+    }
+  }
+
+  const counts = { aligned: 0, minor: 0, major: 0 };
+  for (const r of results) counts[r.divergence as keyof typeof counts]++;
+
+  return json({ sweep: 'kagi_score_audit', audited: results.length, counts, results, description: `Audited ${results.length} stories: ${counts.aligned} aligned, ${counts.minor} minor, ${counts.major} major divergence` });
+}
+
+// ─── Sweep: kagi_url_check ───────────────────────────────────────────────────
+
+/** Dead URL detection via Kagi Summarizer. */
+export async function sweepKagiUrlCheck({ db, env, url }: SweepContext): Promise<Response> {
+  const apiKey = env.KAGI_API_KEY;
+  if (!apiKey) return json({ error: 'KAGI_API_KEY not configured' }, 500);
+
+  const limit = parseLimit(url, 20, 100);
+
+  const { results: stories } = await db
+    .prepare(
+      `SELECT s.hn_id, s.title, s.url, s.domain
+       FROM stories s
+       WHERE s.eval_status = 'done'
+         AND s.url IS NOT NULL
+         AND s.evaluated_at < datetime('now', '-7 days')
+         AND NOT EXISTS (
+           SELECT 1 FROM events e
+           WHERE e.hn_id = s.hn_id
+             AND e.event_type = 'kagi_audit'
+             AND json_extract(e.details, '$.audit_type') = 'url_check'
+             AND e.created_at > datetime('now', '-30 days')
+         )
+       ORDER BY s.hn_score DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ hn_id: number; title: string; url: string; domain: string | null }>();
+
+  if (stories.length === 0) return json({ sweep: 'kagi_url_check', checked: 0, description: 'No URLs due for checking' });
+
+  const results: { hn_id: number; url: string; status: 'alive' | 'dead' | 'degraded' | 'error'; detail: string }[] = [];
+  const deadSignals = ['404', 'not found', 'page not found', 'access denied', 'no longer available', 'has been removed', 'does not exist'];
+
+  for (const story of stories) {
+    try {
+      const resp = await kagiSummarize(apiKey, story.url);
+      const output = resp.data.output.toLowerCase();
+      const outputLen = resp.data.output.length;
+
+      let status: 'alive' | 'dead' | 'degraded' = 'alive';
+      if (deadSignals.some(sig => output.includes(sig))) {
+        status = 'dead';
+      } else if (outputLen < 100) {
+        status = 'degraded';
+      }
+
+      results.push({ hn_id: story.hn_id, url: story.url, status, detail: resp.data.output.slice(0, 200) });
+
+      await logEvent(db, {
+        hn_id: story.hn_id,
+        event_type: 'kagi_audit',
+        severity: status === 'dead' ? 'warn' : 'info',
+        message: `Kagi URL check: ${status} (${story.domain || story.url})`,
+        details: { audit_type: 'url_check', url: story.url, status, summary_length: outputLen, tokens: resp.data.tokens },
+      });
+    } catch (err) {
+      results.push({ hn_id: story.hn_id, url: story.url, status: 'error', detail: String(err) });
+    }
+  }
+
+  const counts = { alive: 0, dead: 0, degraded: 0, error: 0 };
+  for (const r of results) counts[r.status]++;
+
+  return json({ sweep: 'kagi_url_check', checked: results.length, counts, results: results.slice(0, 50), description: `Checked ${results.length} URLs: ${counts.alive} alive, ${counts.dead} dead, ${counts.degraded} degraded, ${counts.error} errors` });
+}
+
+// ─── Sweep: kagi_domain_enrich ───────────────────────────────────────────────
+
+/** Enrich domain DCP with Kagi news intelligence. Background (202). */
+export async function sweepKagiDomainEnrich({ db, env, ctx, url }: SweepContext): Promise<Response> {
+  const apiKey = env.KAGI_API_KEY;
+  if (!apiKey) return json({ error: 'KAGI_API_KEY not configured' }, 500);
+
+  const limit = parseLimit(url, 10, 50);
+
+  const { results: domains } = await db
+    .prepare(
+      `SELECT da.domain
+       FROM domain_aggregates da
+       WHERE da.evaluated_count >= 3
+         AND NOT EXISTS (
+           SELECT 1 FROM domain_dcp dd
+           WHERE dd.domain = da.domain
+             AND json_extract(dd.dcp_json, '$.kagi_news') IS NOT NULL
+         )
+       ORDER BY da.evaluated_count DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ domain: string }>();
+
+  if (domains.length === 0) return json({ sweep: 'kagi_domain_enrich', enriched: 0, description: 'No domains need enrichment' }, 200);
+
+  ctx.waitUntil((async () => {
+    let enriched = 0;
+    for (const { domain } of domains) {
+      try {
+        const resp = await kagiEnrichNews(apiKey, domain);
+        const articles = resp.data.slice(0, 5).map(a => ({ title: a.title, url: a.url, published: a.published }));
+
+        // Read existing DCP, merge kagi_news
+        const existing = await db
+          .prepare(`SELECT dcp_json FROM domain_dcp WHERE domain = ?`)
+          .bind(domain)
+          .first<{ dcp_json: string }>();
+
+        let dcp: Record<string, unknown> = {};
+        if (existing?.dcp_json) {
+          try { dcp = JSON.parse(existing.dcp_json); } catch { /* fresh */ }
+        }
+        dcp.kagi_news = { articles, fetched_at: new Date().toISOString() };
+
+        await db
+          .prepare(
+            `INSERT INTO domain_dcp (domain, dcp_json, updated_at)
+             VALUES (?, ?, datetime('now'))
+             ON CONFLICT(domain) DO UPDATE SET dcp_json = excluded.dcp_json, updated_at = excluded.updated_at`
+          )
+          .bind(domain, JSON.stringify(dcp))
+          .run();
+
+        enriched++;
+
+        await logEvent(db, {
+          event_type: 'kagi_audit',
+          severity: 'info',
+          message: `Kagi domain enrich: ${domain} (${articles.length} articles)`,
+          details: { audit_type: 'domain_enrich', domain, article_count: articles.length },
+        });
+      } catch (err) {
+        console.error(`[kagi_domain_enrich] Error for ${domain}:`, err);
+      }
+    }
+  })());
+
+  return json({ sweep: 'kagi_domain_enrich', queued: domains.length, description: `Enriching ${domains.length} domain(s) in background` }, 202);
+}
+
+// ─── Sweep: kagi_calibration_oracle ──────────────────────────────────────────
+
+/** Validate calibration set against Kagi FastGPT UDHR assessment. */
+export async function sweepKagiCalibrationOracle({ db, env }: SweepContext): Promise<Response> {
+  const apiKey = env.KAGI_API_KEY;
+  if (!apiKey) return json({ error: 'KAGI_API_KEY not configured' }, 500);
+
+  const results: {
+    slot: string; label: string; expectedClass: string;
+    expectedMin: number; expectedMax: number;
+    kagi_dir: DirectionalAssessment; kagi_numeric: number;
+    class_match: boolean;
+  }[] = [];
+
+  for (const cal of CALIBRATION_SET) {
+    try {
+      const query = `Evaluate the UDHR (Universal Declaration of Human Rights) implications of ${cal.url} ("${cal.label}"). Is this content rights-positive, neutral, or rights-negative from a human rights perspective?`;
+      const resp = await kagiFastGPT(apiKey, query);
+      const kagiDir = parseDirectionalAssessment(resp.data.output);
+      const kagiNum = assessmentToNumeric(kagiDir);
+
+      // Check if Kagi's direction matches expected class
+      const classMatch =
+        (cal.expectedClass === 'EP' && kagiDir === 'positive') ||
+        (cal.expectedClass === 'EN' && kagiDir === 'neutral') ||
+        (cal.expectedClass === 'EX' && kagiDir === 'negative');
+
+      results.push({
+        slot: cal.slot, label: cal.label, expectedClass: cal.expectedClass,
+        expectedMin: cal.expectedMeanMin, expectedMax: cal.expectedMeanMax,
+        kagi_dir: kagiDir, kagi_numeric: kagiNum, class_match: classMatch,
+      });
+    } catch (err) {
+      console.error(`[kagi_calibration_oracle] Error for ${cal.slot}:`, err);
+    }
+  }
+
+  const matched = results.filter(r => r.class_match).length;
+  const total = results.length;
+
+  await logEvent(db, {
+    event_type: 'kagi_audit',
+    severity: matched < 10 ? 'warn' : 'info',
+    message: `Kagi calibration oracle: ${matched}/${total} class matches`,
+    details: { audit_type: 'calibration_oracle', matched, total, results },
+  });
+
+  return json({
+    sweep: 'kagi_calibration_oracle',
+    matched, total,
+    accuracy: total > 0 ? +(matched / total).toFixed(3) : null,
+    results,
+    description: `Calibration oracle: ${matched}/${total} class matches (${total > 0 ? ((matched / total) * 100).toFixed(1) : 0}%)`,
   });
 }

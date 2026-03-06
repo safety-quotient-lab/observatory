@@ -85,3 +85,4 @@ binding = "BROWSER_AUDIT_QUEUE"
 # Secrets (set via `wrangler secret put --name hn-hrcb-cron`):
 # ANTHROPIC_API_KEY
 # CRON_SECRET
+# KAGI_API_KEY

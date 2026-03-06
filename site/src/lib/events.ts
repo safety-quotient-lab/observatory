@@ -34,7 +34,8 @@ export type EventType =
   | 'r2_cleanup'
   | 'content_drift'
   | 'model_divergence'
-  | 'setl_spike';
+  | 'setl_spike'
+  | 'kagi_audit';
 
 export type Severity = 'info' | 'warn' | 'error';
 

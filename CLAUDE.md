@@ -42,7 +42,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 **Workers:**
 - `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`. Dispatches sweeps via `SWEEP_HANDLERS` map in `sweeps.ts`.
-- `site/functions/sweeps.ts` — 15 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores/UpgradeLite/BrowserAudit`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
+- `site/functions/sweeps.ts` — 19 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores/UpgradeLite/BrowserAudit/KagiScoreAudit/KagiUrlCheck/KagiDomainEnrich/KagiCalibrationOracle`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
 - `site/functions/consumer-shared.ts` — Shared types, content prep, result writing. Uses `isFirstFullEval` for first-eval housekeeping (R2 snapshot, content hash, DCP cache, archive).
 - `site/functions/consumer-anthropic.ts` — Anthropic queue handler. Prompt caching, proactive rate limit tracking, 429/529/credit handling, truncation retry.
 - `site/functions/consumer-openrouter.ts` — OpenRouter queue handler (8 model queues). Lite + full prompt modes.
@@ -141,6 +141,22 @@ curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut
 curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=browser_audit&domain=example.com"
 
+# Sweep: Kagi score audit — cross-validate HRCB scores via FastGPT (default limit 10, max 50)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=kagi_score_audit&limit=10"
+
+# Sweep: Kagi URL check — dead URL detection via Summarizer (default limit 20, max 100)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=kagi_url_check&limit=20"
+
+# Sweep: Kagi domain enrich — news intelligence for DCP (202 Accepted, background; default limit 10, max 50)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=kagi_domain_enrich&limit=10"
+
+# Sweep: Kagi calibration oracle — validate all 15 calibration URLs via FastGPT
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=kagi_calibration_oracle"
+
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health
 
@@ -155,7 +171,7 @@ npx wrangler tail hn-hrcb-consumer-workers-ai --format pretty
 
 ## Event Types
 
-The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `rater_validation_warn`, `rater_validation_fail`, `rater_auto_disable`, `rater_auto_enable`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `dcp_stale`, `r2_cleanup`, `story_flagged`, `content_drift`, `model_divergence`, `setl_spike`.
+The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `rater_validation_warn`, `rater_validation_fail`, `rater_auto_disable`, `rater_auto_enable`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `dcp_stale`, `r2_cleanup`, `story_flagged`, `content_drift`, `model_divergence`, `setl_spike`, `kagi_audit`.
 
 ## Methodology Files
 
