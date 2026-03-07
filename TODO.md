@@ -9,14 +9,20 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Blog posts + integration (2026-03-07).** Construct validity sprint complete. AP webhook added to cron.ts (posts evaluated stories to Fediverse via unratified.org/ap/publish — needs AP_PUBLISH_TOKEN secret). Test-retest sweep implemented (migration 0069 + sweepTestRetest). Methodology validation blog post published. Remaining: API blog post, accommodation-engine, cogarch, Claude Code as OS.
+**Epistemic quality (2026-03-07).** Prioritize measurement integrity over publication. HRCB consensus restored (WAI lite models re-enabled, 1,685→3,874 consensus stories). Test-retest sweep dispatched (50 stories). Next: collect test-retest results, define AP publishing thresholds, ESC validation.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
-Remaining:
-- [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
-- [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
-- [ ] **Write Claude Code as OS blog post** — technical companion: skills, memory, cognitive triggers, agent identity, federation. 40+ features only possible with Claude Code's architecture. Scaffold at `.claude/plans/memorized/blog/claude-code-as-os.md`. Blocked on: psychology-agent's cognitive architecture analysis (provides T1-T14 detail). Timing: after cogarch personal post establishes context.
+Epistemic queue (priority order):
+- [ ] **Test-retest results** — run `sweep=test_retest&phase=check` after re-evals complete. First same-model reliability data.
+- [ ] **AP publishing thresholds** — define minimum RS, |HRCB|, hn_score for Fediverse publication. Recommended: RS ≥ 0.03, |HRCB| ≥ 0.05, hn_score ≥ 20 (filters 46% low-salience noise). Then `wrangler secret put AP_PUBLISH_TOKEN`.
+- [ ] **ESC construct validation** — Editorial-Structural Coherence is Tier A pedagogical but unvalidated. SETL formula live but no external validation yet.
+
+Blog posts (deferred — lower priority than epistemic quality):
+- [ ] **Write API blog post** — moved from Standards; announce public REST API
+- [ ] **Write accommodation-engine blog post** — MASSIVE work required. Defer until bandwidth exists.
+- [ ] **Write cognitive architecture personal post** — first-person builder account. After accommodation-engine or concurrent.
+- [ ] **Write Claude Code as OS blog post** — blocked on psychology-agent's cogarch analysis.
 
 ### Architecture (evaluate later)
 
@@ -24,7 +30,6 @@ Remaining:
 
 ### Standards
 
-- [ ] **Write API blog post** — announce the public REST API at `observatory.unratified.org/api/v1/`. OpenAPI spec live. Methodology validation post published (2026-03-07) — API post can reference it. Personal note + author review before publishing.
 - [ ] **ActivityPub** (W3C) — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live (unratified-agent deployed WebFinger + Actor + Outbox). Webhook in cron.ts implemented but **deferred** — need to define publishing thresholds before enabling (minimum RS? minimum HN score? minimum |HRCB|? exclude low-salience?). Token not yet set. **Blocked on:** threshold analysis, then `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron`.
 
 ---
