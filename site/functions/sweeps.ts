@@ -19,7 +19,7 @@ import {
 } from '../src/lib/coverage-crawl';
 import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates, refreshUserAggregate, updateConsensusScore, updatePsqConsensus } from '../src/lib/eval-write';
 import { refreshArticlePairStats } from '../src/lib/db-analytics';
-import { getEnabledFreeModels } from '../src/lib/models';
+import { getEnabledFreeModels, getModelQueue } from '../src/lib/models';
 import { safeBatch, writeDb } from '../src/lib/db-utils';
 import { computeRightsSalience, computeAcScore, computeCarScore } from '../src/lib/compute-aggregates';
 import type { EvalScore } from '../src/lib/shared-eval';
@@ -1533,8 +1533,28 @@ export async function sweepTestRetest({ db, env, url }: SweepContext): Promise<R
   await safeBatch(db, deleteBatch);
   await safeBatch(db, resetBatch);
 
-  // Trigger re-enqueue
-  await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
+  // Direct dispatch to eval_queue — bypasses enqueueForEvaluation's credit pause,
+  // content gating, and domain circuit breakers. Retest stories already passed those
+  // gates on their original evaluation.
+  const clearQueueBatch = candidates.results.map(c =>
+    db.prepare('DELETE FROM eval_queue WHERE hn_id = ?').bind(c.hn_id)
+  );
+  if (clearQueueBatch.length > 0) await safeBatch(db, clearQueueBatch);
+
+  const queueInsertBatch = candidates.results.map(c =>
+    db.prepare(
+      `INSERT OR IGNORE INTO eval_queue (hn_id, target_provider, target_model, prompt_mode, priority)
+       VALUES (?, ?, ?, 'full', 100)`
+    ).bind(c.hn_id, c.eval_provider, c.eval_model)
+  );
+  if (queueInsertBatch.length > 0) await safeBatch(db, queueInsertBatch);
+
+  // Wake the consumer queue
+  const modelQueue = getModelQueue(candidates.results[0].eval_model, env);
+  const wakeCount = Math.min(Math.ceil(candidates.results.length / 5) + 1, 3);
+  for (let i = 0; i < wakeCount; i++) {
+    await (modelQueue as any).send({ trigger: 'new_work', provider: candidates.results[0].eval_provider }).catch(() => {});
+  }
 
   await logEvent(db, {
     event_type: 'trigger',
