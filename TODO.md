@@ -17,22 +17,15 @@ Remaining:
 - [ ] **Write accommodation-engine blog post** — **MASSIVE work required** (not just a personal note). Draft at `.claude/plans/memorized/blog/accommodation-engine.md` is a starting point only. Timing: defer until bandwidth exists for a full writing effort.
 - [ ] **Write cognitive architecture personal post** — the builder's account of their unique cognitive architecture (MEMORY.md pattern, skill system, epistemic triggers, compressed vocabulary). First-person voice (HN companion register). Show HN draft points readers to `.claude/` in repo in the meantime. Timing: after accommodation-engine post, or concurrent.
 - [ ] **Write Claude Code as OS blog post** — technical companion: skills, memory, cognitive triggers, agent identity, federation. 40+ features only possible with Claude Code's architecture. Scaffold at `.claude/plans/memorized/blog/claude-code-as-os.md`. Blocked on: psychology-agent's cognitive architecture analysis (provides T1-T14 detail). Timing: after cogarch personal post establishes context.
-- [x] ~~Post-launch: Analyze `lite_reeval` data~~ — ✓ DONE 2026-03-06. lite-1.5 fixed lazy-neutral (66%→2% zeros). Old models disabled, superseded by PSQ. See `findings/2026-03-06-lite-reeval-analysis.md`. Historical evals epoched (`data_epoch = 'legacy-lite-1.x'`, migration 0065).
-- [x] ~~Post-launch: `sweep=upgrade_lite`~~ — ✓ MOOT 2026-03-06. Zero candidates — all stories with hn_score >= 50 already have full evals.
-
-### Wolfram Alpha Integration — ✓ COMPLETE 2026-03-05
-All 5 items done: construct validity audit (37/37), geo reference (22 countries), GS enrichment, math verification (10 formulas), confidence intervals (Wilson + t-dist).
 
 ### Architecture (evaluate later)
 
 - [ ] **HN comments passthrough (no DB storage)** — evaluate whether comments can be served via passthrough from the HN Firebase API rather than stored in D1. The HN API exposes comment trees per item in real-time; a passthrough endpoint (`/api/story/[id]/comments` → HN Firebase) would eliminate comment storage entirely and keep data always-fresh. Trade-offs: latency on each request, no offline access, no ability to annotate/score comments, rate limit exposure. Worth evaluating after launch — depends on whether comment scoring becomes a feature goal.
 
-### Standards (M effort — deferred)
+### Standards
 
-- ~~**OpenAPI 3.x spec**~~ — ✓ DONE 2026-03-04. `/api/v1/openapi.json` — 15 endpoints (9 v1 incl. methodology + 4 v0 + badge), 6 schemas, OpenAPI 3.1.0, prerendered. Linked from `/data`.
-- [ ] **Write API blog post** — announce the public REST API at `observatory.unratified.org/api/v1/`. Angles: what data is available, example queries (top negative domains, rights-under-pressure feed, TQ by domain), use cases (researchers, journalists, feed aggregators, agent tool use). Include OpenAPI link once spec is live. Publish after OpenAPI is done. Personal note + author review before publishing.
-- ~~**WebSub**~~ — ✓ DONE 2026-03-04. `rel="hub"` in Atom XML + HTTP Link header, Superfeedr hub ping in cron.ts on stories_new > 0.
-- [ ] **ActivityPub** (W3C) — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live (unratified-agent deployed WebFinger + Actor + Outbox). Webhook in cron.ts implemented (posts evaluated stories every 5 min). **Blocked on:** `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron` (get token from unratified-agent via secure channel). Plan: `.claude/plans/activitypub-federation.md`.
+- [ ] **Write API blog post** — announce the public REST API at `observatory.unratified.org/api/v1/`. OpenAPI spec live. Methodology validation post published (2026-03-07) — API post can reference it. Personal note + author review before publishing.
+- [ ] **ActivityPub** (W3C) — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live (unratified-agent deployed WebFinger + Actor + Outbox). Webhook in cron.ts implemented but **deferred** — need to define publishing thresholds before enabling (minimum RS? minimum HN score? minimum |HRCB|? exclude low-salience?). Token not yet set. **Blocked on:** threshold analysis, then `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron`.
 
 ---
 
@@ -47,25 +40,18 @@ response). It cannot be validated via factor analysis due to: (a) formative
 measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 (c) single-domain sample (HN tech content only). See analysis doc Sections 1-2.
 
-#### Layer 1 — Objective Foundation (no LLM, fully reproducible)
+#### Layers 1-2 — Completed constructs
 
-- ~~**Transparency Quotient (TQ)**~~ — ✓ DONE 2026-03-04. lite-1.6 schema: 5 binary indicators (tq_author/date/sources/corrections/conflicts), tq_score=sum/5, structural proxy injection. Migration 0059. External validation: TQ → RDR (unblocked — see External Validation section).
+TQ ✓, AC ✓ (Layer 2), CAR ✓ (Layer 1), RS ✓ (Layer 1 gate). All in migrations 0059-0068.
 
-- ~~**Accessibility Compliance (AC)**~~ — ✓ DONE 2026-03-06. **Reclassified as Layer 2** (LLM-generated, not objective). Composite from reading_level + jargon_density + assumed_knowledge (0-1 scale, higher=more accessible). Migration 0068. Backfilled 775 stories. Avg AC=0.58, good spread. External validation (WCAG, Flesch-Kincaid) deferred — would upgrade to Layer 1. Language availability not yet measured.
-
-- ~~**Consent Architecture Rating (CAR)**~~ — ✓ DONE 2026-03-06. **Layer 1** (genuinely objective). Composite from browser audit: security (HTTPS/HSTS/CSP) + tracking (inverse tracker count) + accessibility (lang attr/skip nav). Migration 0068. Backfilled 167 domains. Avg CAR=0.638. Domain-level, stored on `domain_browser_audit` + `domain_aggregates`. External validation deferred (EU DSA, DPAF taxonomy).
-
-#### Layer 2 — LLM-Holistic (single scores, minimal contamination)
-
-- ~~**Rights Salience (RS)**~~ — ✓ DONE 2026-03-06. Three-factor multiplicative score: breadth × depth × intensity (Layer 1, no LLM judgment). Migration 0067. Backfilled 1,111 full evals. Gate: RS < 0.03 → "low salience" badge on item page. Validated: high RS stories (≥0.15) avg |HRCB|=0.493 vs low RS (<0.05) avg |HRCB|=0.192. Anchoring contamination confirmed (full-coverage stories score lowest). `findings/2026-03-06-rights-salience-rs.md`.
+#### Layer 2 — Open
 
 - [ ] **Normative Temperature (NT)** — how far from mainstream rights consensus is this content? Low = conventional, high = challenges norms
   - Reframes evaluator task from "judge" to "thermometer" — reduces bias
   - Decomposes HRCB into "how far from norm" vs "which direction"
 
 - [ ] **Propaganda Technique Density (PTD)** — already measured as `pt_score`
-  - ~~Multi-model agreement on technique *presence* (binary) is tractable for inter-rater reliability~~ — **REVISED 2026-03-04**: Only `loaded_language` has usable κ (0.48). Overall κ=0.325 (fair). Haiku detects 3× more techniques than DeepSeek (45% vs 15% rate). Path forward: consolidate 17 techniques → 3 broad categories (Emotive/Logical/Rhetorical), or defer PTD to internal-only (recommended, given consequential ethics risk). See `findings/2026-03-04-ptd-inter-rater-reliability.md`.
-  - ~~Validate via Fleiss' kappa across models on shared stories~~ — ✓ DONE 2026-03-04.
+  - Inter-rater κ=0.325 (fair), only `loaded_language` usable (κ=0.48). Haiku 3× more detections than DeepSeek. Path forward: consolidate 17→3 categories, or defer to internal-only (recommended). `findings/2026-03-04-ptd-inter-rater-reliability.md`.
 
 #### Layer 3 — Aggregate/Temporal (emerge from many evals)
 
@@ -73,23 +59,17 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
   - Emerges from domain-level patterns across many stories, not per-story
   - External validation: RDR corporate accountability, Freedom House
 
-- ~~**Rights Entanglement Map (REM)**~~ — ✓ DONE 2026-03-04. Single-linkage clustering on 496 provision-pair correlations. `computeRemClusters()` in `compute-aggregates.ts`. Section on `/rights/network`. All pairs positive (min r=+0.187 Art12×Art27). Privacy ↔ Expression co-vary positively — no tech-policy trade-off in this corpus.
-
-- ~~**Model Consensus Construct (MCC)**~~ — ✓ DONE 2026-03-06. Validity boundary = salience boundary. Haiku vs DeepSeek (n=264): 91% classification agreement on salient content (RS≥0.05) vs 63% on non-salient. Direction is well-defined; magnitude is model-dependent. RS gating resolves MCC — no additional construct needed. `getModelAgreement()` stays `@internal`. `findings/2026-03-06-model-consensus-construct.md`.
+REM ✓ (single-linkage clustering, `/rights/network`). MCC ✓ (resolved by RS gating — 91% agreement on salient vs 63% non-salient).
 
 #### External Validation (unblocked, highest priority)
 
-- ~~**Convergent validity (TQ → RDR)**~~ — DEFERRED. RDR domain overlap with HN corpus negligible. Used idiap/MBFC instead: TQ → MBFC reliability ρ=+0.014 (null — underpowered n=13 + construct mismatch). Re-run when n≥40 editorial-only domains. `findings/2026-03-04-eq-tq-external-validity-mbfc.md`.
-- ~~**Convergent validity (EQ → Ad Fontes)**~~ — DONE 2026-03-04. Ad Fontes paywalled; used idiap/MBFC factual_reporting instead. EQ → MBFC FR: ρ=+0.362, p=0.098, n=22 — MARGINAL (direction confirmed, power-limited). `findings/2026-03-04-eq-tq-external-validity-mbfc.md`.
-- ~~**Convergent validity (ET valence → VADER)**~~ — ✓ DONE 2026-03-04. r=+0.376 (WEAK). Construct divergence explained: rights-alert content is negative ET + high VADER (emotionally charged advocacy). `findings/2026-03-04-et-cl-convergent-validity.md`.
-- ~~**Convergent validity (CL → FK)**~~ — ✓ DONE 2026-03-04. ρ=-0.063 (FAIL). FK is wrong validator: FK=syntactic complexity, CL=domain expertise. Technical jargon is monosyllabic → lower FK. Better validator = human ratings or Wikipedia topic level. `findings/2026-03-04-et-cl-convergent-validity.md`.
-- ~~**Discriminant validity**~~ — ✓ DONE 2026-03-04. Pearson r=+0.08, R²=0.007 (0.7% shared variance). PASS. See `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`.
-- ~~**Known-groups expansion**~~ — ✓ DONE 2026-03-04. EP=0.348 > EN=0.205 > EC=0.137. Kruskal-Wallis H=23.4, p<0.0001. Strongest Phase 0 result. `findings/2026-03-04-known-groups-hrcb-editorial.md`.
-- [ ] **Test-retest reliability** — Inter-rater DONE 2026-03-06 (n=278, cross-model, r=0.509, 72.3% classification agreement). `findings/2026-03-06-inter-rater-reliability.md`. Test-retest sweep implemented (migration 0069, `sweep=test_retest`). Run: dispatch ~50, wait 1+ days for eval, then `sweep=test_retest&phase=check` to collect results. **Blocked on**: AP_PUBLISH_TOKEN + migration apply + cron deploy.
+Completed: convergent validity TQ→MBFC (deferred, n=13), EQ→MBFC (marginal ρ=+0.362), ET→VADER (weak r=+0.376), CL→FK (fail, wrong validator). Discriminant ✓ (r=+0.08). Known-groups ✓ (H=23.4, p<0.0001). All in `findings/2026-03-04-*.md`.
+
+- [ ] **Test-retest reliability** — Inter-rater DONE 2026-03-06 (n=278, cross-model, r=0.509, 72.3% classification agreement). `findings/2026-03-06-inter-rater-reliability.md`. Test-retest sweep implemented (migration 0069, `sweep=test_retest`). 50 stories dispatched 2026-03-07. Run `sweep=test_retest&phase=check` after 1+ days. **Blocked on**: migration apply + cron deploy.
 
 #### HRCB Decomposition Decision
 
-- ~~**Decide: decompose HRCB into constituent constructs or keep as convenience composite**~~ — ✓ RESOLVED 2026-03-06. Keep as convenience composite with RS validity gate. Evidence: HRCB ≠ sentiment (r=0.08), passes known-groups (H=23.4, p<0.0001), passes discriminant. RS gate addresses the epistemic debt: low-salience stories flagged rather than presented as if HRCB is meaningful. SO/SR redundancy RESOLVED — NOT redundant (story-level r=0.297/0.389, partial r(SO,SR|HRCB)=0.184). `findings/2026-03-06-so-sr-redundancy-resolution.md`.
+RESOLVED 2026-03-06: Keep HRCB as convenience composite with RS validity gate. SO/SR NOT redundant. Full evidence in `findings/2026-03-06-*.md`.
 
 ### Perspective 2 — Pedagogical Effectiveness
 
@@ -110,7 +90,7 @@ See analysis doc Section 8g.
 
 **Combined priority (both perspectives)**:
 - HIGH: TQ, RS, NT, PTD, ESC, REM, ICI
-- ~~CONFLICT (must resolve): RTS~~ — ✓ DONE 2026-03-04. Implemented as dedicated categorical field (not inferred from score deltas). Migration 0060.
+- RTS ✓ — restructured as categorical field (migration 0060).
 - Infrastructure only: MCC, SRD, AC
 - Defer: NFI, DEI, HA
 
@@ -201,8 +181,7 @@ Full 7-perspective analysis in `construct-validity-analysis.md` Section 16.
   - Real-world event annotation layer
 
 - [ ] **Rights network enhancements**
-  - ~~Cluster detection~~ — ✓ Done (REM single-linkage, 2026-03-04)
-  - Temporal network evolution (how correlations shift)
+  - Temporal network evolution (how correlations shift) — cluster detection done (REM)
 
 ### Round 7 — Platform
 
@@ -234,7 +213,7 @@ Full 7-perspective analysis in `construct-validity-analysis.md` Section 16.
 - [ ] **Full-text search endpoint**
   - `/api/v1/search` via FTS5 virtual table on D1
 
-- ~~Dataset license decision~~ — resolved: CC BY-SA 4.0 (see Phase 3.1 audit)
+Dataset license resolved: CC BY-SA 4.0 (Phase 3.1 audit).
 
 ---
 
@@ -256,12 +235,8 @@ Completed 2026-03-02. All 7 decisions resolved:
 
 - [ ] **Acquire domain** — humanify.org + observatory.humanify.org (user action)
 - [ ] **Acquire redirects** — article30.org, clearview TBD (user action)
-- ~~Create GitHub org~~ — done: safety-quotient-lab (https://github.com/safety-quotient-lab)
-- ~~Create observatory repo~~ — done: https://github.com/safety-quotient-lab/observatory
-- ~~Extract methodology~~ — done: `methodology-content.ts` (CC BY-SA) + `prompts.ts` (Apache 2.0)
-- ~~Verify no secrets in git history~~ — done: clean
-- ~~Add license files~~ — done: LICENSE, LICENSE-DATA, ATTRIBUTION.md, SCHEMA.md
-- ~~Add SPDX headers~~ — done: 114 source files (112 Apache 2.0, 1 CC BY-SA, 1 already had it)
+Completed: GitHub org, observatory repo, methodology extraction, secrets audit, license files, SPDX headers (114 files).
+
 - [ ] **Create new repo** — Astro presentation layer only, copy lib/ query subset (~20 functions)
 - [ ] **HN-native design system** — light bg (#f6f6ef), pure orange (#ff6600), black text,
   zero chrome, Verdana only, ~130-line CSS. Accessibility features preserved (focus-visible,
