@@ -9,13 +9,13 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Epistemic quality (2026-03-07).** Prioritize measurement integrity over publication. HRCB consensus restored (WAI lite models re-enabled, 1,685→3,874 consensus stories). Test-retest sweep dispatched (50 stories). Next: collect test-retest results, define AP publishing thresholds, ESC validation.
+**Epistemic quality (2026-03-07).** Prioritize measurement integrity over publication. HRCB consensus restored (WAI lite models re-enabled, 1,685→4,130 consensus stories). Test-retest sweep dispatched (100 stories, blocked on Anthropic credit pause). AP publishing thresholds implemented. Next: collect test-retest results (when credits replenish), ESC validation.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
 Epistemic queue (priority order):
 - [ ] **Test-retest results** — 99 stories queued for Haiku re-eval (dispatch bug fixed: direct eval_queue insert bypasses credit pause + content gate). Run `sweep=test_retest&phase=check` after re-evals complete.
-- [ ] **AP publishing thresholds** — define minimum RS, |HRCB|, hn_score for Fediverse publication. Recommended: RS ≥ 0.03, |HRCB| ≥ 0.05, hn_score ≥ 20 (filters 46% low-salience noise). Then `wrangler secret put AP_PUBLISH_TOKEN`.
+- [x] **AP publishing thresholds** ✓ — RS ≥ 0.03, |HRCB| ≥ 0.05, hn_score ≥ 20 implemented in cron.ts. Post format: `HRCB +0.35 (positive) · RS 0.67 — Title`. **Remaining:** `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron` to go live.
 - [ ] **ESC construct validation** — Editorial-Structural Coherence is Tier A pedagogical but unvalidated. SETL formula live but no external validation yet.
 
 Blog posts (deferred — lower priority than epistemic quality):
@@ -30,7 +30,7 @@ Blog posts (deferred — lower priority than epistemic quality):
 
 ### Standards
 
-- [ ] **ActivityPub** (W3C) — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live (unratified-agent deployed WebFinger + Actor + Outbox). Webhook in cron.ts implemented but **deferred** — need to define publishing thresholds before enabling (minimum RS? minimum HN score? minimum |HRCB|? exclude low-salience?). Token not yet set. **Blocked on:** threshold analysis, then `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron`.
+- [ ] **ActivityPub** (W3C) — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live (unratified-agent deployed WebFinger + Actor + Outbox). Webhook in cron.ts with quality thresholds (RS ≥ 0.03, |HRCB| ≥ 0.05, hn_score ≥ 20). **Blocked on:** `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron` (user action).
 
 ---
 

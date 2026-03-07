@@ -653,19 +653,23 @@ export default {
       try {
         const recentEvals = await db.prepare(
           `SELECT hn_id, title, url, COALESCE(hcb_weighted_mean, hcb_editorial_mean) as score,
-                  hcb_classification, eval_model
+                  hcb_classification, eval_model, rs_score, hn_score
            FROM stories
            WHERE eval_status = 'done' AND hn_id > 0
              AND evaluated_at > datetime('now', '-6 minutes')
+             AND COALESCE(rs_score, 0) >= 0.03
+             AND ABS(COALESCE(hcb_weighted_mean, hcb_editorial_mean, 0)) >= 0.05
+             AND COALESCE(hn_score, 0) >= 20
            ORDER BY evaluated_at DESC LIMIT 10`
-        ).all<{ hn_id: number; title: string; url: string | null; score: number | null; hcb_classification: string | null; eval_model: string | null }>();
+        ).all<{ hn_id: number; title: string; url: string | null; score: number | null; hcb_classification: string | null; eval_model: string | null; rs_score: number | null; hn_score: number | null }>();
 
         let published = 0;
         for (const story of recentEvals.results) {
           const score = story.score != null ? (story.score > 0 ? '+' : '') + story.score.toFixed(2) : '?';
           const classification = story.hcb_classification ?? 'pending';
+          const rs = story.rs_score != null ? story.rs_score.toFixed(2) : '?';
           const storyUrl = `https://observatory.unratified.org/item/${story.hn_id}`;
-          const summary = `HRCB ${score} (${classification}) — ${story.title}`;
+          const summary = `HRCB ${score} (${classification}) · RS ${rs} — ${story.title}`;
 
           const resp = await fetch('https://unratified.org/ap/publish', {
             method: 'POST',
@@ -681,7 +685,7 @@ export default {
                 summary,
                 url: storyUrl,
                 published: new Date().toISOString(),
-                tags: ['hrcb', 'humanrights', classification].filter(Boolean),
+                tags: ['hrcb', 'humanrights', 'udhr', classification].filter(Boolean),
               },
             }),
           });
