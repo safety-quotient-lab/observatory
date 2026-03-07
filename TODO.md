@@ -65,7 +65,7 @@ REM ✓ (single-linkage clustering, `/rights/network`). MCC ✓ (resolved by RS 
 
 Completed: convergent validity TQ→MBFC (deferred, n=13), EQ→MBFC (marginal ρ=+0.362), ET→VADER (weak r=+0.376), CL→FK (fail, wrong validator). Discriminant ✓ (r=+0.08). Known-groups ✓ (H=23.4, p<0.0001). All in `findings/2026-03-04-*.md`.
 
-- [ ] **Test-retest reliability** — Inter-rater DONE 2026-03-06 (n=278, cross-model, r=0.509, 72.3% classification agreement). `findings/2026-03-06-inter-rater-reliability.md`. Test-retest sweep implemented (migration 0069, `sweep=test_retest`). 50 stories dispatched 2026-03-07. Run `sweep=test_retest&phase=check` after 1+ days. **Blocked on**: migration apply + cron deploy.
+- [ ] **Test-retest reliability** — Inter-rater DONE 2026-03-06 (n=278, cross-model, r=0.509, 72.3% classification agreement). `findings/2026-03-06-inter-rater-reliability.md`. Test-retest sweep implemented (migration 0069, `sweep=test_retest`). 50 stories dispatched 2026-03-07. Cron deployed. Run `sweep=test_retest&phase=check` after re-evals complete.
 
 #### HRCB Decomposition Decision
 

@@ -36,7 +36,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     supports_json_mode: false,
     prompt_mode: 'full',
   },
-  // --- Active free OpenRouter models ---
+  // --- Disabled free OpenRouter models (externally blocked / broken) ---
   {
     id: 'gpt-oss-120b',
     display_name: 'GPT-OSS 120B',
@@ -44,7 +44,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'openai/gpt-oss-120b:free',
     is_free: true,
-    enabled: true,
+    enabled: false, // disabled: 404 "No endpoints found matching data policy"
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -57,7 +57,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'google/gemma-3-27b-it:free',
     is_free: true,
-    enabled: true,
+    enabled: false, // disabled: chronic 429s → circuit breaker
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
@@ -70,13 +70,12 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'openrouter',
     api_model_id: 'qwen/qwen3-coder:free',
     is_free: true,
-    enabled: true,
+    enabled: false, // disabled: chronic 429s → circuit breaker
     max_tokens: 8192,
     supports_cache_control: false,
     supports_json_mode: true,
     prompt_mode: 'lite',
   },
-  // --- Disabled free OpenRouter models (historical — broken/rate-limited) ---
   {
     id: 'deepseek-v3.2',
     display_name: 'DeepSeek V3.2',
@@ -188,7 +187,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
     is_free: true,
-    enabled: false, // superseded by llama-3.3-70b-wai-psq (lite-v2)
+    enabled: true, // re-enabled: HRCB lite consensus requires ≥2 models
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
@@ -202,7 +201,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-4-scout-17b-16e-instruct',
     is_free: true,
-    enabled: false, // superseded by llama-4-scout-wai-psq (lite-v2)
+    enabled: true, // re-enabled: HRCB lite consensus requires ≥2 models
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
