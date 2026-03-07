@@ -121,7 +121,14 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 - Run `npx astro build` from `site/` to confirm everything compiles
 - Report any warnings or errors — fix before proceeding
 
-### 9. Git commit
+### 9. Sync with remote
+
+- Run `git fetch origin main` to check for upstream changes
+- If behind: `git pull --rebase origin main` (stash local changes first if needed)
+- This prevents deploying from stale state when multiple machines commit to the same repo
+- If pull introduces conflicts, resolve before proceeding
+
+### 10. Git commit
 
 - Run `git status` and `git diff --stat` to review all staged and unstaged changes
 - Stage all relevant files (prefer naming specific files over `git add -A`; never stage secrets like `.env`, `.cron-secret`, credentials)
@@ -129,7 +136,7 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 - Commit using the standard Co-Authored-By trailer
 - Run `git status` after to verify clean working tree
 
-### 10. Deploy
+### 11. Deploy
 
 - Deploy the site: `cd site && npx wrangler pages deploy dist --project-name hn-hrcb`
 - If worker files changed (functions/*.ts), deploy the affected workers too:
@@ -141,20 +148,20 @@ Memory uses a **index + topic files** structure. MEMORY.md stays under 60 lines 
 - If new migrations were added, apply them first: `npx wrangler d1 migrations apply hrcb-db --remote`
 - Report the deployment URL
 
-### 11. Cleanup
+### 12. Cleanup
 
 - Remove any scratch/temp files created during development (e.g., `*.tmp`, `*.bak`, test outputs)
 - Check for any `console.log` or debug statements that should be removed from production code
 - Verify `.gitignore` covers any new generated directories (e.g., `.astro/`, `dist/`)
 - If new untracked files remain after commit, flag them — they may be intentionally untracked or accidentally missed
 
-### 12. Summary
+### 13. Summary
 
 Report what was updated, what was committed, what was deployed, and what was skipped (with reason).
 
 Include one line: **Next:** [the current focus item from TODO.md]. This makes the session handoff explicit.
 
-### 12.5. Detect cogarch wins
+### 13.5. Detect cogarch wins
 
 - Run `node scripts/detect-cogarch-win.mjs` from repo root
 - Reports win + scaffold path, or "no win detected this session"

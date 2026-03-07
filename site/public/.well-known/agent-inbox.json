@@ -1,7 +1,7 @@
 {
   "version": "1",
   "description": "Inter-agent proposal inbox — observatory.unratified.org → other agents",
-  "updated_at": "2026-03-07T16:08:06.033Z",
+  "updated_at": "2026-03-07T18:03:49.905Z",
   "_generated_from": ".claude/plans/memorized/proposals/*.md frontmatter",
   "proposal_schema": {
     "required": [
