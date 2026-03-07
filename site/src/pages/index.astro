@@ -30,11 +30,13 @@ let stakeholderData: Awaited<ReturnType<typeof getStakeholderOverview>> | null =
 let regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null = null;
 let domainFingerprints: Map<string, (number | null)[]>;
 let psqAggregates: PsqAggregates | null = null;
+let rightsBalance: { positive: number; neutral: number; negative: number } | null = null;
 
 if (blob) {
   ({ articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories,
      signalOverview, stakeholderData, regionData } = blob);
   psqAggregates = blob.psqAggregates ?? null;
+  rightsBalance = blob.rightsBalance ?? null;
   domainFingerprints = new Map(Object.entries(blob.domainFingerprintsRaw));
 } else {
   [articleStats, sparklinesRaw, statusCounts, dailyHrcb, topDomains, propagandaStories] = await Promise.all([
@@ -223,6 +225,15 @@ const groupColors: Record<string, string> = {
           <span class="score-font" style="color: var(--fg-primary); font-weight: bold;">{totalEvaluated.toLocaleString()}</span>
           <span style="color: var(--fg-secondary);"> stories evaluated</span>
         </a>
+        {rightsBalance && (totalEvaluated > 0) && (
+          <a href="/stories" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
+            <span class="score-font" style="color: var(--color-positive); font-weight: bold;">{Math.round(rightsBalance.positive / totalEvaluated * 100)}%</span>
+            <span style="color: var(--fg-secondary);"> positive</span>
+            <span style="color: var(--fg-secondary);"> · </span>
+            <span class="score-font" style="color: var(--color-negative-light); font-weight: bold;">{Math.round(rightsBalance.negative / totalEvaluated * 100)}%</span>
+            <span style="color: var(--fg-secondary);"> negative</span>
+          </a>
+        )}
         {avgTdScore !== null && (
           <a href="/signals" style="background: var(--bg-surface); border-radius: 3px; padding: 2px 8px; text-decoration: none;">
             <span style="color: var(--color-positive);">Transparency</span>

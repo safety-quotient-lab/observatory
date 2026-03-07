@@ -1825,6 +1825,7 @@ export interface HomepageBlob {
   regionData: Awaited<ReturnType<typeof getRegionDistribution>> | null;
   domainFingerprintsRaw: Record<string, (number | null)[]>;
   psqAggregates: PsqAggregates | null;
+  rightsBalance: { positive: number; neutral: number; negative: number } | null;
   computedAt: string;
 }
 
@@ -1893,6 +1894,24 @@ export async function computeHomepageBlob(db: D1Database): Promise<HomepageBlob>
     }
   } catch { /* non-fatal */ }
 
+  // Rights balance — what fraction of evaluated stories are positive/neutral/negative?
+  let rightsBalance: HomepageBlob['rightsBalance'] = null;
+  try {
+    const bal = await db
+      .prepare(
+        `SELECT
+           SUM(CASE WHEN COALESCE(hcb_weighted_mean, hcb_editorial_mean) > 0.05 THEN 1 ELSE 0 END) as positive,
+           SUM(CASE WHEN ABS(COALESCE(hcb_weighted_mean, hcb_editorial_mean)) <= 0.05 THEN 1 ELSE 0 END) as neutral,
+           SUM(CASE WHEN COALESCE(hcb_weighted_mean, hcb_editorial_mean) < -0.05 THEN 1 ELSE 0 END) as negative
+         FROM stories
+         WHERE eval_status = 'done'
+           AND COALESCE(hcb_weighted_mean, hcb_editorial_mean) IS NOT NULL
+           AND hn_id > 0`
+      )
+      .first<{ positive: number; neutral: number; negative: number }>();
+    if (bal) rightsBalance = bal;
+  } catch { /* non-fatal */ }
+
   return {
     articleStats,
     sparklinesRaw,
@@ -1905,6 +1924,7 @@ export async function computeHomepageBlob(db: D1Database): Promise<HomepageBlob>
     regionData,
     domainFingerprintsRaw: Object.fromEntries(fpMap),
     psqAggregates,
+    rightsBalance,
     computedAt: new Date().toISOString(),
   };
 }

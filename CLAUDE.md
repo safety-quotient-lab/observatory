@@ -42,7 +42,7 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 **Workers:**
 - `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`. Dispatches sweeps via `SWEEP_HANDLERS` map in `sweeps.ts`.
-- `site/functions/sweeps.ts` — 19 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores/UpgradeLite/BrowserAudit/KagiScoreAudit/KagiUrlCheck/KagiDomainEnrich/KagiCalibrationOracle`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`.
+- `site/functions/sweeps.ts` — 20 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores/UpgradeLite/BrowserAudit/KagiScoreAudit/KagiUrlCheck/KagiDomainEnrich/KagiCalibrationOracle/BackfillCountry`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`. Kagi sweeps have KV-backed rate limit backoff (`kagi:backoff` key, 30-min TTL).
 - `site/functions/consumer-shared.ts` — Shared types, content prep, result writing. Uses `isFirstFullEval` for first-eval housekeeping (R2 snapshot, content hash, DCP cache, archive).
 - `site/functions/consumer-anthropic.ts` — Anthropic queue handler. Prompt caching, proactive rate limit tracking, 429/529/credit handling, truncation retry.
 - `site/functions/consumer-openrouter.ts` — OpenRouter queue handler (8 model queues). Lite + full prompt modes.
@@ -156,6 +156,10 @@ curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut
 # Sweep: Kagi calibration oracle — validate all 15 calibration URLs via FastGPT
 curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=kagi_calibration_oracle"
+
+# Sweep: backfill source_country from domain TLD heuristics (default limit 500, max 5000)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=backfill_country&limit=5000"
 
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health

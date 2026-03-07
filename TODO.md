@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment + Wolfram CIs done. Lite reeval analysis complete (2026-03-06) — lazy-neutral resolved, legacy data epoched. Kagi API integrated (2026-03-06) — 4 sweep handlers (score audit, URL check, domain enrich, calibration oracle). Blog posts next.
+**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment + Wolfram CIs done. Lite reeval analysis complete (2026-03-06) — lazy-neutral resolved, legacy data epoched. Kagi API integrated (2026-03-06) — 4 sweep handlers with KV-backed rate limit backoff. Source column added (migration 0066) — multi-source future-proofing. Rights balance pill on homepage. TLD country backfill sweep ready (`sweep=backfill_country`). Blog posts next.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
@@ -25,7 +25,6 @@ All 5 items done: construct validity audit (37/37), geo reference (22 countries)
 
 ### Architecture (evaluate later)
 
-- [ ] **Federal Register API integration** — ingest G7 tech-regulatory filings as a new story source beyond HN. The US Federal Register API (`federalregister.gov/api/v1/documents.json`) is public JSON, no auth required. Filter by agency (FTC, Commerce Dept) and keywords (privacy, surveillance, biometric, AI). Pairs with UDHR audit: filings that reduce rights protections trigger high SETL. EU DSA Transparency DB is researcher-gated but public Statements of Reason are scrapeable. Tier 2 (mission-aligned infrastructure). Gemini exchange (2026-03-04) confirmed feasibility. Significant scope — requires new content type, ingestion worker, and adapted eval prompt.
 - [ ] **HN comments passthrough (no DB storage)** — evaluate whether comments can be served via passthrough from the HN Firebase API rather than stored in D1. The HN API exposes comment trees per item in real-time; a passthrough endpoint (`/api/story/[id]/comments` → HN Firebase) would eliminate comment storage entirely and keep data always-fresh. Trade-offs: latency on each request, no offline access, no ability to annotate/score comments, rate limit exposure. Worth evaluating after launch — depends on whether comment scoring becomes a feature goal.
 
 ### Standards (M effort — deferred)

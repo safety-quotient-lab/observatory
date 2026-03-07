@@ -38,6 +38,7 @@ import {
   sweepLiteReeval, sweepRefreshConsensusScores, sweepUpgradeLite,
   sweepBrowserAudit,
   sweepKagiScoreAudit, sweepKagiUrlCheck, sweepKagiDomainEnrich, sweepKagiCalibrationOracle,
+  sweepBackfillCountry,
   type SweepContext,
 } from './sweeps';
 
@@ -709,6 +710,7 @@ export default {
         kagi_url_check: sweepKagiUrlCheck,
         kagi_domain_enrich: sweepKagiDomainEnrich,
         kagi_calibration_oracle: sweepKagiCalibrationOracle,
+        backfill_country: sweepBackfillCountry,
       };
 
       const handler = SWEEP_HANDLERS[sweep];

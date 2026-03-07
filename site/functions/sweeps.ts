@@ -764,12 +764,33 @@ interface KagiEnrichResponse {
   meta?: { id: string; node: string; ms: number };
 }
 
+const KAGI_BACKOFF_KEY = 'kagi:backoff';
+
+async function checkKagiBackoff(env: Env): Promise<string | null> {
+  const until = await env.CONTENT_CACHE.get(KAGI_BACKOFF_KEY);
+  if (until && new Date(until) > new Date()) return until;
+  return null;
+}
+
+async function setKagiBackoff(env: Env, minutes: number): Promise<void> {
+  const until = new Date(Date.now() + minutes * 60_000).toISOString();
+  await env.CONTENT_CACHE.put(KAGI_BACKOFF_KEY, until, { expirationTtl: minutes * 60 });
+}
+
+class KagiRateLimitError extends Error {
+  constructor(endpoint: string, status: number) {
+    super(`Kagi ${endpoint} rate limited (${status})`);
+    this.name = 'KagiRateLimitError';
+  }
+}
+
 async function kagiFastGPT(apiKey: string, query: string): Promise<KagiFastGPTResponse> {
   const res = await fetch('https://kagi.com/api/v0/fastgpt', {
     method: 'POST',
     headers: { 'Authorization': `Bot ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ query }),
   });
+  if (res.status === 429) throw new KagiRateLimitError('FastGPT', res.status);
   if (!res.ok) throw new Error(`Kagi FastGPT ${res.status}: ${await res.text()}`);
   return res.json() as Promise<KagiFastGPTResponse>;
 }
@@ -778,6 +799,7 @@ async function kagiSummarize(apiKey: string, url: string): Promise<KagiSummarize
   const res = await fetch(`https://kagi.com/api/v0/summarize?url=${encodeURIComponent(url)}`, {
     headers: { 'Authorization': `Bot ${apiKey}` },
   });
+  if (res.status === 429) throw new KagiRateLimitError('Summarizer', res.status);
   if (!res.ok) throw new Error(`Kagi Summarizer ${res.status}: ${await res.text()}`);
   return res.json() as Promise<KagiSummarizerResponse>;
 }
@@ -786,6 +808,7 @@ async function kagiEnrichNews(apiKey: string, query: string): Promise<KagiEnrich
   const res = await fetch(`https://kagi.com/api/v0/enrich/news?q=${encodeURIComponent(query)}`, {
     headers: { 'Authorization': `Bot ${apiKey}` },
   });
+  if (res.status === 429) throw new KagiRateLimitError('Enrich', res.status);
   if (!res.ok) throw new Error(`Kagi Enrich ${res.status}: ${await res.text()}`);
   return res.json() as Promise<KagiEnrichResponse>;
 }
@@ -822,6 +845,8 @@ function classifyDivergence(ourScore: number, kagiDir: DirectionalAssessment): '
 export async function sweepKagiScoreAudit({ db, env, url }: SweepContext): Promise<Response> {
   const apiKey = env.KAGI_API_KEY;
   if (!apiKey) return json({ error: 'KAGI_API_KEY not configured' }, 500);
+  const backoffUntil = await checkKagiBackoff(env);
+  if (backoffUntil) return json({ sweep: 'kagi_score_audit', skipped: true, backoff_until: backoffUntil, description: 'Kagi API in backoff period' });
 
   const limit = parseLimit(url, 10, 50);
 
@@ -865,6 +890,11 @@ export async function sweepKagiScoreAudit({ db, env, url }: SweepContext): Promi
         details: { audit_type: 'score_audit', our_score: story.hcb_weighted_mean, kagi_direction: kagiDir, divergence, kagi_output: resp.data.output.slice(0, 500), tokens: resp.data.tokens },
       });
     } catch (err) {
+      if (err instanceof KagiRateLimitError) {
+        await setKagiBackoff(env, 30);
+        await logEvent(db, { event_type: 'kagi_audit', severity: 'warn', message: 'Kagi rate limited — backoff 30min', details: { audit_type: 'score_audit', backoff_minutes: 30 } });
+        break;
+      }
       console.error(`[kagi_score_audit] Error for hn_id=${story.hn_id}:`, err);
     }
   }
@@ -881,6 +911,8 @@ export async function sweepKagiScoreAudit({ db, env, url }: SweepContext): Promi
 export async function sweepKagiUrlCheck({ db, env, url }: SweepContext): Promise<Response> {
   const apiKey = env.KAGI_API_KEY;
   if (!apiKey) return json({ error: 'KAGI_API_KEY not configured' }, 500);
+  const backoffUntil = await checkKagiBackoff(env);
+  if (backoffUntil) return json({ sweep: 'kagi_url_check', skipped: true, backoff_until: backoffUntil, description: 'Kagi API in backoff period' });
 
   const limit = parseLimit(url, 20, 100);
 
@@ -932,6 +964,11 @@ export async function sweepKagiUrlCheck({ db, env, url }: SweepContext): Promise
         details: { audit_type: 'url_check', url: story.url, status, summary_length: outputLen, tokens: resp.data.tokens },
       });
     } catch (err) {
+      if (err instanceof KagiRateLimitError) {
+        await setKagiBackoff(env, 30);
+        await logEvent(db, { event_type: 'kagi_audit', severity: 'warn', message: 'Kagi rate limited — backoff 30min', details: { audit_type: 'url_check', backoff_minutes: 30 } });
+        break;
+      }
       results.push({ hn_id: story.hn_id, url: story.url, status: 'error', detail: String(err) });
     }
   }
@@ -948,6 +985,8 @@ export async function sweepKagiUrlCheck({ db, env, url }: SweepContext): Promise
 export async function sweepKagiDomainEnrich({ db, env, ctx, url }: SweepContext): Promise<Response> {
   const apiKey = env.KAGI_API_KEY;
   if (!apiKey) return json({ error: 'KAGI_API_KEY not configured' }, 500);
+  const backoffUntil = await checkKagiBackoff(env);
+  if (backoffUntil) return json({ sweep: 'kagi_domain_enrich', skipped: true, backoff_until: backoffUntil, description: 'Kagi API in backoff period' });
 
   const limit = parseLimit(url, 10, 50);
 
@@ -1006,6 +1045,11 @@ export async function sweepKagiDomainEnrich({ db, env, ctx, url }: SweepContext)
           details: { audit_type: 'domain_enrich', domain, article_count: articles.length },
         });
       } catch (err) {
+        if (err instanceof KagiRateLimitError) {
+          await setKagiBackoff(env, 30);
+          await logEvent(db, { event_type: 'kagi_audit', severity: 'warn', message: 'Kagi rate limited — backoff 30min', details: { audit_type: 'domain_enrich', backoff_minutes: 30 } });
+          break;
+        }
         console.error(`[kagi_domain_enrich] Error for ${domain}:`, err);
       }
     }
@@ -1017,9 +1061,11 @@ export async function sweepKagiDomainEnrich({ db, env, ctx, url }: SweepContext)
 // ─── Sweep: kagi_calibration_oracle ──────────────────────────────────────────
 
 /** Validate calibration set against Kagi FastGPT UDHR assessment. */
-export async function sweepKagiCalibrationOracle({ db, env }: SweepContext): Promise<Response> {
+export async function sweepKagiCalibrationOracle({ db, env, url }: SweepContext): Promise<Response> {
   const apiKey = env.KAGI_API_KEY;
   if (!apiKey) return json({ error: 'KAGI_API_KEY not configured' }, 500);
+  const backoffUntil = await checkKagiBackoff(env);
+  if (backoffUntil) return json({ sweep: 'kagi_calibration_oracle', skipped: true, backoff_until: backoffUntil, description: 'Kagi API in backoff period' });
 
   const results: {
     slot: string; label: string; expectedClass: string;
@@ -1047,6 +1093,11 @@ export async function sweepKagiCalibrationOracle({ db, env }: SweepContext): Pro
         kagi_dir: kagiDir, kagi_numeric: kagiNum, class_match: classMatch,
       });
     } catch (err) {
+      if (err instanceof KagiRateLimitError) {
+        await setKagiBackoff(env, 30);
+        await logEvent(db, { event_type: 'kagi_audit', severity: 'warn', message: 'Kagi rate limited — backoff 30min', details: { audit_type: 'calibration_oracle', backoff_minutes: 30 } });
+        break;
+      }
       console.error(`[kagi_calibration_oracle] Error for ${cal.slot}:`, err);
     }
   }
@@ -1067,5 +1118,99 @@ export async function sweepKagiCalibrationOracle({ db, env }: SweepContext): Pro
     accuracy: total > 0 ? +(matched / total).toFixed(3) : null,
     results,
     description: `Calibration oracle: ${matched}/${total} class matches (${total > 0 ? ((matched / total) * 100).toFixed(1) : 0}%)`,
+  });
+}
+
+// ─── Sweep: backfill_country ────────────────────────────────────────────────
+
+/** Backfill source_country from domain TLD heuristics. */
+export async function sweepBackfillCountry({ db, url }: SweepContext): Promise<Response> {
+  const limit = parseLimit(url, 500, 5000);
+
+  // ccTLD → country name mapping (ISO 3166-1 common TLDs)
+  const TLD_COUNTRY: Record<string, string> = {
+    'co.uk': 'United Kingdom', 'org.uk': 'United Kingdom', 'ac.uk': 'United Kingdom',
+    'com.au': 'Australia', 'org.au': 'Australia',
+    'co.nz': 'New Zealand',
+    'co.jp': 'Japan', 'or.jp': 'Japan',
+    'co.kr': 'South Korea',
+    'co.in': 'India', 'org.in': 'India',
+    'co.za': 'South Africa',
+    'com.br': 'Brazil',
+    'com.mx': 'Mexico',
+    'co.il': 'Israel',
+    uk: 'United Kingdom', de: 'Germany', fr: 'France', it: 'Italy', es: 'Spain',
+    nl: 'Netherlands', be: 'Belgium', at: 'Austria', ch: 'Switzerland',
+    se: 'Sweden', no: 'Norway', dk: 'Denmark', fi: 'Finland', ie: 'Ireland',
+    pt: 'Portugal', pl: 'Poland', cz: 'Czechia', ro: 'Romania', hu: 'Hungary',
+    gr: 'Greece', bg: 'Bulgaria', hr: 'Croatia', sk: 'Slovakia', si: 'Slovenia',
+    lt: 'Lithuania', lv: 'Latvia', ee: 'Estonia',
+    ru: 'Russia', ua: 'Ukraine', by: 'Belarus',
+    jp: 'Japan', kr: 'South Korea', cn: 'China', tw: 'Taiwan', hk: 'Hong Kong',
+    sg: 'Singapore', my: 'Malaysia', ph: 'Philippines', th: 'Thailand', vn: 'Vietnam',
+    id: 'Indonesia', in: 'India', pk: 'Pakistan', bd: 'Bangladesh', lk: 'Sri Lanka',
+    au: 'Australia', nz: 'New Zealand',
+    ca: 'Canada', mx: 'Mexico', br: 'Brazil', ar: 'Argentina', cl: 'Chile', co: 'Colombia',
+    za: 'South Africa', ng: 'Nigeria', ke: 'Kenya', gh: 'Ghana', tz: 'Tanzania',
+    eg: 'Egypt', ma: 'Morocco', tn: 'Tunisia',
+    il: 'Israel', ae: 'United Arab Emirates', sa: 'Saudi Arabia', qa: 'Qatar',
+    tr: 'Turkey', ir: 'Iran',
+  };
+
+  function countryFromDomain(domain: string): string | null {
+    const parts = domain.toLowerCase().split('.');
+    if (parts.length < 2) return null;
+    // Try compound TLD first (co.uk, com.au, etc.)
+    if (parts.length >= 3) {
+      const compound = parts.slice(-2).join('.');
+      if (TLD_COUNTRY[compound]) return TLD_COUNTRY[compound];
+    }
+    // Try single TLD
+    const tld = parts[parts.length - 1];
+    return TLD_COUNTRY[tld] || null;
+  }
+
+  // Get stories with domains but no source_country
+  const { results: stories } = await db
+    .prepare(
+      `SELECT hn_id, domain FROM stories
+       WHERE domain IS NOT NULL
+         AND source_country IS NULL
+         AND hn_id > 0
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ hn_id: number; domain: string }>();
+
+  if (stories.length === 0) return json({ sweep: 'backfill_country', updated: 0, description: 'No stories need country backfill' });
+
+  let updated = 0;
+  const countryCounts: Record<string, number> = {};
+  const batch: D1PreparedStatement[] = [];
+
+  for (const story of stories) {
+    const country = countryFromDomain(story.domain);
+    if (country) {
+      batch.push(
+        db.prepare(`UPDATE stories SET source_country = ? WHERE hn_id = ?`).bind(country, story.hn_id)
+      );
+      countryCounts[country] = (countryCounts[country] || 0) + 1;
+      updated++;
+    }
+  }
+
+  if (batch.length > 0) {
+    await safeBatch(db, batch);
+  }
+
+  const topCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  return json({
+    sweep: 'backfill_country',
+    scanned: stories.length,
+    updated,
+    skipped: stories.length - updated,
+    top_countries: topCountries,
+    description: `Backfilled ${updated}/${stories.length} stories with TLD-derived country. Top: ${topCountries.slice(0, 5).map(([c, n]) => `${c}(${n})`).join(', ')}`,
   });
 }
