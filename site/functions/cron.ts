@@ -42,6 +42,7 @@ import {
   sweepBackfillRs,
   sweepBackfillAc,
   sweepBackfillCar,
+  sweepTestRetest,
   type SweepContext,
 } from './sweeps';
 
@@ -66,6 +67,7 @@ export interface Env {
   CRON_SECRET?: string;
   DAILY_EVAL_BUDGET?: string;
   KAGI_API_KEY?: string;
+  AP_PUBLISH_TOKEN?: string;
 }
 
 // --- Main cron handler ---
@@ -645,6 +647,55 @@ export default {
       }
     }
 
+    // ─── ActivityPub publish (post newly evaluated stories to Fediverse) ───
+
+    if (env.AP_PUBLISH_TOKEN && minute % 5 === 2) {
+      try {
+        const recentEvals = await db.prepare(
+          `SELECT hn_id, title, url, COALESCE(hcb_weighted_mean, hcb_editorial_mean) as score,
+                  hcb_classification, eval_model
+           FROM stories
+           WHERE eval_status = 'done' AND hn_id > 0
+             AND evaluated_at > datetime('now', '-6 minutes')
+           ORDER BY evaluated_at DESC LIMIT 10`
+        ).all<{ hn_id: number; title: string; url: string | null; score: number | null; hcb_classification: string | null; eval_model: string | null }>();
+
+        let published = 0;
+        for (const story of recentEvals.results) {
+          const score = story.score != null ? (story.score > 0 ? '+' : '') + story.score.toFixed(2) : '?';
+          const classification = story.hcb_classification ?? 'pending';
+          const storyUrl = `https://observatory.unratified.org/item/${story.hn_id}`;
+          const summary = `HRCB ${score} (${classification}) — ${story.title}`;
+
+          const resp = await fetch('https://unratified.org/ap/publish', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${env.AP_PUBLISH_TOKEN}`,
+            },
+            body: JSON.stringify({
+              actor: 'observatory',
+              post: {
+                id: `observatory-eval-${story.hn_id}`,
+                title: story.title,
+                summary,
+                url: storyUrl,
+                published: new Date().toISOString(),
+                tags: ['hrcb', 'humanrights', classification].filter(Boolean),
+              },
+            }),
+          });
+
+          if (resp.ok) published++;
+          else console.warn(`[ap] Publish failed for ${story.hn_id}: ${resp.status}`);
+        }
+
+        if (published > 0) console.log(`[ap] Published ${published}/${recentEvals.results.length} stories to Fediverse`);
+      } catch (err) {
+        console.warn('[ap] ActivityPub publish failed (non-fatal):', err);
+      }
+    }
+
     // ─── Log cron run event ───
 
     await logEvent(db, {
@@ -717,6 +768,7 @@ export default {
         backfill_rs: sweepBackfillRs,
         backfill_ac: sweepBackfillAc,
         backfill_car: sweepBackfillCar,
+        test_retest: sweepTestRetest,
       };
 
       const handler = SWEEP_HANDLERS[sweep];

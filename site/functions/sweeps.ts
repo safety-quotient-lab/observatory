@@ -1402,3 +1402,151 @@ export async function sweepBackfillCar({ db }: SweepContext): Promise<Response> 
     description: `Computed CAR for ${audits.length} domains from browser audit data`,
   });
 }
+
+// ─── Sweep: test_retest ────────────────────────────────────────────────────
+
+/**
+ * Phase 1 (dispatch): Find stories with full evals >= min_days old, store
+ * original scores in test_retest_pairs, delete old rater data, re-enqueue.
+ * Phase 2 (check): Fill in retest scores from completed re-evaluations.
+ *
+ * Usage:
+ *   sweep=test_retest              — dispatch new re-evaluations (default)
+ *   sweep=test_retest&phase=check  — collect completed re-eval scores
+ *   sweep=test_retest&min_days=14  — minimum age gap (default 14)
+ */
+export async function sweepTestRetest({ db, env, url }: SweepContext): Promise<Response> {
+  const phase = url.searchParams.get('phase') || 'dispatch';
+  const limit = parseLimit(url, 50, 100);
+  const minDays = parseInt(url.searchParams.get('min_days') || '14', 10) || 14;
+
+  if (phase === 'check') {
+    // Phase 2: collect completed re-evaluations
+    const pending = await db.prepare(
+      `SELECT trp.id, trp.hn_id, trp.eval_model,
+              re.hcb_weighted_mean as retest_score,
+              re.hcb_editorial_mean as retest_editorial,
+              re.hcb_structural_mean as retest_structural,
+              re.hcb_setl as retest_setl,
+              re.evaluated_at as retest_evaluated_at
+       FROM test_retest_pairs trp
+       INNER JOIN rater_evals re ON re.hn_id = trp.hn_id AND re.eval_model = trp.eval_model
+         AND re.eval_status = 'done' AND re.prompt_mode = 'full'
+       WHERE trp.status = 'pending'
+       LIMIT ?`
+    ).bind(limit).all<{
+      id: number; hn_id: number; eval_model: string;
+      retest_score: number | null; retest_editorial: number | null;
+      retest_structural: number | null; retest_setl: number | null;
+      retest_evaluated_at: string | null;
+    }>();
+
+    const batch: D1PreparedStatement[] = [];
+    for (const row of pending.results) {
+      batch.push(db.prepare(
+        `UPDATE test_retest_pairs
+         SET retest_score = ?, retest_editorial = ?, retest_structural = ?,
+             retest_setl = ?, retest_evaluated_at = ?, status = 'done'
+         WHERE id = ?`
+      ).bind(
+        row.retest_score, row.retest_editorial, row.retest_structural,
+        row.retest_setl, row.retest_evaluated_at, row.id
+      ));
+    }
+    if (batch.length > 0) await safeBatch(db, batch);
+
+    // Compute summary stats if we have completed pairs
+    const stats = await db.prepare(
+      `SELECT COUNT(*) as n,
+              ROUND(AVG(ABS(original_score - retest_score)), 4) as mae,
+              ROUND(AVG((original_score - retest_score) * (original_score - retest_score)), 6) as mse
+       FROM test_retest_pairs WHERE status = 'done'`
+    ).first<{ n: number; mae: number | null; mse: number | null }>();
+
+    return json({
+      sweep: 'test_retest', phase: 'check',
+      collected: pending.results.length,
+      total_done: stats?.n ?? 0,
+      mae: stats?.mae,
+      rmse: stats?.mse != null ? Math.round(Math.sqrt(stats.mse) * 10000) / 10000 : null,
+      description: `Collected ${pending.results.length} re-eval results (${stats?.n ?? 0} total pairs done)`,
+    });
+  }
+
+  // Phase 1: dispatch re-evaluations
+  // Find stories with a full eval from the primary model, old enough for retest
+  const candidates = await db.prepare(
+    `SELECT re.hn_id, re.eval_model, re.eval_provider,
+            re.hcb_weighted_mean as score, re.hcb_editorial_mean as editorial,
+            re.hcb_structural_mean as structural, re.hcb_setl as setl,
+            re.evaluated_at
+     FROM rater_evals re
+     INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
+     LEFT JOIN test_retest_pairs trp ON trp.hn_id = re.hn_id AND trp.eval_model = re.eval_model
+     WHERE re.eval_status = 'done'
+       AND re.prompt_mode = 'full'
+       AND re.hn_id > 0
+       AND re.hcb_weighted_mean IS NOT NULL
+       AND re.evaluated_at < datetime('now', '-' || ? || ' days')
+       AND trp.id IS NULL
+     ORDER BY RANDOM()
+     LIMIT ?`
+  ).bind(minDays, limit).all<{
+    hn_id: number; eval_model: string; eval_provider: string;
+    score: number; editorial: number | null; structural: number | null;
+    setl: number | null; evaluated_at: string;
+  }>();
+
+  if (candidates.results.length === 0) {
+    return json({ sweep: 'test_retest', phase: 'dispatch', dispatched: 0,
+      description: `No eligible stories (need full eval >= ${minDays} days old, not already in test_retest_pairs)` });
+  }
+
+  // Store originals and delete old rater data
+  const insertBatch: D1PreparedStatement[] = [];
+  const deleteBatch: D1PreparedStatement[] = [];
+  const resetBatch: D1PreparedStatement[] = [];
+
+  for (const c of candidates.results) {
+    // Store original scores
+    insertBatch.push(db.prepare(
+      `INSERT OR IGNORE INTO test_retest_pairs
+       (hn_id, eval_model, original_score, original_editorial, original_structural,
+        original_setl, original_evaluated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).bind(c.hn_id, c.eval_model, c.score, c.editorial, c.structural, c.setl, c.evaluated_at));
+
+    // Delete old rater data so the UNIQUE constraint allows re-insert
+    deleteBatch.push(
+      db.prepare('DELETE FROM rater_scores WHERE hn_id = ? AND eval_model = ?').bind(c.hn_id, c.eval_model),
+      db.prepare('DELETE FROM rater_witness WHERE hn_id = ? AND eval_model = ?').bind(c.hn_id, c.eval_model),
+      db.prepare('DELETE FROM rater_evals WHERE hn_id = ? AND eval_model = ?').bind(c.hn_id, c.eval_model),
+    );
+
+    // Reset story to pending for re-evaluation
+    resetBatch.push(db.prepare(
+      `UPDATE stories SET eval_status = 'pending' WHERE hn_id = ? AND eval_status = 'done'`
+    ).bind(c.hn_id));
+  }
+
+  await safeBatch(db, insertBatch);
+  await safeBatch(db, deleteBatch);
+  await safeBatch(db, resetBatch);
+
+  // Trigger re-enqueue
+  await enqueueForEvaluation(db, env.EVAL_QUEUE, env.CONTENT_CACHE, undefined, env as unknown as Record<string, any>);
+
+  await logEvent(db, {
+    event_type: 'trigger',
+    severity: 'info',
+    message: `Sweep: dispatched ${candidates.results.length} test-retest re-evaluations (min_days=${minDays})`,
+    details: { sweep: 'test_retest', dispatched: candidates.results.length, min_days: minDays },
+  });
+
+  return json({
+    sweep: 'test_retest', phase: 'dispatch',
+    dispatched: candidates.results.length,
+    min_days: minDays,
+    description: `Stored originals and re-enqueued ${candidates.results.length} stories for same-model re-evaluation`,
+  });
+}

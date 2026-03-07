@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Construct validity sprint (2026-03-06).** RS, MCC, AC, CAR, HRCB decomposition all resolved. SO/SR redundancy resolved (NOT redundant — partial r=0.184 after controlling for HRCB; Phase A inflation was Spearman artifact on n=68). Inter-rater reliability quantified (r=0.509, 72.3% classification agreement, n=278 cross-model pairs). Test-retest formal deferred (no same-model pairs exist — requires dedicated sweep). Remaining: blog posts (API, accommodation-engine, cogarch, Claude Code as OS).
+**Blog posts + integration (2026-03-07).** Construct validity sprint complete. AP webhook added to cron.ts (posts evaluated stories to Fediverse via unratified.org/ap/publish — needs AP_PUBLISH_TOKEN secret). Test-retest sweep implemented (migration 0069 + sweepTestRetest). Methodology validation blog post published. Remaining: API blog post, accommodation-engine, cogarch, Claude Code as OS.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
@@ -32,7 +32,7 @@ All 5 items done: construct validity audit (37/37), geo reference (22 countries)
 - ~~**OpenAPI 3.x spec**~~ — ✓ DONE 2026-03-04. `/api/v1/openapi.json` — 15 endpoints (9 v1 incl. methodology + 4 v0 + badge), 6 schemas, OpenAPI 3.1.0, prerendered. Linked from `/data`.
 - [ ] **Write API blog post** — announce the public REST API at `observatory.unratified.org/api/v1/`. Angles: what data is available, example queries (top negative domains, rights-under-pressure feed, TQ by domain), use cases (researchers, journalists, feed aggregators, agent tool use). Include OpenAPI link once spec is live. Publish after OpenAPI is done. Personal note + author review before publishing.
 - ~~**WebSub**~~ — ✓ DONE 2026-03-04. `rel="hub"` in Atom XML + HTTP Link header, Superfeedr hub ping in cron.ts on stories_new > 0.
-- [ ] **ActivityPub** (W3C) — Fediverse federation as `@observatory@unratified.org`. Multi-actor AP server built by unratified-agent on unratified.org (spec sent: PR #9). Observatory adds ~20-line webhook to cron.ts posting to `/ap/publish`. **Blocked on:** unratified.org implementing AP server. Plan: `.claude/plans/activitypub-federation.md`.
+- [ ] **ActivityPub** (W3C) — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live (unratified-agent deployed WebFinger + Actor + Outbox). Webhook in cron.ts implemented (posts evaluated stories every 5 min). **Blocked on:** `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron` (get token from unratified-agent via secure channel). Plan: `.claude/plans/activitypub-federation.md`.
 
 ---
 
@@ -85,7 +85,7 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 - ~~**Convergent validity (CL → FK)**~~ — ✓ DONE 2026-03-04. ρ=-0.063 (FAIL). FK is wrong validator: FK=syntactic complexity, CL=domain expertise. Technical jargon is monosyllabic → lower FK. Better validator = human ratings or Wikipedia topic level. `findings/2026-03-04-et-cl-convergent-validity.md`.
 - ~~**Discriminant validity**~~ — ✓ DONE 2026-03-04. Pearson r=+0.08, R²=0.007 (0.7% shared variance). PASS. See `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`.
 - ~~**Known-groups expansion**~~ — ✓ DONE 2026-03-04. EP=0.348 > EN=0.205 > EC=0.137. Kruskal-Wallis H=23.4, p<0.0001. Strongest Phase 0 result. `findings/2026-03-04-known-groups-hrcb-editorial.md`.
-- [ ] **Test-retest reliability** — Inter-rater DONE 2026-03-06 (n=278, cross-model, r=0.509, 72.3% classification agreement). `findings/2026-03-06-inter-rater-reliability.md`. Test-retest (same-model) still needed: no same-model pairs exist — requires dedicated `test_retest` sweep (re-evaluate ~50 stories with same model after >=14d gap). Low priority — temporal instability not a primary concern.
+- [ ] **Test-retest reliability** — Inter-rater DONE 2026-03-06 (n=278, cross-model, r=0.509, 72.3% classification agreement). `findings/2026-03-06-inter-rater-reliability.md`. Test-retest sweep implemented (migration 0069, `sweep=test_retest`). Run: dispatch ~50, wait 1+ days for eval, then `sweep=test_retest&phase=check` to collect results. **Blocked on**: AP_PUBLISH_TOKEN + migration apply + cron deploy.
 
 #### HRCB Decomposition Decision
 
