@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Multi-model free pipeline live.** Math audit complete. Signals + sources pages redesigned (2026-03-05). GS enrichment + Wolfram CIs done. Lite reeval analysis complete (2026-03-06) — lazy-neutral resolved, legacy data epoched. Kagi API integrated (2026-03-06) — 4 sweep handlers with KV-backed rate limit backoff. Source column added (migration 0066) — multi-source future-proofing. Rights balance pill on homepage. TLD country backfill sweep ready (`sweep=backfill_country`). Blog posts next.
+**Construct validity sprint (2026-03-06).** Rights Salience (RS) implemented — three-factor validity gate for HRCB, backfilled 1,111 evals, low-salience badge on item page. HRCB decomposition resolved (keep as composite with RS gate). Model Consensus Construct validated (91% agreement on salient content). Accessibility Compliance (AC) + Consent Architecture Rating (CAR) formalized (migrations 0067-0068). Remaining: SO/SR redundancy test, test-retest formal (n≥50), blog posts.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
@@ -51,18 +51,13 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 
 - ~~**Transparency Quotient (TQ)**~~ — ✓ DONE 2026-03-04. lite-1.6 schema: 5 binary indicators (tq_author/date/sources/corrections/conflicts), tq_score=sum/5, structural proxy injection. Migration 0059. External validation: TQ → RDR (unblocked — see External Validation section).
 
-- [ ] **Accessibility Compliance (AC)** — reading level, jargon density, assumed knowledge, language availability
-  - We already collect `jargon_density` and `assumed_knowledge_level`
-  - External validation: WCAG conformance evaluation methodology
+- ~~**Accessibility Compliance (AC)**~~ — ✓ DONE 2026-03-06. **Reclassified as Layer 2** (LLM-generated, not objective). Composite from reading_level + jargon_density + assumed_knowledge (0-1 scale, higher=more accessible). Migration 0068. Backfilled 775 stories. Avg AC=0.58, good spread. External validation (WCAG, Flesch-Kincaid) deferred — would upgrade to Layer 1. Language availability not yet measured.
 
-- [ ] **Consent Architecture Rating (CAR)** — dark pattern count, cookie consent model, ToS readability, data collection scope
-  - External validation: EU DSA compliance, DPAF taxonomy (68 pattern types)
+- ~~**Consent Architecture Rating (CAR)**~~ — ✓ DONE 2026-03-06. **Layer 1** (genuinely objective). Composite from browser audit: security (HTTPS/HSTS/CSP) + tracking (inverse tracker count) + accessibility (lang attr/skip nav). Migration 0068. Backfilled 167 domains. Avg CAR=0.638. Domain-level, stored on `domain_browser_audit` + `domain_aggregates`. External validation deferred (EU DSA, DPAF taxonomy).
 
 #### Layer 2 — LLM-Holistic (single scores, minimal contamination)
 
-- [ ] **Rights Salience (RS)** — does this content engage with rights at all? Binary per-article, count of provisions touched
-  - Gates HRCB validity: high HRCB + zero RS = suspect score
-  - External validation: correlate with Semiotic Rights Density (Layer 1 text analysis)
+- ~~**Rights Salience (RS)**~~ — ✓ DONE 2026-03-06. Three-factor multiplicative score: breadth × depth × intensity (Layer 1, no LLM judgment). Migration 0067. Backfilled 1,111 full evals. Gate: RS < 0.03 → "low salience" badge on item page. Validated: high RS stories (≥0.15) avg |HRCB|=0.493 vs low RS (<0.05) avg |HRCB|=0.192. Anchoring contamination confirmed (full-coverage stories score lowest). `findings/2026-03-06-rights-salience-rs.md`.
 
 - [ ] **Normative Temperature (NT)** — how far from mainstream rights consensus is this content? Low = conventional, high = challenges norms
   - Reframes evaluator task from "judge" to "thermometer" — reduces bias
@@ -80,9 +75,7 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 
 - ~~**Rights Entanglement Map (REM)**~~ — ✓ DONE 2026-03-04. Single-linkage clustering on 496 provision-pair correlations. `computeRemClusters()` in `compute-aggregates.ts`. Section on `/rights/network`. All pairs positive (min r=+0.187 Art12×Art27). Privacy ↔ Expression co-vary positively — no tech-policy trade-off in this corpus.
 
-- [ ] **Model Consensus Construct (MCC)** — formalize agreement/disagreement patterns
-  - `getModelAgreement()` already computes pairwise Pearson r (`@internal`)
-  - Maps the validity boundary: where models agree = well-defined construct territory
+- ~~**Model Consensus Construct (MCC)**~~ — ✓ DONE 2026-03-06. Validity boundary = salience boundary. Haiku vs DeepSeek (n=264): 91% classification agreement on salient content (RS≥0.05) vs 63% on non-salient. Direction is well-defined; magnitude is model-dependent. RS gating resolves MCC — no additional construct needed. `getModelAgreement()` stays `@internal`. `findings/2026-03-06-model-consensus-construct.md`.
 
 #### External Validation (unblocked, highest priority)
 
@@ -96,9 +89,7 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 
 #### HRCB Decomposition Decision
 
-- [ ] **Decide: decompose HRCB into constituent constructs or keep as convenience composite**
-  - Depends on external validation results — if HRCB correlates with sentiment (r > 0.8), decomposition is urgent
-  - If HRCB passes convergent/discriminant checks, may keep as summary with caveats
+- ~~**Decide: decompose HRCB into constituent constructs or keep as convenience composite**~~ — ✓ RESOLVED 2026-03-06. Keep as convenience composite with RS validity gate. Evidence: HRCB ≠ sentiment (r=0.08), passes known-groups (H=23.4, p<0.0001), passes discriminant. RS gate addresses the epistemic debt: low-salience stories flagged rather than presented as if HRCB is meaningful. Remaining concern: SO/SR redundancy (ρ>0.58 with HRCB) — deferred to independence testing.
 
 ### Perspective 2 — Pedagogical Effectiveness
 

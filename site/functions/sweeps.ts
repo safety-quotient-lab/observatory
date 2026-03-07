@@ -21,6 +21,8 @@ import { refreshAllDomainAggregates, backfillPtScores, refreshAllUserAggregates,
 import { refreshArticlePairStats } from '../src/lib/db-analytics';
 import { getEnabledFreeModels } from '../src/lib/models';
 import { safeBatch, writeDb } from '../src/lib/db-utils';
+import { computeRightsSalience, computeAcScore, computeCarScore } from '../src/lib/compute-aggregates';
+import type { EvalScore } from '../src/lib/shared-eval';
 import { CALIBRATION_SET } from '../src/lib/calibration';
 import type { Env } from './cron';
 
@@ -1212,5 +1214,191 @@ export async function sweepBackfillCountry({ db, url }: SweepContext): Promise<R
     skipped: stories.length - updated,
     top_countries: topCountries,
     description: `Backfilled ${updated}/${stories.length} stories with TLD-derived country. Top: ${topCountries.slice(0, 5).map(([c, n]) => `${c}(${n})`).join(', ')}`,
+  });
+}
+
+// ─── Sweep: backfill_rs ─────────────────────────────────────────────────────
+
+/** Backfill Rights Salience (RS) from rater_scores for full evals missing rs_score. */
+export async function sweepBackfillRs({ db, url }: SweepContext): Promise<Response> {
+  const limit = parseLimit(url, 200, 2000);
+
+  // Find full-eval stories missing rs_score
+  const { results: stories } = await db
+    .prepare(
+      `SELECT DISTINCT re.hn_id, re.eval_model
+       FROM rater_evals re
+       WHERE re.eval_status = 'done'
+         AND re.prompt_mode = 'full'
+         AND re.rs_score IS NULL
+         AND re.hn_id > 0
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ hn_id: number; eval_model: string }>();
+
+  if (!stories || stories.length === 0) {
+    return json({ sweep: 'backfill_rs', scanned: 0, updated: 0, description: 'No full evals missing RS' });
+  }
+
+  let updated = 0;
+  const rsBatch: D1PreparedStatement[] = [];
+
+  for (const { hn_id, eval_model } of stories) {
+    // Fetch per-section scores for this rater eval
+    const { results: scores } = await db
+      .prepare(
+        `SELECT section, final, editorial, structural, evidence
+         FROM rater_scores
+         WHERE hn_id = ? AND eval_model = ?`
+      )
+      .bind(hn_id, eval_model)
+      .all<{ section: string; final: number | null; editorial: number | null; structural: number | null; evidence: string | null }>();
+
+    if (!scores || scores.length === 0) continue;
+
+    const evalScores: EvalScore[] = scores.map(s => ({
+      section: s.section,
+      final: s.final,
+      editorial: s.editorial,
+      structural: s.structural,
+      evidence: s.evidence,
+      directionality: [],
+      note: '',
+      editorial_note: '',
+      structural_note: '',
+      combined: null,
+      context_modifier: null,
+      witness_facts: [],
+      witness_inferences: [],
+    }));
+
+    const rs = computeRightsSalience(evalScores);
+
+    // Update rater_evals
+    rsBatch.push(
+      db.prepare(
+        `UPDATE rater_evals SET rs_score = ?, rs_breadth = ?, rs_depth = ?, rs_intensity = ?
+         WHERE hn_id = ? AND eval_model = ?`
+      ).bind(rs.rs_score, rs.rs_breadth, rs.rs_depth, rs.rs_intensity, hn_id, eval_model)
+    );
+
+    // Update stories (only if this is the story's primary eval_model)
+    rsBatch.push(
+      db.prepare(
+        `UPDATE stories SET rs_score = ?, rs_breadth = ?, rs_depth = ?, rs_intensity = ?
+         WHERE hn_id = ? AND eval_model = ? AND rs_score IS NULL`
+      ).bind(rs.rs_score, rs.rs_breadth, rs.rs_depth, rs.rs_intensity, hn_id, eval_model)
+    );
+
+    updated++;
+  }
+
+  if (rsBatch.length > 0) {
+    await safeBatch(db, rsBatch);
+  }
+
+  // Compute distribution summary for the response
+  const { results: dist } = await db
+    .prepare(
+      `SELECT
+         ROUND(AVG(rs_score), 4) as mean,
+         MIN(rs_score) as min,
+         MAX(rs_score) as max,
+         COUNT(*) as total,
+         SUM(CASE WHEN rs_score < 0.01 THEN 1 ELSE 0 END) as below_001,
+         SUM(CASE WHEN rs_score < 0.05 THEN 1 ELSE 0 END) as below_005,
+         SUM(CASE WHEN rs_score < 0.10 THEN 1 ELSE 0 END) as below_010
+       FROM rater_evals
+       WHERE rs_score IS NOT NULL AND prompt_mode = 'full' AND hn_id > 0`
+    )
+    .all();
+
+  return json({
+    sweep: 'backfill_rs',
+    scanned: stories.length,
+    updated,
+    distribution: dist?.[0] ?? null,
+    description: `Computed RS for ${updated} full evals from rater_scores`,
+  });
+}
+
+// ─── Sweep: backfill_ac ─────────────────────────────────────────────────────
+
+/** Backfill Accessibility Compliance (AC) from existing CL columns on stories. */
+export async function sweepBackfillAc({ db, url }: SweepContext): Promise<Response> {
+  const limit = parseLimit(url, 500, 5000);
+
+  const { results: stories } = await db
+    .prepare(
+      `SELECT hn_id, cl_reading_level, cl_jargon_density, cl_assumed_knowledge
+       FROM stories
+       WHERE eval_status = 'done' AND hn_id > 0
+         AND cl_reading_level IS NOT NULL
+         AND ac_score IS NULL
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all<{ hn_id: number; cl_reading_level: string; cl_jargon_density: string; cl_assumed_knowledge: string }>();
+
+  if (!stories || stories.length === 0) {
+    return json({ sweep: 'backfill_ac', scanned: 0, updated: 0, description: 'No stories missing AC score' });
+  }
+
+  const batch: D1PreparedStatement[] = [];
+  for (const s of stories) {
+    const ac = computeAcScore(s.cl_reading_level, s.cl_jargon_density, s.cl_assumed_knowledge);
+    if (ac != null) {
+      batch.push(
+        db.prepare('UPDATE stories SET ac_score = ? WHERE hn_id = ?').bind(ac, s.hn_id)
+      );
+    }
+  }
+
+  if (batch.length > 0) await safeBatch(db, batch);
+
+  return json({
+    sweep: 'backfill_ac',
+    scanned: stories.length,
+    updated: batch.length,
+    description: `Computed AC for ${batch.length} stories from CL columns`,
+  });
+}
+
+// ─── Sweep: backfill_car ────────────────────────────────────────────────────
+
+/** Backfill Consent Architecture Rating (CAR) from browser audit data. */
+export async function sweepBackfillCar({ db }: SweepContext): Promise<Response> {
+  const { results: audits } = await db
+    .prepare(
+      `SELECT domain, has_https, has_hsts, has_csp, tracker_count, has_lang_attr, has_skip_nav
+       FROM domain_browser_audit
+       WHERE audit_error IS NULL AND car_score IS NULL`
+    )
+    .all<{ domain: string; has_https: number | null; has_hsts: number | null; has_csp: number | null; tracker_count: number | null; has_lang_attr: number | null; has_skip_nav: number | null }>();
+
+  if (!audits || audits.length === 0) {
+    return json({ sweep: 'backfill_car', scanned: 0, updated: 0, description: 'No audits missing CAR score' });
+  }
+
+  const batch: D1PreparedStatement[] = [];
+  for (const a of audits) {
+    const car = computeCarScore(a);
+    batch.push(
+      db.prepare('UPDATE domain_browser_audit SET car_score = ? WHERE domain = ?').bind(car, a.domain)
+    );
+    // Also update domain_aggregates if row exists
+    batch.push(
+      db.prepare('UPDATE domain_aggregates SET car_score = ? WHERE domain = ?').bind(car, a.domain)
+    );
+  }
+
+  if (batch.length > 0) await safeBatch(db, batch);
+
+  return json({
+    sweep: 'backfill_car',
+    scanned: audits.length,
+    updated: audits.length,
+    description: `Computed CAR for ${audits.length} domains from browser audit data`,
   });
 }

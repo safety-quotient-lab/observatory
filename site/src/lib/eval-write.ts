@@ -5,7 +5,7 @@
  * Pure extraction from shared-eval.ts — no logic changes.
  */
 
-import { computeSetl, EVIDENCE_WEIGHTS_CONFIDENCE } from './compute-aggregates';
+import { computeSetl, computeRightsSalience, computeAcScore, EVIDENCE_WEIGHTS_CONFIDENCE } from './compute-aggregates';
 import { ALL_SECTIONS, type EvalResult, type LiteEvalResponse, type LiteEvalResponseV2 } from './eval-types';
 import { computeLiteAggregates, type LiteAggregates } from './eval-parse';
 import { PRIMARY_MODEL_ID } from './models';
@@ -88,6 +88,12 @@ export async function writeEvalResult(
   const td = result.transparency_disclosure;
   const rts = result.rights_tensions ?? null;
 
+  // Rights Salience
+  const rs = computeRightsSalience(result.scores);
+
+  // Accessibility Compliance
+  const acScore = computeAcScore(cl?.reading_level ?? null, cl?.jargon_density ?? null, cl?.assumed_knowledge ?? null);
+
   await db
     .prepare(
       `UPDATE stories SET
@@ -146,6 +152,11 @@ export async function writeEvalResult(
         td_conflicts_disclosed = ?,
         td_funding_disclosed = ?,
         rts_tensions_json = ?,
+        rs_score = ?,
+        rs_breadth = ?,
+        rs_depth = ?,
+        rs_intensity = ?,
+        ac_score = ?,
         eval_status = 'done',
         eval_error = NULL,
         evaluated_at = datetime('now')
@@ -216,6 +227,8 @@ export async function writeEvalResult(
       td?.conflicts_disclosed != null ? (td.conflicts_disclosed ? 1 : 0) : null,
       td?.funding_disclosed != null ? (td.funding_disclosed ? 1 : 0) : null,
       rts && rts.length > 0 ? JSON.stringify(rts) : null,
+      rs.rs_score, rs.rs_breadth, rs.rs_depth, rs.rs_intensity,
+      acScore,
       hnId
     )
     .run();
@@ -890,6 +903,9 @@ export async function writeRaterEvalResult(
   const td = result.transparency_disclosure;
   const rts = result.rights_tensions ?? null;
 
+  // Rights Salience
+  const rs = computeRightsSalience(result.scores);
+
   // UPSERT rater_evals
   await db
     .prepare(
@@ -905,6 +921,7 @@ export async function writeRaterEvalResult(
         hcb_editorial_mean, hcb_structural_mean, hcb_setl, hcb_confidence,
         eq_score, so_score, et_primary_tone, et_valence, et_arousal,
         sr_score, pt_flag_count, pt_score, rts_tension_count, td_score,
+        rs_score, rs_breadth, rs_depth, rs_intensity,
         input_tokens, output_tokens, content_truncation_pct,
         eval_batch_id, evaluated_at
       ) VALUES (
@@ -919,6 +936,7 @@ export async function writeRaterEvalResult(
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
+        ?, ?, ?, ?,
         ?, ?, ?,
         ?, datetime('now')
       )
@@ -958,6 +976,10 @@ export async function writeRaterEvalResult(
         pt_score = excluded.pt_score,
         rts_tension_count = excluded.rts_tension_count,
         td_score = excluded.td_score,
+        rs_score = excluded.rs_score,
+        rs_breadth = excluded.rs_breadth,
+        rs_depth = excluded.rs_depth,
+        rs_intensity = excluded.rs_intensity,
         input_tokens = excluded.input_tokens,
         output_tokens = excluded.output_tokens,
         content_truncation_pct = excluded.content_truncation_pct,
@@ -985,6 +1007,7 @@ export async function writeRaterEvalResult(
       computePtScore(pt),
       rts ? rts.length : null,
       td?.td_score ?? null,
+      rs.rs_score, rs.rs_breadth, rs.rs_depth, rs.rs_intensity,
       inputTokens, outputTokens, contentTruncationPct,
       batchId,
     )

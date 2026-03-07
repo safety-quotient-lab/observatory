@@ -324,6 +324,94 @@ export function computeFairWitnessAggregates(scores: EvalScore[]): FairWitnessAg
   };
 }
 
+// --- Accessibility Compliance (AC) ---
+// Layer 2 (LLM-generated). Composite from reading level, jargon density, assumed knowledge.
+// Higher = more accessible content. Scale [0, 1].
+
+const READING_LEVEL_SCORE: Record<string, number> = {
+  accessible: 1.0, moderate: 0.67, technical: 0.33, expert: 0.0,
+};
+const JARGON_SCORE: Record<string, number> = {
+  low: 1.0, medium: 0.5, high: 0.0,
+};
+const KNOWLEDGE_SCORE: Record<string, number> = {
+  none: 1.0, general: 0.75, domain_specific: 0.25, expert: 0.0,
+};
+
+export function computeAcScore(
+  readingLevel: string | null,
+  jargonDensity: string | null,
+  assumedKnowledge: string | null,
+): number | null {
+  if (readingLevel == null && jargonDensity == null && assumedKnowledge == null) return null;
+  const rl = READING_LEVEL_SCORE[readingLevel ?? ''] ?? 0.5;
+  const jd = JARGON_SCORE[jargonDensity ?? ''] ?? 0.5;
+  const ak = KNOWLEDGE_SCORE[assumedKnowledge ?? ''] ?? 0.5;
+  return round((rl + jd + ak) / 3);
+}
+
+// --- Consent Architecture Rating (CAR) ---
+// Layer 1 (objective, from browser audit). Composite from security, tracking, accessibility.
+// Higher = more respectful of user consent/rights. Scale [0, 1]. Domain-level.
+
+export function computeCarScore(audit: {
+  has_https: number | null;
+  has_hsts: number | null;
+  has_csp: number | null;
+  tracker_count: number | null;
+  has_lang_attr: number | null;
+  has_skip_nav: number | null;
+}): number {
+  // Security sub-score (0-1): HTTPS + HSTS + CSP
+  const security = ((audit.has_https ?? 0) + (audit.has_hsts ?? 0) + (audit.has_csp ?? 0)) / 3;
+
+  // Tracking sub-score (0-1): inverse of tracker count
+  const tc = audit.tracker_count ?? 0;
+  const tracking = tc === 0 ? 1.0 : tc <= 3 ? 0.7 : tc <= 10 ? 0.4 : 0.1;
+
+  // Accessibility sub-score (0-1): lang attr + skip nav
+  const accessibility = ((audit.has_lang_attr ?? 0) + (audit.has_skip_nav ?? 0)) / 2;
+
+  return round((security + tracking + accessibility) / 3);
+}
+
+// --- Rights Salience (RS) ---
+// Three-factor multiplicative score: breadth × depth × intensity
+// Breadth: fraction of UDHR articles touched (signal_sections / 31)
+// Depth: mean evidence weight of scored sections (H=1.0, M=0.7, L=0.4)
+// Intensity: mean |final| of scored sections (substantive engagement strength)
+// Multiplicative form: zero in any dimension → zero RS
+
+export interface RightsSalience {
+  rs_score: number;
+  rs_breadth: number;
+  rs_depth: number;
+  rs_intensity: number;
+}
+
+export function computeRightsSalience(scores: EvalScore[], totalSections = 31): RightsSalience {
+  const scored = scores.filter(s => s.final != null);
+  if (scored.length === 0) {
+    return { rs_score: 0, rs_breadth: 0, rs_depth: 0, rs_intensity: 0 };
+  }
+
+  const rs_breadth = round(scored.length / totalSections);
+
+  let evWeightSum = 0;
+  let absSum = 0;
+  for (const s of scored) {
+    const ev = s.evidence?.toUpperCase() ?? 'L';
+    evWeightSum += EVIDENCE_WEIGHTS_MEAN[ev] ?? 0.4;
+    absSum += Math.abs(s.final!);
+  }
+  const rs_depth = round(evWeightSum / scored.length);
+  const rs_intensity = round(absSum / scored.length);
+
+  const rs_score = round(rs_breadth * rs_depth * rs_intensity);
+
+  return { rs_score, rs_breadth, rs_depth, rs_intensity };
+}
+
 // --- Rights Entanglement Map (REM) ---
 
 export interface RemCluster {

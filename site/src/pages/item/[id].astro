@@ -285,6 +285,10 @@ const rightsWashing = isDone && aggSetl !== null && aggSetl >= 0.25
   && storyData.hcb_editorial_mean != null && storyData.hcb_structural_mean != null
   && storyData.hcb_editorial_mean > 0.1 && storyData.hcb_structural_mean < -0.1;
 
+// Rights Salience gate
+const rsScore = (storyData as any).rs_score as number | null;
+const lowSalience = isDone && rsScore != null && rsScore < 0.03;
+
 // comments, storyEvents, evalHistory, storyTimeline fetched in parallel above
 
 // Merge events and eval_history into a unified audit trail, sorted newest first
@@ -687,6 +691,15 @@ function timeAgo(unixTime: number): string {
             {interRaterAgreement} agreement ({interRaterCount} models)
           </span>
         )}
+        {lowSalience && (
+          <span
+            class="badge"
+            style="background: rgba(100,100,100,0.15); color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;"
+            title={`Low rights salience (RS: ${rsScore?.toFixed(3)}). Content has minimal engagement with UDHR provisions — HRCB score may reflect noise rather than genuine rights signal.`}
+          >
+            low salience
+          </span>
+        )}
         {rightsWashing && (
           <span
             class="badge"
@@ -896,6 +909,22 @@ function timeAgo(unixTime: number): string {
               {(storyData.hcb_nd_count ?? 0) > 0 && <span style={`color: ${evidenceColor(null)};`}>{storyData.hcb_nd_count} ND</span>}
             </div>
           </div>
+          {rsScore != null && (
+            <div style="margin-top: 8px;">
+              <div style="display: flex; align-items: center; gap: 5px;">
+                <span style="color: var(--fg-secondary); font-size: var(--font-xs);">Rights Salience</span>
+                <span class="score-font" style={`color: ${rsScore < 0.03 ? 'var(--fg-secondary)' : rsScore < 0.10 ? 'var(--color-warning)' : 'var(--color-positive)'}; font-size: var(--font-xs);`}>{(rsScore * 100).toFixed(1)}%</span>
+                <span style="color: var(--fg-secondary); font-size: var(--font-xs);"
+                  title={`Breadth: ${((storyData as any).rs_breadth * 100)?.toFixed(0)}% articles touched · Depth: ${((storyData as any).rs_depth * 100)?.toFixed(0)}% evidence quality · Intensity: ${((storyData as any).rs_intensity * 100)?.toFixed(0)}% score strength`}
+                >({((storyData as any).rs_breadth * 100)?.toFixed(0)}b × {((storyData as any).rs_depth * 100)?.toFixed(0)}d × {((storyData as any).rs_intensity * 100)?.toFixed(0)}i)</span>
+              </div>
+              {lowSalience && (
+                <div style="color: var(--fg-secondary); font-size: var(--font-xs); font-style: italic; margin-top: 2px;">
+                  Content has minimal engagement with UDHR provisions. Score may reflect noise.
+                </div>
+              )}
+            </div>
+          )}
         </div>
     </div>
     <div>
