@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Construct validity sprint (2026-03-06).** Rights Salience (RS) implemented — three-factor validity gate for HRCB, backfilled 1,111 evals, low-salience badge on item page. HRCB decomposition resolved (keep as composite with RS gate). Model Consensus Construct validated (91% agreement on salient content). Accessibility Compliance (AC) + Consent Architecture Rating (CAR) formalized (migrations 0067-0068). Remaining: SO/SR redundancy test, test-retest formal (n≥50), blog posts.
+**Construct validity sprint (2026-03-06).** RS, MCC, AC, CAR, HRCB decomposition all resolved. SO/SR redundancy resolved (NOT redundant — partial r=0.184 after controlling for HRCB; Phase A inflation was Spearman artifact on n=68). Inter-rater reliability quantified (r=0.509, 72.3% classification agreement, n=278 cross-model pairs). Test-retest formal deferred (no same-model pairs exist — requires dedicated sweep). Remaining: blog posts (API, accommodation-engine, cogarch, Claude Code as OS).
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
@@ -85,11 +85,11 @@ measurement model, (b) simultaneous-generation contamination (anchoring/halo),
 - ~~**Convergent validity (CL → FK)**~~ — ✓ DONE 2026-03-04. ρ=-0.063 (FAIL). FK is wrong validator: FK=syntactic complexity, CL=domain expertise. Technical jargon is monosyllabic → lower FK. Better validator = human ratings or Wikipedia topic level. `findings/2026-03-04-et-cl-convergent-validity.md`.
 - ~~**Discriminant validity**~~ — ✓ DONE 2026-03-04. Pearson r=+0.08, R²=0.007 (0.7% shared variance). PASS. See `findings/2026-03-04-discriminant-validity-hrcb-vs-sentiment.md`.
 - ~~**Known-groups expansion**~~ — ✓ DONE 2026-03-04. EP=0.348 > EN=0.205 > EC=0.137. Kruskal-Wallis H=23.4, p<0.0001. Strongest Phase 0 result. `findings/2026-03-04-known-groups-hrcb-editorial.md`.
-- [ ] **Test-retest reliability** — ✓ Preliminary DONE 2026-03-04 (n=11, hours apart, r=0.984). Formal test still needed: n≥50, 1+ week gap. See `findings/2026-03-04-test-retest-reliability-haiku-lite.md`. Low priority — temporal instability not a primary concern.
+- [ ] **Test-retest reliability** — Inter-rater DONE 2026-03-06 (n=278, cross-model, r=0.509, 72.3% classification agreement). `findings/2026-03-06-inter-rater-reliability.md`. Test-retest (same-model) still needed: no same-model pairs exist — requires dedicated `test_retest` sweep (re-evaluate ~50 stories with same model after >=14d gap). Low priority — temporal instability not a primary concern.
 
 #### HRCB Decomposition Decision
 
-- ~~**Decide: decompose HRCB into constituent constructs or keep as convenience composite**~~ — ✓ RESOLVED 2026-03-06. Keep as convenience composite with RS validity gate. Evidence: HRCB ≠ sentiment (r=0.08), passes known-groups (H=23.4, p<0.0001), passes discriminant. RS gate addresses the epistemic debt: low-salience stories flagged rather than presented as if HRCB is meaningful. Remaining concern: SO/SR redundancy (ρ>0.58 with HRCB) — deferred to independence testing.
+- ~~**Decide: decompose HRCB into constituent constructs or keep as convenience composite**~~ — ✓ RESOLVED 2026-03-06. Keep as convenience composite with RS validity gate. Evidence: HRCB ≠ sentiment (r=0.08), passes known-groups (H=23.4, p<0.0001), passes discriminant. RS gate addresses the epistemic debt: low-salience stories flagged rather than presented as if HRCB is meaningful. SO/SR redundancy RESOLVED — NOT redundant (story-level r=0.297/0.389, partial r(SO,SR|HRCB)=0.184). `findings/2026-03-06-so-sr-redundancy-resolution.md`.
 
 ### Perspective 2 — Pedagogical Effectiveness
 
