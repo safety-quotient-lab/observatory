@@ -9,25 +9,15 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Peer review sprint (2026-03-08).** All 5 findings from psychology-agent review processed: H1 (absence-as-negative) fixed, ES-R2 (DCP injection into lite) shipped, H4+ES-R1 already done, PSQ-R1 (1-decimal) done. Issues #44 (queue hygiene), #48 (PSQ first evals), #49 (consensus refresh) closed. Next: blog posts or remaining GitHub issues.
+**Clean board (2026-03-08).** All GH issues closed (28 total). Peer review findings implemented (H1, ES-R2, PSQ-R1). Epistemic sprint complete. H1 fix verified (0 extreme negatives, 4 repairs confirmed). Next: blog posts.
 
-Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
+Blog posts:
+- [ ] **Write API blog post** — announce public REST API
+- [ ] **Write accommodation-engine blog post** — MASSIVE work required
+- [ ] **Write cognitive architecture personal post** — first-person builder account
+- [ ] **Write Claude Code as OS blog post** — blocked on psychology-agent's cogarch analysis
 
-Epistemic queue: **all items closed** (test-retest, AP thresholds, ESC validation). See `findings/2026-03-07-*.md`.
-
-Blog posts (deferred — lower priority than epistemic quality):
-- [ ] **Write API blog post** — moved from Standards; announce public REST API
-- [ ] **Write accommodation-engine blog post** — MASSIVE work required. Defer until bandwidth exists.
-- [ ] **Write cognitive architecture personal post** — first-person builder account. After accommodation-engine or concurrent.
-- [ ] **Write Claude Code as OS blog post** — blocked on psychology-agent's cogarch analysis.
-
-### Architecture (evaluate later)
-
-- [ ] **HN comments passthrough (no DB storage)** — evaluate whether comments can be served via passthrough from the HN Firebase API rather than stored in D1. The HN API exposes comment trees per item in real-time; a passthrough endpoint (`/api/story/[id]/comments` → HN Firebase) would eliminate comment storage entirely and keep data always-fresh. Trade-offs: latency on each request, no offline access, no ability to annotate/score comments, rate limit exposure. Worth evaluating after launch — depends on whether comment scoring becomes a feature goal.
-
-### Standards
-
-- [x] ~~**ActivityPub** (W3C)~~ ✓ — live, KV dedup + burst limit. Removed from active backlog.
+Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email: `.claude/plans/memorized/newsguard-research-access-email.md`.
 
 ---
 
@@ -67,11 +57,7 @@ REM ✓ (single-linkage clustering, `/rights/network`). MCC ✓ (resolved by RS 
 
 Completed: convergent validity TQ→MBFC (deferred, n=13), EQ→MBFC (marginal ρ=+0.362), ET→VADER (weak r=+0.376), CL→FK (fail, wrong validator). Discriminant ✓ (r=+0.08). Known-groups ✓ (H=23.4, p<0.0001). All in `findings/2026-03-04-*.md`.
 
-- [x] **Test-retest reliability** ✓ — Same-model (Haiku, n=85): r=0.397, MAE=0.142, 74.1% classification agreement. Inter-rater (cross-model, n=278): r=0.509, 72.3% agreement. `findings/2026-03-07-test-retest-reliability.md`, `findings/2026-03-06-inter-rater-reliability.md`.
-
-#### HRCB Decomposition Decision
-
-RESOLVED 2026-03-06: Keep HRCB as convenience composite with RS validity gate. SO/SR NOT redundant. Full evidence in `findings/2026-03-06-*.md`.
+Test-retest ✓ (r=0.397, 74.1% agreement). Inter-rater ✓ (r=0.509, 72.3%). HRCB decomposition resolved (keep composite + RS gate). All in `findings/2026-03-06-*.md` and `findings/2026-03-07-*.md`.
 
 ### Perspective 2 — Pedagogical Effectiveness
 
