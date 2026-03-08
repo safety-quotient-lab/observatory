@@ -184,7 +184,7 @@ function scoreRowToScore(row: ScoreRow): Score {
 }
 
 export type SortOption = 'top' | 'time' | 'time_asc' | 'score_desc' | 'score_asc' | 'hn_points' | 'hn_points_asc' | 'conf_desc' | 'conf_asc' | 'setl_desc' | 'setl_asc' | 'velocity' | 'psq_desc' | 'psq_asc' | 'editorial_desc' | 'editorial_asc' | 'structural_desc' | 'structural_asc';
-export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed';
+export type FilterOption = 'all' | 'evaluated' | 'positive' | 'negative' | 'neutral' | 'pending' | 'failed' | 'psq_safe' | 'psq_mixed' | 'psq_threat';
 export type TypeOption = 'all' | 'ask' | 'show' | 'job';
 export type ContentTypeOption = 'all' | 'ED' | 'PO' | 'LP' | 'PR' | 'AC' | 'MI';
 export type ModelOption = string; // 'all' or a model ID like 'claude-haiku-4-5-20251001'
@@ -245,6 +245,9 @@ export async function getFilteredStoriesWithScores(
     case 'positive': conditions.push("s.eval_status = 'done' AND COALESCE(s.hcb_weighted_mean, s.hcb_editorial_mean) > 0.05"); break;
     case 'negative': conditions.push("s.eval_status = 'done' AND COALESCE(s.hcb_weighted_mean, s.hcb_editorial_mean) < -0.05"); break;
     case 'neutral': conditions.push("s.eval_status = 'done' AND COALESCE(s.hcb_weighted_mean, s.hcb_editorial_mean) BETWEEN -0.05 AND 0.05"); break;
+    case 'psq_safe': conditions.push("s.psq_score IS NOT NULL AND s.psq_score > 6"); break;
+    case 'psq_mixed': conditions.push("s.psq_score IS NOT NULL AND s.psq_score BETWEEN 4 AND 6"); break;
+    case 'psq_threat': conditions.push("s.psq_score IS NOT NULL AND s.psq_score < 4"); break;
     case 'pending': conditions.push("s.eval_status IN ('pending', 'queued', 'evaluating')"); break;
     case 'failed': conditions.push("s.eval_status IN ('failed', 'skipped')"); break;
   }
