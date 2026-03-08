@@ -1579,32 +1579,49 @@ export async function sweepExternalPsq({ db, env, url }: SweepContext): Promise<
   const limit = parseLimit(url, 50, 500);
   const kv = env.CONTENT_CACHE;
 
-  const { results: stories } = await db.prepare(
+  // Prioritize self-posts (have inline text), then URL stories (need KV cache)
+  const { results: selfPosts } = await db.prepare(
     `SELECT s.hn_id, s.url, s.hn_text
      FROM stories s
-     WHERE s.psq_score IS NULL
-       AND s.hn_id > 0
-       AND (s.url IS NOT NULL OR s.hn_text IS NOT NULL)
+     WHERE s.psq_score IS NULL AND s.hn_id > 0
+       AND s.hn_text IS NOT NULL AND length(s.hn_text) >= 50
      ORDER BY COALESCE(s.eval_priority_score, s.hn_score, 0) DESC
      LIMIT ?`
   ).bind(limit).all<{ hn_id: number; url: string | null; hn_text: string | null }>();
 
+  const remaining = limit - selfPosts.length;
+  const urlStories = remaining > 0 ? (await db.prepare(
+    `SELECT s.hn_id, s.url, s.hn_text
+     FROM stories s
+     WHERE s.psq_score IS NULL AND s.hn_id > 0
+       AND s.hn_text IS NULL AND s.url IS NOT NULL
+     ORDER BY COALESCE(s.eval_priority_score, s.hn_score, 0) DESC
+     LIMIT ?`
+  ).bind(remaining).all<{ hn_id: number; url: string | null; hn_text: string | null }>()).results : [];
+
+  const stories = [...selfPosts, ...urlStories];
   if (stories.length === 0) return json({ sweep: 'external_psq', scored: 0, message: 'No stories need external PSQ' });
 
   let scored = 0, errors = 0, skipped = 0;
 
   for (const story of stories) {
-    // Try KV content cache first, then self-post text
-    let content: string | null = await kv.get(`content:${story.hn_id}`).catch(() => null);
-    if (!content && story.hn_text) content = story.hn_text;
-    if (!content || content.length < 50) { skipped++; continue; }
+    try {
+      // Self-post text first, then KV content cache
+      let content: string | null = story.hn_text ?? null;
+      if (!content) content = await kv.get(`content:${story.hn_id}`).catch(() => null);
+      if (!content || content.length < 50) { skipped++; continue; }
 
-    const result = await scoreExternalPsq(content);
-    if (result) {
-      await writeExternalPsqScore(db, story.hn_id, result);
-      scored++;
-    } else {
+      const result = await scoreExternalPsq(content, 8000);
+      if (result) {
+        await writeExternalPsqScore(db, story.hn_id, result);
+        scored++;
+      } else {
+        errors++;
+        if (errors >= 3) break; // stop early if endpoint is unreachable
+      }
+    } catch {
       errors++;
+      if (errors >= 3) break;
     }
   }
 
