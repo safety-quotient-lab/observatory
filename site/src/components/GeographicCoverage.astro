@@ -1,0 +1,75 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+
+interface RegionEntry {
+  region: string;
+  count: number;
+}
+
+interface Props {
+  scopeEntries: [string, number][];
+  regionEntries: RegionEntry[];
+  maxScopeCount: number;
+  maxRegionCount: number;
+}
+
+const { scopeEntries, regionEntries, maxScopeCount, maxRegionCount } = Astro.props;
+---
+
+{(scopeEntries.length > 0 || regionEntries.length > 0) && (
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Scope Distribution</div>
+      <table cellpadding="0" cellspacing="0" width="100%">
+        {scopeEntries.map(([scope, count]) => {
+          const pct = maxScopeCount > 0 ? Math.round((count / maxScopeCount) * 100) : 0;
+          return (
+            <tr>
+              <td style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 100px;">
+                {scope}
+              </td>
+              <td style="padding: 3px 8px;">
+                <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                  <div style={`width: ${pct}%; height: 100%; background: var(--color-positive-medium); border-radius: 3px;`}></div>
+                </div>
+              </td>
+              <td style="width: 40px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
+                {count}
+              </td>
+            </tr>
+          );
+        })}
+      </table>
+      {scopeEntries.length === 0 && (
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No scope data.</div>
+      )}
+    </div>
+
+    <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Region Distribution</div>
+      <table cellpadding="0" cellspacing="0" width="100%">
+        {regionEntries.map(r => {
+          const pct = maxRegionCount > 0 ? Math.round((r.count / maxRegionCount) * 100) : 0;
+          return (
+            <tr>
+              <td title={r.region} style="padding: 3px 0; color: var(--fg-primary); font-size: var(--font-xs); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {r.region}
+              </td>
+              <td style="padding: 3px 8px;">
+                <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                  <div style={`width: ${pct}%; height: 100%; background: var(--channel-editorial); border-radius: 3px;`}></div>
+                </div>
+              </td>
+              <td style="width: 30px; text-align: right; padding: 3px 0; color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">
+                {r.count}
+              </td>
+            </tr>
+          );
+        })}
+      </table>
+      {regionEntries.length === 0 && (
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No region data.</div>
+      )}
+    </div>
+  </div>
+)}

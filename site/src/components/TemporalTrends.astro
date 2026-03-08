@@ -1,0 +1,60 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor } from '../lib/colors';
+
+interface DailyEntry {
+  day: string;
+  avg: number;
+  count: number;
+}
+
+interface Props {
+  dailyReversed: DailyEntry[];
+  chartW: number;
+  chartH: number;
+  lineAreaH: number;
+  chartStep: number;
+  chartLinePath: string;
+  chartBarW: number;
+  maxDailyCount: number;
+  latestDailyScore: number;
+}
+
+const { dailyReversed, chartW, chartH, lineAreaH, chartStep, chartLinePath, chartBarW, maxDailyCount, latestDailyScore } = Astro.props;
+---
+
+<div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+  <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">HRCB Trend{dailyReversed.length > 0 ? ` — ${dailyReversed.length} days` : ''}</div>
+  {dailyReversed.length > 1 ? (
+    <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="xMidYMid meet" style="max-width: 600px;">
+      <line x1="0" y1={lineAreaH / 2} x2={chartW} y2={lineAreaH / 2} stroke="var(--color-border)" stroke-width="0.5" stroke-dasharray="4,4" />
+      <path d={chartLinePath} fill="none" stroke={scoreToColor(latestDailyScore)} stroke-width="1.5" />
+      {dailyReversed.map((d, i) => {
+        const x = i * chartStep - chartBarW / 2;
+        const barH = maxDailyCount > 0 ? (d.count / maxDailyCount) * (chartH - lineAreaH) : 0;
+        const barY = chartH - barH;
+        return <rect x={x.toFixed(1)} y={barY.toFixed(1)} width={chartBarW.toFixed(1)} height={barH.toFixed(1)} fill="var(--color-border)" rx="1" />;
+      })}
+    </svg>
+  ) : (
+    <div style="color: var(--fg-secondary); font-size: var(--font-xs);">Not enough data for trend chart.</div>
+  )}
+  <div style="display: flex; justify-content: space-between; margin-top: 6px;">
+    <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+      {dailyReversed.length > 0 ? dailyReversed[0].day : ''}
+    </span>
+    <div style="display: flex; gap: 12px;">
+      <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+        <span style={`display: inline-block; width: 8px; height: 2px; background: ${scoreToColor(latestDailyScore)}; vertical-align: middle; margin-right: 4px;`}></span>
+        avg HRCB
+      </span>
+      <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+        <span style="display: inline-block; width: 8px; height: 6px; background: var(--color-border); vertical-align: middle; margin-right: 4px;"></span>
+        eval count
+      </span>
+    </div>
+    <span style="color: var(--fg-secondary); font-size: var(--font-xs);">
+      {dailyReversed.length > 0 ? dailyReversed[dailyReversed.length - 1].day : ''}
+    </span>
+  </div>
+</div>

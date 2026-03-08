@@ -1,0 +1,182 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor, formatScore } from '../lib/colors';
+import { ARTICLE_GROUPS, ARTICLE_TITLES, SECTIONS } from '../lib/udhr';
+
+interface Props {
+  statsMap: Map<string, any>;
+  groupColors: Record<string, string>;
+}
+
+const { statsMap, groupColors } = Astro.props;
+---
+
+<div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+  <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;">
+    <span style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em;">UDHR Rights Heatmap</span>
+    <span style="color: var(--fg-secondary); font-size: var(--font-xs); opacity: 0.7;">content scores · <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--color-warning); vertical-align: middle;" title="SETL tension dot: editorial and structural channels diverge significantly for this provision"></span> says ≠ does</span>
+  </div>
+
+  <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;">
+    <span style="color: var(--fg-secondary); font-size: var(--font-xs);">sort:</span>
+    <button class="hm-sort filter-active" data-sort="default">article #</button>
+    <span class="filter-sep">|</span>
+    <button class="hm-sort filter-link" data-sort="negative">most negative</button>
+    <span class="filter-sep">|</span>
+    <button class="hm-sort filter-link" data-sort="positive">most positive</button>
+    <span class="filter-sep">|</span>
+    <button class="hm-sort filter-link" data-sort="count">most triggered</button>
+    <span class="filter-sep">|</span>
+    <button class="hm-sort filter-link" data-sort="setl">highest tension</button>
+  </div>
+
+  <div id="hm-groups">
+  {Object.entries(ARTICLE_GROUPS).map(([group, sectionIds]) => {
+    const color = groupColors[group] || 'var(--fg-secondary)';
+    return (
+      <div style="margin-bottom: 10px;">
+        <div style={`color: ${color}; font-size: var(--font-xs); margin-bottom: 4px; opacity: 0.8;`}>{group}</div>
+        <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+          {sectionIds.map(sid => {
+            const stat = statsMap.get(sid);
+            const score = stat?.avg_editorial ?? null;
+            const count = stat?.signal_count ?? 0;
+            const section = SECTIONS.find(s => s.id === sid);
+            const label = sid === 'Preamble' ? 'P' : String(section?.number ?? '?');
+            const title = ARTICLE_TITLES[sid] ?? sid;
+            const barColor = scoreToColor(score);
+            const setl = (stat?.avg_editorial != null && stat?.avg_structural != null)
+              ? Math.abs(stat.avg_editorial - stat.avg_structural) : null;
+            return (
+                <tr style="border-top: 1px solid var(--bg-surface);" data-score={score !== null ? String(score) : ''} data-count={String(count)} data-setl={setl !== null ? String(setl) : ''} data-article={String(section?.number ?? 0)} data-group={group}>
+                  <td style={`width: 22px; padding: 3px 4px; color: ${score !== null ? color : 'var(--bg-surface)'}; font-weight: bold;`} class="score-font hm-score">
+                    <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{label}</a>
+                  </td>
+                  <td title={`${title} (n=${count})`} class="hm-title" style={`padding: 3px 4px; color: ${score !== null ? 'var(--fg-primary)' : 'var(--fg-secondary)'}; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;`}>
+                    <a href={`/article/${section?.number ?? 0}`} style={`color: inherit; text-decoration: none;`}>{title}</a>
+                    {count > 0 && <span style="color: var(--fg-secondary); font-size: 9px; margin-left: 4px;">n={count}</span>}
+                  </td>
+                  <td class="hm-data" style="width: 140px; padding: 3px 4px;">
+                    {score !== null ? (
+                      <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="flex: 1; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative;">
+                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.3;"></div>
+                          {score < 0 ? (
+                            <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(score) * 50}%; height: 100%; background: ${barColor}; border-radius: 3px 0 0 3px;`}></div>
+                          ) : (
+                            <div style={`position: absolute; left: 50%; top: 0; width: ${score * 50}%; height: 100%; background: ${barColor}; border-radius: 0 3px 3px 0;`}></div>
+                          )}
+                        </div>
+                        <span style={`color: ${barColor}; font-size: var(--font-xs); min-width: 36px; text-align: right;`} class="score-font">{formatScore(score)}</span>
+                      </div>
+                    ) : (
+                      <span style="color: var(--bg-surface);">--</span>
+                    )}
+                  </td>
+                  <td class="hm-data" style="width: 18px; padding: 3px 2px; text-align: center;" title={setl !== null ? `E/S tension: ${setl.toFixed(2)}` : 'No tension data'}>
+                    {setl !== null && setl >= 0.10 ? (
+                      <div style={`width: 8px; height: 8px; border-radius: 50%; margin: 0 auto; background: ${setl >= 0.25 ? 'var(--color-negative)' : 'var(--color-warning)'}; opacity: ${Math.min(1, 0.5 + setl)};`}></div>
+                    ) : null}
+                  </td>
+                  <td class="hm-data score-font" style="width: 50px; padding: 3px 4px; text-align: right; color: var(--fg-secondary);">
+                    {count > 0 ? count : '--'}
+                  </td>
+                </tr>
+            );
+          })}
+        </table>
+      </div>
+    );
+  })}
+  </div>
+  <div id="hm-sorted" style="display:none;">
+    <table cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+      <tbody id="hm-sorted-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .hm-sort {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: var(--font-xs);
+    font-family: inherit;
+    font-weight: normal;
+  }
+  .hm-sort:hover { text-decoration: underline; }
+  .hm-trend { display: none; }
+  @media (max-width: 540px) {
+    .hm-data { display: none; }
+    .hm-title { max-width: none !important; }
+    .hm-trend { display: table-row; }
+  }
+</style>
+
+<script is:inline>
+(function () {
+  function sortHeatmap(mode) {
+    var groups = document.getElementById('hm-groups');
+    var sorted = document.getElementById('hm-sorted');
+    var body = document.getElementById('hm-sorted-body');
+
+    document.querySelectorAll('.hm-sort').forEach(function (btn) {
+      var active = btn.dataset.sort === mode;
+      btn.classList.toggle('filter-active', active);
+      btn.classList.toggle('filter-link', !active);
+    });
+
+    if (mode === 'default') {
+      groups.style.display = '';
+      sorted.style.display = 'none';
+      return;
+    }
+
+    var rows = Array.from(document.querySelectorAll('#hm-groups tr:not(.hm-trend)'));
+
+    rows.sort(function (a, b) {
+      var sa = parseFloat(a.dataset.score), sb = parseFloat(b.dataset.score);
+      var ca = parseInt(a.dataset.count) || 0, cb = parseInt(b.dataset.count) || 0;
+      var ta = parseFloat(a.dataset.setl), tb = parseFloat(b.dataset.setl);
+      var hasA = !isNaN(sa), hasB = !isNaN(sb);
+      if (mode === 'negative') {
+        if (!hasA && !hasB) return 0;
+        if (!hasA) return 1; if (!hasB) return -1;
+        return sa - sb;
+      }
+      if (mode === 'positive') {
+        if (!hasA && !hasB) return 0;
+        if (!hasA) return 1; if (!hasB) return -1;
+        return sb - sa;
+      }
+      if (mode === 'count') return cb - ca;
+      if (mode === 'setl') {
+        var htA = !isNaN(ta), htB = !isNaN(tb);
+        if (!htA && !htB) return 0;
+        if (!htA) return 1; if (!htB) return -1;
+        return tb - ta;
+      }
+      return 0;
+    });
+
+    body.innerHTML = '';
+    rows.forEach(function (row) {
+      body.appendChild(row.cloneNode(true));
+      var next = row.nextElementSibling;
+      if (next && next.classList.contains('hm-trend')) {
+        body.appendChild(next.cloneNode(true));
+      }
+    });
+
+    groups.style.display = 'none';
+    sorted.style.display = '';
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.hm-sort');
+    if (btn) sortHeatmap(btn.dataset.sort);
+  });
+})();
+</script>

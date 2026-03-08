@@ -1,0 +1,70 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor, formatScore } from '../lib/colors';
+import { SECTIONS } from '../lib/udhr';
+
+interface Props {
+  topDomains: { domain: string; avg_score: number | null; count: number }[];
+  domainFingerprints: Map<string, (number | null)[]>;
+}
+
+const { topDomains, domainFingerprints } = Astro.props;
+---
+
+<div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px; margin-bottom: 16px;">
+  <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+    Domain Rights Profiles — Top 10
+    <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 8px; text-transform: none; letter-spacing: 0; font-weight: normal; white-space: nowrap;">all sources →</a>
+  </div>
+  <div class="table-wrap">
+  <table class="fp-table" cellpadding="0" cellspacing="0" width="100%" style="font-size: var(--font-xs); min-width: 480px;">
+    <tr style="color: var(--fg-secondary);">
+      <td style="padding: 4px 0;">Domain</td>
+      <td style="width: 60px; text-align: right; padding: 4px 0;">HRCB</td>
+      <td style="width: 50px; text-align: right; padding: 4px 0;">Stories</td>
+      <td class="fp-col" style="padding: 4px 8px;">Fingerprint</td>
+    </tr>
+    {topDomains.map(d => {
+      const fp = domainFingerprints.get(d.domain);
+      return (
+        <tr style="border-top: 1px solid var(--bg-surface);">
+          <td style="padding: 4px 0;">
+            <a href={`/domain/${d.domain}`} style="color: var(--fg-primary); text-decoration: none;">{d.domain}</a>
+          </td>
+          <td style="width: 60px; text-align: right; padding: 4px 0;">
+            <span style={`color: ${scoreToColor(d.avg_score)};`} class="score-font">{formatScore(d.avg_score)}</span>
+          </td>
+          <td style="width: 50px; text-align: right; padding: 4px 0; color: var(--fg-secondary);" class="score-font">
+            {d.count}
+          </td>
+          <td class="fp-col" style="padding: 4px 8px;">
+            {fp ? (
+              <div style="display: flex; gap: 1px; align-items: center;">
+                {fp.map((val, idx) => {
+                  const bg = val !== null ? scoreToColor(val) : 'var(--bg-surface)';
+                  const opacity = val !== null ? '1' : '0.3';
+                  return (
+                    <div style={`width: 6px; height: 10px; background: ${bg}; border-radius: 1px; opacity: ${opacity};`} title={`${SECTIONS[idx]?.id ?? idx}: ${val !== null ? formatScore(val) : 'ND'}`}></div>
+                  );
+                })}
+              </div>
+            ) : (
+              <span style="color: var(--bg-surface);">--</span>
+            )}
+          </td>
+        </tr>
+      );
+    })}
+  </table>
+  </div>
+</div>
+
+<style>
+  .table-wrap {
+    overflow-x: auto;
+  }
+  @media (max-width: 540px) {
+    .fp-col { display: none; }
+    .fp-table { min-width: 200px !important; }
+  }
+</style>

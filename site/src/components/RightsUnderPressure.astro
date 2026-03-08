@@ -1,0 +1,87 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor, formatScore } from '../lib/colors';
+import { ARTICLE_TITLES, SECTIONS } from '../lib/udhr';
+
+interface ArticleStat {
+  section: string;
+  avg_editorial: number | null;
+  signal_count: number;
+}
+
+interface Props {
+  mostNegative: ArticleStat[];
+  mostTriggered: ArticleStat[];
+  lowestCoverage: ArticleStat[];
+}
+
+const { mostNegative, mostTriggered, lowestCoverage } = Astro.props;
+---
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px;">
+  <!-- Most Negative -->
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+    <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Negative</div>
+    <table cellpadding="0" cellspacing="0" width="100%">
+      {mostNegative.map(a => {
+        const section = SECTIONS.find(s => s.id === a.section);
+        return (
+          <tr style="border-top: 1px solid var(--bg-surface);">
+            <td style="padding: 4px 0;">
+              <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
+                {ARTICLE_TITLES[a.section] ?? a.section}
+              </a>
+            </td>
+            <td style="width: 50px; text-align: right; padding: 4px 0;">
+              <span style={`color: ${scoreToColor(a.avg_editorial)}; font-size: var(--font-xs);`} class="score-font">{formatScore(a.avg_editorial)}</span>
+            </td>
+          </tr>
+        );
+      })}
+    </table>
+  </div>
+
+  <!-- Most Triggered -->
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+    <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Most Triggered</div>
+    <table cellpadding="0" cellspacing="0" width="100%">
+      {mostTriggered.map(a => {
+        const section = SECTIONS.find(s => s.id === a.section);
+        return (
+          <tr style="border-top: 1px solid var(--bg-surface);">
+            <td style="padding: 4px 0;">
+              <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
+                {ARTICLE_TITLES[a.section] ?? a.section}
+              </a>
+            </td>
+            <td style="width: 50px; text-align: right; padding: 4px 0;">
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{a.signal_count}</span>
+            </td>
+          </tr>
+        );
+      })}
+    </table>
+  </div>
+
+  <!-- Lowest Coverage -->
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px; padding: 14px;">
+    <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Lowest Coverage</div>
+    <table cellpadding="0" cellspacing="0" width="100%">
+      {lowestCoverage.map(a => {
+        const section = SECTIONS.find(s => s.id === a.section);
+        return (
+          <tr style="border-top: 1px solid var(--bg-surface);">
+            <td style="padding: 4px 0;">
+              <a href={`/article/${section?.number ?? 0}`} style="color: var(--fg-primary); font-size: var(--font-xs); text-decoration: none;">
+                {ARTICLE_TITLES[a.section] ?? a.section}
+              </a>
+            </td>
+            <td style="width: 50px; text-align: right; padding: 4px 0;">
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs);" class="score-font">{a.signal_count}</span>
+            </td>
+          </tr>
+        );
+      })}
+    </table>
+  </div>
+</div>

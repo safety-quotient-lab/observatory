@@ -97,14 +97,13 @@ export default {
     }
 
     // ─── Pre-compute homepage data blob (lock-free, read-only + KV write) ───
-    if (minute % 5 === 0) {
-      try {
-        const blob = await computeHomepageBlob(db);
-        await env.CONTENT_CACHE.put(HOMEPAGE_BLOB_KEY, JSON.stringify(blob), { expirationTtl: HOMEPAGE_BLOB_TTL });
-        console.log(`[cron] Homepage blob computed: ${blob.statusCounts.done} evaluated, ${blob.topDomains.length} domains`);
-      } catch (err) {
-        console.error('[cron] Homepage blob failed (non-fatal):', err);
-      }
+    // Runs every minute (not gated) because minute%N is unreliable with cron lock.
+    // KV dedup: blob TTL 300s means stale reads are bounded; write cost is ~1 KV put/min.
+    try {
+      const blob = await computeHomepageBlob(db);
+      await env.CONTENT_CACHE.put(HOMEPAGE_BLOB_KEY, JSON.stringify(blob), { expirationTtl: HOMEPAGE_BLOB_TTL });
+    } catch (err) {
+      console.error('[cron] Homepage blob failed (non-fatal):', err);
     }
 
     // ─── Distributed lock (prevent overlapping cron cycles) ───
@@ -1368,6 +1367,18 @@ export default {
     }
 
     // GET /health — pipeline health check (no auth required)
+    if (path === '/refresh-blob') {
+      const authErr = checkAuth();
+      if (authErr) return authErr;
+      try {
+        const blob = await computeHomepageBlob(writeDb(env.DB));
+        await env.CONTENT_CACHE.put(HOMEPAGE_BLOB_KEY, JSON.stringify(blob), { expirationTtl: HOMEPAGE_BLOB_TTL });
+        return new Response(JSON.stringify({ ok: true, evaluated: blob.statusCounts.done, domains: blob.topDomains.length, computedAt: blob.computedAt }), { headers: { 'Content-Type': 'application/json' } });
+      } catch (err) {
+        return new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
     if (path === '/health' && request.method === 'GET') {
       const health = await getPipelineHealth(writeDb(env.DB));
       return new Response(JSON.stringify(health), {
