@@ -376,20 +376,21 @@ export async function updatePsqConsensus(db: D1Database, hnId: number): Promise<
     const { results } = await db
       .prepare(
         `SELECT re.eval_model, re.psq_score, COALESCE(re.hcb_confidence, 0.5) as confidence,
-                re.content_truncation_pct
+                re.content_truncation_pct, re.psq_dimensions_json
          FROM rater_evals re
          INNER JOIN model_registry mr ON mr.model_id = re.eval_model AND mr.enabled = 1
          WHERE re.hn_id = ? AND re.eval_status = 'done' AND re.prompt_mode = 'lite-v2'
            AND re.psq_score IS NOT NULL`
       )
       .bind(hnId)
-      .all<{ eval_model: string; psq_score: number; confidence: number; content_truncation_pct: number | null }>();
+      .all<{ eval_model: string; psq_score: number; confidence: number; content_truncation_pct: number | null; psq_dimensions_json: string | null }>();
 
     if (results.length < 2) return;
 
     let weightedSum = 0;
     let totalWeight = 0;
     const scores: number[] = [];
+    const dimSums: Record<string, { total: number; count: number }> = {};
 
     for (const r of results) {
       const confidenceFactor = Math.max(0.2, r.confidence);
@@ -398,12 +399,33 @@ export async function updatePsqConsensus(db: D1Database, hnId: number): Promise<
       weightedSum += r.psq_score * weight;
       totalWeight += weight;
       scores.push(r.psq_score);
+
+      // Accumulate per-dimension averages from LLM PSQ
+      if (r.psq_dimensions_json) {
+        try {
+          const parsed = JSON.parse(r.psq_dimensions_json);
+          for (const [name, val] of Object.entries(parsed)) {
+            const score = typeof val === 'number' ? val : (val as any)?.score;
+            if (typeof score !== 'number') continue;
+            if (!dimSums[name]) dimSums[name] = { total: 0, count: 0 };
+            dimSums[name].total += score;
+            dimSums[name].count += 1;
+          }
+        } catch { /* skip malformed */ }
+      }
     }
 
     if (totalWeight === 0 || scores.length < 2) return;
 
     const consensusScore = Math.round((weightedSum / totalWeight) * 1000) / 1000;
     const spread = Math.round((Math.max(...scores) - Math.min(...scores)) * 1000) / 1000;
+
+    // Build flat dimension averages for stories.psq_dimensions_json (format 3: Record<string,number>)
+    const dimAverages: Record<string, number> = {};
+    for (const [name, { total, count }] of Object.entries(dimSums)) {
+      dimAverages[name] = Math.round((total / count) * 100) / 100;
+    }
+    const dimsJson = Object.keys(dimAverages).length > 0 ? JSON.stringify(dimAverages) : null;
 
     // Update psq_lite_archive with LLM PSQ consensus data
     await db.prepare(
@@ -414,6 +436,12 @@ export async function updatePsqConsensus(db: D1Database, hnId: number): Promise<
          psq_consensus_model_count = excluded.psq_consensus_model_count,
          psq_consensus_spread = excluded.psq_consensus_spread`
     ).bind(hnId, consensusScore, scores.length, spread).run();
+
+    // Mirror LLM PSQ consensus to stories for display
+    const meanConf = results.reduce((s, r) => s + r.confidence, 0) / results.length;
+    await db.prepare(
+      `UPDATE stories SET psq_score = ?, psq_dimensions_json = COALESCE(?, psq_dimensions_json), psq_confidence = ? WHERE hn_id = ?`
+    ).bind(consensusScore, dimsJson, Math.round(meanConf * 1000) / 1000, hnId).run();
   } catch (err) {
     console.error(`[eval-write] updatePsqConsensus failed for hn_id=${hnId}:`, err);
   }

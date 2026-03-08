@@ -1882,7 +1882,11 @@ export async function computeHomepageBlob(db: D1Database): Promise<HomepageBlob>
           } else if (parsed.dimensions && typeof parsed.dimensions === 'object') {
             dims = Object.entries(parsed.dimensions).map(([name, score]) => ({ name, score: score as number }));
           } else {
-            dims = Object.entries(parsed).map(([name, score]) => ({ name, score: score as number }));
+            // Format 3: Record<string, number> (flat) or Record<string, {score, ...}> (nested LLM PSQ)
+            dims = Object.entries(parsed).map(([name, val]) => ({
+              name,
+              score: typeof val === 'number' ? val : (val as any)?.score ?? 0,
+            }));
           }
           for (const d of dims) {
             if (!dimSums[d.name]) dimSums[d.name] = { total: 0, count: 0 };

@@ -123,14 +123,7 @@ export async function writeExternalPsqScore(
        scored_at = datetime('now')`
   ).bind(hnId, psqScore, dimsJson, factorsJson, gPsqConf, result.elapsed_ms ?? null).run();
 
-  // Mirror to stories.psq_score for display (all existing queries read from stories)
-  await db.prepare(
-    `UPDATE stories SET psq_score = ?, psq_dimensions_json = ?, psq_confidence = ? WHERE hn_id = ?`
-  ).bind(psqScore, dimsJson, gPsqConf, hnId).run();
-
-  // Refresh aggregates
-  const story = await db.prepare('SELECT domain, by as author FROM stories WHERE hn_id = ?')
-    .bind(hnId).first<{ domain: string | null; author: string | null }>();
-  if (story?.domain) refreshDomainAggregate(db, story.domain).catch(() => {});
-  if (story?.author) refreshUserAggregate(db, story.author).catch(() => {});
+  // External PSQ scores stored in psq_external only (not mirrored to stories).
+  // stories.psq_score is sourced from LLM PSQ consensus (updatePsqConsensus)
+  // because external DistilBERT lacks score breadth (range 4.0-6.4, 86% in one bucket).
 }
