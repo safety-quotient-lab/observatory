@@ -493,6 +493,17 @@ export function validateLiteEvalResponse(parsed: any): ValidationResult {
     errors.push('Editorial score is null \u2014 no data to score');
   }
 
+  // H1 fix: Absence-as-negative bias — Workers AI models score technical content
+  // with zero rights discussion far below 50 (e.g., editorial=5 → -0.80), despite prompt
+  // instruction reserving 50 for no-signal content. Scores ≤ -0.60 (raw ≤ 10) map to the
+  // "dehumanizing propaganda" tier, which is implausible for standard HN content.
+  // Repair to 0.0 (ND-equivalent) and flag for consensus neutral-discount.
+  if (ev.editorial != null && ev.editorial <= -0.60) {
+    warnings.push(`Absence-as-negative: editorial=${ev.editorial.toFixed(2)} (raw \u226410) \u2014 repairing to 0.0 (ND-equivalent)`);
+    ev.editorial = 0.0;
+    repairs.push(`Repaired editorial from \u2264-0.60 to 0.0 (absence-as-negative)`);
+  }
+
   // Flag suspect lazy neutral: editorial=50 (converts to 0.0) with high confidence
   // This pattern indicates model defaulting to safe center rather than evaluating UDHR signals
   if (ev.editorial === 0 && typeof ev.confidence === 'number' && ev.confidence >= 0.7) {

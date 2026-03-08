@@ -226,6 +226,14 @@ Score tq_conflicts=0 unless explicit disclosure text is present — not just app
 - Score editorial independently from TQ. They measure different constructs.
 - editorial = what the content SAYS about rights. TQ = how transparent and verifiable the content is.
 - A propaganda article can score tq_author=1 (author identified) while scoring editorial=10 (hostile framing).
+- CRITICAL: Technical content with NO rights discussion MUST score editorial 50. Do NOT score below 50 just because rights are absent. Below-50 requires ACTIVE dismissal or hostility toward rights.
+
+## EXAMPLES (editorial score only)
+- "How to implement a B-tree in Rust" → editorial: 50, evidence: L (pure technical, zero rights discussion)
+- "RFC 9849: HTTP Header Fields" → editorial: 50, evidence: L (protocol spec, zero rights discussion)
+- "Console.table() in JavaScript" → editorial: 50, evidence: L (API documentation, zero rights discussion)
+- "ACLU sues ICE over deportation flights" → editorial: 85, evidence: H (rights advocacy, exposing abuses)
+- "Company launches facial recognition for schools" → editorial: 35, evidence: M (normalizes surveillance)
 
 Content types (use code): ED=Editorial, PO=Policy/Legal, LP=Landing Page, PR=Product/Feature, MI=Mission/Values, HR=Human Rights Specific, CO=Community/Forum, MX=Mixed (default)
 

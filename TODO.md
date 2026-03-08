@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Epistemic quality (2026-03-07).** Measurement integrity sprint complete. HRCB consensus restored (4,130 stories). All Final Four validated (RS, ESC, RTS, REM). AP publishing live. PSQ caveats shipped (ordinal + scorer note). Test-retest done (n=85, r=0.397, 74% classification agreement — ordinal stability confirmed). All Phase 0 epistemic queue items closed. Next: blog posts or Phase 1 engineering.
+**Epistemic quality (2026-03-08).** H1 absence-as-negative bias fix shipped (prompt few-shot + post-scoring safety net). PSQ display precision reduced to 1 decimal. Peer review from psychology-agent via unratified-agent processed (5 findings: H1 done, H4 already done, ES-R1 already done, ES-R2 deferred, PSQ-R1 done). Next: lite_reeval sweep to re-score affected tech stories, then blog posts or Phase 1.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
@@ -27,7 +27,7 @@ Blog posts (deferred — lower priority than epistemic quality):
 
 ### Standards
 
-- [x] **ActivityPub** (W3C) ✓ — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live. Composite filter: RS ≥ 0.10 + quality score ≥ 0.45 + hn_score ≥ 20. KV dedup + 3/cycle burst limit. Publishing every cron cycle (every ~2-3 min).
+- [x] ~~**ActivityPub** (W3C)~~ ✓ — live, KV dedup + burst limit. Removed from active backlog.
 
 ---
 

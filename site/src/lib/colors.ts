@@ -225,7 +225,7 @@ export function formatPsqScore(psq: number | null | undefined): string {
   const n = normalizePsq(psq);
   if (n == null) return 'ND';
   const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(2)}`;
+  return `${sign}${n.toFixed(1)}`;
 }
 
 /** Fair Witness ratio color: maps 0–1 to purple(0) → green(1) */
