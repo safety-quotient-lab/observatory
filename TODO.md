@@ -9,12 +9,12 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Epistemic quality (2026-03-07).** Prioritize measurement integrity over publication. HRCB consensus restored (WAI lite models re-enabled, 1,685→4,130 consensus stories). Test-retest sweep dispatched (100 stories, blocked on Anthropic credit pause). AP publishing thresholds implemented. ESC validated (all Final Four done: RS, ESC, RTS, REM). AP_PUBLISH_TOKEN set on both workers — AP publishing live. Next: collect test-retest results (when credits replenish).
+**Epistemic quality (2026-03-07).** Prioritize measurement integrity over publication. HRCB consensus restored (WAI lite models re-enabled, 1,685→4,130 consensus stories). All Final Four validated (RS, ESC, RTS, REM). AP publishing live (token set, thresholds active). PSQ ordinal caveat + scorer methodology note shipped. Test-retest batch running (94 stories via standalone evaluator, OAuth bypass of credit pause). Next: collect test-retest results (`sweep=test_retest&phase=check`).
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
 Epistemic queue (priority order):
-- [ ] **Test-retest results** — 99 stories queued for Haiku re-eval (dispatch bug fixed: direct eval_queue insert bypasses credit pause + content gate). Run `sweep=test_retest&phase=check` after re-evals complete.
+- [ ] **Test-retest results** — 94 stories running via standalone evaluator (Haiku, OAuth). Run `sweep=test_retest&phase=check` after batch completes.
 - [x] **AP publishing thresholds** ✓ — RS ≥ 0.03, |HRCB| ≥ 0.05, hn_score ≥ 20. Token set on both `hn-hrcb-cron` + `unratified-ap`. Live.
 - [x] **ESC construct validation** ✓ — SETL validated for full evals (inter-rater r=0.519, face validity confirmed, discriminant ✓). Lite SETL degenerate (r=0.000, 80% at zero) — suppressed on item page for lite-only stories. Findings: `findings/2026-03-07-esc-setl-construct-validation.md`.
 
