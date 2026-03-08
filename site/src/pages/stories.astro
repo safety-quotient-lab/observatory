@@ -165,11 +165,9 @@ const canonicalUrl = `${url.origin}${canonicalQs ? `/stories?${canonicalQs}` : '
 const SORT_OPTIONS = [
   { value: 'top', label: 'top' },
   { value: 'time', label: 'new' },
-  { value: 'score_desc', label: 'top hrcb' },
-  { value: 'score_asc', label: 'bottom hrcb' },
-  { value: 'psq_desc', label: 'top psq' },
-  { value: 'editorial_desc', label: 'top E' },
-  { value: 'structural_desc', label: 'top S' },
+  { value: 'score_desc', label: 'top rights' },
+  { value: 'score_asc', label: 'bottom rights' },
+  { value: 'psq_desc', label: 'top safety' },
   { value: 'hn_points', label: 'points' },
   { value: 'conf_desc', label: 'top conf' },
   { value: 'conf_asc', label: 'bottom conf' },
@@ -227,6 +225,9 @@ const FILTER_OPTIONS = [
   { value: 'positive', label: 'positive' },
   { value: 'negative', label: 'negative' },
   { value: 'neutral', label: 'neutral' },
+  { value: 'psq_safe', label: 'safe' },
+  { value: 'psq_mixed', label: 'mixed' },
+  { value: 'psq_threat', label: 'threat' },
   { value: 'pending', label: 'pending' },
   { value: 'failed', label: 'failed' },
 ] as const;
@@ -280,6 +281,9 @@ function isLiteModel(id: string): boolean {
         { value: 'positive', label: 'positive' },
         { value: 'negative', label: 'negative' },
         { value: 'neutral', label: 'neutral' },
+        { value: 'psq_safe', label: 'safe' },
+        { value: 'psq_mixed', label: 'mixed' },
+        { value: 'psq_threat', label: 'threat' },
       ] as const).map((opt, i) => (
         <>
           {i > 0 && <span class="filter-sep"> | </span>}
@@ -293,7 +297,7 @@ function isLiteModel(id: string): boolean {
       <a href="#" id="toggle-advanced-filters" class="filter-link" style="color: var(--fg-secondary);">more ▾</a>
     </div>
     {/* Advanced filters — collapsed by default, auto-open if non-default params active */}
-    <div id="advanced-filters" style={`display: ${safeType !== 'all' || safeCtype !== 'all' || safeModel !== 'any' || safeFilter === 'pending' || safeFilter === 'failed' || !['top', 'time', 'score_desc', 'hn_points', 'psq_desc', 'editorial_desc', 'structural_desc'].includes(safeSort) ? 'block' : 'none'};`}>
+    <div id="advanced-filters" style={`display: ${safeType !== 'all' || safeCtype !== 'all' || safeModel !== 'any' || safeFilter === 'pending' || safeFilter === 'failed' || safeFilter === 'psq_safe' || safeFilter === 'psq_mixed' || safeFilter === 'psq_threat' || !['top', 'time', 'score_desc', 'hn_points', 'psq_desc'].includes(safeSort) ? 'block' : 'none'};`}>
       <div class="filter-row">
         <span class="filter-label">sort:</span>
         {SORT_OPTIONS.map((opt, i) => (
@@ -394,22 +398,13 @@ function isLiteModel(id: string): boolean {
       <th style="width: 28px; text-align: right; padding-right: 5px; font-weight: normal;">#</th>
       <th style="text-align: left; font-weight: normal;">Title</th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('score_desc')} style={thStyle('score_desc')} title="Human Rights Compatibility Bias score — click to sort, click again to reverse">HRCB{sortArrow('score_desc')}</a>
+        <a href={sortUrl('score_desc')} style={thStyle('score_desc')} title="Human Rights Compatibility Bias — how content aligns with UDHR provisions. Click to sort.">Rights{sortArrow('score_desc')}</a>
       </th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('psq_desc')} style={thStyle('psq_desc')} title="Psychoemotional Safety Quotient — experimental, ordinal only (rank-order meaningful, distances not). Click to sort.">PSQ{sortArrow('psq_desc')}</a>
+        <a href={sortUrl('psq_desc')} style={thStyle('psq_desc')} title="Psychoemotional Safety Quotient — reader safety signal. Click to sort.">Safety{sortArrow('psq_desc')}</a>
       </th>
-      <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('editorial_desc')} style={thStyle('editorial_desc')} title="Editorial: what the content says — click to sort, click again to reverse">E{sortArrow('editorial_desc')}</a>
-      </th>
-      <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('structural_desc')} style={thStyle('structural_desc')} title="Structural: what the site does — click to sort, click again to reverse">S{sortArrow('structural_desc')}</a>
-      </th>
-      <th width="45" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('hn_points')} style={thStyle('hn_points')} title="HN score — click to sort, click again to reverse">Pts{sortArrow('hn_points')}</a>
-      </th>
-      <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('time')} style={thStyle('time')} title="Time posted — click to sort, click again to reverse">Age{sortArrow('time')}</a>
+      <th width="50" style="text-align: center; font-weight: normal;">
+        <a href={sortUrl('hn_points')} style={thStyle('hn_points')} title="HN score — click to sort">Points{sortArrow('hn_points')}</a>
       </th>
     </tr>
     </thead>
@@ -493,13 +488,6 @@ function isLiteModel(id: string): boolean {
                 </>
               )}
             </div>
-            {hasEval && miniScores.length > 0 && (
-              <div style="margin-top: 2px;">
-                <a href={`/item/${story.hn_id}`} style="text-decoration: none;">
-                  <MiniBar scores={miniScores} />
-                </a>
-              </div>
-            )}
           </td>
           <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${isZero ? 'var(--color-nd)' : hasEval ? scoreToColor(displayScore) : 'var(--fg-secondary)'};`}>
             {isZero
@@ -519,23 +507,14 @@ function isLiteModel(id: string): boolean {
           <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${hasPsq ? scoreToColor(psqNorm) : 'var(--fg-secondary)'};`}>
             {hasPsq ? <a href={`/item/${story.hn_id}`} style="color: inherit; text-decoration: none;">{formatPsqScore(story.psq_score)}</a> : '—'}
           </td>
-          <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${story.hcb_editorial_mean != null ? scoreToColor(story.hcb_editorial_mean) : 'var(--fg-secondary)'};`}>
-            {story.hcb_editorial_mean != null ? <a href={`/item/${story.hn_id}`} style="color: inherit; text-decoration: none;">{formatScore(story.hcb_editorial_mean)}</a> : '—'}
-          </td>
-          <td align="center" class="score-font" style={`vertical-align: top; padding-top: 4px; color: ${story.hcb_structural_mean != null ? scoreToColor(story.hcb_structural_mean) : 'var(--fg-secondary)'};`}>
-            {story.hcb_structural_mean != null ? <a href={`/item/${story.hn_id}`} style="color: inherit; text-decoration: none;">{formatScore(story.hcb_structural_mean)}</a> : '—'}
-          </td>
           <td align="center" class="score-font" style="vertical-align: top; padding-top: 4px; color: var(--fg-secondary);">
             {story.hn_score ?? '—'}
-          </td>
-          <td align="center" class="score-font" style="vertical-align: top; padding-top: 4px; color: var(--fg-secondary); white-space: nowrap;">
-            {timeAgo(story.hn_time)}
           </td>
         </tr>
         {/* Pedagogical interstitial after stories 10 and 20 */}
         {i === 9 && selectedInsights[0] && (<>
           <tr>
-            <td colspan="8" style="padding: 8px 0;">
+            <td colspan="5" style="padding: 8px 0;">
               <div style="border-top: 1px dashed var(--color-border); border-bottom: 1px dashed var(--color-border); padding: 8px 10px; color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
                 <span style="color: var(--color-orange);">&#9670;</span>
                 {' '}{selectedInsights[0].text}
@@ -553,17 +532,14 @@ function isLiteModel(id: string): boolean {
           <tr class="interstitial-header" style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="width: 28px; text-align: right; padding-right: 5px;">#</td>
             <td style="text-align: left;">Title</td>
-            <td width="55" style="text-align: center;">HRCB</td>
-            <td width="55" style="text-align: center;" title="Psychoemotional Safety Quotient — experimental">PSQ</td>
-            <td width="55" style="text-align: center;" title="Editorial signal">E</td>
-            <td width="55" style="text-align: center;" title="Structural signal">S</td>
-            <td width="45" style="text-align: center;">Pts</td>
-            <td width="55" style="text-align: center;">Age</td>
+            <td width="55" style="text-align: center;">Rights</td>
+            <td width="55" style="text-align: center;" title="Psychoemotional Safety Quotient">Safety</td>
+            <td width="55" style="text-align: center;">Points</td>
           </tr>
         </>)}
         {i === 19 && selectedInsights[1] && (<>
           <tr>
-            <td colspan="8" style="padding: 8px 0;">
+            <td colspan="5" style="padding: 8px 0;">
               <div style="border-top: 1px dashed var(--color-border); border-bottom: 1px dashed var(--color-border); padding: 8px 10px; color: var(--fg-secondary); font-size: var(--font-xs); line-height: 1.6;">
                 <span style="color: var(--color-orange);">&#9670;</span>
                 {' '}{selectedInsights[1].text}
@@ -581,12 +557,9 @@ function isLiteModel(id: string): boolean {
           <tr class="interstitial-header" style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="width: 28px; text-align: right; padding-right: 5px;">#</td>
             <td style="text-align: left;">Title</td>
-            <td width="55" style="text-align: center;">HRCB</td>
-            <td width="55" style="text-align: center;" title="Psychoemotional Safety Quotient — experimental">PSQ</td>
-            <td width="55" style="text-align: center;" title="Editorial signal">E</td>
-            <td width="55" style="text-align: center;" title="Structural signal">S</td>
-            <td width="45" style="text-align: center;">Pts</td>
-            <td width="55" style="text-align: center;">Age</td>
+            <td width="55" style="text-align: center;">Rights</td>
+            <td width="55" style="text-align: center;" title="Psychoemotional Safety Quotient">Safety</td>
+            <td width="55" style="text-align: center;">Points</td>
           </tr>
         </>)}
         </>
