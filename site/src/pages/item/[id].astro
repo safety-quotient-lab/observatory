@@ -866,8 +866,13 @@ function timeAgo(unixTime: number): string {
             </tr>
             <tr>
               <td style="color: var(--fg-secondary);"><abbr title="Structural-Editorial Tension Level: how much a site's actions (S channel) diverge from what its content says (E channel)">SETL</abbr> <a href="/about#setl" style="color: var(--fg-secondary); text-decoration: none; font-size: var(--font-xs);" title="About SETL">ℹ</a></td>
-              <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
-              <td style="color: var(--fg-secondary); font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
+              {isLiteOnlyEval ? (
+                <td class="score-font" style="color: var(--color-nd);" title="SETL requires a full evaluation — lite structural proxy lacks sufficient variance"><span style="color: var(--color-nd);">ND</span></td>
+                <td style="color: var(--fg-secondary); font-size: var(--font-xs);" colspan="2">Full eval required</td>
+              ) : (
+                <td class="score-font" style={`color: ${setlToColor(aggSetl)};`}>{formatSetl(aggSetl)}</td>
+                <td style="color: var(--fg-secondary); font-size: var(--font-xs);" colspan="2">{aggSetl !== null ? (aggSetl > 0 ? 'Editorial-dominant' : aggSetl < 0 ? 'Structural-dominant' : 'Balanced') : ''}</td>
+              )}
             </tr>
             {hasFairWitness && (
               <tr>

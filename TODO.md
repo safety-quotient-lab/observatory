@@ -9,14 +9,14 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Epistemic quality (2026-03-07).** Prioritize measurement integrity over publication. HRCB consensus restored (WAI lite models re-enabled, 1,685→4,130 consensus stories). Test-retest sweep dispatched (100 stories, blocked on Anthropic credit pause). AP publishing thresholds implemented. Next: collect test-retest results (when credits replenish), ESC validation.
+**Epistemic quality (2026-03-07).** Prioritize measurement integrity over publication. HRCB consensus restored (WAI lite models re-enabled, 1,685→4,130 consensus stories). Test-retest sweep dispatched (100 stories, blocked on Anthropic credit pause). AP publishing thresholds implemented. ESC validated (all Final Four done: RS, ESC, RTS, REM). Next: collect test-retest results (when credits replenish). User action: `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron`.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
 Epistemic queue (priority order):
 - [ ] **Test-retest results** — 99 stories queued for Haiku re-eval (dispatch bug fixed: direct eval_queue insert bypasses credit pause + content gate). Run `sweep=test_retest&phase=check` after re-evals complete.
 - [x] **AP publishing thresholds** ✓ — RS ≥ 0.03, |HRCB| ≥ 0.05, hn_score ≥ 20 implemented in cron.ts. Post format: `HRCB +0.35 (positive) · RS 0.67 — Title`. **Remaining:** `wrangler secret put AP_PUBLISH_TOKEN --name hn-hrcb-cron` to go live.
-- [ ] **ESC construct validation** — Editorial-Structural Coherence is Tier A pedagogical but unvalidated. SETL formula live but no external validation yet.
+- [x] **ESC construct validation** ✓ — SETL validated for full evals (inter-rater r=0.519, face validity confirmed, discriminant ✓). Lite SETL degenerate (r=0.000, 80% at zero) — suppressed on item page for lite-only stories. Findings: `findings/2026-03-07-esc-setl-construct-validation.md`.
 
 Blog posts (deferred — lower priority than epistemic quality):
 - [ ] **Write API blog post** — moved from Standards; announce public REST API
