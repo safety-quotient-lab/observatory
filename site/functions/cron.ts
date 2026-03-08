@@ -651,25 +651,30 @@ export default {
 
     if (env.AP_PUBLISH_TOKEN && minute % 5 === 2) {
       try {
+        // Composite "worth sharing" filter: RS gate + (RS*0.5 + EQ*0.3 + SO*0.2) >= 0.45
+        // RS >= 0.10 ensures rights relevance; composite rewards quality + constructive framing
+        // hn_score >= 20 provides community validation
         const recentEvals = await db.prepare(
           `SELECT hn_id, title, url, COALESCE(hcb_weighted_mean, hcb_editorial_mean) as score,
-                  hcb_classification, eval_model, rs_score, hn_score
+                  hcb_classification, eval_model, rs_score, eq_score, so_score, hn_score
            FROM stories
            WHERE eval_status = 'done' AND hn_id > 0
              AND evaluated_at > datetime('now', '-6 minutes')
-             AND COALESCE(rs_score, 0) >= 0.03
-             AND ABS(COALESCE(hcb_weighted_mean, hcb_editorial_mean, 0)) >= 0.05
+             AND COALESCE(rs_score, 0) >= 0.10
+             AND (COALESCE(rs_score, 0) * 0.5 + COALESCE(eq_score, 0) * 0.3 + COALESCE(so_score, 0) * 0.2) >= 0.45
              AND COALESCE(hn_score, 0) >= 20
            ORDER BY evaluated_at DESC LIMIT 10`
-        ).all<{ hn_id: number; title: string; url: string | null; score: number | null; hcb_classification: string | null; eval_model: string | null; rs_score: number | null; hn_score: number | null }>();
+        ).all<{ hn_id: number; title: string; url: string | null; score: number | null; hcb_classification: string | null; eval_model: string | null; rs_score: number | null; eq_score: number | null; so_score: number | null; hn_score: number | null }>();
 
         let published = 0;
         for (const story of recentEvals.results) {
           const score = story.score != null ? (story.score > 0 ? '+' : '') + story.score.toFixed(2) : '?';
           const classification = story.hcb_classification ?? 'pending';
           const rs = story.rs_score != null ? story.rs_score.toFixed(2) : '?';
+          const eq = story.eq_score != null ? story.eq_score.toFixed(2) : '?';
+          const so = story.so_score != null ? story.so_score.toFixed(2) : '?';
           const storyUrl = `https://observatory.unratified.org/item/${story.hn_id}`;
-          const summary = `HRCB ${score} (${classification}) · RS ${rs} — ${story.title}`;
+          const summary = `HRCB ${score} (${classification}) · RS ${rs} · EQ ${eq} · SO ${so} — ${story.title}`;
 
           const resp = await fetch('https://unratified.org/ap/publish', {
             method: 'POST',
