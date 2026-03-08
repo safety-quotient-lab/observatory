@@ -1871,7 +1871,19 @@ export async function computeHomepageBlob(db: D1Database): Promise<HomepageBlob>
       for (const row of psqRows.results) {
         psqTotal += row.psq_score;
         try {
-          const dims = JSON.parse(row.psq_dimensions_json) as Array<{ name: string; score: number }>;
+          const parsed = JSON.parse(row.psq_dimensions_json);
+          // Handle 3 formats:
+          // 1. Array<{name,score}> — LLM lite-v2
+          // 2. {dimensions: Record<string,number>, factors: ...} — external PSQ
+          // 3. Record<string,number> — flat external PSQ
+          let dims: Array<{ name: string; score: number }>;
+          if (Array.isArray(parsed)) {
+            dims = parsed;
+          } else if (parsed.dimensions && typeof parsed.dimensions === 'object') {
+            dims = Object.entries(parsed.dimensions).map(([name, score]) => ({ name, score: score as number }));
+          } else {
+            dims = Object.entries(parsed).map(([name, score]) => ({ name, score: score as number }));
+          }
           for (const d of dims) {
             if (!dimSums[d.name]) dimSums[d.name] = { total: 0, count: 0 };
             dimSums[d.name].total += d.score;

@@ -369,7 +369,7 @@ export async function updateConsensusScore(db: D1Database, hnId: number): Promis
   }
 }
 
-// --- PSQ consensus (separate from HRCB consensus) ---
+// --- PSQ-lite consensus (LLM-based PSQ, separate from external PSQ and HRCB consensus) ---
 
 export async function updatePsqConsensus(db: D1Database, hnId: number): Promise<void> {
   try {
@@ -405,13 +405,15 @@ export async function updatePsqConsensus(db: D1Database, hnId: number): Promise<
     const consensusScore = Math.round((weightedSum / totalWeight) * 1000) / 1000;
     const spread = Math.round((Math.max(...scores) - Math.min(...scores)) * 1000) / 1000;
 
-    await db
-      .prepare(
-        `UPDATE stories SET psq_consensus_score=?, psq_consensus_model_count=?,
-         psq_consensus_spread=? WHERE hn_id=?`
-      )
-      .bind(consensusScore, scores.length, spread, hnId)
-      .run();
+    // Update psq_lite_archive with LLM PSQ consensus data
+    await db.prepare(
+      `INSERT INTO psq_lite_archive (hn_id, psq_score, psq_consensus_score, psq_consensus_model_count, psq_consensus_spread)
+       VALUES (?, NULL, ?, ?, ?)
+       ON CONFLICT(hn_id) DO UPDATE SET
+         psq_consensus_score = excluded.psq_consensus_score,
+         psq_consensus_model_count = excluded.psq_consensus_model_count,
+         psq_consensus_spread = excluded.psq_consensus_spread`
+    ).bind(hnId, consensusScore, scores.length, spread).run();
   } catch (err) {
     console.error(`[eval-write] updatePsqConsensus failed for hn_id=${hnId}:`, err);
   }
@@ -1558,22 +1560,21 @@ export async function writePsqRaterEvalResult(
     )
     .run();
 
-  // COALESCE fill-in: write PSQ signals to stories where not yet set.
-  // PSQ does NOT write hcb_* columns — it's an independent signal.
+  // Write PSQ-lite (LLM-based) to archive table for comparison research.
+  // Canonical psq_score on stories comes from external DistilBERT endpoint.
   await db.prepare(
-    `UPDATE stories SET
-       psq_score = COALESCE(psq_score, ?),
-       psq_dimensions_json = COALESCE(psq_dimensions_json, ?),
-       psq_confidence = COALESCE(psq_confidence, ?),
-       tq_score = COALESCE(tq_score, ?)
-     WHERE hn_id = ?`
-  ).bind(
-    gPsq,
-    psqDimsJson,
-    meanConf,
-    tqScore,
-    hnId,
-  ).run().catch(() => {});
+    `INSERT INTO psq_lite_archive (hn_id, psq_score, psq_dimensions_json, psq_confidence)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(hn_id) DO UPDATE SET
+       psq_score = excluded.psq_score,
+       psq_dimensions_json = excluded.psq_dimensions_json,
+       psq_confidence = excluded.psq_confidence`
+  ).bind(gPsq, psqDimsJson, meanConf, hnId).run().catch(() => {});
+
+  // TQ still goes on stories (shared construct)
+  await db.prepare(
+    `UPDATE stories SET tq_score = COALESCE(tq_score, ?) WHERE hn_id = ?`
+  ).bind(tqScore, hnId).run().catch(() => {});
 
   // Refresh domain aggregate (includes avg_psq now)
   const domain = await db.prepare('SELECT domain FROM stories WHERE hn_id = ?')

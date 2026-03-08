@@ -51,6 +51,7 @@ import { computeContentHash } from '../src/lib/content-drift';
 import { logEvent } from '../src/lib/events';
 import { writeDb } from '../src/lib/db-utils';
 import { checkCreditPause } from './rate-limit';
+import { scoreExternalPsq, writeExternalPsqScore } from '../src/lib/psq-external';
 
 // --- Shared types ---
 
@@ -598,6 +599,14 @@ export async function processLiteResult(
   // Health success
   await handleRaterHealthSuccess(env, db, story, prep.msgModelId);
 
+  // External PSQ scoring (non-fatal — backfill sweep covers misses)
+  if (prep.content.length >= 50) {
+    try {
+      const psqResult = await scoreExternalPsq(prep.content);
+      if (psqResult) await writeExternalPsqScore(writeDb(env.DB), story.hn_id, psqResult);
+    } catch {}
+  }
+
   const { weighted_mean, classification } = computeLiteAggregates(liteParsed);
   const evalDurationMs = Date.now() - evalStartMs;
   console.log(`[consumer] Done (lite): hn_id=${story.hn_id} → ${classification} (${weighted_mean}) [${prep.msgModelId}] ${evalDurationMs}ms`);
@@ -812,6 +821,14 @@ export async function processFullResult(
 
   // Track rater health for all models
   await handleRaterHealthSuccess(env, db, story, prep.msgModelId);
+
+  // External PSQ scoring (non-fatal — backfill sweep covers misses)
+  if (prep.content.length >= 50) {
+    try {
+      const psqResult = await scoreExternalPsq(prep.content);
+      if (psqResult) await writeExternalPsqScore(db, story.hn_id, psqResult);
+    } catch {}
+  }
 
   const evalDurationMs = Date.now() - evalStartMs;
   console.log(`[consumer] Done: hn_id=${story.hn_id} → ${aggregates.classification} (${aggregates.weighted_mean}) [${prep.msgModelId}] ${evalDurationMs}ms`);

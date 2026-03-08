@@ -42,8 +42,9 @@ Cron Worker (1min) → Queues → 3 Provider-Specific Consumer Workers → D1 + 
 
 **Workers:**
 - `site/functions/cron.ts` — HN crawling, score refresh, queue dispatch. Serves `/trigger`, `/trigger?sweep=...`, `/calibrate`, `/calibrate/check`, `/health`. Dispatches sweeps via `SWEEP_HANDLERS` map in `sweeps.ts`.
-- `site/functions/sweeps.ts` — 24 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores/UpgradeLite/BrowserAudit/KagiScoreAudit/KagiUrlCheck/KagiDomainEnrich/KagiCalibrationOracle/BackfillCountry/BackfillRs/BackfillAc/BackfillCar/TestRetest`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`. Kagi sweeps have KV-backed rate limit backoff (`kagi:backoff` key, 30-min TTL).
-- `site/functions/consumer-shared.ts` — Shared types, content prep, result writing. Uses `isFirstFullEval` for first-eval housekeeping (R2 snapshot, content hash, DCP cache, archive).
+- `site/functions/sweeps.ts` — 25 sweep handlers (`sweepFailed/Skipped/Coverage/ContentDrift/AlgoliaBackfill/RefreshDomainAggregates/BackfillPtScore/SetlSpikes/RefreshUserAggregates/ExpandFromSubmitted/RefreshArticlePairStats/LiteReeval/RefreshConsensusScores/UpgradeLite/BrowserAudit/KagiScoreAudit/KagiUrlCheck/KagiDomainEnrich/KagiCalibrationOracle/BackfillCountry/BackfillRs/BackfillAc/BackfillCar/TestRetest/ExternalPsq`). Add new sweeps here + one entry in `SWEEP_HANDLERS` in `cron.ts`. Kagi sweeps have KV-backed rate limit backoff (`kagi:backoff` key, 30-min TTL).
+- `site/functions/consumer-shared.ts` — Shared types, content prep, result writing. Uses `isFirstFullEval` for first-eval housekeeping (R2 snapshot, content hash, DCP cache, archive). Inline external PSQ scoring (non-fatal) after each eval.
+- `site/src/lib/psq-external.ts` — External PSQ scoring client. Calls DistilBERT endpoint at `psq.unratified.org/score`. `scoreExternalPsq()`, `writeExternalPsqScore()` (writes to `psq_external` table + mirrors to `stories.psq_score`), `checkPsqHealth()`.
 - `site/functions/consumer-anthropic.ts` — Anthropic queue handler. Prompt caching, proactive rate limit tracking, 429/529/credit handling, truncation retry.
 - `site/functions/consumer-openrouter.ts` — OpenRouter queue handler (8 model queues). Lite + full prompt modes.
 - `site/functions/consumer-workers-ai.ts` — Workers AI queue handler. Free tier, no API key.
@@ -168,6 +169,10 @@ curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut
 # Sweep: test-retest — collect completed re-evaluation results
 curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
   "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=test_retest&phase=check"
+
+# Sweep: external PSQ — score existing stories via DistilBERT endpoint (default limit 50, max 500)
+curl -s -H "Authorization: Bearer $(grep '^TRIGGER_SECRET=' site/.dev.vars | cut -d= -f2-)" \
+  "https://hn-hrcb-cron.kashifshah.workers.dev/trigger?sweep=external_psq&limit=50"
 
 # Health check (no auth)
 curl -s https://hn-hrcb-cron.kashifshah.workers.dev/health

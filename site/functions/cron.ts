@@ -43,6 +43,7 @@ import {
   sweepBackfillAc,
   sweepBackfillCar,
   sweepTestRetest,
+  sweepExternalPsq,
   type SweepContext,
 } from './sweeps';
 
@@ -800,6 +801,7 @@ export default {
         backfill_ac: sweepBackfillAc,
         backfill_car: sweepBackfillCar,
         test_retest: sweepTestRetest,
+        external_psq: sweepExternalPsq,
       };
 
       const handler = SWEEP_HANDLERS[sweep];
