@@ -253,6 +253,31 @@ export function computeDerivedScoreFields(
   });
 }
 
+/**
+ * ES-R2: Apply aggregate DCP modifier to a lite structural score.
+ * Lite evals have no per-section scores, so we average all non-null DCP
+ * element modifiers and apply as a single structural adjustment.
+ * Cap at ±0.30 (same as full eval per-section cap).
+ */
+export function applyDcpToLiteStructural(
+  structuralScore: number | null,
+  dcpElements: Record<string, DcpElement> | null,
+): { adjusted: number | null; dcpModifier: number | null } {
+  if (!dcpElements || structuralScore == null) return { adjusted: structuralScore, dcpModifier: null };
+
+  const modifiers = Object.values(dcpElements)
+    .map(el => el.modifier)
+    .filter((m): m is number => m != null);
+
+  if (modifiers.length === 0) return { adjusted: structuralScore, dcpModifier: null };
+
+  const avgModifier = modifiers.reduce((a, b) => a + b, 0) / modifiers.length;
+  const capped = round(Math.max(-0.30, Math.min(0.30, avgModifier)));
+  const adjusted = round(Math.max(-1.0, Math.min(1.0, structuralScore + capped)));
+
+  return { adjusted, dcpModifier: capped };
+}
+
 // --- SETL (Structural-Editorial Tension Level) ---
 
 export function computeSetl(scores: Array<{ editorial: number | null; structural: number | null }>): number | null {

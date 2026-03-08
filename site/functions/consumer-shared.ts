@@ -44,7 +44,7 @@ import {
   type LiteEvalResponseV2,
 } from '../src/lib/shared-eval';
 
-import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, type DcpElement } from '../src/lib/compute-aggregates';
+import { computeAggregates, computeWitnessRatio, computeDerivedScoreFields, applyDcpToLiteStructural, type DcpElement } from '../src/lib/compute-aggregates';
 import { cleanHtml, hasReadableText } from '../src/lib/html-clean';
 import { classifyContent } from '../src/lib/content-gate';
 import { computeContentHash } from '../src/lib/content-drift';
@@ -556,6 +556,22 @@ export async function processLiteResult(
 
   if (liteValidation.warnings.length > 0 || liteValidation.repairs.length > 0) {
     await logEvent(db, { hn_id: story.hn_id, event_type: 'rater_validation_warn', severity: 'info', message: `Lite validation warnings for model ${prep.msgModelId}: ${liteValidation.warnings.length}W ${liteValidation.repairs.length}R`, details: { model: prep.msgModelId, warnings: liteValidation.warnings, repairs: liteValidation.repairs, prompt_mode: 'lite' } });
+  }
+
+  // ES-R2: Inject cached DCP into lite structural score
+  if (prep.domain && liteParsed.evaluation.structural != null) {
+    try {
+      const cachedDcp = await lookupCachedDcp(env, prep.domain);
+      if (cachedDcp) {
+        const { adjusted, dcpModifier } = applyDcpToLiteStructural(
+          liteParsed.evaluation.structural,
+          cachedDcp as Record<string, DcpElement>,
+        );
+        if (adjusted != null && dcpModifier != null && dcpModifier !== 0) {
+          liteParsed.evaluation.structural = adjusted;
+        }
+      }
+    } catch { /* DCP lookup failure is non-fatal */ }
   }
 
   // Build hashes
