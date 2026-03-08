@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Epistemic quality (2026-03-08).** H1 absence-as-negative bias fix shipped (prompt few-shot + post-scoring safety net). PSQ display precision reduced to 1 decimal. Peer review from psychology-agent via unratified-agent processed (5 findings: H1 done, H4 already done, ES-R1 already done, ES-R2 deferred, PSQ-R1 done). Next: lite_reeval sweep to re-score affected tech stories, then blog posts or Phase 1.
+**Peer review sprint (2026-03-08).** All 5 findings from psychology-agent review processed: H1 (absence-as-negative) fixed, ES-R2 (DCP injection into lite) shipped, H4+ES-R1 already done, PSQ-R1 (1-decimal) done. Issues #44 (queue hygiene), #48 (PSQ first evals), #49 (consensus refresh) closed. Next: blog posts or remaining GitHub issues.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
