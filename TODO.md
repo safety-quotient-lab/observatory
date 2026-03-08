@@ -9,14 +9,11 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Epistemic quality (2026-03-07).** Prioritize measurement integrity over publication. HRCB consensus restored (WAI lite models re-enabled, 1,685→4,130 consensus stories). All Final Four validated (RS, ESC, RTS, REM). AP publishing live (token set, thresholds active). PSQ ordinal caveat + scorer methodology note shipped. Test-retest batch running (94 stories via standalone evaluator, OAuth bypass of credit pause). Next: collect test-retest results (`sweep=test_retest&phase=check`).
+**Epistemic quality (2026-03-07).** Measurement integrity sprint complete. HRCB consensus restored (4,130 stories). All Final Four validated (RS, ESC, RTS, REM). AP publishing live. PSQ caveats shipped (ordinal + scorer note). Test-retest done (n=85, r=0.397, 74% classification agreement — ordinal stability confirmed). All Phase 0 epistemic queue items closed. Next: blog posts or Phase 1 engineering.
 
 Phase B (human raters) and Phase C (NewsGuard) **deferred**. Email drafted at `.claude/plans/memorized/newsguard-research-access-email.md`. Full plan: `.claude/plans/memorized/signal-validation-plan.md`.
 
-Epistemic queue (priority order):
-- [ ] **Test-retest results** — 94 stories running via standalone evaluator (Haiku, OAuth). Run `sweep=test_retest&phase=check` after batch completes.
-- [x] **AP publishing thresholds** ✓ — RS ≥ 0.03, |HRCB| ≥ 0.05, hn_score ≥ 20. Token set on both `hn-hrcb-cron` + `unratified-ap`. Live.
-- [x] **ESC construct validation** ✓ — SETL validated for full evals (inter-rater r=0.519, face validity confirmed, discriminant ✓). Lite SETL degenerate (r=0.000, 80% at zero) — suppressed on item page for lite-only stories. Findings: `findings/2026-03-07-esc-setl-construct-validation.md`.
+Epistemic queue: **all items closed** (test-retest, AP thresholds, ESC validation). See `findings/2026-03-07-*.md`.
 
 Blog posts (deferred — lower priority than epistemic quality):
 - [ ] **Write API blog post** — moved from Standards; announce public REST API
@@ -30,7 +27,7 @@ Blog posts (deferred — lower priority than epistemic quality):
 
 ### Standards
 
-- [x] **ActivityPub** (W3C) ✓ — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live. Token set, quality thresholds active (RS ≥ 0.03, |HRCB| ≥ 0.05, hn_score ≥ 20). Publishing every 5 min on cron.
+- [x] **ActivityPub** (W3C) ✓ — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live. Composite filter: RS ≥ 0.10 + quality score ≥ 0.45 + hn_score ≥ 20. Selects ~4% of evaluated stories. Publishing every 5 min on cron.
 
 ---
 
@@ -70,7 +67,7 @@ REM ✓ (single-linkage clustering, `/rights/network`). MCC ✓ (resolved by RS 
 
 Completed: convergent validity TQ→MBFC (deferred, n=13), EQ→MBFC (marginal ρ=+0.362), ET→VADER (weak r=+0.376), CL→FK (fail, wrong validator). Discriminant ✓ (r=+0.08). Known-groups ✓ (H=23.4, p<0.0001). All in `findings/2026-03-04-*.md`.
 
-- [ ] **Test-retest reliability** — Inter-rater DONE 2026-03-06 (n=278, cross-model, r=0.509, 72.3% classification agreement). `findings/2026-03-06-inter-rater-reliability.md`. Test-retest sweep implemented (migration 0069, `sweep=test_retest`). 50 stories dispatched 2026-03-07. Cron deployed. Run `sweep=test_retest&phase=check` after re-evals complete.
+- [x] **Test-retest reliability** ✓ — Same-model (Haiku, n=85): r=0.397, MAE=0.142, 74.1% classification agreement. Inter-rater (cross-model, n=278): r=0.509, 72.3% agreement. `findings/2026-03-07-test-retest-reliability.md`, `findings/2026-03-06-inter-rater-reliability.md`.
 
 #### HRCB Decomposition Decision
 
