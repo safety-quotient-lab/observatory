@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
-import { getAllDomainStats, getDomainSignalProfiles, getDomainKarmaMap } from '../lib/db';
+import { getDomainSignalProfiles, getDomainKarmaMap } from '../lib/db';
 import { scoreToColor, formatScore } from '../lib/colors';
 import type { DomainSignalProfile } from '../lib/db';
 import { cachedQuery, readDb } from '../lib/db-utils';
@@ -12,8 +12,8 @@ const db = readDb(Astro.locals.runtime.env.DB);
 const kv = Astro.locals.runtime.env.CONTENT_CACHE;
 
 // --- 1. Parallel fetch ---
-const [domains, signalProfilesArr, karmaMapArr] = await Promise.all([
-  cachedQuery(kv, 'allDomainStats:count:50', () => getAllDomainStats(db, 'count', 50)),
+// Signal profiles already contain avg_hrcb — no need for separate getAllDomainStats query
+const [signalProfilesArr, karmaMapArr] = await Promise.all([
   cachedQuery<DomainSignalProfile[]>(kv, 'domainSignalProfiles', async () => {
     const m = await getDomainSignalProfiles(db);
     return [...m.values()];
@@ -25,8 +25,8 @@ const [domains, signalProfilesArr, karmaMapArr] = await Promise.all([
 ]);
 const karmaMap = new Map(karmaMapArr.map(k => [k.domain, k]));
 
-const evaluatedDomains = domains.filter(d => d.avg_score !== null && d.count >= 3);
-const domainScoreMap = new Map(evaluatedDomains.map(d => [d.domain, d.avg_score]));
+// Derive domainScoreMap from signal profiles (avg_hrcb) — eliminates redundant GROUP BY scan
+const domainScoreMap = new Map(signalProfilesArr.map(p => [p.domain, p.avg_hrcb ?? null]));
 
 // --- Signal dimension definitions (used by both computation and template) ---
 type SignalDimDef = { code: string; fullLabel: string; label: string; color: string };
@@ -829,7 +829,7 @@ return {
 } // end computeFactionsData
 
 const fd = await cachedQuery<FactionsData>(kv, 'sys:factions', () =>
-  Promise.resolve(computeFactionsData(signalProfilesArr, domainScoreMap, karmaMap)), 120);
+  Promise.resolve(computeFactionsData(signalProfilesArr, domainScoreMap, karmaMap)), 600);
 
 const {
   enrichedClusters, loneWolfDomains, histograms, coreHistograms,

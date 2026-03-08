@@ -59,18 +59,19 @@ export async function getAllDomainStats(
       case 'setl': orderBy = 'avg_setl DESC NULLS LAST'; break;
       case 'conf': orderBy = 'avg_conf DESC NULLS LAST'; break;
     }
+    // Read from materialized domain_aggregates instead of scanning stories table
     const { results } = await db
       .prepare(
-        `SELECT s.domain, COUNT(*) as count,
-                SUM(CASE WHEN s.eval_status = 'done' THEN 1 ELSE 0 END) as evaluated,
-                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_weighted_mean END) as avg_score,
-                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_editorial_mean END) as avg_editorial,
-                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_structural_mean END) as avg_structural,
-                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_setl END) as avg_setl,
-                AVG(CASE WHEN s.eval_status = 'done' THEN s.hcb_confidence END) as avg_conf
-         FROM stories s
-         WHERE s.domain IS NOT NULL
-         GROUP BY s.domain
+        `SELECT domain,
+                story_count as count,
+                evaluated_count as evaluated,
+                avg_hrcb as avg_score,
+                avg_editorial,
+                avg_structural,
+                avg_setl,
+                avg_confidence as avg_conf
+         FROM domain_aggregates
+         WHERE domain IS NOT NULL
          ORDER BY ${orderBy}
          LIMIT ? OFFSET ?`
       )
