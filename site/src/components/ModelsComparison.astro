@@ -1,0 +1,118 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor, formatScore } from '../lib/colors';
+import { modelDisplayName, isLiteMode, getModelDef } from '../lib/shared-eval';
+
+interface Props {
+  totalStories: number;
+  agreeCount: number;
+  agreePct: number;
+  classAgreeCount: number;
+  classAgreePct: number;
+  avgDelta: number;
+  medianDelta: number;
+  pairCorrelations: any[];
+  modelIds: string[];
+  aggregates: any[];
+  biasAnalysis: any[];
+}
+
+const { totalStories, agreeCount, agreePct, classAgreeCount, classAgreePct, avgDelta, medianDelta, pairCorrelations, modelIds, aggregates, biasAnalysis } = Astro.props;
+---
+
+{totalStories > 0 && (
+  <details open class="collapsible-section">
+    <summary>
+      Multi-Model Comparison
+      <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
+        {totalStories} shared stories
+      </span>
+    </summary>
+
+    {/* Summary stats */}
+    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 10px; padding: 10px; background: var(--bg-surface); border-radius: 4px;">
+      <div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Sign Agreement</div>
+        <span class="score-font" style={`color: ${agreePct >= 80 ? 'var(--color-positive-medium)' : agreePct >= 60 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
+          {agreePct}%
+        </span>
+        <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">{agreeCount}/{totalStories}</span>
+      </div>
+      <div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Class Agreement</div>
+        <span class="score-font" style={`color: ${classAgreePct >= 60 ? 'var(--color-positive-medium)' : classAgreePct >= 40 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
+          {classAgreePct}%
+        </span>
+        <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">{classAgreeCount}/{totalStories}</span>
+      </div>
+      <div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Median Delta</div>
+        <span class="score-font" style={`color: ${medianDelta < 0.1 ? 'var(--color-positive-medium)' : medianDelta < 0.2 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
+          {medianDelta.toFixed(3)}
+        </span>
+      </div>
+      <div>
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Mean Delta</div>
+        <span class="score-font" style={`color: ${avgDelta < 0.1 ? 'var(--color-positive-medium)' : avgDelta < 0.2 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
+          {avgDelta.toFixed(3)}
+        </span>
+      </div>
+      {pairCorrelations.map(pc => (
+        <div>
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; margin-bottom: 2px;">Pearson r</div>
+          <span class="score-font" style={`color: ${pc.r !== null && pc.r >= 0.7 ? 'var(--color-positive-medium)' : pc.r !== null && pc.r >= 0.4 ? 'var(--color-warning)' : 'var(--color-negative)'}; font-size: var(--font-lg); font-weight: bold;`}>
+            {pc.r !== null ? pc.r.toFixed(3) : '---'}
+          </span>
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 4px;">n={pc.n}</span>
+        </div>
+      ))}
+    </div>
+
+    {/* Model Profiles table */}
+    <div class="table-wrap">
+    <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 600px;">
+      <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+        <td style="padding: 4px 8px;">Model</td>
+        <td style="padding: 4px 8px; text-align: center;">Shared</td>
+        <td style="padding: 4px 8px; text-align: center;">Avg HRCB</td>
+        <td style="padding: 4px 8px; text-align: center;">|HRCB|</td>
+        <td style="padding: 4px 8px; text-align: center;">+</td>
+        <td style="padding: 4px 8px; text-align: center;">0</td>
+        <td style="padding: 4px 8px; text-align: center;">-</td>
+        <td style="padding: 4px 8px; text-align: center;">Rates Higher</td>
+        <td style="padding: 4px 8px; text-align: center;">Rates Lower</td>
+      </tr>
+      {aggregates.filter(a => modelIds.includes(a.model)).map(a => {
+        const bias = biasAnalysis.find(b => b.model === a.model);
+        return (
+          <tr style="border-top: 1px solid var(--bg-surface);">
+            <td style="padding: 6px 8px; color: var(--fg-primary); font-weight: bold; font-size: var(--font-sm);">
+              {modelDisplayName(a.model)}
+              {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Lite evaluation — editorial only">lite</span>}
+            </td>
+            <td style="padding: 6px 8px; text-align: center; color: var(--fg-secondary);">{a.story_count}</td>
+            <td style={`padding: 6px 8px; text-align: center; font-weight: bold; color: ${scoreToColor(a.avg_score)};`}>
+              {formatScore(a.avg_score)}
+              {a.ci_margin > 0 && <span style="color: var(--fg-secondary); font-size: var(--font-xs); font-weight: normal;" title={`95% CI: ${(a.avg_score - a.ci_margin).toFixed(3)} to ${(a.avg_score + a.ci_margin).toFixed(3)} (n=${a.story_count})`}>{' '}±{a.ci_margin.toFixed(3)}</span>}
+              {isLiteMode(getModelDef(a.model)?.prompt_mode ?? null) && <span style="color: var(--fg-secondary); font-size: var(--font-xs); font-weight: normal; margin-left: 3px;" title="Editorial channel only — not comparable to full model weighted mean">E</span>}
+            </td>
+            <td style="padding: 6px 8px; text-align: center; color: var(--fg-emphasis);">{a.avg_abs_score != null ? a.avg_abs_score.toFixed(3) : '—'}</td>
+            <td style="padding: 6px 8px; text-align: center; color: var(--color-positive-medium);">{a.positive_pct}%</td>
+            <td style="padding: 6px 8px; text-align: center; color: var(--fg-secondary);">{a.neutral_pct}%</td>
+            <td style="padding: 6px 8px; text-align: center; color: var(--color-negative);">{a.negative_pct}%</td>
+            <td style="padding: 6px 8px; text-align: center;">
+              {bias && <span style={`color: ${bias.higherPct > 55 ? 'var(--color-positive-medium)' : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>{bias.higherPct}%</span>}
+            </td>
+            <td style="padding: 6px 8px; text-align: center;">
+              {bias && <span style={`color: ${bias.lowerPct > 55 ? 'var(--color-negative)' : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>{bias.lowerPct}%</span>}
+            </td>
+          </tr>
+        );
+      })}
+    </table>
+    </div>
+    <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 8px;">
+      Avg HRCB: full models = editorial+structural weighted mean · lite models = editorial only (E) — not directly comparable
+    </div>
+  </details>
+)}

@@ -1,0 +1,82 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor, confidenceToColor } from '../lib/colors';
+import { modelDisplayName, isLiteMode, getModelDef } from '../lib/shared-eval';
+
+interface Props {
+  statusBreakdown: any[];
+  raterSummary: any[];
+}
+
+const { statusBreakdown, raterSummary } = Astro.props;
+---
+
+{statusBreakdown.length > 0 && (
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Multi-Model Raters</div>
+        <div class="table-wrap">
+        <table cellpadding="0" cellspacing="0" width="100%">
+          <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <td style="padding: 4px 8px;">Model</td>
+            <td style="padding: 4px 8px; text-align: center;">Avg Score</td>
+            <td style="padding: 4px 8px; text-align: center;">Conf</td>
+            <td style="padding: 4px 8px; text-align: center;">Done</td>
+            <td style="padding: 4px 8px; text-align: center;">Queued</td>
+            <td style="padding: 4px 8px; text-align: center;">Failed</td>
+            <td style="padding: 4px 8px; text-align: center;">Coverage</td>
+          </tr>
+          {statusBreakdown.map(rs => {
+            const summary = raterSummary.find(s => s.model === rs.model);
+            const coveragePct = rs.total_primary > 0 ? Math.round((rs.done / rs.total_primary) * 100) : 0;
+            const coverageColor = coveragePct >= 95 ? 'var(--color-positive-medium)' : coveragePct >= 50 ? 'var(--color-warning)' : 'var(--color-negative)';
+            const inFlight = rs.queued + rs.pending + rs.evaluating;
+            return (
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="padding: 6px 8px; color: var(--fg-primary); font-size: var(--font-sm); font-weight: bold;">
+                  {modelDisplayName(rs.model)}
+                  {isLiteMode(getModelDef(rs.model)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 4px; font-weight: normal;" title="Lite evaluation — editorial only">lite</span>}
+                </td>
+                <td style="padding: 6px 8px; text-align: center;">
+                  <span class="score-font" style={`color: ${summary?.avg_score != null ? scoreToColor(summary.avg_score) : 'var(--fg-secondary)'}; font-weight: bold;`}>
+                    {summary?.avg_score != null ? summary.avg_score.toFixed(3) : '---'}
+                  </span>
+                </td>
+                <td style="padding: 6px 8px; text-align: center;">
+                  <span class="score-font" style={`color: ${summary?.avg_confidence != null ? confidenceToColor(summary.avg_confidence) : 'var(--fg-secondary)'};`}>
+                    {summary?.avg_confidence != null ? summary.avg_confidence.toFixed(2) : '---'}
+                  </span>
+                </td>
+                <td style="padding: 6px 8px; text-align: center;">
+                  <span class="score-font" style="color: var(--color-positive-medium);">{rs.done}</span>
+                </td>
+                <td style="padding: 6px 8px; text-align: center;">
+                  {inFlight > 0
+                    ? <span class="score-font" style="color: var(--color-warning);">{inFlight}</span>
+                    : <span style="color: var(--fg-secondary);">0</span>
+                  }
+                </td>
+                <td style="padding: 6px 8px; text-align: center;">
+                  {rs.failed > 0
+                    ? <span class="score-font" style="color: var(--color-negative);">{rs.failed}</span>
+                    : <span style="color: var(--fg-secondary);">0</span>
+                  }
+                </td>
+                <td style="padding: 6px 8px; text-align: center;">
+                  <div style="display: inline-flex; align-items: center; gap: 4px;">
+                    <div style="width: 50px; height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                      <div style={`width: ${coveragePct}%; height: 100%; background: ${coverageColor}; border-radius: 3px;`}></div>
+                    </div>
+                    <span class="score-font" style={`color: ${coverageColor}; font-size: var(--font-xs);`}>{coveragePct}%</span>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+)}

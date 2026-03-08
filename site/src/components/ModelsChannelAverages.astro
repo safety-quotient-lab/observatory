@@ -1,0 +1,75 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor } from '../lib/colors';
+import { modelDisplayName } from '../lib/shared-eval';
+
+interface Props {
+  channelAverages: any[];
+}
+
+const { channelAverages } = Astro.props;
+
+const MAX_BAR = Math.max(0.01, ...channelAverages.flatMap(r => [
+  Math.abs(r.avg_hrcb ?? 0),
+  Math.abs(r.avg_e ?? 0),
+  Math.abs(r.avg_s ?? 0),
+]));
+const BAR_W = 80;
+---
+
+{channelAverages.length > 0 && (
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+          Channel Averages
+          <span style="text-transform: none; letter-spacing: 0; color: var(--color-border); margin-left: 6px; font-size: var(--font-xs);">avg HRCB · E · S per model · done evals</span>
+        </div>
+        {channelAverages.map(r => {
+          const hrcbW = Math.round((Math.abs(r.avg_hrcb ?? 0) / MAX_BAR) * BAR_W);
+          const eW    = Math.round((Math.abs(r.avg_e    ?? 0) / MAX_BAR) * BAR_W);
+          const sW    = r.avg_s != null ? Math.round((Math.abs(r.avg_s) / MAX_BAR) * BAR_W) : null;
+          const isLite = r.prompt_mode === 'lite' || r.prompt_mode === 'light';
+          return (
+            <div style="display: flex; align-items: center; gap: 8px; padding: 4px 0; border-top: 1px solid var(--bg-surface); font-size: var(--font-xs);">
+              <div style="width: 140px; color: var(--fg-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;" title={r.eval_model}>
+                {modelDisplayName(r.eval_model)}
+                {isLite && <span style="color: var(--color-orange); margin-left: 3px; font-size: 8px;">~lite</span>}
+              </div>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                {!isLite && (
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="color: var(--fg-secondary); width: 28px; text-align: right; font-size: 8px;">HRCB</span>
+                    <div style={`width: ${hrcbW}px; height: 7px; background: var(--channel-hrcb); border-radius: 2px;`}></div>
+                    <span class="score-font" style={`color: ${scoreToColor(r.avg_hrcb)}; font-size: var(--font-xs);`}>{r.avg_hrcb != null ? r.avg_hrcb.toFixed(3) : '—'}</span>
+                  </div>
+                )}
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span style="color: var(--fg-secondary); width: 28px; text-align: right; font-size: 8px;">E</span>
+                  <div style={`width: ${eW}px; height: 7px; background: var(--channel-editorial); border-radius: 2px;`}></div>
+                  <span class="score-font" style={`color: ${scoreToColor(r.avg_e)}; font-size: var(--font-xs);`}>{r.avg_e != null ? r.avg_e.toFixed(3) : '—'}</span>
+                </div>
+                {!isLite && (
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="color: var(--fg-secondary); width: 28px; text-align: right; font-size: 8px;">S</span>
+                    {sW != null
+                      ? <div style={`width: ${sW}px; height: 7px; background: var(--channel-structural); border-radius: 2px;`}></div>
+                      : <span style="color: var(--color-border); font-size: 8px;">n/a</span>
+                    }
+                    <span class="score-font" style={`color: ${scoreToColor(r.avg_s)}; font-size: var(--font-xs);`}>{r.avg_s != null ? r.avg_s.toFixed(3) : '—'}</span>
+                  </div>
+                )}
+              </div>
+              <div style="color: var(--color-border); font-size: 8px; flex-shrink: 0; width: 36px; text-align: right;">{r.n.toLocaleString()}</div>
+            </div>
+          );
+        })}
+        <div style="display: flex; gap: 12px; margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--bg-surface); font-size: var(--font-xs); color: var(--fg-secondary);">
+          <span><span style="color: var(--channel-hrcb);">■</span> HRCB</span>
+          <span><span style="color: var(--channel-editorial);">■</span> E editorial</span>
+          <span><span style="color: var(--channel-structural);">■</span> S structural</span>
+        </div>
+      </td>
+    </tr>
+  </table>
+)}

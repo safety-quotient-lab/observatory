@@ -1,0 +1,76 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor, formatScore } from '../lib/colors';
+import { modelDisplayName, isLiteMode, getModelDef, MODEL_REGISTRY } from '../lib/shared-eval';
+
+interface Props {
+  models: any[];
+  modelComparison: any[];
+}
+
+const { models, modelComparison } = Astro.props;
+---
+
+{models.length > 0 && (
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+          Evaluation Models
+          {modelComparison.length > 1 && (
+            <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
+              {modelComparison.length} models in history
+            </span>
+          )}
+        </div>
+        <div class="table-wrap">
+        <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-sm);">
+          <tr style="color: var(--fg-secondary); font-size: var(--font-xs);">
+            <td>Model</td>
+            <td width="60" align="center">Status</td>
+            <td width="70" align="center">Provider</td>
+            <td width="70" align="center">Evals</td>
+            <td width="70" align="center">Avg HRCB</td>
+            <td width="50" align="center">Min</td>
+            <td width="50" align="center">Max</td>
+          </tr>
+          {MODEL_REGISTRY.map((reg) => {
+            const active = models.find(m => m.eval_model === reg.id);
+            const hist = modelComparison.find(mc => mc.eval_model === reg.id);
+            const evalCount = active?.count ?? hist?.count ?? 0;
+            const avgScore = active?.avg_score ?? hist?.avg_score ?? null;
+            return (
+            <tr style="border-top: 1px solid var(--bg-surface);">
+              <td style={`color: ${reg.enabled ? 'var(--fg-primary)' : 'var(--fg-secondary)'};`} class="score-font">
+                {reg.api_model_id}
+              </td>
+              <td align="center" class="score-font">
+                {reg.enabled
+                  ? <span style="color: var(--color-positive-light);">on</span>
+                  : <span style="color: var(--fg-secondary);">off</span>
+                }
+              </td>
+              <td align="center" class="score-font" style={`color: ${reg.provider === 'anthropic' ? 'var(--color-purple-light)' : reg.provider === 'workers-ai' ? 'var(--color-amber)' : 'var(--channel-editorial)'};`}>
+                {reg.provider === 'anthropic' ? 'anth' : reg.provider === 'workers-ai' ? 'CF' : 'OR'}{reg.is_free ? '' : ''}
+              </td>
+              <td align="center" class="score-font" style="color: var(--fg-secondary);">
+                {evalCount > 0 ? evalCount : '---'}
+              </td>
+              <td align="center" class="score-font" style={`color: ${scoreToColor(avgScore)}; white-space: nowrap;`}>
+                {avgScore != null ? formatScore(avgScore) : '---'}
+              </td>
+              <td align="center" class="score-font" style={`color: ${scoreToColor(hist?.min_score ?? null)}; white-space: nowrap;`}>
+                {hist ? formatScore(hist.min_score) : '---'}
+              </td>
+              <td align="center" class="score-font" style={`color: ${scoreToColor(hist?.max_score ?? null)}; white-space: nowrap;`}>
+                {hist ? formatScore(hist.max_score) : '---'}
+              </td>
+            </tr>
+            );
+          })}
+        </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+)}

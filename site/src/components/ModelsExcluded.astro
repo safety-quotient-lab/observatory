@@ -1,0 +1,31 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { modelDisplayName, isLiteMode, getModelDef } from '../lib/shared-eval';
+
+interface Props {
+  excludedModels: any[];
+  minStories: number;
+}
+
+const { excludedModels, minStories } = Astro.props;
+---
+
+{excludedModels.length > 0 && (
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 8px 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs);">
+          <span style="color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Excluded models</span> (fewer than {minStories} shared stories):
+          {excludedModels.map((em, i) => (
+            <span>
+              {i > 0 ? ', ' : ' '}
+              <span style="color: var(--fg-secondary);">{modelDisplayName(em.model)}</span>
+              {isLiteMode(getModelDef(em.model)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 2px;">lite</span>}
+              <span style="color: var(--color-border);"> ({em.story_count})</span>
+            </span>
+          ))}
+        </div>
+      </td>
+    </tr>
+  </table>
+)}

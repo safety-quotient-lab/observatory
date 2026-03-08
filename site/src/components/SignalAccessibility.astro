@@ -1,0 +1,84 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { wilsonCI } from '../lib/stats';
+import type { CI } from '../lib/stats';
+
+interface BarRow {
+  label: string;
+  count: number;
+  ci: CI;
+  param?: string;
+}
+
+interface Props {
+  jargonRows: BarRow[];
+  knowledgeRows: BarRow[];
+  maxJargon: number;
+  maxKnowledge: number;
+  clN: number;
+  expertPct: number | null;
+  accessiblePct: number | null;
+  knowledgeExpert: number;
+}
+
+const { jargonRows, knowledgeRows, maxJargon, maxKnowledge, clN, expertPct, accessiblePct, knowledgeExpert } = Astro.props;
+---
+
+<div id="accessibility" style="margin-bottom: 20px;">
+  <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+    Accessibility
+  </h2>
+  <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+    Who can understand this content? <a href="/article/26" style="color: var(--channel-editorial);">UDHR Article 26</a> protects the right to education — jargon and assumed expertise create invisible barriers.
+    <a href="https://unratified.org/covenant" target="_blank" rel="noopener" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">ICESCR Art. 13 &rarr;</a>
+    <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data &rarr;</a>
+  </p>
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div>
+        <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Jargon Density</p>
+        <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+          {jargonRows.map(({ label, count, param, ci }) => (
+            <tr>
+              <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
+              <td style="padding: 0 6px;">
+                <div style="background: var(--bg-primary); border-radius: 3px; height: 12px; width: 100%; position: relative;">
+                  <div style={`background: var(--color-amber); opacity: 0.5; border-radius: 3px; height: 12px; width: ${Math.round((count / maxJargon) * 100)}%;`}></div>
+                </div>
+              </td>
+              <td style="width: 70px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
+                <a href={`/stories?jargon=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></a>
+              </td>
+            </tr>
+          ))}
+        </table>
+      </div>
+      <div>
+        <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Assumed Knowledge</p>
+        <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+          {knowledgeRows.map(({ label, count, ci }) => (
+            <tr>
+              <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
+              <td style="padding: 0 6px;">
+                <div style="background: var(--bg-primary); border-radius: 3px; height: 12px; width: 100%; position: relative;">
+                  <div style={`background: var(--channel-hrcb); opacity: 0.5; border-radius: 3px; height: 12px; width: ${Math.round((count / maxKnowledge) * 100)}%;`}></div>
+                </div>
+              </td>
+              <td style="width: 70px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
+                <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></span>
+              </td>
+            </tr>
+          ))}
+        </table>
+      </div>
+    </div>
+    <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+      {expertPct !== null && (
+        <><span style="color: var(--color-negative);">{expertPct.toFixed(0)}%</span> <span style="color: var(--fg-secondary); font-size: var(--font-xs);" title={`95% CI (Wilson, n=${clN})`}>&plusmn;{Math.ceil(wilsonCI(knowledgeExpert, clN).margin)}</span> of stories assume expert-level knowledge. </>
+      )}
+      {accessiblePct !== null && (
+        <><span style="color: var(--color-positive);">{accessiblePct.toFixed(0)}%</span> are plain-language and self-contained.</>
+      )}
+    </p>
+  </div>
+</div>

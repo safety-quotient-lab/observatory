@@ -1,0 +1,217 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor } from '../lib/colors';
+
+interface Props {
+  driftStats: { models: any[]; overlapping: number; meanDelta: number | null };
+  ctMisclass: { structural_heavy_total: number; structural_heavy_missing: number; misclassification_pct: number; disagreement_count: number };
+  ctValidation: any[];
+  ctDisagreement: any[];
+  truncationImpact: any[];
+  ctEvalMix: any[];
+  STRUCTURAL_HEAVY: Set<string>;
+  CT_WEIGHTS: Record<string, { e: number; s: number }>;
+}
+
+const { driftStats, ctMisclass, ctValidation, ctDisagreement, truncationImpact, ctEvalMix, STRUCTURAL_HEAVY, CT_WEIGHTS } = Astro.props;
+---
+
+<details class="collapsible-section">
+  <summary>Measurement Integrity</summary>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+    {/* Model Drift */}
+    <div style="flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid var(--bg-surface); border-radius: 4px;">
+      <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Model Drift</div>
+      {driftStats.models.length === 0 ? (
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs);">No data</div>
+      ) : (
+        <div style="font-size: var(--font-xs);">
+          {driftStats.models.map((m) => (
+            <div style="color: var(--fg-secondary);">
+              <span style="color: var(--channel-editorial);">{m.eval_model}</span>
+              <span style="color: var(--fg-secondary);"> · {m.count} evals · avg </span>
+              <span style={`color: ${m.avg_score > 0.05 ? 'var(--color-positive)' : m.avg_score < -0.05 ? 'var(--color-negative)' : 'var(--fg-secondary)'};`}>{m.avg_score?.toFixed(3)}</span>
+              <span style="color: var(--color-border);"> ±{m.stddev?.toFixed(3)}</span>
+            </div>
+          ))}
+          {driftStats.overlapping > 0 && (
+            <div style="margin-top: 2px; color: var(--fg-secondary); font-size: 9px;">
+              {driftStats.overlapping} overlapping
+              {driftStats.meanDelta !== null && (
+                <span> · mean |Δ| = <span style={`color: ${driftStats.meanDelta > 0.1 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>{driftStats.meanDelta.toFixed(3)}</span></span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+
+    {/* Content Type Validation */}
+    <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${ctMisclass.misclassification_pct > 15 ? 'var(--color-negative)40' : ctMisclass.misclassification_pct > 5 ? 'var(--color-warning)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+      <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Type Validation</div>
+      <div style="font-size: var(--font-xs);">
+        <span style={`color: ${ctMisclass.misclassification_pct > 15 ? 'var(--color-negative)' : ctMisclass.misclassification_pct > 5 ? 'var(--color-warning)' : 'var(--color-positive)'}; font-weight: bold;`}>{ctMisclass.misclassification_pct}%</span>
+        <span style="color: var(--fg-secondary);"> suspect rate</span>
+      </div>
+      <div style="font-size: 9px; margin-top: 2px; color: var(--fg-secondary);">
+        {ctMisclass.structural_heavy_missing}/{ctMisclass.structural_heavy_total} structural-heavy missing S data
+      </div>
+      {ctMisclass.disagreement_count > 0 && (
+        <div style="font-size: 9px; margin-top: 1px;">
+          <span style="color: var(--color-warning);">{ctMisclass.disagreement_count}</span>
+          <span style="color: var(--fg-secondary);"> stories with model disagreement</span>
+        </div>
+      )}
+    </div>
+  </div>
+
+  {/* Content Type Breakdown (nested collapse) */}
+  {ctValidation.length > 0 && (
+    <details style="margin-bottom: 8px;">
+      <summary style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">Content Type Breakdown</summary>
+      <div class="table-wrap">
+      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+        <tr style="color: var(--fg-secondary); border-bottom: 1px solid var(--color-border);">
+          <td style="padding: 3px 6px;">Type</td>
+          <td style="padding: 3px 6px; text-align: right;">Count</td>
+          <td style="padding: 3px 6px; text-align: right;">Avg Score</td>
+          <td style="padding: 3px 6px; text-align: center;">Weights</td>
+          <td style="padding: 3px 6px; text-align: right;">Suspect</td>
+        </tr>
+        {ctValidation.map(row => {
+          const isHeavy = STRUCTURAL_HEAVY.has(row.content_type);
+          const w = CT_WEIGHTS[row.content_type];
+          const suspect = row.missing_structural + row.low_evidence_only;
+          const suspectPct = row.total > 0 ? Math.round((suspect / row.total) * 100) : 0;
+          const suspectColor = suspectPct > 15 ? 'var(--color-negative)' : suspectPct > 5 ? 'var(--color-warning)' : 'var(--fg-secondary)';
+          return (
+            <tr style="border-bottom: 1px solid var(--bg-highlight);">
+              <td style={`padding: 3px 6px; color: ${isHeavy ? 'var(--color-orange)' : 'var(--fg-primary)'}; font-weight: ${isHeavy ? 'bold' : 'normal'};`}>
+                {row.content_type}{isHeavy && <span style="color: var(--fg-secondary); font-weight: normal;" title="Structural-heavy type"> S</span>}
+              </td>
+              <td style="padding: 3px 6px; text-align: right; color: var(--fg-primary);">{row.total}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${row.avg_score != null ? scoreToColor(row.avg_score) : 'var(--fg-secondary)'};`}>
+                {row.avg_score != null ? row.avg_score.toFixed(3) : '—'}
+              </td>
+              <td style="padding: 3px 6px; text-align: center; color: var(--fg-secondary); font-family: monospace;">
+                {w ? `E:${w.e} S:${w.s}` : '—'}
+              </td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${suspectColor};`}>
+                {suspect > 0 ? `${suspect} (${suspectPct}%)` : '—'}
+              </td>
+            </tr>
+          );
+        })}
+      </table>
+      </div>
+    </details>
+  )}
+
+  {/* Cross-Model Type Disagreement (nested collapse) */}
+  {ctDisagreement.length > 0 && (
+    <details style="margin-bottom: 8px;">
+      <summary style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+        Cross-Model Disagreement ({ctDisagreement.length})
+      </summary>
+      <div style="font-size: var(--font-xs);">
+        {ctDisagreement.slice(0, 10).map(row => (
+          <div style="padding: 2px 0; border-bottom: 1px solid var(--bg-highlight);">
+            <a href={`/item/${row.hn_id}`} style="color: var(--color-blue);">{row.hn_id}</a>
+            <span style="color: var(--fg-secondary);"> · </span>
+            <span style="color: var(--color-warning);">{row.types_seen}</span>
+            <span style="color: var(--fg-secondary);"> · {row.models}</span>
+          </div>
+        ))}
+      </div>
+    </details>
+  )}
+
+  {/* Truncation Impact (nested collapse) */}
+  {truncationImpact.length > 0 && (
+    <details style="margin-bottom: 8px;">
+      <summary style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+        Truncation Impact ({truncationImpact.filter(r => r.truncated_count > 0).length} models truncating)
+      </summary>
+      <div class="table-wrap">
+      <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+        <tr style="color: var(--fg-secondary); border-bottom: 1px solid var(--color-border); font-size: 9px;">
+          <td style="padding: 3px 6px;">Model</td>
+          <td style="padding: 3px 6px; text-align: right;">Evals</td>
+          <td style="padding: 3px 6px; text-align: right;">Truncated</td>
+          <td style="padding: 3px 6px; text-align: right;">Avg Trunc%</td>
+          <td style="padding: 3px 6px; text-align: right;">Avg Score (trunc)</td>
+          <td style="padding: 3px 6px; text-align: right;">Avg Score (full)</td>
+          <td style="padding: 3px 6px; text-align: right;">Δ</td>
+        </tr>
+        {truncationImpact.map(r => {
+          const delta = r.avg_score_truncated !== null && r.avg_score_full !== null
+            ? r.avg_score_truncated - r.avg_score_full : null;
+          const deltaColor = delta === null ? 'var(--fg-secondary)' : Math.abs(delta) > 0.1 ? 'var(--color-warning)' : Math.abs(delta) > 0.05 ? 'var(--fg-primary)' : 'var(--fg-secondary)';
+          const truncPct = r.n > 0 ? Math.round((r.truncated_count / r.n) * 100) : 0;
+          return (
+            <tr style="border-bottom: 1px solid var(--bg-highlight);">
+              <td style="padding: 3px 6px; color: var(--fg-primary);">{r.eval_model.replace('claude-', '').replace('-20251001', '').replace('-20251022', '')}</td>
+              <td style="padding: 3px 6px; text-align: right; color: var(--fg-secondary);">{r.n}</td>
+              <td style={`padding: 3px 6px; text-align: right; color: ${truncPct > 50 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>
+                {r.truncated_count} <span style="color: var(--color-border);">({truncPct}%)</span>
+              </td>
+              <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${r.avg_truncation_pct > 60 ? 'var(--color-warning)' : 'var(--fg-secondary)'};`}>
+                {r.avg_truncation_pct != null ? r.avg_truncation_pct.toFixed(0) + '%' : '—'}
+              </td>
+              <td style="padding: 3px 6px; text-align: right; font-family: monospace; color: var(--fg-secondary);">
+                {r.avg_score_truncated !== null ? r.avg_score_truncated.toFixed(3) : '—'}
+              </td>
+              <td style="padding: 3px 6px; text-align: right; font-family: monospace; color: var(--fg-secondary);">
+                {r.avg_score_full !== null ? r.avg_score_full.toFixed(3) : '—'}
+              </td>
+              <td style={`padding: 3px 6px; text-align: right; font-family: monospace; color: ${deltaColor};`}>
+                {delta !== null ? (delta > 0 ? '+' : '') + delta.toFixed(3) : '—'}
+              </td>
+            </tr>
+          );
+        })}
+      </table>
+      </div>
+      <div style="color: var(--color-border); font-size: 9px; margin-top: 3px;">
+        Δ = avg score (truncated) − avg score (full content). Non-zero suggests truncation may bias scores.
+      </div>
+    </details>
+  )}
+
+  {/* Content Type Eval Mix (nested collapse) */}
+  {ctEvalMix.length > 0 && (
+    <details style="margin-bottom: 8px;">
+      <summary style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; cursor: pointer; margin-bottom: 4px;">
+        Content Type Coverage Mix
+      </summary>
+      <div style="font-size: var(--font-xs);">
+        {ctEvalMix.map(r => {
+          const donePct      = r.total > 0 ? (r.done          / r.total) * 100 : 0;
+          const gatedPct     = r.total > 0 ? (r.gated         / r.total) * 100 : 0;
+          const failedPct    = r.total > 0 ? (r.failed_skipped / r.total) * 100 : 0;
+          const pendingPct   = r.total > 0 ? (r.pending        / r.total) * 100 : 0;
+          return (
+            <div style="display: flex; align-items: center; gap: 6px; padding: 2px 0; border-bottom: 1px solid var(--bg-highlight);">
+              <span style="width: 52px; color: var(--fg-secondary); text-align: right; font-family: monospace; flex-shrink: 0;">{r.content_type}</span>
+              <div style="flex: 1; display: flex; height: 10px; border-radius: 2px; overflow: hidden; background: var(--bg-primary); min-width: 80px;">
+                {donePct   > 0 && <div style={`width: ${donePct}%; background: var(--channel-hrcb); opacity: 0.85;`} title={`Done: ${r.done}`} />}
+                {gatedPct  > 0 && <div style={`width: ${gatedPct}%; background: var(--color-orange); opacity: 0.7;`} title={`Gated: ${r.gated}`} />}
+                {failedPct > 0 && <div style={`width: ${failedPct}%; background: var(--color-negative); opacity: 0.6;`} title={`Failed/skipped: ${r.failed_skipped}`} />}
+                {pendingPct > 0 && <div style={`width: ${pendingPct}%; background: var(--color-border); opacity: 0.8;`} title={`Pending: ${r.pending}`} />}
+              </div>
+              <span style="width: 36px; color: var(--color-border); text-align: right; flex-shrink: 0; font-family: monospace;">{r.total}</span>
+            </div>
+          );
+        })}
+        <div style="display: flex; gap: 10px; margin-top: 4px;">
+          {[['var(--channel-hrcb)','Done'],['var(--color-orange)','Gated'],['var(--color-negative)','Failed'],['var(--color-border)','Pending']].map(([c,l]) => (
+            <span style="display: inline-flex; align-items: center; gap: 3px;">
+              <span style={`display: inline-block; width: 8px; height: 8px; background: ${c}; border-radius: 1px;`}></span>
+              <span style="color: var(--fg-secondary); font-size: 9px;">{l}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </details>
+  )}
+</details>

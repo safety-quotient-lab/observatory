@@ -1,0 +1,54 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor } from '../lib/colors';
+import { modelDisplayName, isLiteMode, getModelDef } from '../lib/shared-eval';
+
+interface Props {
+  totalStories: number;
+  modelIds: string[];
+  histograms: any[];
+  histMaxCount: number;
+}
+
+const { totalStories, modelIds, histograms, histMaxCount } = Astro.props;
+
+const BIN_MIN = -0.5;
+const BIN_MAX = 0.5;
+const BIN_WIDTH = (BIN_MAX - BIN_MIN) / 10;
+---
+
+{totalStories > 0 && (
+  <details open class="collapsible-section">
+    <summary>Score Distribution</summary>
+    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+      {modelIds.map(mid => {
+        const counts = histograms.find(h => h.model === mid)?.counts || [];
+        return (
+          <div style="flex: 1; min-width: 200px;">
+            <div style="color: var(--fg-emphasis); font-size: var(--font-sm); font-weight: bold; margin-bottom: 6px;">
+              {modelDisplayName(mid)}
+              {isLiteMode(getModelDef(mid)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 4px; font-weight: normal;">lite</span>}
+            </div>
+            <div style="display: flex; align-items: flex-end; gap: 2px; height: 60px;">
+              {counts.map((count: number, i: number) => {
+                const binStart = BIN_MIN + i * BIN_WIDTH;
+                const binMid = binStart + BIN_WIDTH / 2;
+                const heightPct = (count / histMaxCount) * 100;
+                return (
+                  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end;" title={`${binStart.toFixed(1)} to ${(binStart + BIN_WIDTH).toFixed(1)}: ${count} stories`}>
+                    <div style={`width: 100%; height: ${Math.max(heightPct, count > 0 ? 3 : 0)}%; background: ${scoreToColor(binMid)}; border-radius: 2px 2px 0 0; min-height: ${count > 0 ? '2px' : '0'};`}></div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 2px;">
+              <span style="color: var(--fg-secondary); font-size: 8px;">-0.5</span>
+              <span style="color: var(--fg-secondary); font-size: 8px;">0</span>
+              <span style="color: var(--fg-secondary); font-size: 8px;">+0.5</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </details>
+)}

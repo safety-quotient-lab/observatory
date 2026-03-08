@@ -1,0 +1,108 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { CALIBRATION_SET, LITE_CALIBRATION_SET } from '../lib/calibration';
+
+interface Props {
+  lastCalibration: any | null;
+  lastLiteCalibration: any | null;
+  methodologyDist: any[];
+  globalGate: { total: number; gated: number; gate_pct: number; breakdown: { gate_category: string; cnt: number }[] };
+}
+
+const { lastCalibration, lastLiteCalibration, methodologyDist, globalGate } = Astro.props;
+---
+
+<details open class="collapsible-section">
+  <summary>Calibration</summary>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+    {/* Full calibration */}
+    <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${lastCalibration?.status === 'fail' ? 'var(--color-negative)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+      <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Full Model</div>
+      {!lastCalibration ? (
+        <div style="font-size: var(--font-xs);">
+          <div style="color: var(--color-warning);">No runs yet</div>
+          <div style="color: var(--color-border); font-size: 9px;">{CALIBRATION_SET.length} URLs defined</div>
+        </div>
+      ) : (
+        <div style="font-size: var(--font-xs);">
+          <span style={`color: ${lastCalibration.status === 'pass' ? 'var(--color-positive)' : lastCalibration.status === 'fail' ? 'var(--color-negative)' : 'var(--color-warning)'}; font-weight: bold; text-transform: uppercase;`}>{lastCalibration.status}</span>
+          <span style="color: var(--fg-secondary);"> · {lastCalibration.passed}/{lastCalibration.total_urls} passed</span>
+          {lastCalibration.failed > 0 && <span style="color: var(--color-negative);"> · {lastCalibration.failed} failed</span>}
+          <div style="color: var(--color-border); font-size: 9px; margin-top: 2px;">
+            {lastCalibration.model.replace('claude-', '').replace('-20251001', '')} · {lastCalibration.created_at.slice(0, 10)}
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Lite calibration */}
+    <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${lastLiteCalibration?.status === 'fail' ? 'var(--color-negative)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+      <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Lite Model</div>
+      {!lastLiteCalibration ? (
+        <div style="font-size: var(--font-xs);">
+          <div style="color: var(--color-warning);">No runs yet</div>
+          <div style="color: var(--color-border); font-size: 9px;">{LITE_CALIBRATION_SET.length} URLs defined</div>
+        </div>
+      ) : (
+        <div style="font-size: var(--font-xs);">
+          <span style={`color: ${lastLiteCalibration.status === 'pass' ? 'var(--color-positive)' : lastLiteCalibration.status === 'fail' ? 'var(--color-negative)' : 'var(--color-warning)'}; font-weight: bold; text-transform: uppercase;`}>{lastLiteCalibration.status}</span>
+          <span style="color: var(--fg-secondary);"> · {lastLiteCalibration.passed}/{lastLiteCalibration.total_urls} passed</span>
+          {lastLiteCalibration.failed > 0 && <span style="color: var(--color-negative);"> · {lastLiteCalibration.failed} failed</span>}
+          <div style="color: var(--color-border); font-size: 9px; margin-top: 2px;">
+            {lastLiteCalibration.model ?? 'lite-1.4'} · {lastLiteCalibration.created_at.slice(0, 10)}
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Methodology Drift */}
+    {methodologyDist.length > 0 && (() => {
+      const total = methodologyDist.reduce((s: number, r: any) => s + r.count, 0);
+      const current = methodologyDist[0];
+      const currentPct = total > 0 ? Math.round((current.count / total) * 100) : 0;
+      const stale = total - current.count;
+      return (
+        <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${stale > 0 ? 'var(--color-warning)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+          <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Methodology Drift</div>
+          <div style="font-size: var(--font-xs);">
+            <span style={`color: ${currentPct < 90 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-weight: bold;`}>{currentPct}%</span>
+            <span style="color: var(--fg-secondary);"> on current hash</span>
+            {stale > 0 && (
+              <span style="color: var(--color-warning);"> · {stale} stale</span>
+            )}
+          </div>
+          {methodologyDist.map((r: any) => (
+            <div style="color: var(--fg-secondary); font-size: 9px; margin-top: 1px;">
+              <span style="font-family: monospace;">{r.methodology_hash ? r.methodology_hash.slice(0, 8) : 'null'}</span>
+              <span style="color: var(--fg-secondary);"> · {r.count} stories</span>
+              {r.latest_eval && (
+                <span style="color: var(--color-border);"> · {r.latest_eval.slice(0, 10)}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    })()}
+
+    {/* Content Gates */}
+    <div style={`flex: 1; min-width: 200px; padding: 6px 8px; background: var(--bg-surface); border: 1px solid ${globalGate.gate_pct > 20 ? 'var(--color-warning)40' : 'var(--bg-surface)'}; border-radius: 4px;`}>
+      <div style="color: var(--fg-secondary); font-size: 9px; text-transform: uppercase; margin-bottom: 3px;">Content Gates</div>
+      <div style="font-size: var(--font-xs);">
+        <span style={`color: ${globalGate.gate_pct > 20 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-weight: bold;`}>{globalGate.gate_pct}%</span>
+        <span style="color: var(--fg-secondary);"> gated ({globalGate.gated}/{globalGate.total})</span>
+      </div>
+      {globalGate.breakdown.length > 0 && (
+        <div style="margin-top: 3px; font-size: 9px;">
+          {globalGate.breakdown.slice(0, 4).map(b => (
+            <div style="color: var(--fg-secondary);">
+              <span style={`color: ${b.gate_category === 'paywall' ? 'var(--color-orange)' : b.gate_category === 'bot_protection' ? 'var(--color-negative)' : b.gate_category === 'error_page' ? 'var(--fg-secondary)' : 'var(--color-warning)'};`}>
+                {b.gate_category.replace(/_/g, ' ')}
+              </span>
+              <span style="color: var(--color-border);"> · {b.cnt}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+</details>

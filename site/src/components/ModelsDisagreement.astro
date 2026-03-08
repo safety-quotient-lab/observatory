@@ -1,0 +1,96 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { modelDisplayName, isLiteMode, getModelDef } from '../lib/shared-eval';
+import type { ComparedStory } from '../lib/db';
+
+interface Props {
+  totalStories: number;
+  modelIds: string[];
+  mostDisagreed: ComparedStory[];
+  mostAgreed: ComparedStory[];
+}
+
+const { totalStories, modelIds, mostDisagreed, mostAgreed } = Astro.props;
+---
+
+{totalStories > 0 && (
+  <details class="collapsible-section">
+    <summary>Most Disagreed / Most Agreed</summary>
+    <div class="two-col" style="margin-bottom: 10px;">
+      <div>
+        <div style="padding: 10px; background: var(--bg-surface); border-radius: 4px; height: 100%;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Disagreed</div>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">
+              <td style="padding: 3px 6px;">Story</td>
+              {modelIds.map(m => (
+                <td style="padding: 3px 6px; text-align: center;">
+                  {modelDisplayName(m)}
+                  {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
+                </td>
+              ))}
+              <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
+            </tr>
+            {mostDisagreed.map(s => (
+              <tr style="border-top: 1px solid var(--bg-highlight);">
+                <td style="padding: 3px 6px; font-size: var(--font-xs);">
+                  <a href={`/item/${s.hn_id}`} style="color: var(--fg-primary); text-decoration: none;" title={s.title}>
+                    {s.title ? (s.title.length > 40 ? s.title.slice(0, 40) + '...' : s.title) : '---'}
+                  </a>
+                </td>
+                {modelIds.map(mid => {
+                  const me = s.models.find(m => m.model === mid);
+                  return (
+                    <td style={`padding: 3px 6px; text-align: center; color: ${me ? me.scoreColor : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
+                      {me ? me.scoreFormatted : '---'}
+                    </td>
+                  );
+                })}
+                <td style={`padding: 3px 6px; text-align: center; color: ${s.maxDelta >= 0.3 ? 'var(--color-negative)' : s.maxDelta >= 0.15 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
+                  {s.maxDelta != null ? s.maxDelta.toFixed(2) : '—'}
+                </td>
+              </tr>
+            ))}
+          </table>
+        </div>
+      </div>
+      <div>
+        <div style="padding: 10px; background: var(--bg-surface); border-radius: 4px; height: 100%;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">Most Agreed</div>
+          <table cellpadding="0" cellspacing="0" width="100%">
+            <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase;">
+              <td style="padding: 3px 6px;">Story</td>
+              {modelIds.map(m => (
+                <td style="padding: 3px 6px; text-align: center;">
+                  {modelDisplayName(m)}
+                  {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
+                </td>
+              ))}
+              <td style="padding: 3px 6px; text-align: center;">&Delta;</td>
+            </tr>
+            {mostAgreed.map(s => (
+              <tr style="border-top: 1px solid var(--bg-highlight);">
+                <td style="padding: 3px 6px; font-size: var(--font-xs);">
+                  <a href={`/item/${s.hn_id}`} style="color: var(--fg-primary); text-decoration: none;" title={s.title}>
+                    {s.title ? (s.title.length > 40 ? s.title.slice(0, 40) + '...' : s.title) : '---'}
+                  </a>
+                </td>
+                {modelIds.map(mid => {
+                  const me = s.models.find(m => m.model === mid);
+                  return (
+                    <td style={`padding: 3px 6px; text-align: center; color: ${me ? me.scoreColor : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
+                      {me ? me.scoreFormatted : '---'}
+                    </td>
+                  );
+                })}
+                <td style="padding: 3px 6px; text-align: center; color: var(--color-positive-medium); font-size: var(--font-sm);">
+                  {s.maxDelta != null ? s.maxDelta.toFixed(2) : '—'}
+                </td>
+              </tr>
+            ))}
+          </table>
+        </div>
+      </div>
+    </div>
+  </details>
+)}

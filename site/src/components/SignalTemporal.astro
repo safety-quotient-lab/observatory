@@ -1,0 +1,89 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { wilsonCI } from '../lib/stats';
+
+interface FocusRow {
+  label: string;
+  count: number;
+  pct: number | null;
+  color: string;
+  param: string;
+  ci: ReturnType<typeof wilsonCI>;
+}
+
+interface HorizonRow {
+  label: string;
+  count: number;
+  ci: ReturnType<typeof wilsonCI>;
+}
+
+interface Props {
+  focusRows: FocusRow[];
+  horizonRows: HorizonRow[];
+  maxFocus: number;
+  maxHorizon: number;
+  tfN: number;
+  horizonTotal: number;
+  retroRatio: string | null;
+  storyCount: number;
+}
+
+const { focusRows, horizonRows, maxFocus, maxHorizon, tfN, horizonTotal, retroRatio, storyCount } = Astro.props;
+---
+
+<div id="temporal" style="margin-bottom: 20px;">
+  <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+    Temporal Framing
+  </h2>
+  <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+    Does tech coverage look backward or forward? Retrospective analysis and prospective advocacy signal different relationships to change.
+    <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data &rarr;</a>
+  </p>
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+    <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+      {focusRows.map(({ label, count, pct, color, param, ci }) => (
+        <tr>
+          <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
+          <td style="padding: 0 8px;">
+            <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+              <div style={`background: ${color}; opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((count / maxFocus) * 100)}%;`}></div>
+            </div>
+          </td>
+          <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
+            {pct !== null ? (
+              <a href={`/stories?temporal=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${tfN})`}>
+                {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(ci.margin)}</span>
+              </a>
+            ) : '\u2014'}
+          </td>
+        </tr>
+      ))}
+    </table>
+    {horizonRows.length > 0 && (
+      <>
+        <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 10px 0 4px 0; font-weight: bold;">Time Horizon</p>
+        <table cellpadding="2" cellspacing="0" style="font-size: var(--font-xs); width: 100%;">
+          {horizonRows.map(({ label, count, ci }) => (
+            <tr>
+              <td style="width: 90px; color: var(--fg-secondary); white-space: nowrap;">{label}</td>
+              <td style="padding: 0 6px;">
+                <div style="background: var(--bg-primary); border-radius: 2px; height: 10px; width: 100%;">
+                  <div style={`background: var(--fg-secondary); opacity: 0.3; border-radius: 2px; height: 10px; width: ${Math.round((count / maxHorizon) * 100)}%;`}></div>
+                </div>
+              </td>
+              <td style="width: 60px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
+                <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${horizonTotal})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></span>
+              </td>
+            </tr>
+          ))}
+        </table>
+      </>
+    )}
+    <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+      {retroRatio && (
+        <>Tech coverage looks backward <span class="score-font">{retroRatio}&times;</span> more than forward. </>
+      )}
+      <a href="/status#signal-coverage" style="color: var(--fg-secondary); text-decoration: none; border-bottom: 1px dotted var(--color-border);" title={`${tfN} of ${storyCount} evaluated stories have temporal framing data — remainder lacked classifiable temporal focus`}>{tfN.toLocaleString()} stories measured.</a>
+    </p>
+  </div>
+</div>

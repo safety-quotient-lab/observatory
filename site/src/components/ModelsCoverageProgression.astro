@@ -1,0 +1,76 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+
+interface Props {
+  coverageProgression: any[];
+}
+
+const { coverageProgression } = Astro.props;
+
+const days = coverageProgression.map(r => r.day.slice(5));
+const maxVal = Math.max(1, ...coverageProgression.map(r => r.full + r.lite));
+const W = 600, H = 80, padL = 28, padR = 8, padT = 8, padB = 20;
+const innerW = W - padL - padR;
+const innerH = H - padT - padB;
+const n = coverageProgression.length;
+const barW = Math.max(2, Math.floor(innerW / n) - 1);
+const yLabels = [0, Math.round(maxVal / 2), maxVal];
+---
+
+{coverageProgression.length > 0 && (
+  <details open class="collapsible-section">
+    <summary>
+      Coverage Progression
+      <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
+        new stories entering each tier per day (30d)
+      </span>
+    </summary>
+    <div style="overflow-x: auto;">
+    <svg width={W} viewBox={`0 0 ${W} ${H}`} style="display: block;">
+      <rect x="0" y="0" width={W} height={H} fill="var(--bg-primary)" rx="4" />
+      {yLabels.map((v) => {
+        const y = padT + innerH - (v / maxVal) * innerH;
+        return (
+          <g>
+            <text x={padL - 3} y={y + 3} fill="var(--fg-secondary)" font-size="7" font-family="monospace" text-anchor="end">{v}</text>
+            <line x1={padL} y1={y} x2={padL + innerW} y2={y} stroke="var(--color-border)" stroke-width="0.5" />
+          </g>
+        );
+      })}
+      {coverageProgression.map((row, i) => {
+        const x = padL + Math.round((i / n) * innerW);
+        const hFull = Math.round((row.full / maxVal) * innerH);
+        const hLite = Math.round((row.lite / maxVal) * innerH);
+        return (
+          <g>
+            {row.lite > 0 && (
+              <rect x={x} y={padT + innerH - hFull - hLite} width={barW} height={hLite} fill="var(--color-orange)" opacity="0.7">
+                <title>{row.day}: {row.lite} lite</title>
+              </rect>
+            )}
+            {row.full > 0 && (
+              <rect x={x} y={padT + innerH - hFull} width={barW} height={hFull} fill="var(--channel-hrcb)" opacity="0.85">
+                <title>{row.day}: {row.full} full</title>
+              </rect>
+            )}
+            {i % Math.max(1, Math.floor(n / 8)) === 0 && (
+              <text x={x + barW / 2} y={H - 4} fill="var(--fg-secondary)" font-size="7" font-family="monospace" text-anchor="middle">{days[i]}</text>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+    </div>
+    <div style="display: flex; gap: 12px; margin-top: 4px; font-size: var(--font-xs);">
+      <span style="display: inline-flex; align-items: center; gap: 3px;">
+        <span style="display: inline-block; width: 10px; height: 8px; background: var(--channel-hrcb); border-radius: 1px;"></span>
+        <span style="color: var(--fg-secondary);">Full eval</span>
+      </span>
+      <span style="display: inline-flex; align-items: center; gap: 3px;">
+        <span style="display: inline-block; width: 10px; height: 8px; background: var(--color-orange); border-radius: 1px;"></span>
+        <span style="color: var(--fg-secondary);">Lite eval</span>
+      </span>
+      <span style="color: var(--color-border); margin-left: 4px;">stories receiving their first evaluation of any kind</span>
+    </div>
+  </details>
+)}

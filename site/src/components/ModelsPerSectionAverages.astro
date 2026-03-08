@@ -1,0 +1,69 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor } from '../lib/colors';
+import { modelDisplayName, ALL_SECTIONS, isLiteMode, getModelDef } from '../lib/shared-eval';
+import { ARTICLE_TITLES } from '../lib/udhr';
+
+interface Props {
+  totalStories: number;
+  modelIds: string[];
+  sectionAverages: any[];
+}
+
+const { totalStories, modelIds, sectionAverages } = Astro.props;
+
+// Build section averages lookup: model -> section -> avg_final
+const sectionByModelMap = new Map<string, Map<string, number>>();
+for (const row of sectionAverages) {
+  if (!sectionByModelMap.has(row.model)) sectionByModelMap.set(row.model, new Map());
+  sectionByModelMap.get(row.model)!.set(row.section, row.avg_final);
+}
+---
+
+{totalStories > 0 && (
+  <details class="collapsible-section">
+    <summary>Per-Section Averages</summary>
+    <div class="table-wrap">
+    <div style="max-height: 500px; overflow-y: auto;">
+      <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 400px;">
+        <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; position: sticky; top: 0; background: var(--bg-highlight);">
+          <td style="padding: 3px 6px;">Section</td>
+          {modelIds.map(m => (
+            <td style="padding: 3px 6px; text-align: center;">
+              {modelDisplayName(m)}
+              {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
+            </td>
+          ))}
+          {modelIds.length >= 2 && <td style="padding: 3px 6px; text-align: center;">Gap</td>}
+        </tr>
+        {ALL_SECTIONS.map((section, idx) => {
+          const vals = modelIds.map(m => sectionByModelMap.get(m)?.get(section) ?? null);
+          const validVals = vals.filter((v): v is number => v !== null);
+          const delta = validVals.length >= 2 ? Math.max(...validVals) - Math.min(...validVals) : null;
+          const deltaColor = delta !== null
+            ? delta < 0.05 ? 'var(--fg-secondary)' : delta < 0.1 ? 'var(--color-warning)' : 'var(--color-negative)'
+            : 'var(--fg-secondary)';
+          const title = idx > 0 && idx <= 30 ? ARTICLE_TITLES[idx - 1] : '';
+          return (
+            <tr style="border-top: 1px solid var(--bg-surface);">
+              <td style="padding: 2px 6px; color: var(--fg-emphasis); font-size: var(--font-xs);" title={title}>
+                <a href={`/article/${idx}`} style="color: var(--fg-emphasis); text-decoration: none;">{section}</a>
+              </td>
+              {vals.map(v => (
+                <td style={`padding: 2px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : 'var(--fg-secondary)'}; font-size: var(--font-sm);`}>
+                  {v !== null ? v.toFixed(3) : '---'}
+                </td>
+              ))}
+              {delta !== null && (
+                <td style={`padding: 2px 6px; text-align: center; color: ${deltaColor}; font-size: var(--font-sm);`}>
+                  {delta.toFixed(3)}
+                </td>
+              )}
+            </tr>
+          );
+        })}
+      </table>
+    </div>
+    </div>
+  </details>
+)}

@@ -1,0 +1,78 @@
+---
+import { scoreToColor, formatScore } from '../lib/colors';
+
+interface Props {
+  outlierEntries: {
+    domain: string;
+    score: number | null;
+    outlierScore: number;
+    nearestCluster: string;
+    nearestSim: number;
+    keySignal: string;
+    tone: string | null;
+  }[];
+}
+
+const { outlierEntries } = Astro.props;
+
+const PHI = (1 + Math.sqrt(5)) / 2;
+const factionThreshold = 1 / PHI;
+const allianceThreshold = 1 / (PHI * PHI);
+const acquaintanceThreshold = 1 / (PHI * PHI * PHI);
+function tierLabel(sim: number): { label: string; color: string } {
+  if (sim >= factionThreshold) return { label: 'Faction', color: 'var(--channel-structural)' };
+  if (sim >= allianceThreshold) return { label: 'Alliance', color: 'var(--color-positive-medium)' };
+  if (sim >= acquaintanceThreshold) return { label: 'Acquaintance', color: 'var(--color-warning-light)' };
+  if (sim >= 0) return { label: 'Neutral', color: 'var(--fg-secondary)' };
+  return { label: 'Rival', color: 'var(--color-negative-light)' };
+}
+---
+
+{outlierEntries.length > 0 && (
+  <table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+    <tr>
+      <td style="padding: 12px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+          Outliers & Lone Wolves
+          <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
+            domains not assigned to any cluster, sorted by outlier score
+          </span>
+        </div>
+        <div class="table-wrap">
+          <table cellpadding="4" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+            <tr style="color: var(--fg-secondary);">
+              <td>Domain</td>
+              <td style="text-align: right;">HRCB</td>
+              <td style="text-align: right;">Outlier</td>
+              <td>Nearest Cluster</td>
+              <td style="text-align: right;">Similarity</td>
+              <td>Key Signal</td>
+              <td>Tone</td>
+            </tr>
+            {outlierEntries.map(w => {
+              const tier = tierLabel(w.nearestSim);
+              return (
+                <tr style="border-top: 1px solid var(--bg-surface);">
+                  <td><a href={`/domain/${w.domain}`} style="color: var(--fg-emphasis); text-decoration: none;">{w.domain}</a></td>
+                  <td style={`text-align: right; color: ${w.score !== null ? scoreToColor(w.score) : 'var(--fg-secondary)'};`} class="score-font">
+                    {w.score !== null ? formatScore(w.score) : 'ND'}
+                  </td>
+                  <td style="text-align: right; color: var(--color-amber-light);" class="score-font">{w.outlierScore.toFixed(2)}</td>
+                  <td style="color: var(--fg-secondary);">
+                    {w.nearestCluster}
+                  </td>
+                  <td style={`text-align: right; color: ${tier.color};`} class="score-font">
+                    {w.nearestSim.toFixed(2)}
+                    <span style="color: var(--fg-secondary); margin-left: 3px; font-size: var(--font-xs);">{tier.label}</span>
+                  </td>
+                  <td style="color: var(--fg-secondary);">{w.keySignal}</td>
+                  <td style="color: var(--fg-secondary);">{w.tone || '\u2014'}</td>
+                </tr>
+              );
+            })}
+          </table>
+        </div>
+      </td>
+    </tr>
+  </table>
+)}

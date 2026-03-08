@@ -1,0 +1,269 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor, formatScore } from '../lib/colors';
+
+interface LiminalMember {
+  domain: string;
+  secondCluster: string;
+  similarity: number;
+}
+
+interface EnrichedCluster {
+  id: number;
+  members: string[];
+  centroid: number[];
+  rawCentroid: number[];
+  avgScore: number | null;
+  name: string;
+  archetype: string;
+  description: string;
+  icon: string;
+  color: string;
+  insight: string;
+  dominantTone: string | null;
+  dominantScope: string | null;
+  dominantReadingLevel: string | null;
+  dominantSentiment: string | null;
+  avgSetl: number | null;
+  avgHnScore: number;
+  avgHnComments: number;
+  avgKarma: number | null;
+  storyCount: number;
+  hrcbPositive: number;
+  hrcbNeutral: number;
+  hrcbNegative: number;
+  liminalMembers: LiminalMember[];
+}
+
+interface SignalDim {
+  code: string;
+  color: string;
+}
+
+interface Props {
+  cl: EnrichedCluster;
+  nDims: number;
+  dimValues: number[][];
+  populationMedian: number[];
+  domainScores: Record<string, number | null>;
+  signalDims: SignalDim[];
+}
+
+const { cl, nDims, dimValues, populationMedian, domainScores, signalDims } = Astro.props;
+
+function clamp01(v: number): number { return Math.max(0, Math.min(1, v)); }
+
+// Radar chart values: normalize rawCentroid values to [0,1] for display
+const radarSize = 200;
+const radarCx = radarSize / 2;
+const radarCy = radarSize / 2;
+const radarR = radarSize / 2 - 30;
+const numAxes = nDims;
+const angleStep = 360 / numAxes;
+
+function polarToXY(angle: number, r: number): [number, number] {
+  const rad = ((angle - 90) * Math.PI) / 180;
+  return [radarCx + r * Math.cos(rad), radarCy + r * Math.sin(rad)];
+}
+
+// Normalize values for radar: map from raw to [0,1]
+const radarVals = cl.rawCentroid.map((v, i) => {
+  const dimMin = Math.min(...dimValues[i], 0);
+  const dimMax = Math.max(...dimValues[i], 1);
+  const range = dimMax - dimMin || 1;
+  return clamp01((v - dimMin) / range);
+});
+const medianVals = populationMedian.map((v, i) => {
+  const dimMin = Math.min(...dimValues[i], 0);
+  const dimMax = Math.max(...dimValues[i], 1);
+  const range = dimMax - dimMin || 1;
+  return clamp01((v - dimMin) / range);
+});
+
+const radarPoints = radarVals.map((v, i) => polarToXY(i * angleStep, v * radarR));
+const medianPoints = medianVals.map((v, i) => polarToXY(i * angleStep, v * radarR));
+const radarPoly = radarPoints.map(([x, y]) => `${x},${y}`).join(' ');
+const medianPoly = medianPoints.map(([x, y]) => `${x},${y}`).join(' ');
+
+// Pre-compute HRCB distribution values
+const hrcbTotal = cl.hrcbPositive + cl.hrcbNeutral + cl.hrcbNegative;
+const posPct = hrcbTotal > 0 ? Math.round((cl.hrcbPositive / hrcbTotal) * 100) : 0;
+const neuPct = hrcbTotal > 0 ? Math.round((cl.hrcbNeutral / hrcbTotal) * 100) : 0;
+const negPct = hrcbTotal > 0 ? 100 - posPct - neuPct : 0;
+---
+
+<table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+  <tr>
+    <td style="padding: 12px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+      {/* Header */}
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+        <span style={`color: ${cl.color}; font-weight: bold; font-size: var(--font-sm);`}>
+          {cl.name}
+          <span style="color: var(--fg-secondary); font-weight: normal; margin-left: 8px; font-size: var(--font-xs);">
+            {cl.members.length} domains · {cl.storyCount} stories
+          </span>
+        </span>
+        {cl.avgScore !== null && (
+          <span class="score-font" style={`color: ${scoreToColor(cl.avgScore)}; font-size: var(--font-sm);`}>
+            {formatScore(cl.avgScore)}
+          </span>
+        )}
+      </div>
+
+      {/* Archetype + description */}
+      {cl.archetype && (
+        <div style="margin-bottom: 4px;">
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs); font-style: italic;">
+            {cl.icon} {cl.archetype}
+          </span>
+          {cl.description && (
+            <span style="color: var(--fg-secondary); font-size: var(--font-xs); margin-left: 6px;">
+              &mdash; {cl.description}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Insight */}
+      <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 8px; line-height: 1.4;">
+        {cl.insight}
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px;">
+        {/* Signal radar */}
+        <div>
+          <svg width={radarSize} height={radarSize} viewBox={`0 0 ${radarSize} ${radarSize}`} style="display: block;">
+            {/* Grid rings */}
+            {[0.25, 0.5, 0.75, 1.0].map(r => {
+              const pts = Array.from({ length: numAxes }, (_, i) => {
+                const [x, y] = polarToXY(i * angleStep, r * radarR);
+                return `${x},${y}`;
+              }).join(' ');
+              return <polygon points={pts} fill="none" stroke="var(--color-border)" stroke-width="1" />;
+            })}
+
+            {/* Axes */}
+            {signalDims.map((dim, i) => {
+              const [ax, ay] = polarToXY(i * angleStep, radarR);
+              const [lx, ly] = polarToXY(i * angleStep, radarR + 18);
+              return (
+                <g>
+                  <line x1={radarCx} y1={radarCy} x2={ax} y2={ay} stroke="var(--color-border)" stroke-width="1" />
+                  <text x={lx} y={ly} fill={dim.color} font-size="8" font-family="monospace" text-anchor="middle" dominant-baseline="middle">
+                    {dim.code}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Population median polygon */}
+            <polygon points={medianPoly} fill="none" stroke="var(--fg-secondary)" stroke-width="1" stroke-dasharray="3,2" />
+
+            {/* Cluster data polygon */}
+            <polygon points={radarPoly} fill={cl.color} fill-opacity="0.15" stroke={cl.color} stroke-width="2" />
+
+            {/* Data points */}
+            {radarPoints.map(([x, y], i) => (
+              <circle cx={x} cy={y} r="3" fill={cl.color} stroke="var(--bg-highlight)" stroke-width="1">
+                <title>{signalDims[i].code}: {cl.rawCentroid[i].toFixed(2)}</title>
+              </circle>
+            ))}
+          </svg>
+          <div style="text-align: center; font-size: 8px; color: var(--fg-secondary); margin-top: 2px;">
+            <span style={`color: ${cl.color};`}>&#9632;</span> cluster
+            <span style="color: var(--fg-secondary); margin-left: 6px;">- - -</span> population median
+          </div>
+        </div>
+
+        {/* Key characteristics */}
+        <div style="flex: 1; min-width: 200px;">
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 4px;">Key Characteristics</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px;">
+            {cl.dominantTone && (
+              <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+                {cl.dominantTone}
+              </span>
+            )}
+            {cl.dominantSentiment && (
+              <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+                {cl.dominantSentiment}
+              </span>
+            )}
+            {cl.dominantScope && (
+              <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+                {cl.dominantScope}
+              </span>
+            )}
+            {cl.dominantReadingLevel && (
+              <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+                {cl.dominantReadingLevel}
+              </span>
+            )}
+            {cl.avgSetl !== null && (
+              <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 1px 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+                SETL <span class="score-font" style={`color: ${scoreToColor(cl.avgSetl)};`}>{cl.avgSetl > 0 ? '+' : ''}{cl.avgSetl.toFixed(2)}</span>
+              </span>
+            )}
+          </div>
+
+          {/* HN engagement + karma + HRCB distribution */}
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; font-size: var(--font-xs); align-items: center;">
+            <span style="color: var(--fg-secondary);">
+              Pts <span class="score-font" style="color: var(--color-amber-light);">{Math.round(cl.avgHnScore)}</span>
+            </span>
+            <span style="color: var(--fg-secondary);">
+              Cmts <span class="score-font" style="color: var(--channel-editorial);">{Math.round(cl.avgHnComments)}</span>
+            </span>
+            {cl.avgKarma !== null && (
+              <span style="color: var(--fg-secondary);">
+                Karma <span class="score-font" style="color: var(--color-sentiment);">{cl.avgKarma.toLocaleString()}</span>
+              </span>
+            )}
+            {hrcbTotal > 0 && (
+              <span style="display: inline-flex; align-items: center; gap: 4px; color: var(--fg-secondary);">
+                HRCB
+                <span style="display: inline-flex; width: 60px; height: 8px; border-radius: 2px; overflow: hidden;">
+                  {posPct > 0 && <span style={`width: ${posPct}%; background: var(--color-positive-medium);`}></span>}
+                  {neuPct > 0 && <span style={`width: ${neuPct}%; background: var(--color-warning);`}></span>}
+                  {negPct > 0 && <span style={`width: ${negPct}%; background: var(--color-negative-light);`}></span>}
+                </span>
+                <span class="score-font" style="color: var(--fg-secondary);">{cl.hrcbPositive}+/{cl.hrcbNeutral}~/{cl.hrcbNegative}-</span>
+              </span>
+            )}
+          </div>
+
+          {/* Member domains */}
+          <div style="color: var(--fg-secondary); font-size: var(--font-xs); margin-bottom: 4px;">Members</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            {cl.members.map(m => {
+              const score = domainScores[m] ?? undefined;
+              const isLiminal = cl.liminalMembers.some(l => l.domain === m);
+              return (
+                <a href={`/domain/${m}`}
+                   style={`color: ${score !== undefined && score !== null ? scoreToColor(score) : 'var(--fg-secondary)'}; font-size: var(--font-xs); padding: 2px 6px; background: var(--bg-primary); border: 1px solid ${isLiminal ? 'var(--color-warning-light)' : 'var(--color-border)'}; border-radius: 3px; text-decoration: none;`}>
+                  {m}
+                  {score !== null && score !== undefined && (
+                    <span class="score-font" style="margin-left: 3px; font-size: var(--font-xs);">{formatScore(score)}</span>
+                  )}
+                  {isLiminal && <span style="color: var(--color-warning-light); margin-left: 2px;" title="Liminal member (high affinity with another cluster)">*</span>}
+                </a>
+              );
+            })}
+          </div>
+
+          {/* Liminal members detail */}
+          {cl.liminalMembers.length > 0 && (
+            <div style="margin-top: 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+              <span style="color: var(--color-warning-light);">*</span> Liminal:
+              {cl.liminalMembers.map(l => (
+                <span style="margin-left: 4px;">
+                  {l.domain} &rarr; {l.secondCluster} <span class="score-font" style="color: var(--fg-secondary);">({l.similarity.toFixed(2)})</span>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </td>
+  </tr>
+</table>

@@ -1,0 +1,84 @@
+---
+interface CrossClusterPair {
+  a: string;
+  b: string;
+  similarity: number;
+  clusterA: string;
+  clusterB: string;
+}
+
+interface SameClusterDivergentPair {
+  a: string;
+  b: string;
+  similarity: number;
+  cluster: string;
+}
+
+interface Props {
+  crossClusterPairs: CrossClusterPair[];
+  sameClusterDivergent: SameClusterDivergentPair[];
+}
+
+const { crossClusterPairs, sameClusterDivergent } = Astro.props;
+---
+
+<table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+  <tr>
+    <td style="padding: 12px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        Interesting Pairs
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
+          editorially similar across clusters &amp; divergent within clusters
+        </span>
+      </div>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+        {/* Left: cross-cluster closest */}
+        {crossClusterPairs.length > 0 && (
+          <div style="flex: 1; min-width: 280px;">
+            <div style="color: var(--color-positive-medium); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; border-bottom: 1px solid rgba(90, 173, 143, 0.2); padding-bottom: 4px;">
+              Cross-Cluster Harmony
+            </div>
+            <div class="table-wrap">
+              <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                <tr style="color: var(--fg-secondary);">
+                  <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Sim</td><td>Clusters</td>
+                </tr>
+                {crossClusterPairs.map(p => (
+                  <tr style="border-top: 1px solid var(--bg-surface); background: rgba(90, 173, 143, 0.03);">
+                    <td><a href={`/domain/${p.a}`} style="color: var(--fg-emphasis); text-decoration: none;">{p.a}</a></td>
+                    <td><a href={`/domain/${p.b}`} style="color: var(--fg-emphasis); text-decoration: none;">{p.b}</a></td>
+                    <td style="text-align: right; color: var(--color-positive-medium);" class="score-font">{p.similarity.toFixed(3)}</td>
+                    <td style="color: var(--fg-secondary); font-size: var(--font-xs);">{p.clusterA} / {p.clusterB}</td>
+                  </tr>
+                ))}
+              </table>
+            </div>
+          </div>
+        )}
+        {/* Right: same-cluster most divergent */}
+        {sameClusterDivergent.length > 0 && (
+          <div style="flex: 1; min-width: 280px;">
+            <div style="color: var(--color-negative-light); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; border-bottom: 1px solid rgba(248, 113, 113, 0.2); padding-bottom: 4px;">
+              Intra-Cluster Tension
+            </div>
+            <div class="table-wrap">
+              <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+                <tr style="color: var(--fg-secondary);">
+                  <td>Domain A</td><td>Domain B</td><td style="text-align: right;">Sim</td><td>Cluster</td>
+                </tr>
+                {sameClusterDivergent.map(p => (
+                  <tr style="border-top: 1px solid var(--bg-surface); background: rgba(248, 113, 113, 0.03);">
+                    <td><a href={`/domain/${p.a}`} style="color: var(--fg-emphasis); text-decoration: none;">{p.a}</a></td>
+                    <td><a href={`/domain/${p.b}`} style="color: var(--fg-emphasis); text-decoration: none;">{p.b}</a></td>
+                    <td style="text-align: right; color: var(--color-negative-light);" class="score-font">{p.similarity.toFixed(3)}</td>
+                    <td style="color: var(--fg-secondary); font-size: var(--font-xs);">{p.cluster}</td>
+                  </tr>
+                ))}
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    </td>
+  </tr>
+</table>

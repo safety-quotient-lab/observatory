@@ -2,10 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 import Base from '../layouts/Base.astro';
 import Breadcrumb from '../components/Breadcrumb.astro';
+import SignalKeyFindings from '../components/SignalKeyFindings.astro';
+import SignalTransparency from '../components/SignalTransparency.astro';
+import SignalAccessibility from '../components/SignalAccessibility.astro';
+import SignalPersuasion from '../components/SignalPersuasion.astro';
+import SignalReaderSafety from '../components/SignalReaderSafety.astro';
+import SignalDiscourse from '../components/SignalDiscourse.astro';
+import SignalTemporal from '../components/SignalTemporal.astro';
+import SignalTensions from '../components/SignalTensions.astro';
 import { getStatusCounts, getSignalOverview, getTdSignalAggregates, getComplexityAggregates, getTemporalFramingAggregates, HOMEPAGE_BLOB_KEY } from '../lib/db';
 import type { PsqAggregates, HomepageBlob } from '../lib/db';
 import { PSQ_THREAT_DIMENSIONS, PSQ_PROTECTIVE_DIMENSIONS } from '../lib/eval-types';
-import { scoreToColor, normalizePsq, formatPsqScore } from '../lib/colors';
+import { formatPsqScore } from '../lib/colors';
 import { computeGeoInsights } from '../lib/geo-reference';
 import { wilsonCI, meanCI } from '../lib/stats';
 import { cachedQuery, readDb } from '../lib/db-utils';
@@ -52,6 +60,7 @@ const threatDims: Array<{ name: string; avg: number }> = [];
 const protectiveDims: Array<{ name: string; avg: number }> = [];
 if (psqAggregates?.dim_averages) {
   for (const [name, avg] of Object.entries(psqAggregates.dim_averages)) {
+    if (typeof avg !== 'number') continue; // skip null/undefined from KV blob
     if (PSQ_THREAT_DIMENSIONS.has(name)) threatDims.push({ name, avg });
     else if (PSQ_PROTECTIVE_DIMENSIONS.has(name)) protectiveDims.push({ name, avg });
   }
@@ -289,477 +298,77 @@ if (tdData?.any_disclosure_pct != null && complexityData?.accessible_pct != null
 
         {/* ═══ 1. KEY FINDINGS ═══ */}
 
-        {findings.length > 0 && (
-          <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 20px;">
-            {findings.map((f, i) => (
-              <div style={`padding: 4px 0;${i > 0 ? ' border-top: 1px solid var(--color-border);' : ''}`}>
-                <a href={f.anchor} style="color: var(--fg-primary); font-size: var(--font-sm); text-decoration: none;">
-                  <span style="color: var(--channel-hrcb); margin-right: 6px;">&rsaquo;</span>{f.text}
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
+        <SignalKeyFindings findings={findings} />
 
         {/* ═══ 2. TRANSPARENCY ═══ */}
 
         {tdData && tdData.td_measured > 0 && (
-          <div id="transparency" style="margin-bottom: 20px;">
-            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
-              Transparency
-            </h2>
-            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              Who's transparent about what they write? <a href="/article/19" style="color: var(--channel-editorial);">UDHR Article 19</a> protects expression — but expression without disclosure undermines trust.
-              <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">by source &rarr;</a>
-            </p>
-            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-              <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                {tdRows.map(({ label, pct, ci }) => (
-                  <tr>
-                    <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
-                    <td style="padding: 0 8px;">
-                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
-                        <div style={`background: var(--color-positive); opacity: 0.5; border-radius: 3px; height: 14px; width: ${pct ?? 0}%;`}></div>
-                      </div>
-                    </td>
-                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
-                      {pct !== null ? (
-                        <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${tdN})`}>
-                          {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(ci.margin)}</span>
-                        </span>
-                      ) : 'n/a'}
-                    </td>
-                  </tr>
-                ))}
-              </table>
-              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                <a href="/status#signal-coverage" style="color: var(--fg-secondary); text-decoration: none; border-bottom: 1px dotted var(--color-border);" title={`${tdData.td_measured} of ${status.done} evaluated stories have transparency data`}>{tdData.td_measured.toLocaleString()} stories measured.</a>
-                {tdData.high_td_pct !== null && (
-                  <> <span style="color: var(--color-positive);">{tdData.high_td_pct.toFixed(0)}%</span> meet high transparency standards.</>
-                )}
-                <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 6px; white-space: nowrap;">data &rarr;</a>
-              </p>
-            </div>
-          </div>
+          <SignalTransparency
+            tdRows={tdRows} tdN={tdN}
+            tdMeasured={tdData.td_measured} doneCt={storyCount}
+            highTdPct={tdData.high_td_pct}
+          />
         )}
 
         {/* ═══ 3. ACCESSIBILITY ═══ */}
 
         {complexityData && complexityData.total_measured > 0 && (
-          <div id="accessibility" style="margin-bottom: 20px;">
-            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
-              Accessibility
-            </h2>
-            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              Who can understand this content? <a href="/article/26" style="color: var(--channel-editorial);">UDHR Article 26</a> protects the right to education — jargon and assumed expertise create invisible barriers.
-              <a href="https://unratified.org/covenant" target="_blank" rel="noopener" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">ICESCR Art. 13 &rarr;</a>
-              <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data &rarr;</a>
-            </p>
-            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div>
-                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Jargon Density</p>
-                  <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                    {jargonRows.map(({ label, count, param, ci }) => (
-                      <tr>
-                        <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
-                        <td style="padding: 0 6px;">
-                          <div style="background: var(--bg-primary); border-radius: 3px; height: 12px; width: 100%; position: relative;">
-                            <div style={`background: var(--color-amber); opacity: 0.5; border-radius: 3px; height: 12px; width: ${Math.round((count / maxJargon) * 100)}%;`}></div>
-                          </div>
-                        </td>
-                        <td style="width: 70px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
-                          <a href={`/stories?jargon=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></a>
-                        </td>
-                      </tr>
-                    ))}
-                  </table>
-                </div>
-                <div>
-                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 6px 0; font-weight: bold;">Assumed Knowledge</p>
-                  <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                    {knowledgeRows.map(({ label, count, ci }) => (
-                      <tr>
-                        <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
-                        <td style="padding: 0 6px;">
-                          <div style="background: var(--bg-primary); border-radius: 3px; height: 12px; width: 100%; position: relative;">
-                            <div style={`background: var(--channel-hrcb); opacity: 0.5; border-radius: 3px; height: 12px; width: ${Math.round((count / maxKnowledge) * 100)}%;`}></div>
-                          </div>
-                        </td>
-                        <td style="width: 70px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
-                          <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${clN})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></span>
-                        </td>
-                      </tr>
-                    ))}
-                  </table>
-                </div>
-              </div>
-              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                {complexityData.expert_pct !== null && (
-                  <><span style="color: var(--color-negative);">{complexityData.expert_pct.toFixed(0)}%</span> <span style="color: var(--fg-secondary); font-size: var(--font-xs);" title={`95% CI (Wilson, n=${clN})`}>&plusmn;{Math.ceil(wilsonCI(complexityData.knowledge_expert, clN).margin)}</span> of stories assume expert-level knowledge. </>
-                )}
-                {complexityData.accessible_pct !== null && (
-                  <><span style="color: var(--color-positive);">{complexityData.accessible_pct.toFixed(0)}%</span> are plain-language and self-contained.</>
-                )}
-              </p>
-            </div>
-          </div>
+          <SignalAccessibility
+            jargonRows={jargonRows} knowledgeRows={knowledgeRows}
+            maxJargon={maxJargon} maxKnowledge={maxKnowledge}
+            clN={clN} expertPct={complexityData.expert_pct}
+            accessiblePct={complexityData.accessible_pct}
+            knowledgeExpert={complexityData.knowledge_expert}
+          />
         )}
 
         {/* ═══ 4. PERSUASION TECHNIQUES (tier breakdown) ═══ */}
 
         {totalPt > 0 && (
-          <div id="persuasion" style="margin-bottom: 20px;">
-            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
-              Persuasion Techniques
-            </h2>
-            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              How does tech discourse persuade? PTC-18 techniques grouped by severity — high-severity techniques manipulate through fear, identity attacks, and false choices.
-              <a href="/stories?show=negative&sort=score" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">flagged stories &rarr;</a>
-            </p>
-            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-              <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                {tierA.count > 0 && (
-                  <tr>
-                    <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
-                      <span style="color: var(--color-negative); font-weight: bold;">High severity</span>
-                    </td>
-                    <td style="padding: 0 8px;">
-                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
-                        <div style={`background: var(--color-negative); opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((tierA.count / maxTier) * 100)}%;`}></div>
-                      </div>
-                    </td>
-                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
-                      {topTierA ? (
-                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierA)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierACI.lower * 100).toFixed(1)}–${(tierACI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierA.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierACI.margin)}</span></a>
-                      ) : <span title={`95% CI: ${(tierACI.lower * 100).toFixed(1)}–${(tierACI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierA.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierACI.margin)}</span></span>}
-                    </td>
-                  </tr>
-                )}
-                {tierB.count > 0 && (
-                  <tr>
-                    <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
-                      <span style="color: var(--color-warning); font-weight: bold;">Moderate</span>
-                    </td>
-                    <td style="padding: 0 8px;">
-                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
-                        <div style={`background: var(--color-warning); opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((tierB.count / maxTier) * 100)}%;`}></div>
-                      </div>
-                    </td>
-                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
-                      {topTierB ? (
-                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierB)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierBCI.lower * 100).toFixed(1)}–${(tierBCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierB.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierBCI.margin)}</span></a>
-                      ) : <span title={`95% CI: ${(tierBCI.lower * 100).toFixed(1)}–${(tierBCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierB.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierBCI.margin)}</span></span>}
-                    </td>
-                  </tr>
-                )}
-                {tierC.count > 0 && (
-                  <tr>
-                    <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
-                      <span style="color: var(--fg-secondary); font-weight: bold;">Low severity</span>
-                    </td>
-                    <td style="padding: 0 8px;">
-                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
-                        <div style={`background: var(--fg-secondary); opacity: 0.3; border-radius: 3px; height: 14px; width: ${Math.round((tierC.count / maxTier) * 100)}%;`}></div>
-                      </div>
-                    </td>
-                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
-                      {topTierC ? (
-                        <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierC)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierCCI.lower * 100).toFixed(1)}–${(tierCCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierC.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierCCI.margin)}</span></a>
-                      ) : <span title={`95% CI: ${(tierCCI.lower * 100).toFixed(1)}–${(tierCCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierC.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierCCI.margin)}</span></span>}
-                    </td>
-                  </tr>
-                )}
-              </table>
-              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                {tierA.count > 0 && (
-                  <><span style="color: var(--color-negative);">{tierA.count.toLocaleString()}</span> uses of high-severity techniques (name-calling, appeal to fear, false dilemma). </>
-                )}
-                {tierB.count > 0 && (
-                  <><span style="color: var(--color-warning);">{tierB.count.toLocaleString()}</span> moderate (whataboutism, strawman). </>
-                )}
-                {tierC.count > 0 && (
-                  <>{tierC.count.toLocaleString()} low-severity (loaded language, slogans). </>
-                )}
-                <a href="/about#supplementary" style="color: var(--channel-hrcb);">PTC-18 taxonomy &rarr;</a>
-              </p>
-            </div>
-          </div>
+          <SignalPersuasion
+            tierA={tierA} tierB={tierB} tierC={tierC}
+            totalPt={totalPt} maxTier={maxTier}
+            tierACI={tierACI} tierBCI={tierBCI} tierCCI={tierCCI}
+            topTierA={topTierA} topTierB={topTierB} topTierC={topTierC}
+          />
         )}
 
         {/* ═══ 5. TEMPORAL FRAMING ═══ */}
 
         {temporalData && temporalData.total_measured > 0 && (
-          <div id="temporal" style="margin-bottom: 20px;">
-            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
-              Temporal Framing
-            </h2>
-            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              Does tech coverage look backward or forward? Retrospective analysis and prospective advocacy signal different relationships to change.
-              <a href="/api/v1/signals" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">data &rarr;</a>
-            </p>
-            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-              <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
-                {focusRows.map(({ label, count, pct, color, param, ci }) => (
-                  <tr>
-                    <td style="width: 110px; color: var(--fg-primary); white-space: nowrap;">{label}</td>
-                    <td style="padding: 0 8px;">
-                      <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
-                        <div style={`background: ${color}; opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((count / maxFocus) * 100)}%;`}></div>
-                      </div>
-                    </td>
-                    <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
-                      {pct !== null ? (
-                        <a href={`/stories?temporal=${param}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${tfN})`}>
-                          {pct.toFixed(0)}%<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(ci.margin)}</span>
-                        </a>
-                      ) : '\u2014'}
-                    </td>
-                  </tr>
-                ))}
-              </table>
-              {horizonRows.length > 0 && (
-                <>
-                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 10px 0 4px 0; font-weight: bold;">Time Horizon</p>
-                  <table cellpadding="2" cellspacing="0" style="font-size: var(--font-xs); width: 100%;">
-                    {horizonRows.map(({ label, count, ci }) => (
-                      <tr>
-                        <td style="width: 90px; color: var(--fg-secondary); white-space: nowrap;">{label}</td>
-                        <td style="padding: 0 6px;">
-                          <div style="background: var(--bg-primary); border-radius: 2px; height: 10px; width: 100%;">
-                            <div style={`background: var(--fg-secondary); opacity: 0.3; border-radius: 2px; height: 10px; width: ${Math.round((count / maxHorizon) * 100)}%;`}></div>
-                          </div>
-                        </td>
-                        <td style="width: 60px; text-align: right; color: var(--fg-secondary); white-space: nowrap;" class="score-font">
-                          <span title={`95% CI: ${(ci.lower * 100).toFixed(1)}–${(ci.upper * 100).toFixed(1)}% (Wilson, n=${horizonTotal})`}>{count.toLocaleString()}<span style="font-size: var(--font-xs); opacity: 0.7;"> ±{Math.ceil(ci.margin)}</span></span>
-                        </td>
-                      </tr>
-                    ))}
-                  </table>
-                </>
-              )}
-              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                {retroRatio && (
-                  <>Tech coverage looks backward <span class="score-font">{retroRatio}&times;</span> more than forward. </>
-                )}
-                <a href="/status#signal-coverage" style="color: var(--fg-secondary); text-decoration: none; border-bottom: 1px dotted var(--color-border);" title={`${temporalData.total_measured} of ${status.done} evaluated stories have temporal framing data — remainder lacked classifiable temporal focus`}>{temporalData.total_measured.toLocaleString()} stories measured.</a>
-              </p>
-            </div>
-          </div>
+          <SignalTemporal
+            focusRows={focusRows} horizonRows={horizonRows}
+            maxFocus={maxFocus} maxHorizon={maxHorizon}
+            tfN={tfN} horizonTotal={horizonTotal}
+            retroRatio={retroRatio} storyCount={storyCount}
+          />
         )}
 
         {/* ═══ 6. READER SAFETY (PSQ) ═══ */}
 
         {psqAggregates && psqAggregates.story_count > 0 && (
-          <div id="reader-safety" style="margin-bottom: 20px;">
-            <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px;">
-              <div role="heading" aria-level="2" style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0;">
-                Reader Safety
-              </div>
-              <span class="psq-experimental">experimental</span>
-            </div>
-            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              How safe does this content feel to encounter? <a href="/article/3" style="color: var(--channel-editorial);">UDHR Article 3</a> protects security of person; <a href="/article/12" style="color: var(--channel-editorial);">Article 12</a> protects against attacks on reputation. PSQ measures psychoemotional safety across threat exposure and protective factors.
-            </p>
-            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
-                <div style="text-align: center;">
-                  <div style="color: var(--fg-secondary); font-size: var(--font-xs);">avg PSQ</div>
-                  <span class="score-font" style={`color: ${scoreToColor(normalizePsq(psqAggregates.avg_psq))}; font-size: var(--font-md);`}>
-                    {formatPsqScore(psqAggregates.avg_psq)}
-                  </span>
-                  <span style="color: var(--fg-secondary); font-size: var(--font-xs);">/10</span>
-                  {psqCI && (
-                    <span style="color: var(--fg-secondary); font-size: var(--font-xs);" title={`95% CI: ${psqCI.lower.toFixed(2)}–${psqCI.upper.toFixed(2)} (t-dist, n=${psqAggregates.story_count})`}> ±{psqCI.margin.toFixed(1)}</span>
-                  )}
-                </div>
-                <div style="color: var(--fg-secondary); font-size: var(--font-xs);">
-                  {psqAggregates.story_count} stories scored
-                </div>
-                {threatAvg != null && protectiveAvg != null && (
-                  <div style="margin-left: auto; display: flex; gap: 12px; font-size: var(--font-xs);">
-                    <span>
-                      <span style="color: var(--fg-secondary);">Threat avg: </span>
-                      <span class="score-font" style={`color: ${scoreToColor(normalizePsq(threatAvg))};`}>{threatAvg.toFixed(1)}</span>
-                    </span>
-                    <span>
-                      <span style="color: var(--fg-secondary);">Protective avg: </span>
-                      <span class="score-font" style={`color: ${scoreToColor(normalizePsq(protectiveAvg))};`}>{protectiveAvg.toFixed(1)}</span>
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {threatDims.length > 0 && (
-                <div style="margin-bottom: 8px;">
-                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 4px 0; font-weight: bold;">Threat Dimensions</p>
-                  {threatDims.map(({ name, avg }) => {
-                    const dimNorm = normalizePsq(avg);
-                    const dimColor = dimNorm != null ? scoreToColor(dimNorm) : 'var(--fg-secondary)';
-                    return (
-                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
-                        <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 120px; text-align: right; white-space: nowrap;">
-                          {name.replace(/_/g, ' ')}
-                        </span>
-                        <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative; max-width: 200px;">
-                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
-                          {dimNorm != null && (dimNorm >= 0 ? (
-                            <div style={`position: absolute; left: 50%; top: 0; width: ${dimNorm * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
-                          ) : (
-                            <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(dimNorm) * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
-                          ))}
-                        </div>
-                        <span class="score-font" style={`color: ${dimColor}; font-size: var(--font-xs); width: 40px; text-align: right;`}>
-                          {avg.toFixed(1)}/10
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {protectiveDims.length > 0 && (
-                <div>
-                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 4px 0; font-weight: bold;">Protective Dimensions</p>
-                  {protectiveDims.map(({ name, avg }) => {
-                    const dimNorm = normalizePsq(avg);
-                    const dimColor = dimNorm != null ? scoreToColor(dimNorm) : 'var(--fg-secondary)';
-                    return (
-                      <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
-                        <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 120px; text-align: right; white-space: nowrap;">
-                          {name.replace(/_/g, ' ')}
-                        </span>
-                        <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative; max-width: 200px;">
-                          <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
-                          {dimNorm != null && (dimNorm >= 0 ? (
-                            <div style={`position: absolute; left: 50%; top: 0; width: ${dimNorm * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
-                          ) : (
-                            <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(dimNorm) * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
-                          ))}
-                        </div>
-                        <span class="score-font" style={`color: ${dimColor}; font-size: var(--font-xs); width: 40px; text-align: right;`}>
-                          {avg.toFixed(1)}/10
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
-                PSQ (Psychoemotional Safety Quotient) — an independent signal measuring reader safety across 10 dimensions.
-                <a href="/about#supplementary" style="color: var(--channel-hrcb); margin-left: 4px;">methodology &rarr;</a>
-              </p>
-            </div>
-          </div>
+          <SignalReaderSafety
+            psqAggregates={psqAggregates}
+            threatDims={threatDims} protectiveDims={protectiveDims}
+            threatAvg={threatAvg} protectiveAvg={protectiveAvg}
+            psqCI={psqCI}
+          />
         )}
 
         {/* ═══ 7. DISCOURSE CHARACTER (merged tone + scope) ═══ */}
 
         {(toneEntries.length > 0 || scopeEntries.length > 0) && (
-          <div id="discourse" style="margin-bottom: 20px;">
-            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
-              Discourse Character
-            </h2>
-            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              How does tech discourse sound, and who does it address? Emotional tone shapes how rights issues land; geographic scope reveals whose "<a href="/article/25" style="color: var(--channel-editorial);">adequate standard of living</a>" gets discussed.
-              <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">by source &rarr;</a>
-            </p>
-            <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
-              {toneEntries.length > 0 && (
-                <div style={scopeEntries.length > 0 ? 'margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--color-border);' : ''}>
-                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Tone (top 5 of {totalTone})</p>
-                  <table cellpadding="0" cellspacing="0" width="100%">
-                    {toneEntries.map(([label, count]) => {
-                      const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
-                      const toneCI = wilsonCI(count, totalTone);
-                      return (
-                        <tr>
-                          <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
-                          <td style="padding: 2px 8px;">
-                            <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
-                              <div style={`width: ${pct}%; height: 100%; background: var(--color-inference); border-radius: 3px;`}></div>
-                            </div>
-                          </td>
-                          <td style="width: 56px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs); white-space: nowrap;" class="score-font">
-                            <span title={`95% CI: ${(toneCI.lower * 100).toFixed(1)}–${(toneCI.upper * 100).toFixed(1)}% (Wilson, n=${totalTone})`}>{count}<span style="opacity: 0.7;"> ±{Math.ceil(toneCI.margin)}</span></span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </table>
-                </div>
-              )}
-
-              {scopeEntries.length > 0 && (
-                <div>
-                  <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
-                  <table cellpadding="0" cellspacing="0" width="100%">
-                    {scopeEntries.map(([label, count]) => {
-                      const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
-                      const scopeCI = wilsonCI(count, totalScope);
-                      return (
-                        <tr>
-                          <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
-                          <td style="padding: 2px 8px;">
-                            <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
-                              <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
-                            </div>
-                          </td>
-                          <td style="width: 56px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs); white-space: nowrap;" class="score-font">
-                            <span title={`95% CI: ${(scopeCI.lower * 100).toFixed(1)}–${(scopeCI.upper * 100).toFixed(1)}% (Wilson, n=${totalScope})`}>{count}<span style="opacity: 0.7;"> ±{Math.ceil(scopeCI.margin)}</span></span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </table>
-                  <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 6px 0 0 0; line-height: 1.5;">
-                    <span style="color: var(--color-warning);">{geoInsights.usMentionPct}%</span> of geographic mentions reference the US.
-                    Covered countries represent <span style="color: var(--fg-primary);">{geoInsights.coveragePct}%</span> of world population — but
-                    {' '}<span style="color: var(--color-negative);">{Math.round(geoInsights.underrepPop / 1_000_000_000 * 10) / 10}B people</span> across
-                    {' '}{geoInsights.underrepCountries} countries (Indonesia, Pakistan, Nigeria, Bangladesh, Ethiopia) have zero coverage.
-                    <span style="color: var(--fg-secondary); font-style: italic; margin-left: 4px;">
-                      Source: <a href="https://www.wolframalpha.com" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Wolfram Alpha</a> 2023 estimates
-                    </span>
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          <SignalDiscourse
+            toneEntries={toneEntries} scopeEntries={scopeEntries}
+            maxTone={maxTone} maxScope={maxScope}
+            totalTone={totalTone} totalScope={totalScope}
+            geoInsights={geoInsights}
+          />
         )}
 
-        {/* ═══ 7. SIGNAL TENSIONS ═══ */}
+        {/* ═══ 8. SIGNAL TENSIONS ═══ */}
 
-        {tensions.length > 0 && (
-          <div style="margin-bottom: 20px;">
-            <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
-              Signal Tensions
-            </h2>
-            <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
-              Where signals contradict each other, rights patterns emerge. These cross-signal tensions reveal how the tech ecosystem relates to human rights in ways no single metric captures.
-            </p>
-            {tensions.map((t) => (
-              <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
-                  <span style="color: var(--fg-primary); font-size: var(--font-sm); font-weight: bold;">{t.label}</span>
-                  <a href={t.articleHref} style="color: var(--channel-editorial); font-size: var(--font-xs); white-space: nowrap;">{t.article}</a>
-                </div>
-                <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">{t.description}</p>
-                <div style="display: flex; gap: 16px; font-size: var(--font-xs);">
-                  <span>
-                    <span style="color: var(--fg-secondary);">{t.metric1.name}: </span>
-                    <span style={`color: ${t.metric1.color}; font-weight: bold;`} class="score-font">{t.metric1.value}</span>
-                  </span>
-                  <span style="color: var(--fg-secondary);">vs</span>
-                  <span>
-                    <span style="color: var(--fg-secondary);">{t.metric2.name}: </span>
-                    <span style={`color: ${t.metric2.color}; font-weight: bold;`} class="score-font">{t.metric2.value}</span>
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <SignalTensions tensions={tensions} />
 
         {/* ═══ 8. METHODOLOGY NOTES ═══ */}
 

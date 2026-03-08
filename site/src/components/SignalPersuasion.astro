@@ -1,0 +1,97 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { wilsonCI } from '../lib/stats';
+
+interface Props {
+  tierA: { count: number; techniques: string[] };
+  tierB: { count: number; techniques: string[] };
+  tierC: { count: number; techniques: string[] };
+  totalPt: number;
+  maxTier: number;
+  tierACI: ReturnType<typeof wilsonCI>;
+  tierBCI: ReturnType<typeof wilsonCI>;
+  tierCCI: ReturnType<typeof wilsonCI>;
+  topTierA: string | undefined;
+  topTierB: string | undefined;
+  topTierC: string | undefined;
+}
+
+const { tierA, tierB, tierC, totalPt, maxTier, tierACI, tierBCI, tierCCI, topTierA, topTierB, topTierC } = Astro.props;
+---
+
+<div id="persuasion" style="margin-bottom: 20px;">
+  <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+    Persuasion Techniques
+  </h2>
+  <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+    How does tech discourse persuade? PTC-18 techniques grouped by severity — high-severity techniques manipulate through fear, identity attacks, and false choices.
+    <a href="/stories?show=negative&sort=score" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">flagged stories &rarr;</a>
+  </p>
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+    <table cellpadding="2" cellspacing="0" style="font-size: var(--font-sm); width: 100%;">
+      {tierA.count > 0 && (
+        <tr>
+          <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
+            <span style="color: var(--color-negative); font-weight: bold;">High severity</span>
+          </td>
+          <td style="padding: 0 8px;">
+            <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+              <div style={`background: var(--color-negative); opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((tierA.count / maxTier) * 100)}%;`}></div>
+            </div>
+          </td>
+          <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
+            {topTierA ? (
+              <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierA)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierACI.lower * 100).toFixed(1)}–${(tierACI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierA.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierACI.margin)}</span></a>
+            ) : <span title={`95% CI: ${(tierACI.lower * 100).toFixed(1)}–${(tierACI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierA.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierACI.margin)}</span></span>}
+          </td>
+        </tr>
+      )}
+      {tierB.count > 0 && (
+        <tr>
+          <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
+            <span style="color: var(--color-warning); font-weight: bold;">Moderate</span>
+          </td>
+          <td style="padding: 0 8px;">
+            <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+              <div style={`background: var(--color-warning); opacity: 0.5; border-radius: 3px; height: 14px; width: ${Math.round((tierB.count / maxTier) * 100)}%;`}></div>
+            </div>
+          </td>
+          <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
+            {topTierB ? (
+              <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierB)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierBCI.lower * 100).toFixed(1)}–${(tierBCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierB.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierBCI.margin)}</span></a>
+            ) : <span title={`95% CI: ${(tierBCI.lower * 100).toFixed(1)}–${(tierBCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierB.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierBCI.margin)}</span></span>}
+          </td>
+        </tr>
+      )}
+      {tierC.count > 0 && (
+        <tr>
+          <td style="width: 155px; color: var(--fg-primary); white-space: nowrap;">
+            <span style="color: var(--fg-secondary); font-weight: bold;">Low severity</span>
+          </td>
+          <td style="padding: 0 8px;">
+            <div style="background: var(--bg-primary); border-radius: 3px; height: 14px; width: 100%; position: relative;">
+              <div style={`background: var(--fg-secondary); opacity: 0.3; border-radius: 3px; height: 14px; width: ${Math.round((tierC.count / maxTier) * 100)}%;`}></div>
+            </div>
+          </td>
+          <td style="width: 70px; text-align: right; color: var(--fg-primary); white-space: nowrap;" class="score-font">
+            {topTierC ? (
+              <a href={`/stories?show=negative&sort=score&pt=${encodeURIComponent(topTierC)}`} style="color: inherit; text-decoration: none;" title={`95% CI: ${(tierCCI.lower * 100).toFixed(1)}–${(tierCCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierC.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierCCI.margin)}</span></a>
+            ) : <span title={`95% CI: ${(tierCCI.lower * 100).toFixed(1)}–${(tierCCI.upper * 100).toFixed(1)}% of occurrences (Wilson, n=${totalPt})`}>{tierC.count.toLocaleString()}<span style="color: var(--fg-secondary); font-size: var(--font-xs);"> ±{Math.ceil(tierCCI.margin)}</span></span>}
+          </td>
+        </tr>
+      )}
+    </table>
+    <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+      {tierA.count > 0 && (
+        <><span style="color: var(--color-negative);">{tierA.count.toLocaleString()}</span> uses of high-severity techniques (name-calling, appeal to fear, false dilemma). </>
+      )}
+      {tierB.count > 0 && (
+        <><span style="color: var(--color-warning);">{tierB.count.toLocaleString()}</span> moderate (whataboutism, strawman). </>
+      )}
+      {tierC.count > 0 && (
+        <>{tierC.count.toLocaleString()} low-severity (loaded language, slogans). </>
+      )}
+      <a href="/about#supplementary" style="color: var(--channel-hrcb);">PTC-18 taxonomy &rarr;</a>
+    </p>
+  </div>
+</div>

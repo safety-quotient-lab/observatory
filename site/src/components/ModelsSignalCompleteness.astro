@@ -1,0 +1,46 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+
+interface Props {
+  signalCompleteness: any[];
+}
+
+const { signalCompleteness } = Astro.props;
+---
+
+{signalCompleteness.length > 0 && (
+  <details open class="collapsible-section">
+    <summary>
+      Signal Completeness
+      {signalCompleteness.some(r => r.any_below_80) && (
+        <span style="text-transform: none; letter-spacing: 0; color: var(--color-warning); margin-left: 6px;">gaps detected</span>
+      )}
+    </summary>
+    <div class="table-wrap">
+    <table cellpadding="3" cellspacing="0" width="100%" style="font-size: var(--font-xs);">
+      <tr style="color: var(--color-border); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em;">
+        <td style="padding: 2px 6px;">Model</td>
+        <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Epistemic quality">EQ</td>
+        <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Solution orientation">SO</td>
+        <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Temporal dimension">TD</td>
+        <td style="padding: 2px 6px; text-align: right; width: 40px;" title="Propaganda flags">PT</td>
+        <td style="padding: 2px 6px; text-align: right; width: 50px;" title="Primary tone">Tone</td>
+      </tr>
+      {signalCompleteness.map(row => {
+        const pct = (v: number | null) => v == null ? '—' : `${Math.round(v)}%`;
+        const col = (v: number | null) => v == null ? 'var(--color-border)' : v < 80 ? 'var(--color-negative)' : v < 95 ? 'var(--color-warning)' : 'var(--fg-secondary)';
+        return (
+          <tr style="border-top: 1px solid var(--bg-surface);">
+            <td style="padding: 3px 6px; color: var(--fg-primary);">{row.eval_model}</td>
+            <td style={`padding: 3px 6px; text-align: right; color: ${col(row.eq_pct)};`}>{pct(row.eq_pct)}</td>
+            <td style={`padding: 3px 6px; text-align: right; color: ${col(row.so_pct)};`}>{pct(row.so_pct)}</td>
+            <td style={`padding: 3px 6px; text-align: right; color: ${col(row.td_pct)};`}>{pct(row.td_pct)}</td>
+            <td style={`padding: 3px 6px; text-align: right; color: ${col(row.pt_pct)};`}>{pct(row.pt_pct)}</td>
+            <td style={`padding: 3px 6px; text-align: right; color: ${col(row.tone_pct)};`}>{pct(row.tone_pct)}</td>
+          </tr>
+        );
+      })}
+    </table>
+    </div>
+  </details>
+)}

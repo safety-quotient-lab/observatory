@@ -9,7 +9,7 @@ Completed rounds (1–4.8, 4.9, 5.5, 8) archived in git history.
 
 ## Current Focus
 
-**Clean board (2026-03-08).** All GH issues closed (28 total). Peer review findings implemented (H1, ES-R2, PSQ-R1). Epistemic sprint complete. External PSQ endpoint integrated (migration 0070, DistilBERT canonical, LLM PSQ archived). Homepage SSR truncation fixed (PsqLens null guard + 11 extracted components). Next: blog posts.
+**Clean board (2026-03-08).** All GH issues closed (28 total). Peer review findings implemented (H1, ES-R2, PSQ-R1). Epistemic sprint complete. External PSQ endpoint integrated (migration 0070, DistilBERT canonical, LLM PSQ archived). SSR truncation fixed on all 4 major pages (homepage 11, signals 8, models 16, factions 7+SignalSpace components — KV blob null guards). Next: blog posts.
 
 Blog posts:
 - [ ] **Write API blog post** — announce public REST API

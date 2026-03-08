@@ -1,0 +1,49 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+
+interface SignalTension {
+  label: string;
+  description: string;
+  metric1: { name: string; value: string; color: string };
+  metric2: { name: string; value: string; color: string };
+  article: string;
+  articleHref: string;
+}
+
+interface Props {
+  tensions: SignalTension[];
+}
+
+const { tensions } = Astro.props;
+---
+
+{tensions.length > 0 && (
+  <div style="margin-bottom: 20px;">
+    <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+      Signal Tensions
+    </h2>
+    <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+      Where signals contradict each other, rights patterns emerge. These cross-signal tensions reveal how the tech ecosystem relates to human rights in ways no single metric captures.
+    </p>
+    {tensions.map((t) => (
+      <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+          <span style="color: var(--fg-primary); font-size: var(--font-sm); font-weight: bold;">{t.label}</span>
+          <a href={t.articleHref} style="color: var(--channel-editorial); font-size: var(--font-xs); white-space: nowrap;">{t.article}</a>
+        </div>
+        <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">{t.description}</p>
+        <div style="display: flex; gap: 16px; font-size: var(--font-xs);">
+          <span>
+            <span style="color: var(--fg-secondary);">{t.metric1.name}: </span>
+            <span style={`color: ${t.metric1.color}; font-weight: bold;`} class="score-font">{t.metric1.value}</span>
+          </span>
+          <span style="color: var(--fg-secondary);">vs</span>
+          <span>
+            <span style="color: var(--fg-secondary);">{t.metric2.name}: </span>
+            <span style={`color: ${t.metric2.color}; font-weight: bold;`} class="score-font">{t.metric2.value}</span>
+          </span>
+        </div>
+      </div>
+    ))}
+  </div>
+)}

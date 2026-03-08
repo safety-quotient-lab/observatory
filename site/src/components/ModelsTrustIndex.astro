@@ -1,0 +1,90 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { modelDisplayName, isLiteMode, getModelDef } from '../lib/shared-eval';
+
+interface Props {
+  trustByModel: Map<string, any[]>;
+}
+
+const { trustByModel } = Astro.props;
+---
+
+{[...trustByModel.entries()].length > 0 && (
+  <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 10px;">
+    <tr>
+      <td style="padding: 10px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-lg);">
+          Evaluator Trust Index
+          <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">14-day composite trust score per model</span>
+        </div>
+        <div class="table-wrap">
+        <table cellpadding="0" cellspacing="0" width="100%" style="min-width: 500px;">
+          <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+            <td style="padding: 3px 8px;">Model</td>
+            <td style="padding: 3px 8px; text-align: center;">Latest</td>
+            <td style="padding: 3px 8px; text-align: center;">Cal Acc</td>
+            <td style="padding: 3px 8px; text-align: center;">Consensus</td>
+            <td style="padding: 3px 8px; text-align: center;">Parse%</td>
+            <td style="padding: 3px 8px; text-align: center;">Evals/7d</td>
+            <td style="padding: 3px 8px;">14d Trend</td>
+          </tr>
+          {[...trustByModel.entries()].map(([modelId, snaps]) => {
+            const latest = snaps[snaps.length - 1];
+            const trust = latest?.trust_score ?? null;
+            const trustColor = trust === null ? 'var(--fg-secondary)' : trust >= 0.7 ? 'var(--color-positive-medium)' : trust >= 0.5 ? 'var(--color-warning)' : 'var(--color-negative)';
+            const sparkW = 80, sparkH = 20;
+            const sparkVals = snaps.map(s => s.trust_score ?? null);
+            const validVals = sparkVals.filter((v): v is number => v !== null);
+            const sparkMin = validVals.length > 0 ? Math.min(...validVals) : 0;
+            const sparkMax = Math.max(validVals.length > 0 ? Math.max(...validVals) : 1, sparkMin + 0.01);
+            const sparkPoints = sparkVals.map((v, i) => {
+              const x = sparkW * (i / Math.max(sparkVals.length - 1, 1));
+              const y = v !== null ? sparkH - ((v - sparkMin) / (sparkMax - sparkMin)) * sparkH : null;
+              return { x, y, v };
+            }).filter((p): p is { x: number; y: number; v: number } => p.y !== null);
+            const polyPoints = sparkPoints.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+            return (
+              <tr style="border-top: 1px solid var(--bg-surface);">
+                <td style="padding: 5px 8px; color: var(--fg-primary); font-size: var(--font-sm);">
+                  {modelDisplayName(modelId)}
+                  {isLiteMode(getModelDef(modelId)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: var(--font-xs); margin-left: 4px;">lite</span>}
+                </td>
+                <td style={`padding: 5px 8px; text-align: center; font-weight: bold; color: ${trustColor};`}>
+                  {trust !== null ? trust.toFixed(2) : '—'}
+                </td>
+                <td style="padding: 5px 8px; text-align: center; color: var(--fg-emphasis); font-size: var(--font-sm);">
+                  {latest?.calibration_accuracy !== null && latest?.calibration_accuracy !== undefined ? (latest.calibration_accuracy * 100).toFixed(0) + '%' : '—'}
+                </td>
+                <td style="padding: 5px 8px; text-align: center; color: var(--fg-emphasis); font-size: var(--font-sm);">
+                  {latest?.consensus_agreement !== null && latest?.consensus_agreement !== undefined ? (latest.consensus_agreement * 100).toFixed(0) + '%' : '—'}
+                </td>
+                <td style="padding: 5px 8px; text-align: center; color: var(--fg-emphasis); font-size: var(--font-sm);">
+                  {latest?.parse_success_rate !== null && latest?.parse_success_rate !== undefined ? (latest.parse_success_rate * 100).toFixed(0) + '%' : '—'}
+                </td>
+                <td style="padding: 5px 8px; text-align: center; color: var(--fg-secondary); font-size: var(--font-sm);">
+                  {latest?.eval_count ?? 0}
+                </td>
+                <td style="padding: 5px 8px;">
+                  {sparkPoints.length >= 2 ? (
+                    <svg width={sparkW} height={sparkH} viewBox={`0 0 ${sparkW} ${sparkH}`} style="display: block;">
+                      <polyline points={polyPoints} fill="none" stroke={trustColor} stroke-width="1.5" stroke-linejoin="round" />
+                      {sparkPoints.length > 0 && (
+                        <circle cx={sparkPoints[sparkPoints.length - 1].x} cy={sparkPoints[sparkPoints.length - 1].y} r="2" fill={trustColor} />
+                      )}
+                    </svg>
+                  ) : (
+                    <span style="color: var(--color-border); font-size: var(--font-xs);">no history</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+        </div>
+        <div style="color: var(--color-border); font-size: var(--font-xs); margin-top: 6px;">
+          Trust = calibration accuracy (40%) + consensus agreement (35%) + parse success (25%) · updated hourly · &lt;0.3 for 7+ days triggers review alert
+        </div>
+      </td>
+    </tr>
+  </table>
+)}

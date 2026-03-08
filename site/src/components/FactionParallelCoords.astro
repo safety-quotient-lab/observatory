@@ -1,0 +1,187 @@
+---
+interface Props {
+  totalClusters: number;
+  totalDomains: number;
+  unalignedCount: number;
+  mostDiff: { code: string; color: string } | null;
+  leastDiff: { code: string; color: string } | null;
+  loneWolfRatio: number;
+  enrichedClusters: Array<{ name: string; color: string; rawCentroid: number[] }>;
+  pcLines: Array<{ domain: string; color: string; opacity: number; points: string; clusterName: string | null }>;
+  pcCentroidLines: Array<{ name: string; color: string; points: string }>;
+  signalDims: Array<{ code: string; color: string }>;
+  pcDimMins: number[];
+  pcDimMaxs: number[];
+  factionThreshold: number;
+  allianceThreshold: number;
+  acquaintanceThreshold: number;
+}
+
+const {
+  totalClusters,
+  totalDomains,
+  unalignedCount,
+  mostDiff,
+  leastDiff,
+  loneWolfRatio,
+  enrichedClusters,
+  pcLines,
+  pcCentroidLines,
+  signalDims,
+  pcDimMins,
+  pcDimMaxs,
+  factionThreshold,
+  allianceThreshold,
+  acquaintanceThreshold,
+} = Astro.props;
+
+const nDims = signalDims.length;
+const pcW = 700, pcH = 300, pcPadL = 30, pcPadR = 30, pcPadT = 30, pcPadB = 40;
+const pcInnerW = pcW - pcPadL - pcPadR;
+const pcInnerH = pcH - pcPadT - pcPadB;
+const axisSpacing = pcInnerW / (nDims - 1);
+function pcAxisX(dim: number): number { return pcPadL + dim * axisSpacing; }
+function pcValY(val: number, dim: number): number {
+  const norm = (val - pcDimMins[dim]) / ((pcDimMaxs[dim] - pcDimMins[dim]) || 1);
+  return pcPadT + pcInnerH * (1 - norm);
+}
+---
+
+<table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+  <tr>
+    <td style="padding: 12px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        Landscape Overview
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
+          parallel coordinates &mdash; each line is a domain across 8 signal dimensions
+        </span>
+      </div>
+
+      {/* Stat badges */}
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;">
+        <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: var(--channel-structural);">
+          {totalClusters} clusters
+        </span>
+        <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: var(--channel-editorial);">
+          {totalDomains} domains
+        </span>
+        <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: var(--fg-secondary);">
+          {unalignedCount} unaligned
+        </span>
+        {mostDiff && (
+          <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: var(--fg-secondary);">
+            Most differentiating: <span style={`color: ${mostDiff.color};`}>{mostDiff.code}</span>
+          </span>
+        )}
+        {leastDiff && (
+          <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: var(--fg-secondary);">
+            Least differentiating: <span style={`color: ${leastDiff.color};`}>{leastDiff.code}</span>
+          </span>
+        )}
+      </div>
+
+      {loneWolfRatio > 0.6 && (
+        <div style="font-size: var(--font-xs); color: var(--color-amber-light); margin-bottom: 8px;">
+          {Math.round(loneWolfRatio * 100)}% unaligned — most domains have unique editorial profiles
+        </div>
+      )}
+
+      {/* Parallel coordinates chart — scrollable on mobile, no label shrink */}
+      <div style="overflow-x: auto;">
+      <svg width={pcW} viewBox={`0 0 ${pcW} ${pcH}`} style="display: block;">
+        {/* Background */}
+        <rect x="0" y="0" width={pcW} height={pcH} fill="var(--bg-primary)" rx="4" />
+
+        {/* Vertical axes */}
+        {signalDims.map((dim, i) => {
+          const x = pcAxisX(i);
+          return (
+            <g>
+              <line x1={x} y1={pcPadT} x2={x} y2={pcPadT + pcInnerH} stroke="var(--color-border)" stroke-width="1" />
+              {/* Axis label */}
+              <text x={x} y={pcPadT + pcInnerH + 16} fill={dim.color} font-size="10" font-family="monospace" text-anchor="middle" font-weight="bold">
+                {dim.code}
+              </text>
+              {/* Min/max tick labels */}
+              <text x={x} y={pcPadT - 6} fill="var(--color-border)" font-size="7" font-family="monospace" text-anchor="middle">
+                {pcDimMaxs[i].toFixed(2)}
+              </text>
+              <text x={x} y={pcPadT + pcInnerH + 28} fill="var(--color-border)" font-size="7" font-family="monospace" text-anchor="middle">
+                {pcDimMins[i].toFixed(2)}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Domain polylines (individual domains, thin) */}
+        {pcLines.map(line => (
+          <polyline
+            points={line.points}
+            fill="none"
+            stroke={line.color}
+            stroke-width="1"
+            opacity={line.opacity}
+          >
+            <title>{line.domain}{line.clusterName ? ` (${line.clusterName})` : ' (unaligned)'}</title>
+          </polyline>
+        ))}
+
+        {/* Cluster centroid polylines (thick overlay) */}
+        {pcCentroidLines.map(cl => (
+          <polyline
+            points={cl.points}
+            fill="none"
+            stroke={cl.color}
+            stroke-width="3"
+            opacity="0.9"
+            stroke-linejoin="round"
+          >
+            <title>{cl.name} (cluster centroid)</title>
+          </polyline>
+        ))}
+
+        {/* Centroid dots at each axis */}
+        {enrichedClusters.map(cl =>
+          cl.rawCentroid.map((v, i) => (
+            <circle cx={pcAxisX(i)} cy={pcValY(v, i)} r="3" fill={cl.color} stroke="var(--bg-primary)" stroke-width="1">
+              <title>{cl.name} — {signalDims[i].code}: {v.toFixed(2)}</title>
+            </circle>
+          ))
+        )}
+      </svg>
+      </div>
+
+      {/* Legend row */}
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px;">
+        {enrichedClusters.map(cl => (
+          <span style={`display: inline-flex; align-items: center; gap: 3px; font-size: var(--font-xs);`}>
+            <span style={`display: inline-block; width: 12px; height: 3px; border-radius: 1px; background: ${cl.color};`}></span>
+            <span style={`color: ${cl.color};`}>{cl.name}</span>
+          </span>
+        ))}
+        {unalignedCount > 0 && (
+          <span style="display: inline-flex; align-items: center; gap: 3px; font-size: var(--font-xs);">
+            <span style="display: inline-block; width: 12px; height: 1px; background: var(--fg-secondary);"></span>
+            <span style="color: var(--fg-secondary);">Unaligned</span>
+          </span>
+        )}
+        <span style="font-size: var(--font-xs); color: var(--color-border); margin-left: 8px;">
+          Thick lines = cluster centroids · Thin lines = individual domains · Bundled = agreement · Crossing = divergence
+        </span>
+      </div>
+
+      {/* Threshold badges */}
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;">
+        <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: var(--channel-structural);">
+          Faction &ge; 1/&#x3C6; ({factionThreshold.toFixed(3)})
+        </span>
+        <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: var(--color-positive-medium);">
+          Alliance &ge; 1/&#x3C6;&sup2; ({allianceThreshold.toFixed(3)})
+        </span>
+        <span style="background: var(--bg-primary); border: 1px solid var(--color-border); border-radius: 3px; padding: 2px 8px; font-size: var(--font-xs); color: var(--color-warning-light);">
+          Acquaintance &ge; 1/&#x3C6;&sup3; ({acquaintanceThreshold.toFixed(3)})
+        </span>
+      </div>
+    </td>
+  </tr>
+</table>

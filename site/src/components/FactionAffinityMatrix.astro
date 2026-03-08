@@ -1,0 +1,89 @@
+---
+interface Props {
+  enrichedClusters: Array<{ name: string; color: string }>;
+  affinityMatrix: number[][];
+  nClusters: number;
+}
+
+const { enrichedClusters, affinityMatrix, nClusters } = Astro.props;
+
+const PHI = (1 + Math.sqrt(5)) / 2;
+const factionThreshold = 1 / PHI;
+const allianceThreshold = 1 / (PHI * PHI);
+const acquaintanceThreshold = 1 / (PHI * PHI * PHI);
+
+function affinityColor(sim: number): string {
+  if (sim >= factionThreshold) return 'var(--color-positive-medium)';
+  if (sim >= allianceThreshold) return 'var(--color-positive-light)';
+  if (sim >= acquaintanceThreshold) return 'var(--color-warning-light)';
+  if (sim >= 0) return 'var(--bg-surface)';
+  return 'var(--color-negative-light)';
+}
+function affinityOpacity(sim: number): number {
+  return Math.min(Math.abs(sim) * 0.8 + 0.2, 1);
+}
+function tierLabel(sim: number): { label: string; color: string } {
+  if (sim >= factionThreshold) return { label: 'Faction', color: 'var(--channel-structural)' };
+  if (sim >= allianceThreshold) return { label: 'Alliance', color: 'var(--color-positive-medium)' };
+  if (sim >= acquaintanceThreshold) return { label: 'Acquaintance', color: 'var(--color-warning-light)' };
+  if (sim >= 0) return { label: 'Neutral', color: 'var(--fg-secondary)' };
+  return { label: 'Rival', color: 'var(--color-negative-light)' };
+}
+---
+
+<table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+  <tr>
+    <td style="padding: 12px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">
+        Inter-Cluster Affinity
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
+          cosine similarity between cluster centroids
+        </span>
+      </div>
+      <div style="overflow-x: auto;">
+        <svg width={nClusters * 60 + 180} height={nClusters * 60 + 40} viewBox={`0 0 ${nClusters * 60 + 180} ${nClusters * 60 + 40}`}>
+          {/* Column headers */}
+          {enrichedClusters.map((cl, j) => (
+            <text x={180 + j * 60 + 25} y="16" fill={cl.color} font-size="7" font-family="monospace" text-anchor="middle">
+              {cl.name.length > 12 ? cl.name.slice(0, 12) + '..' : cl.name}
+            </text>
+          ))}
+          {/* Rows */}
+          {enrichedClusters.map((clI, i) => (
+            <g>
+              <text x="175" y={26 + i * 60 + 25} fill={clI.color} font-size="7" font-family="monospace" text-anchor="end">
+                {clI.name.length > 22 ? clI.name.slice(0, 22) + '..' : clI.name}
+              </text>
+              {enrichedClusters.map((clJ, j) => {
+                const sim = affinityMatrix[i][j];
+                const tier = tierLabel(sim);
+                return (
+                  <g>
+                    <rect x={180 + j * 60} y={26 + i * 60} width="50" height="50" rx="4"
+                          fill={affinityColor(sim)} opacity={affinityOpacity(sim)}>
+                      <title>{clI.name} vs {clJ.name}: {sim.toFixed(3)} ({tier.label})</title>
+                    </rect>
+                    <text x={180 + j * 60 + 25} y={26 + i * 60 + 28} fill="var(--fg-primary)" font-size="10" font-family="monospace" text-anchor="middle">
+                      {sim.toFixed(2)}
+                    </text>
+                    {i !== j && (
+                      <text x={180 + j * 60 + 25} y={26 + i * 60 + 40} fill="var(--fg-emphasis)" font-size="7" font-family="monospace" text-anchor="middle">
+                        {tier.label}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+          ))}
+        </svg>
+      </div>
+      <div style="display: flex; gap: 12px; margin-top: 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+        <span><span style="color: var(--color-positive-medium);">&#9632;</span> Allied</span>
+        <span><span style="color: var(--color-warning-light);">&#9632;</span> Acquaintance</span>
+        <span><span style="color: var(--bg-surface);">&#9632;</span> Neutral</span>
+        <span><span style="color: var(--color-negative-light);">&#9632;</span> Rival</span>
+      </div>
+    </td>
+  </tr>
+</table>

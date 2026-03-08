@@ -1,0 +1,140 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+
+interface SignalHistogram {
+  code: string;
+  fullLabel: string;
+  color: string;
+  bins: { x0: number; x1: number; count: number }[];
+  min: number;
+  max: number;
+  maxCount: number;
+  clusterMarkers: { name: string; value: number; color: string }[];
+}
+
+interface ClusterInfo {
+  name: string;
+  color: string;
+}
+
+interface Props {
+  profileCount: number;
+  coreHistograms: SignalHistogram[];
+  histograms: SignalHistogram[];
+  enrichedClusters: ClusterInfo[];
+}
+
+const { profileCount, coreHistograms, histograms, enrichedClusters } = Astro.props;
+---
+
+<table cellpadding="0" cellspacing="0" width="100%" style="padding: 4px 0;">
+  <tr>
+    <td style="padding: 12px; background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 6px;">
+      <div style="color: var(--fg-secondary); font-size: var(--font-sm); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+        Signal Landscape
+        <span style="text-transform: none; letter-spacing: 0; color: var(--fg-secondary); margin-left: 6px;">
+          how {profileCount} domains distribute across core and editorial dimensions · colored lines mark cluster centroids
+        </span>
+      </div>
+
+      {/* Core signals */}
+      <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 8px; margin-bottom: 4px;">
+        Core Signals
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        {coreHistograms.map(h => {
+          const chartW = 200;
+          const chartH = 50;
+          const numBins = h.bins.length;
+          if (numBins === 0) return null;
+          const barW = chartW / numBins;
+          const range = h.max - h.min || 1;
+          const toX = (v: number) => ((v - h.min) / range) * chartW;
+          return (
+            <div style="background: var(--bg-primary); border: 1px solid var(--bg-surface); border-radius: 4px; padding: 6px 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                <span style={`color: ${h.color}; font-size: var(--font-xs); font-weight: bold;`}>{h.code}</span>
+                <span style="color: var(--fg-secondary); font-size: 9px;">{h.fullLabel}</span>
+              </div>
+              <svg width={chartW + 10} height={chartH + 16} viewBox={`0 0 ${chartW + 10} ${chartH + 16}`} style="display: block;">
+                {h.bins.map((bin, bi) => {
+                  const barH = h.maxCount > 0 ? (bin.count / h.maxCount) * chartH : 0;
+                  const x = 5 + bi * barW;
+                  return (
+                    <rect x={x} y={chartH - barH} width={Math.max(barW - 1, 1)} height={Math.max(barH, 0)} fill={h.color} opacity="0.6" rx="1">
+                      <title>{bin.x0.toFixed(2)}–{bin.x1.toFixed(2)}: {bin.count} domains</title>
+                    </rect>
+                  );
+                })}
+                {h.clusterMarkers.map(cm => {
+                  const x = 5 + toX(cm.value);
+                  return (
+                    <line x1={x} y1="0" x2={x} y2={chartH} stroke={cm.color} stroke-width="2" opacity="0.8">
+                      <title>{cm.name}: {cm.value.toFixed(2)}</title>
+                    </line>
+                  );
+                })}
+                <text x="5" y={chartH + 11} fill="var(--color-border)" font-size="7" font-family="monospace">{h.min.toFixed(2)}</text>
+                <text x={5 + chartW} y={chartH + 11} fill="var(--color-border)" font-size="7" font-family="monospace" text-anchor="end">{h.max.toFixed(2)}</text>
+              </svg>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Editorial signal dimensions */}
+      <div style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 10px; margin-bottom: 4px;">
+        Editorial Character <span style="text-transform: none; letter-spacing: 0; color: var(--color-border);">(used for clustering)</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        {histograms.map(h => {
+          const chartW = 200;
+          const chartH = 50;
+          const numBins = h.bins.length;
+          if (numBins === 0) return null;
+          const barW = chartW / numBins;
+          const range = h.max - h.min || 1;
+          const toX = (v: number) => ((v - h.min) / range) * chartW;
+          return (
+            <div style="background: var(--bg-primary); border: 1px solid var(--bg-surface); border-radius: 4px; padding: 6px 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+                <span style={`color: ${h.color}; font-size: var(--font-xs); font-weight: bold;`}>{h.code}</span>
+                <span style="color: var(--fg-secondary); font-size: 9px;">{h.fullLabel}</span>
+              </div>
+              <svg width={chartW + 10} height={chartH + 16} viewBox={`0 0 ${chartW + 10} ${chartH + 16}`} style="display: block;">
+                {h.bins.map((bin, bi) => {
+                  const barH = h.maxCount > 0 ? (bin.count / h.maxCount) * chartH : 0;
+                  const x = 5 + bi * barW;
+                  return (
+                    <rect x={x} y={chartH - barH} width={Math.max(barW - 1, 1)} height={Math.max(barH, 0)} fill={h.color} opacity="0.6" rx="1">
+                      <title>{bin.x0.toFixed(2)}–{bin.x1.toFixed(2)}: {bin.count} domains</title>
+                    </rect>
+                  );
+                })}
+                {h.clusterMarkers.map(cm => {
+                  const x = 5 + toX(cm.value);
+                  return (
+                    <line x1={x} y1="0" x2={x} y2={chartH} stroke={cm.color} stroke-width="2" opacity="0.8">
+                      <title>{cm.name}: {cm.value.toFixed(2)}</title>
+                    </line>
+                  );
+                })}
+                <text x="5" y={chartH + 11} fill="var(--color-border)" font-size="7" font-family="monospace">{h.min.toFixed(2)}</text>
+                <text x={5 + chartW} y={chartH + 11} fill="var(--color-border)" font-size="7" font-family="monospace" text-anchor="end">{h.max.toFixed(2)}</text>
+              </svg>
+            </div>
+          );
+        })}
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; font-size: var(--font-xs); color: var(--fg-secondary);">
+        <span>Colored lines = cluster centroids</span>
+        {enrichedClusters.map(cl => (
+          <span style={`display: inline-flex; align-items: center; gap: 3px;`}>
+            <span style={`display: inline-block; width: 12px; height: 2px; background: ${cl.color};`}></span>
+            <span style={`color: ${cl.color};`}>{cl.name}</span>
+          </span>
+        ))}
+      </div>
+    </td>
+  </tr>
+</table>

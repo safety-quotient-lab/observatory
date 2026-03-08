@@ -1,0 +1,21 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+
+interface Props {
+  findings: Array<{ text: string; anchor: string }>;
+}
+
+const { findings } = Astro.props;
+---
+
+{findings.length > 0 && (
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px 12px; margin-bottom: 20px;">
+    {findings.map((f, i) => (
+      <div style={`padding: 4px 0;${i > 0 ? ' border-top: 1px solid var(--color-border);' : ''}`}>
+        <a href={f.anchor} style="color: var(--fg-primary); font-size: var(--font-sm); text-decoration: none;">
+          <span style="color: var(--channel-hrcb); margin-right: 6px;">&rsaquo;</span>{f.text}
+        </a>
+      </div>
+    ))}
+  </div>
+)}

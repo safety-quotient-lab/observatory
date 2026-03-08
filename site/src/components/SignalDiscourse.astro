@@ -1,0 +1,87 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { wilsonCI } from '../lib/stats';
+import { computeGeoInsights } from '../lib/geo-reference';
+
+interface Props {
+  toneEntries: Array<[string, number]>;
+  scopeEntries: Array<[string, number]>;
+  maxTone: number;
+  maxScope: number;
+  totalTone: number;
+  totalScope: number;
+  geoInsights: ReturnType<typeof computeGeoInsights>;
+}
+
+const { toneEntries, scopeEntries, maxTone, maxScope, totalTone, totalScope, geoInsights } = Astro.props;
+---
+
+<div id="discourse" style="margin-bottom: 20px;">
+  <h2 style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0 0 2px 0;">
+    Discourse Character
+  </h2>
+  <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+    How does tech discourse sound, and who does it address? Emotional tone shapes how rights issues land; geographic scope reveals whose "<a href="/article/25" style="color: var(--channel-editorial);">adequate standard of living</a>" gets discussed.
+    <a href="/sources" style="color: var(--channel-hrcb); font-size: var(--font-xs); margin-left: 4px; white-space: nowrap;">by source &rarr;</a>
+  </p>
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+    {toneEntries.length > 0 && (
+      <div style={scopeEntries.length > 0 ? 'margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--color-border);' : ''}>
+        <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Dominant Tone (top 5 of {totalTone})</p>
+        <table cellpadding="0" cellspacing="0" width="100%">
+          {toneEntries.map(([label, count]) => {
+            const pct = maxTone > 0 ? Math.round((count / maxTone) * 100) : 0;
+            const toneCI = wilsonCI(count, totalTone);
+            return (
+              <tr>
+                <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
+                <td style="padding: 2px 8px;">
+                  <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                    <div style={`width: ${pct}%; height: 100%; background: var(--color-inference); border-radius: 3px;`}></div>
+                  </div>
+                </td>
+                <td style="width: 56px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs); white-space: nowrap;" class="score-font">
+                  <span title={`95% CI: ${(toneCI.lower * 100).toFixed(1)}–${(toneCI.upper * 100).toFixed(1)}% (Wilson, n=${totalTone})`}>{count}<span style="opacity: 0.7;"> ±{Math.ceil(toneCI.margin)}</span></span>
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+      </div>
+    )}
+
+    {scopeEntries.length > 0 && (
+      <div>
+        <p style="font-size: var(--font-xs); color: var(--fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px 0;">Geographic Scope</p>
+        <table cellpadding="0" cellspacing="0" width="100%">
+          {scopeEntries.map(([label, count]) => {
+            const pct = maxScope > 0 ? Math.round((count / maxScope) * 100) : 0;
+            const scopeCI = wilsonCI(count, totalScope);
+            return (
+              <tr>
+                <td style="padding: 2px 0; color: var(--fg-primary); font-size: var(--font-xs); width: 110px;">{label}</td>
+                <td style="padding: 2px 8px;">
+                  <div style="height: 6px; background: var(--bg-surface); border-radius: 3px; overflow: hidden;">
+                    <div style={`width: ${pct}%; height: 100%; background: var(--color-sentiment); border-radius: 3px;`}></div>
+                  </div>
+                </td>
+                <td style="width: 56px; text-align: right; color: var(--fg-secondary); font-size: var(--font-xs); white-space: nowrap;" class="score-font">
+                  <span title={`95% CI: ${(scopeCI.lower * 100).toFixed(1)}–${(scopeCI.upper * 100).toFixed(1)}% (Wilson, n=${totalScope})`}>{count}<span style="opacity: 0.7;"> ±{Math.ceil(scopeCI.margin)}</span></span>
+                </td>
+              </tr>
+            );
+          })}
+        </table>
+        <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 6px 0 0 0; line-height: 1.5;">
+          <span style="color: var(--color-warning);">{geoInsights.usMentionPct}%</span> of geographic mentions reference the US.
+          Covered countries represent <span style="color: var(--fg-primary);">{geoInsights.coveragePct}%</span> of world population — but
+          {' '}<span style="color: var(--color-negative);">{Math.round(geoInsights.underrepPop / 1_000_000_000 * 10) / 10}B people</span> across
+          {' '}{geoInsights.underrepCountries} countries (Indonesia, Pakistan, Nigeria, Bangladesh, Ethiopia) have zero coverage.
+          <span style="color: var(--fg-secondary); font-style: italic; margin-left: 4px;">
+            Source: <a href="https://www.wolframalpha.com" target="_blank" rel="noopener" style="color: var(--fg-secondary);">Wolfram Alpha</a> 2023 estimates
+          </span>
+        </p>
+      </div>
+    )}
+  </div>
+</div>

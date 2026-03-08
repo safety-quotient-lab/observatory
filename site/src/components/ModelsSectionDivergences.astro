@@ -1,0 +1,50 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import { scoreToColor, formatScore } from '../lib/colors';
+import { modelDisplayName, isLiteMode, getModelDef } from '../lib/shared-eval';
+
+interface Props {
+  totalStories: number;
+  modelIds: string[];
+  topDivergent: any[];
+}
+
+const { totalStories, modelIds, topDivergent } = Astro.props;
+---
+
+{totalStories > 0 && (
+  <details class="collapsible-section">
+    <summary>Section Divergences</summary>
+    <table cellpadding="0" cellspacing="0" width="100%">
+      <tr style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
+        <td style="padding: 3px 6px;">Section</td>
+        <td style="padding: 3px 6px; color: var(--fg-secondary); font-weight: normal; text-transform: none;">Topic</td>
+        {modelIds.map(m => (
+          <td style="padding: 3px 6px; text-align: center;">
+            {modelDisplayName(m)}
+            {isLiteMode(getModelDef(m)?.prompt_mode ?? null) && <span style="color: var(--color-orange); font-size: 6pt; margin-left: 2px;">lite</span>}
+          </td>
+        ))}
+        <td style="padding: 3px 6px; text-align: center;">Gap</td>
+      </tr>
+      {topDivergent.map(d => (
+        <tr style="border-top: 1px solid var(--bg-surface);">
+          <td style="padding: 4px 6px; font-size: var(--font-xs);">
+            <a href={`/article/${d.idx}`} style="color: var(--fg-emphasis); text-decoration: none;">{d.section}</a>
+          </td>
+          <td style="padding: 4px 6px; color: var(--fg-secondary); font-size: var(--font-xs); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title={d.title}>
+            {d.title ? (d.title.length > 30 ? d.title.slice(0, 30) + '...' : d.title) : '---'}
+          </td>
+          {d.vals.map((v: number | null) => (
+            <td style={`padding: 4px 6px; text-align: center; color: ${v !== null ? scoreToColor(v) : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
+              {v !== null ? formatScore(v) : '---'}
+            </td>
+          ))}
+          <td style={`padding: 4px 6px; text-align: center; color: ${d.delta >= 0.1 ? 'var(--color-negative)' : d.delta >= 0.05 ? 'var(--color-warning)' : 'var(--fg-secondary)'}; font-size: var(--font-sm); font-weight: bold;`}>
+            {d.delta != null ? d.delta.toFixed(3) : '—'}
+          </td>
+        </tr>
+      ))}
+    </table>
+  </details>
+)}

@@ -1,0 +1,118 @@
+---
+// SPDX-License-Identifier: Apache-2.0
+import type { PsqAggregates } from '../lib/db';
+import { scoreToColor, normalizePsq, formatPsqScore } from '../lib/colors';
+
+interface Props {
+  psqAggregates: PsqAggregates;
+  threatDims: Array<{ name: string; avg: number }>;
+  protectiveDims: Array<{ name: string; avg: number }>;
+  threatAvg: number | null;
+  protectiveAvg: number | null;
+  psqCI: { lower: number; upper: number; margin: number } | null;
+}
+
+const { psqAggregates, threatDims, protectiveDims, threatAvg, protectiveAvg, psqCI } = Astro.props;
+---
+
+<div id="reader-safety" style="margin-bottom: 20px;">
+  <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px;">
+    <div role="heading" aria-level="2" style="font-size: var(--font-sm); color: var(--fg-primary); font-weight: bold; margin: 0;">
+      Reader Safety
+    </div>
+    <span class="psq-experimental">experimental</span>
+  </div>
+  <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 0 0 8px 0;">
+    How safe does this content feel to encounter? <a href="/article/3" style="color: var(--channel-editorial);">UDHR Article 3</a> protects security of person; <a href="/article/12" style="color: var(--channel-editorial);">Article 12</a> protects against attacks on reputation. PSQ measures psychoemotional safety across threat exposure and protective factors.
+  </p>
+  <div style="background: var(--bg-highlight); border: 1px solid var(--color-border); border-radius: 4px; padding: 10px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+      <div style="text-align: center;">
+        <div style="color: var(--fg-secondary); font-size: var(--font-xs);">avg PSQ</div>
+        <span class="score-font" style={`color: ${scoreToColor(normalizePsq(psqAggregates.avg_psq))}; font-size: var(--font-md);`}>
+          {formatPsqScore(psqAggregates.avg_psq)}
+        </span>
+        <span style="color: var(--fg-secondary); font-size: var(--font-xs);">/10</span>
+        {psqCI && (
+          <span style="color: var(--fg-secondary); font-size: var(--font-xs);" title={`95% CI: ${psqCI.lower.toFixed(2)}\u2013${psqCI.upper.toFixed(2)} (t-dist, n=${psqAggregates.story_count})`}> &plusmn;{psqCI.margin.toFixed(1)}</span>
+        )}
+      </div>
+      <div style="color: var(--fg-secondary); font-size: var(--font-xs);">
+        {psqAggregates.story_count} stories scored
+      </div>
+      {threatAvg != null && protectiveAvg != null && (
+        <div style="margin-left: auto; display: flex; gap: 12px; font-size: var(--font-xs);">
+          <span>
+            <span style="color: var(--fg-secondary);">Threat avg: </span>
+            <span class="score-font" style={`color: ${scoreToColor(normalizePsq(threatAvg))};`}>{threatAvg.toFixed(1)}</span>
+          </span>
+          <span>
+            <span style="color: var(--fg-secondary);">Protective avg: </span>
+            <span class="score-font" style={`color: ${scoreToColor(normalizePsq(protectiveAvg))};`}>{protectiveAvg.toFixed(1)}</span>
+          </span>
+        </div>
+      )}
+    </div>
+
+    {threatDims.length > 0 && (
+      <div style="margin-bottom: 8px;">
+        <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 4px 0; font-weight: bold;">Threat Dimensions</p>
+        {threatDims.map(({ name, avg }) => {
+          const dimNorm = normalizePsq(avg);
+          const dimColor = dimNorm != null ? scoreToColor(dimNorm) : 'var(--fg-secondary)';
+          return (
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 120px; text-align: right; white-space: nowrap;">
+                {name.replace(/_/g, ' ')}
+              </span>
+              <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative; max-width: 200px;">
+                <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
+                {dimNorm != null && (dimNorm >= 0 ? (
+                  <div style={`position: absolute; left: 50%; top: 0; width: ${dimNorm * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
+                ) : (
+                  <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(dimNorm) * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
+                ))}
+              </div>
+              <span class="score-font" style={`color: ${dimColor}; font-size: var(--font-xs); width: 40px; text-align: right;`}>
+                {avg.toFixed(1)}/10
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    )}
+
+    {protectiveDims.length > 0 && (
+      <div>
+        <p style="font-size: var(--font-xs); color: var(--fg-secondary); margin: 0 0 4px 0; font-weight: bold;">Protective Dimensions</p>
+        {protectiveDims.map(({ name, avg }) => {
+          const dimNorm = normalizePsq(avg);
+          const dimColor = dimNorm != null ? scoreToColor(dimNorm) : 'var(--fg-secondary)';
+          return (
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 3px;">
+              <span style="color: var(--fg-secondary); font-size: var(--font-xs); width: 120px; text-align: right; white-space: nowrap;">
+                {name.replace(/_/g, ' ')}
+              </span>
+              <div style="flex: 1; height: 8px; background: var(--bg-surface); border-radius: 3px; overflow: hidden; position: relative; max-width: 200px;">
+                <div style="position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--fg-secondary); opacity: 0.2;"></div>
+                {dimNorm != null && (dimNorm >= 0 ? (
+                  <div style={`position: absolute; left: 50%; top: 0; width: ${dimNorm * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 0 3px 3px 0;`}></div>
+                ) : (
+                  <div style={`position: absolute; right: 50%; top: 0; width: ${Math.abs(dimNorm) * 50}%; height: 100%; background: ${dimColor}; opacity: 0.8; border-radius: 3px 0 0 3px;`}></div>
+                ))}
+              </div>
+              <span class="score-font" style={`color: ${dimColor}; font-size: var(--font-xs); width: 40px; text-align: right;`}>
+                {avg.toFixed(1)}/10
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    )}
+
+    <p style="color: var(--fg-secondary); font-size: var(--font-xs); margin: 8px 0 0 0;">
+      PSQ (Psychoemotional Safety Quotient) — an independent signal measuring reader safety across 10 dimensions.
+      <a href="/about#supplementary" style="color: var(--channel-hrcb); margin-left: 4px;">methodology &rarr;</a>
+    </p>
+  </div>
+</div>
