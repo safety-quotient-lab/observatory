@@ -649,25 +649,37 @@ export default {
 
     // ─── ActivityPub publish (post newly evaluated stories to Fediverse) ───
 
-    if (env.AP_PUBLISH_TOKEN && minute % 5 === 2) {
+    // AP publish runs every cron cycle — KV dedup prevents duplicate posts.
+    // (minute%N slotting doesn't work: cron lock causes unpredictable minute selection)
+    if (env.AP_PUBLISH_TOKEN) {
+      const AP_BURST_LIMIT = 3;   // max posts per 5-min cycle — prevents Fediverse flooding
+      const AP_RECENCY_DAYS = 7;  // only publish stories evaluated in last 7 days
+      const AP_DEDUP_TTL = 30 * 24 * 3600; // 30-day KV dedup TTL
       try {
-        // Composite "worth sharing" filter: RS gate + (RS*0.5 + EQ*0.3 + SO*0.2) >= 0.45
-        // RS >= 0.10 ensures rights relevance; composite rewards quality + constructive framing
-        // hn_score >= 20 provides community validation
-        const recentEvals = await db.prepare(
+        // Composite "worth sharing" filter: RS gate + quality composite + engagement
+        // Candidates are all qualifying unpublished stories (not just last 6 min)
+        const candidates = await db.prepare(
           `SELECT hn_id, title, url, COALESCE(hcb_weighted_mean, hcb_editorial_mean) as score,
                   hcb_classification, eval_model, rs_score, eq_score, so_score, hn_score
            FROM stories
            WHERE eval_status = 'done' AND hn_id > 0
-             AND evaluated_at > datetime('now', '-6 minutes')
+             AND evaluated_at > datetime('now', '-${AP_RECENCY_DAYS} days')
              AND COALESCE(rs_score, 0) >= 0.10
              AND (COALESCE(rs_score, 0) * 0.5 + COALESCE(eq_score, 0) * 0.3 + COALESCE(so_score, 0) * 0.2) >= 0.45
              AND COALESCE(hn_score, 0) >= 20
-           ORDER BY evaluated_at DESC LIMIT 10`
+           ORDER BY evaluated_at DESC LIMIT 20`
         ).all<{ hn_id: number; title: string; url: string | null; score: number | null; hcb_classification: string | null; eval_model: string | null; rs_score: number | null; eq_score: number | null; so_score: number | null; hn_score: number | null }>();
 
+        // KV dedup: skip already-published stories
         let published = 0;
-        for (const story of recentEvals.results) {
+        let skippedDedup = 0;
+        for (const story of candidates.results) {
+          if (published >= AP_BURST_LIMIT) break;
+
+          const dedupKey = `ap:pub:${story.hn_id}`;
+          const already = await env.CONTENT_CACHE.get(dedupKey);
+          if (already) { skippedDedup++; continue; }
+
           const score = story.score != null ? (story.score > 0 ? '+' : '') + story.score.toFixed(2) : '?';
           const classification = story.hcb_classification ?? 'pending';
           const rs = story.rs_score != null ? story.rs_score.toFixed(2) : '?';
@@ -695,13 +707,23 @@ export default {
             }),
           });
 
-          if (resp.ok) published++;
-          else console.warn(`[ap] Publish failed for ${story.hn_id}: ${resp.status}`);
+          if (resp.ok) {
+            published++;
+            await env.CONTENT_CACHE.put(dedupKey, new Date().toISOString(), { expirationTtl: AP_DEDUP_TTL });
+            await logEvent(db, { event_type: 'ap_publish', severity: 'info', message: `Published to Fediverse: ${story.title}`, hn_id: story.hn_id, details: { score, rs, classification } }).catch(() => {});
+          } else {
+            const body = await resp.text().catch(() => '');
+            console.warn(`[ap] Publish failed for ${story.hn_id}: ${resp.status} ${body}`);
+            await logEvent(db, { event_type: 'ap_publish', severity: 'warn', message: `AP publish failed: ${resp.status}`, hn_id: story.hn_id, details: { status: resp.status, body: body.slice(0, 200) } }).catch(() => {});
+          }
         }
 
-        if (published > 0) console.log(`[ap] Published ${published}/${recentEvals.results.length} stories to Fediverse`);
+        if (candidates.results.length > 0 || published > 0) {
+          console.log(`[ap] AP check: ${candidates.results.length} qualifying, ${skippedDedup} already published, ${published} new`);
+        }
       } catch (err) {
         console.warn('[ap] ActivityPub publish failed (non-fatal):', err);
+        await logEvent(db, { event_type: 'ap_publish', severity: 'error', message: `AP publish error: ${String(err)}`, details: { error: String(err) } }).catch(() => {});
       }
     }
 

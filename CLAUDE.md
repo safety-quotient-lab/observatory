@@ -183,7 +183,7 @@ npx wrangler tail hn-hrcb-consumer-workers-ai --format pretty
 
 ## Event Types
 
-The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `rater_validation_warn`, `rater_validation_fail`, `rater_auto_disable`, `rater_auto_enable`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `dcp_stale`, `r2_cleanup`, `story_flagged`, `content_drift`, `model_divergence`, `setl_spike`, `kagi_audit`.
+The pipeline logs structured events: `eval_success`, `eval_failure`, `eval_retry`, `eval_skip`, `rate_limit`, `self_throttle`, `credit_exhausted`, `fetch_error`, `cron_run`, `cron_error`, `crawl_error`, `r2_error`, `dlq`, `dlq_replay`, `calibration`, `coverage_crawl`, `trigger`, `rater_validation_warn`, `rater_validation_fail`, `rater_auto_disable`, `rater_auto_enable`, `auto_retry`, `dlq_auto_replay`, `auto_calibration`, `dcp_stale`, `r2_cleanup`, `story_flagged`, `content_drift`, `model_divergence`, `setl_spike`, `kagi_audit`, `ap_publish`.
 
 ## Methodology Files
 

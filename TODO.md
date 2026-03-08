@@ -27,7 +27,7 @@ Blog posts (deferred — lower priority than epistemic quality):
 
 ### Standards
 
-- [x] **ActivityPub** (W3C) ✓ — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live. Composite filter: RS ≥ 0.10 + quality score ≥ 0.45 + hn_score ≥ 20. Selects ~4% of evaluated stories. Publishing every 5 min on cron.
+- [x] **ActivityPub** (W3C) ✓ — Fediverse federation as `@observatory@unratified.org`. AP Phase 1 live. Composite filter: RS ≥ 0.10 + quality score ≥ 0.45 + hn_score ≥ 20. KV dedup + 3/cycle burst limit. Publishing every cron cycle (every ~2-3 min).
 
 ---
 
