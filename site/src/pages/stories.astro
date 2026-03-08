@@ -398,10 +398,10 @@ function isLiteModel(id: string): boolean {
       <th style="width: 28px; text-align: right; padding-right: 5px; font-weight: normal;">#</th>
       <th style="text-align: left; font-weight: normal;">Title</th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('score_desc')} style={thStyle('score_desc')} title="Human Rights Compatibility Bias — how content aligns with UDHR provisions. Click to sort.">Rights{sortArrow('score_desc')}</a>
+        <a href={sortUrl('score_desc')} style={thStyle('score_desc')} title="Human Rights Compatibility Bias — how content aligns with UDHR provisions. Click to sort.">Rights{sortArrow('score_desc')}</a>{' '}<a href="/about#classification" style="color: var(--fg-secondary); font-size: 9px; text-decoration: none; opacity: 0.6;" title="What is Rights (HRCB)?">?</a>
       </th>
       <th width="55" style="text-align: center; font-weight: normal;">
-        <a href={sortUrl('psq_desc')} style={thStyle('psq_desc')} title="Psychoemotional Safety Quotient — reader safety signal. Click to sort.">Safety{sortArrow('psq_desc')}</a>
+        <a href={sortUrl('psq_desc')} style={thStyle('psq_desc')} title="Psychoemotional Safety Quotient — reader safety signal. Click to sort.">Safety{sortArrow('psq_desc')}</a>{' '}<a href="/about#psq" style="color: var(--fg-secondary); font-size: 9px; text-decoration: none; opacity: 0.6;" title="What is Safety (PSQ)?">?</a>
       </th>
       <th width="50" style="text-align: center; font-weight: normal;">
         <a href={sortUrl('hn_points')} style={thStyle('hn_points')} title="HN score — click to sort">Points{sortArrow('hn_points')}</a>
@@ -532,8 +532,8 @@ function isLiteModel(id: string): boolean {
           <tr class="interstitial-header" style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="width: 28px; text-align: right; padding-right: 5px;">#</td>
             <td style="text-align: left;">Title</td>
-            <td width="55" style="text-align: center;">Rights</td>
-            <td width="55" style="text-align: center;" title="Psychoemotional Safety Quotient">Safety</td>
+            <td width="55" style="text-align: center;"><a href="/about#classification" style="color: inherit; text-decoration: none;" title="What is Rights (HRCB)?">Rights</a></td>
+            <td width="55" style="text-align: center;"><a href="/about#psq" style="color: inherit; text-decoration: none;" title="What is Safety (PSQ)?">Safety</a></td>
             <td width="55" style="text-align: center;">Points</td>
           </tr>
         </>)}
@@ -557,8 +557,8 @@ function isLiteModel(id: string): boolean {
           <tr class="interstitial-header" style="color: var(--fg-secondary); font-size: var(--font-xs); text-transform: uppercase; letter-spacing: 0.05em;">
             <td style="width: 28px; text-align: right; padding-right: 5px;">#</td>
             <td style="text-align: left;">Title</td>
-            <td width="55" style="text-align: center;">Rights</td>
-            <td width="55" style="text-align: center;" title="Psychoemotional Safety Quotient">Safety</td>
+            <td width="55" style="text-align: center;"><a href="/about#classification" style="color: inherit; text-decoration: none;" title="What is Rights (HRCB)?">Rights</a></td>
+            <td width="55" style="text-align: center;"><a href="/about#psq" style="color: inherit; text-decoration: none;" title="What is Safety (PSQ)?">Safety</a></td>
             <td width="55" style="text-align: center;">Points</td>
           </tr>
         </>)}
