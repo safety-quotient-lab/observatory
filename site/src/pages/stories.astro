@@ -31,7 +31,7 @@ const safeTemporal = validTemporal.includes(temporalRaw) ? temporalRaw : '';
 const hasSupplFilter = !!(safePt || safeJargon || safeTemporal);
 
 const validSorts: SortOption[] = ['top', 'time', 'time_asc', 'score_desc', 'score_asc', 'hn_points', 'hn_points_asc', 'conf_desc', 'conf_asc', 'velocity', 'psq_desc', 'psq_asc', 'editorial_desc', 'editorial_asc', 'structural_desc', 'structural_asc'];
-const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed'];
+const validFilters: FilterOption[] = ['all', 'evaluated', 'positive', 'negative', 'neutral', 'pending', 'failed', 'psq_safe', 'psq_mixed', 'psq_threat'];
 const validTypes: TypeOption[] = ['all', 'ask', 'show', 'job'];
 const validCtypes: ContentTypeOption[] = ['all', 'ED', 'PO', 'LP', 'PR', 'AC', 'MI'];
 const safeSort = validSorts.includes(sort) ? sort : 'top';
