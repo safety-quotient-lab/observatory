@@ -120,13 +120,33 @@ export default {
     }
 
     try {
-    // ─── Front-page free model dispatch (every minute) ───
+    // ─── Workers AI daily neuron budget check ───
+    // Free tier: 10,000 neurons/day. Budget cap at 8,000 to leave headroom.
+    // Each Llama 4 Scout request ≈ 50 neurons. KV counter auto-expires after 48h.
+    const WAI_DAILY_BUDGET = 8000;
+    const WAI_NEURON_COST = 50; // estimated per-request
+    const today = new Date().toISOString().slice(0, 10);
+    const waiKey = `wai:neurons:${today}`;
+    let waiNeuronsUsed = 0;
+    let waiBudgetExhausted = false;
+    try {
+      const val = await env.CONTENT_CACHE.get(waiKey);
+      waiNeuronsUsed = val ? parseInt(val, 10) : 0;
+      waiBudgetExhausted = waiNeuronsUsed >= WAI_DAILY_BUDGET;
+      if (waiBudgetExhausted) {
+        console.log(`[wai-budget] Daily budget exhausted: ${waiNeuronsUsed}/${WAI_DAILY_BUDGET} neurons`);
+      }
+    } catch { /* non-fatal */ }
+
+    // ─── Front-page free model dispatch (every minute, budget-gated) ───
 
     try {
-      const fpResults = await dispatchFrontPageFreeEvals(db, env as unknown as Record<string, any>, 20);
-      const fpTotal = fpResults.reduce((sum, r) => sum + r.dispatched, 0);
-      if (fpTotal > 0) {
-        console.log(`[fp-free] Dispatched ${fpTotal} evals across ${fpResults.filter(r => r.dispatched > 0).length} models`);
+      if (!waiBudgetExhausted) {
+        const fpResults = await dispatchFrontPageFreeEvals(db, env as unknown as Record<string, any>, 20);
+        const fpTotal = fpResults.reduce((sum, r) => sum + r.dispatched, 0);
+        if (fpTotal > 0) {
+          console.log(`[fp-free] Dispatched ${fpTotal} evals across ${fpResults.filter(r => r.dispatched > 0).length} models`);
+        }
       }
     } catch (err) {
       console.error('[fp-free] Front-page dispatch failed (non-fatal):', err);
@@ -154,7 +174,7 @@ export default {
 
     // ─── Multi-model dispatch (every 5 minutes) ───
 
-    if (minute % 5 === 0) {
+    if (minute % 5 === 0 && !waiBudgetExhausted) {
       try {
         const multiModelResults = await dispatchFreeModelEvals(db, env as unknown as Record<string, any>, 50);
         const totalDispatched = multiModelResults.reduce((sum, r) => sum + r.dispatched, 0);

@@ -39,6 +39,18 @@ import { logEvent } from '../src/lib/events';
 import { writeDb } from '../src/lib/db-utils';
 import { callWorkersAi } from './providers';
 
+/** Increment daily WAI neuron counter in KV. Non-fatal. */
+async function incrementNeuronBudget(env: Env): Promise<void> {
+  const WAI_NEURON_COST = 50;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `wai:neurons:${today}`;
+    const val = await env.CONTENT_CACHE.get(key);
+    const current = val ? parseInt(val, 10) : 0;
+    await env.CONTENT_CACHE.put(key, String(current + WAI_NEURON_COST), { expirationTtl: 172800 }); // 48h TTL
+  } catch { /* non-fatal */ }
+}
+
 async function processWaiClaim(env: Env, msg: Message<QueueMessage>, db: D1Database): Promise<void> {
   const story = msg.body;
   const evalStartMs = Date.now();
@@ -94,6 +106,9 @@ async function processWaiClaim(env: Env, msg: Message<QueueMessage>, db: D1Datab
 
       await processFullResult(env, msg, prep, slim, 0, 0, evalStartMs, cachedDcp);
     }
+
+    // Track neuron usage for daily budget
+    await incrementNeuronBudget(env);
   } catch (err) {
     await handleMessageFailure(env, msg, prep, err, evalStartMs);
   }

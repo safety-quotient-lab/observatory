@@ -187,7 +187,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
     is_free: true,
-    enabled: true, // re-enabled: HRCB lite consensus requires ≥2 models
+    enabled: false, // disabled: free tier budget — consolidated to Scout only
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
@@ -230,7 +230,7 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     provider: 'workers-ai',
     api_model_id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast',
     is_free: true,
-    enabled: true,
+    enabled: false, // disabled: free tier budget — consolidated to Scout only
     max_tokens: 16384,
     supports_cache_control: false,
     supports_json_mode: false,
