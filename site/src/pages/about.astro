@@ -545,7 +545,7 @@ const faqLd = {
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Confidence</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Evidence-weighted</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">N/A</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Output tokens</td><td style="color: var(--fg-secondary); padding: 4px 8px;">~4-5K</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">~200-400</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Schema</td><td style="color: var(--fg-secondary); padding: 4px 8px;">3.7</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">lite-1.5</td></tr>
-            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Anthropic Claude Haiku 4.5</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Workers AI (Llama 4 Scout, Llama 3.3 70B)</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Anthropic Claude Haiku 4.5</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Workers AI (Llama 4 Scout)</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Feed label</td><td style="color: var(--fg-secondary); padding: 4px 8px;">HRCB</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">~lite</td></tr>
           </table>
           </div>
@@ -579,7 +579,7 @@ const faqLd = {
               PSQ is <strong>experimental</strong> until validation criteria are met: (1) pilot distribution across ≥50 stories without clustering, (2) inter-rater ICC > 0.7 across 3 models on 30 stories, (3) CFA factor structure confirmation on N≥100, (4) criterion validity r > 0.4 against human "felt reading safety" ratings, (5) test-retest ICC > 0.8.
               Scores are displayed normalized to [-1, +1] (via <code>(psq-5)/5</code>) for visual consistency with E and S channels.
               Scores should be treated as <strong>ordinal</strong> — rank-order is meaningful, but distances between scores are not.
-              PSQ is currently scored by Workers AI lite models (Llama 3.3 70B, Llama 4 Scout); scorer comparison against larger models is in progress.
+              PSQ is currently scored by Workers AI (Llama 4 Scout PSQ); an external DistilBERT scorer at psq.unratified.org collects data for comparison research but lacks sufficient score breadth for production use.
             </span>
           </p>
 
@@ -590,7 +590,7 @@ const faqLd = {
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Scale</td><td style="color: var(--fg-secondary); padding: 4px 8px;">-1.0 to +1.0</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">0-10 (displayed as -1.0 to +1.0)</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Dimensions</td><td style="color: var(--fg-secondary); padding: 4px 8px;">31 UDHR provisions × E+S channels</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">3 (threat, trust, resilience)</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Consensus</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Shared (full + lite models)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Separate (PSQ models only)</td></tr>
-            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Haiku 4.5, Llama, Scout</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Llama 3.3 70B PSQ, Llama 4 Scout PSQ</td></tr>
+            <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Models</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Haiku 4.5, Llama 4 Scout</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Llama 4 Scout PSQ</td></tr>
             <tr><td style="color: var(--fg-primary); padding: 4px 8px;" class="score-font">Status</td><td style="color: var(--fg-secondary); padding: 4px 8px;">Validated (known-groups, discriminant)</td><td style="color: var(--fg-secondary); padding: 4px 8px; border-left: 1px solid var(--color-border);">Experimental (unvalidated domain transfer)</td></tr>
           </table>
           </div>
@@ -891,7 +891,7 @@ const faqLd = {
               <td style="color: var(--fg-secondary);" class="score-font">Database</td><td style="color: var(--fg-primary);" class="score-font">Cloudflare D1</td>
             </tr>
             <tr>
-              <td style="color: var(--fg-secondary);" class="score-font">Evaluator (~lite)</td><td style="color: var(--color-orange);" class="score-font">Workers AI (Llama 4 Scout, Llama 3.3 70B, Qwen3 30B)</td>
+              <td style="color: var(--fg-secondary);" class="score-font">Evaluator (~lite)</td><td style="color: var(--color-orange);" class="score-font">Workers AI (Llama 4 Scout)</td>
               <td style="color: var(--fg-secondary);" class="score-font">Snapshots</td><td style="color: var(--fg-primary);" class="score-font">R2 (content audit trail)</td>
             </tr>
             <tr>
