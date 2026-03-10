@@ -1,0 +1,9 @@
+{
+  "schema": "agent-identity/v1",
+  "agent_id": "observatory-agent",
+  "hostname": "chromabook",
+  "platform": "linux-x86_64",
+  "registered": "2026-03-10",
+  "capabilities": ["sync"],
+  "notes": "Data observatory, methodology validation, ICESCR framing. Chromabook, Claude Code CLI."
+}

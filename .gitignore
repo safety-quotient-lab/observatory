@@ -39,3 +39,8 @@ package-lock.json
 .claude/plans/archive/
 .claude/plans/*.md
 !.claude/plans/memorized/
+
+# State layer (queryable index, rebuilt from files)
+state.db
+state.db-wal
+state.db-shm

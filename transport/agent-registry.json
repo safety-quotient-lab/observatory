@@ -1,0 +1,70 @@
+{
+  "schema": "agent-registry/v1",
+  "description": "Known agents in the observatory-agent mesh. /sync reads this to determine who to check for activity.",
+  "updated": "2026-03-10",
+
+  "agents": {
+    "psychology-agent": {
+      "role": "peer",
+      "description": "Psychology agent — orchestrator, collegial mentor, cogarch host",
+      "transport": "cross-repo-fetch",
+      "repo": "safety-quotient-lab/psychology-agent",
+      "remote_name": "psychology-agent",
+      "sessions_path": "transport/sessions/",
+      "manifest_path": "transport/MANIFEST.json",
+      "message_prefix": "from-psychology-agent-",
+      "active_sessions": ["dignity-instrument", "psq-scoring"],
+      "always_consider": true,
+      "autonomous": false,
+      "discovery_url": "https://psychology-agent.safety-quotient.dev/.well-known/agent-card.json",
+      "notes": "Primary peer. Cross-repo transport via git remote fetch."
+    },
+    "unratified-agent": {
+      "role": "peer",
+      "description": "Blog platform operator, content publisher",
+      "transport": "cross-repo-fetch",
+      "repo": "safety-quotient-lab/unratified",
+      "remote_name": "unratified",
+      "sessions_path": "transport/sessions/",
+      "message_prefix": "from-unratified-agent-",
+      "active_sessions": ["activitypub-federation", "icescr-framing", "observatory-methodology", "state-feedback-exchange"],
+      "always_consider": true,
+      "autonomous": false,
+      "discovery_url": "https://unratified.org/.well-known/agent-card.json",
+      "notes": "Primary peer. Shared methodology and data sessions."
+    },
+    "psq-agent": {
+      "role": "peer",
+      "description": "Safety-quotient agent — PSQ scoring, psychometric model",
+      "transport": "cross-repo-fetch",
+      "repo": "safety-quotient-lab/safety-quotient",
+      "remote_name": "safety-quotient",
+      "sessions_path": "transport/sessions/",
+      "manifest_path": "transport/MANIFEST.json",
+      "message_prefix": "from-psq-sub-agent-",
+      "active_sessions": ["psq-scoring"],
+      "always_consider": false,
+      "autonomous": false,
+      "discovery_url": "https://psq.safety-quotient.dev/.well-known/agent-card.json",
+      "notes": "PSQ scoring peer."
+    }
+  },
+
+  "outbound_routing": {
+    "description": "Content routing rules for outbound message drafting.",
+    "rules": [
+      {
+        "domain": "methodology",
+        "keywords": ["ICESCR", "methodology", "data collection", "measurement", "research design"],
+        "route_to": ["unratified-agent", "psychology-agent"],
+        "action": "notify peers of methodology changes"
+      },
+      {
+        "domain": "data",
+        "keywords": ["dataset", "observation", "benchmark", "evaluation"],
+        "route_to": ["psychology-agent"],
+        "action": "flag for review"
+      }
+    ]
+  }
+}
