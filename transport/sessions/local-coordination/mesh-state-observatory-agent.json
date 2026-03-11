@@ -1,17 +1,25 @@
 {
   "schema": "mesh-state/v1",
-  "timestamp": "2026-03-10T22:43:02",
+  "timestamp": "2026-03-10T22:48:01",
   "agent_id": "observatory-agent",
   "trust_budget": {
     "agent_id": "observatory-agent",
     "budget_max": 20,
-    "budget_current": 7,
+    "budget_current": 6,
     "shadow_mode": 1,
     "consecutive_blocks": 0,
     "last_action": null,
     "min_action_interval": 300
   },
   "recent_actions": [
+    {
+      "action_type": "gate_poll",
+      "evaluator_result": "approved",
+      "evaluator_tier": 1,
+      "budget_before": 7,
+      "budget_after": 6,
+      "created_at": "2026-03-10T22:47:03"
+    },
     {
       "action_type": "gate_poll",
       "evaluator_result": "approved",
@@ -83,14 +91,6 @@
       "budget_before": 16,
       "budget_after": 15,
       "created_at": "2026-03-10T21:30:50"
-    },
-    {
-      "action_type": "sync",
-      "evaluator_result": "approved",
-      "evaluator_tier": 1,
-      "budget_before": 17,
-      "budget_after": 16,
-      "created_at": "2026-03-10T21:15:49"
     }
   ],
   "transport": {
@@ -101,8 +101,8 @@
   "schedule": {
     "autonomous": true,
     "cron_interval_min": 10,
-    "last_sync": "2026-03-10T22:43:01",
-    "next_expected": "2026-03-10T22:53:01"
+    "last_sync": "2026-03-10T22:48:01",
+    "next_expected": "2026-03-10T22:58:01"
   },
   "psh_facets": {},
   "schema_version": 14,
