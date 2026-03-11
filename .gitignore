@@ -44,3 +44,6 @@ package-lock.json
 state.db
 state.db-wal
 state.db-shm
+
+# Inter-agent mesh — machine-local files (plan9 contract §required_files)
+transport/agent-registry.local.json

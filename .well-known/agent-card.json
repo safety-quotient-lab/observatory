@@ -1,0 +1,165 @@
+{
+  "protocolVersion": "0.3.0",
+  "name": "Human Rights Observatory",
+  "description": "Corpus of Hacker News stories evaluated against all 30 articles and Preamble of the UN Universal Declaration of Human Rights. Provides HRCB scores (editorial × structural dual-channel), SETL tension signals, supplementary signals (transparency, accessibility, persuasion techniques, temporal framing), and domain/user aggregates. Part of the Unratified project — safety-quotient-lab.github.io.",
+  "url": "https://observatory.unratified.org/api/v1",
+  "preferredTransport": "HTTP+JSON",
+  "iconUrl": "https://observatory.unratified.org/favicon.svg",
+  "provider": {
+    "organization": "Safety Quotient Lab",
+    "url": "https://github.com/safety-quotient-lab"
+  },
+  "version": "1.0.0",
+  "documentationUrl": "https://observatory.unratified.org/data",
+  "openApiUrl": "https://observatory.unratified.org/api/v1/openapi.json",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": false,
+    "schemas_supported": [
+      "interagent/v1",
+      "observatory-agent/machine-response/v1"
+    ]
+  },
+  "defaultInputModes": ["text/plain", "application/json"],
+  "defaultOutputModes": ["application/json"],
+  "mesh": {
+    "transport": "git-pr",
+    "protocol": "interagent/v1",
+    "peers": [
+      {
+        "agent_id": "unratified-agent",
+        "discovery_url": "https://unratified.org/.well-known/agent-card.json",
+        "repo": "safety-quotient-lab/unratified"
+      },
+      {
+        "agent_id": "psychology-agent",
+        "repo": "safety-quotient-lab/psychology-agent"
+      },
+      {
+        "agent_id": "psq-agent",
+        "repo": "safety-quotient-lab/safety-quotient"
+      }
+    ]
+  },
+  "extensions": [
+    {
+      "uri": "https://github.com/safety-quotient-lab/interagent-epistemic/v1",
+      "required": false,
+      "description": "Adds per-claim confidence tracking, structural-editorial tension level (SETL), epistemic flags, action gate, and correction mechanism to A2A messages. Jointly derived by observatory-agent and psychology-agent."
+    }
+  ],
+  "skills": [
+    {
+      "id": "query-corpus-signals",
+      "name": "Query Corpus Signals",
+      "description": "Returns corpus-wide aggregate signals: transparency disclosure rates (author identified, conflicts, funding), accessibility (jargon density, assumed knowledge), persuasion technique distribution, temporal framing (retrospective/present/prospective), and overall HRCB signal overview.",
+      "tags": ["human-rights", "transparency", "accessibility", "corpus-analytics", "udhr"],
+      "examples": [
+        "What percentage of HN stories identify their author?",
+        "How much persuasion content appears in HN tech coverage?",
+        "What is the jargon density distribution across evaluated stories?"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests/hour per IP"
+    },
+    {
+      "id": "query-stories",
+      "name": "Query Evaluated Stories",
+      "description": "Returns Hacker News stories with HRCB scores. Filterable by UDHR article (0–30), score direction (positive/negative/neutral), domain, content type, propaganda technique, jargon level, and temporal framing. Sorted by HRCB score, HN score, or recency.",
+      "tags": ["human-rights", "hacker-news", "hrcb-scores", "udhr-provisions", "filtering"],
+      "examples": [
+        "Show me the most privacy-negative stories this week",
+        "Which stories touch Article 19 (freedom of expression)?",
+        "Find stories flagged for propaganda techniques"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests/hour per IP"
+    },
+    {
+      "id": "query-domain-profile",
+      "name": "Query Domain Rights Profile",
+      "description": "Returns a domain's aggregate HRCB score, signal fingerprint (transparency, accessibility, persuasion), editorial character, and SETL tension level across all evaluated stories from that domain.",
+      "tags": ["human-rights", "domain-analysis", "media-bias", "source-intelligence", "udhr"],
+      "examples": [
+        "What is github.com's human rights alignment score?",
+        "Which news domains score highest on transparency signals?",
+        "Does techcrunch.com say one thing and do another (SETL)?"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests/hour per IP"
+    },
+    {
+      "id": "query-udhr-article-rankings",
+      "name": "Query UDHR Article Rankings",
+      "description": "Returns all 31 UDHR provisions with per-article aggregate scores — editorial/structural channel averages, story counts, trigger counts, evidence distribution, SETL tension, and standard deviation. GET /api/v1/articles. Shows which rights tech content most engages with, which it ignores, and which show structural-editorial tension.",
+      "tags": ["human-rights", "udhr", "rights-ranking", "corpus-analytics", "pedagogy"],
+      "examples": [
+        "Which UDHR articles appear most in tech news?",
+        "What rights does HN content lean most negative on?",
+        "Which provisions show the most say-vs-do tension?"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"],
+      "endpoint": "/api/v1/articles",
+      "rateLimit": "200 requests/hour per IP"
+    },
+    {
+      "id": "get-domain-badge",
+      "name": "Get Domain Rights Badge",
+      "description": "Returns an embeddable SVG badge showing a domain's HRCB score with color-coded scale. Suitable for README files, websites, and reports.",
+      "tags": ["human-rights", "badge", "svg", "domain-score"],
+      "examples": [
+        "Get a rights score badge for anthropic.com",
+        "Embed an HRCB badge for my site"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["image/svg+xml"],
+      "rateLimit": "200 requests/hour per IP"
+    },
+    {
+      "id": "receive-agent-proposals",
+      "name": "Receive Inter-Agent Proposals",
+      "description": "Observatory publishes pending proposals for data integration and cross-site collaboration via /.well-known/agent-inbox.json. Other agents (e.g., unratified.org) read and act on these at session start. Proposals follow status lifecycle: pending → accepted → implemented.",
+      "tags": ["inter-agent", "proposals", "collaboration", "a2a"],
+      "examples": [
+        "Check what data integrations the observatory is proposing",
+        "Has the observatory proposed any new signal integrations?"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "rateLimit": "no limit (static file)"
+    },
+    {
+      "id": "get-methodology",
+      "name": "Get Evaluation Methodology",
+      "description": "Returns the complete HRCB evaluation methodology as structured JSON — scoring dimensions, content type weights, evidence strength caps, SETL formula, consensus weighting, propaganda technique tiers, Fair Witness rules, and classification ranges. Available at /api/v1/methodology or /.well-known/methodology.json.",
+      "tags": ["methodology", "scoring", "transparency", "machine-readable"],
+      "examples": [
+        "What weights does the observatory use for editorial vs structural scores?",
+        "How does the SETL tension formula work?",
+        "What are the propaganda technique tiers and weights?"
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["application/json"],
+      "rateLimit": "no limit (static/prerendered)"
+    },
+    {
+      "id": "query-psq-signals",
+      "name": "Query Psychological Safety Quotient",
+      "description": "Returns PSQ (Psychological Safety Quotient) scores — an independent signal measuring reader psychoemotional safety on a 0-10 scale. Three dimensions: threat exposure, trust conditions, resilience baseline. Available per story via /api/v1/story/{id} (psq_score, psq_dimensions_json) and per domain via /api/v1/domain/{domain} (avg_psq). Status: experimental.",
+      "tags": ["psq", "safety", "psychoemotional", "experimental"],
+      "examples": [
+        "How psychologically safe is this domain's content to read?",
+        "What is the PSQ score breakdown for this story?",
+        "Which domains have the highest reader safety scores?"
+      ],
+      "inputModes": ["application/json"],
+      "outputModes": ["application/json"],
+      "rateLimit": "200 requests per hour per IP"
+    }
+  ]
+}
