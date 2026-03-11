@@ -1,0 +1,18 @@
+{
+  "schema": "local-coordination/v1",
+  "timestamp": "2026-03-10T20:13:02",
+  "message_type": "heartbeat",
+  "from": {
+    "agent_id": "observatory-agent",
+    "hostname": "chromabook",
+    "platform": "linux-x86_64",
+    "capabilities": [
+      "sync"
+    ]
+  },
+  "payload": {
+    "status": "alive",
+    "uptime_indicator": "2026-03-10T20:13",
+    "sync_ready": true
+  }
+}
