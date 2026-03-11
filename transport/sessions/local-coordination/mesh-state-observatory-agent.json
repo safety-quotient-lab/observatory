@@ -1,17 +1,26 @@
 {
   "schema": "mesh-state/v1",
-  "timestamp": "2026-03-10T20:33:01",
+  "timestamp": "2026-03-10T20:43:01",
   "agent_id": "observatory-agent",
   "trust_budget": {
     "agent_id": "observatory-agent",
     "budget_max": 20,
-    "budget_current": 20,
+    "budget_current": 19,
     "shadow_mode": 1,
     "consecutive_blocks": 0,
-    "last_action": null,
+    "last_action": "2026-03-10T20:37:15",
     "min_action_interval": 300
   },
-  "recent_actions": [],
+  "recent_actions": [
+    {
+      "action_type": "sync",
+      "evaluator_result": "approved",
+      "evaluator_tier": 1,
+      "budget_before": 20,
+      "budget_after": 19,
+      "created_at": "2026-03-10T20:37:15"
+    }
+  ],
   "transport": {
     "total_messages": 11,
     "unprocessed": 0,
