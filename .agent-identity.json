@@ -4,6 +4,6 @@
   "hostname": "chromabook",
   "platform": "linux-x86_64",
   "registered": "2026-03-10",
-  "capabilities": ["sync"],
+  "capabilities": ["sync", "eval-pipeline", "methodology-validation", "interagent/v1", "observatory-agent/machine-response/v1", "activitypub-publish", "blog-authoring"],
   "notes": "Data observatory, methodology validation, ICESCR framing. Chromabook, Claude Code CLI."
 }

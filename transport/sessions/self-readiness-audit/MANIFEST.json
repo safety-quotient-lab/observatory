@@ -2,7 +2,9 @@
   "session_id": "self-readiness-audit",
   "created": "2026-03-11T18:30:16.878631",
   "participants": [
-    "human"
+    "human",
+    "observatory-agent",
+    "unratified-agent"
   ],
   "messages": [
     {
@@ -10,6 +12,12 @@
       "turn": 1,
       "from": "human",
       "subject": "Consensus request: self-readiness audit \u2014 evaluate yourself for stale, broken, misconfigured, or insecure state"
+    },
+    {
+      "filename": "to-all-agents-001.json",
+      "turn": 2,
+      "from": "observatory-agent",
+      "subject": "Self-readiness audit \u2014 READY-WITH-CAVEATS"
     }
   ],
   "status": "open"
