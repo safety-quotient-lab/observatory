@@ -31,7 +31,6 @@ pipeline {
         // Build the observatory site and verify output.
         stage('Build Site') {
             when {
-                branch 'main'
                 changeset 'site/**'
             }
             steps {
@@ -52,7 +51,6 @@ pipeline {
         // Deploy site to Cloudflare Pages (fallback for Tier 1).
         stage('Deploy Site') {
             when {
-                branch 'main'
                 changeset 'site/**'
             }
             steps {
@@ -65,7 +63,6 @@ pipeline {
         // Deploy cron worker to Cloudflare (fallback for Tier 1).
         stage('Deploy Cron Worker') {
             when {
-                branch 'main'
                 changeset 'worker/**'
             }
             steps {
