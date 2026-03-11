@@ -1,0 +1,56 @@
+name: Deploy Observatory
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'worker/**'
+
+jobs:
+  deploy-site:
+    if: contains(toJSON(github.event.commits.*.modified), 'site/') || contains(toJSON(github.event.commits.*.added), 'site/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        run: cd site && npm ci
+
+      - name: Build site
+        run: cd site && npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: site
+          command: pages deploy dist --project-name=hn-hrcb
+
+  deploy-cron:
+    if: contains(toJSON(github.event.commits.*.modified), 'worker/') || contains(toJSON(github.event.commits.*.added), 'worker/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy Cron Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: worker
+          command: deploy
