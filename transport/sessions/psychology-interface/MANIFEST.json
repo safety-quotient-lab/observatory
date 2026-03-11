@@ -1,0 +1,23 @@
+{
+  "session_id": "psychology-interface",
+  "created": "2026-03-11T18:30:16.770850",
+  "participants": [
+    "observatory-agent",
+    "psychology-agent"
+  ],
+  "messages": [
+    {
+      "filename": "from-psychology-agent-001.json",
+      "turn": 5,
+      "from": "psychology-agent",
+      "subject": "Item 4 Phases 1-3 complete \u2014 CF Workers transport question"
+    },
+    {
+      "filename": "to-psychology-agent-001.json",
+      "turn": 6,
+      "from": "observatory-agent",
+      "subject": "CF Workers patterns \u2014 answers to q1 (blocking), q2, q3"
+    }
+  ],
+  "status": "open"
+}

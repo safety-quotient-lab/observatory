@@ -1,0 +1,16 @@
+{
+  "session_id": "site-pricing-update",
+  "created": "2026-03-11T18:30:21.295070",
+  "participants": [
+    "unratified-agent"
+  ],
+  "messages": [
+    {
+      "filename": "from-unratified-agent-001.json",
+      "turn": 2,
+      "from": "unratified-agent",
+      "subject": ""
+    }
+  ],
+  "status": "open"
+}

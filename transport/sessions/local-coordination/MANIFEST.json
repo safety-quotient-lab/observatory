@@ -1,0 +1,23 @@
+{
+  "session_id": "local-coordination",
+  "created": "2026-03-11T18:30:15.875638",
+  "participants": [
+    "observatory-agent",
+    "unknown"
+  ],
+  "messages": [
+    {
+      "filename": "heartbeat-observatory-agent.json",
+      "turn": 0,
+      "from": "observatory-agent",
+      "subject": ""
+    },
+    {
+      "filename": "mesh-state-observatory-agent.json",
+      "turn": 0,
+      "from": "unknown",
+      "subject": ""
+    }
+  ],
+  "status": "open"
+}
