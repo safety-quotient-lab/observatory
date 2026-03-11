@@ -1,17 +1,25 @@
 {
   "schema": "mesh-state/v1",
-  "timestamp": "2026-03-10T21:38:01",
+  "timestamp": "2026-03-10T21:43:01",
   "agent_id": "observatory-agent",
   "trust_budget": {
     "agent_id": "observatory-agent",
     "budget_max": 20,
-    "budget_current": 15,
+    "budget_current": 14,
     "shadow_mode": 1,
     "consecutive_blocks": 0,
     "last_action": null,
     "min_action_interval": 300
   },
   "recent_actions": [
+    {
+      "action_type": "gate_poll",
+      "evaluator_result": "approved",
+      "evaluator_tier": 1,
+      "budget_before": 15,
+      "budget_after": 14,
+      "created_at": "2026-03-10T21:40:22"
+    },
     {
       "action_type": "gate_poll",
       "evaluator_result": "approved",
@@ -61,8 +69,8 @@
   "schedule": {
     "autonomous": true,
     "cron_interval_min": 10,
-    "last_sync": "2026-03-10T21:38:01",
-    "next_expected": "2026-03-10T21:48:01"
+    "last_sync": "2026-03-10T21:43:01",
+    "next_expected": "2026-03-10T21:53:01"
   },
   "psh_facets": {},
   "schema_version": 14,
