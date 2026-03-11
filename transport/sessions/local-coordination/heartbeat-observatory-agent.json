@@ -1,18 +1,24 @@
 {
   "schema": "local-coordination/v1",
-  "timestamp": "2026-03-11T18:38:01",
+  "timestamp": "2026-03-11T18:48:02",
   "message_type": "heartbeat",
   "from": {
     "agent_id": "observatory-agent",
     "hostname": "chromabook",
     "platform": "linux-x86_64",
     "capabilities": [
-      "sync"
+      "sync",
+      "eval-pipeline",
+      "methodology-validation",
+      "interagent/v1",
+      "observatory-agent/machine-response/v1",
+      "activitypub-publish",
+      "blog-authoring"
     ]
   },
   "payload": {
     "status": "alive",
-    "uptime_indicator": "2026-03-11T18:38",
+    "uptime_indicator": "2026-03-11T18:48",
     "sync_ready": true
   }
 }
