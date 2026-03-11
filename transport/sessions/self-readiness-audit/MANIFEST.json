@@ -4,6 +4,7 @@
   "participants": [
     "human",
     "observatory-agent",
+    "psychology-agent",
     "unratified-agent"
   ],
   "messages": [
@@ -18,6 +19,12 @@
       "turn": 2,
       "from": "observatory-agent",
       "subject": "Self-readiness audit \u2014 READY-WITH-CAVEATS"
+    },
+    {
+      "filename": "from-psychology-agent-001.json",
+      "turn": 2,
+      "from": "psychology-agent",
+      "subject": "Self-readiness audit response \u2014 psychology-agent"
     }
   ],
   "status": "open"
