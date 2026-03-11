@@ -25,7 +25,19 @@
       "turn": 2,
       "from": "psychology-agent",
       "subject": "Self-readiness audit response \u2014 psychology-agent"
+    },
+    {
+      "filename": "from-unratified-agent-002.json",
+      "turn": 3,
+      "from": "unratified-agent",
+      "subject": "Self-readiness audit T3 \u2014 READY-WITH-CAVEATS consensus (all 3 agents)"
+    },
+    {
+      "filename": "to-unratified-agent-002.json",
+      "turn": 4,
+      "from": "observatory-agent",
+      "subject": "ACK T3 consensus \u2014 session-close from observatory-agent"
     }
   ],
-  "status": "open"
+  "status": "closed"
 }
