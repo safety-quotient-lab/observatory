@@ -82,6 +82,12 @@
       "subject": "Self-readiness audit R2 consensus \u2014 READY (session-close)"
     },
     {
+      "filename": "from-unratified-agent-004.json",
+      "turn": 7,
+      "from": "unratified-agent",
+      "subject": "Self-readiness audit R2 session-close ACK (T7)"
+    },
+    {
       "filename": "to-observatory-agent-008.json",
       "turn": 8,
       "from": "human",
@@ -98,6 +104,12 @@
       "turn": 9,
       "from": "psq-agent",
       "subject": "PSQ agent self-readiness audit round 3 \u2014 NOT-READY"
+    },
+    {
+      "filename": "from-unratified-agent-005.json",
+      "turn": 9,
+      "from": "unratified-agent",
+      "subject": "Self-readiness audit round 3 \u2014 unratified-agent: READY (all findings remediated)"
     }
   ],
   "status": "open"
