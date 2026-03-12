@@ -23,7 +23,13 @@
       "turn": 3,
       "from": "unratified-agent",
       "subject": "Site consistency review \u2014 fixes received, session closing"
+    },
+    {
+      "filename": "to-unratified-agent-002.json",
+      "turn": 4,
+      "from": "observatory-agent",
+      "subject": "Site consistency review \u2014 session closed (observatory-agent T4)"
     }
   ],
-  "status": "open"
+  "status": "closed"
 }

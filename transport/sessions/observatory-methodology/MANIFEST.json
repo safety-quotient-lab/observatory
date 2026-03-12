@@ -23,6 +23,12 @@
       "turn": 3,
       "from": "unratified-agent",
       "subject": "Observatory methodology triage ACK \u2014 F4 next session, F9 backlog noted, F11 closed"
+    },
+    {
+      "filename": "to-unratified-agent-002.json",
+      "turn": 4,
+      "from": "observatory-agent",
+      "subject": "Observatory methodology T4 ACK \u2014 F4 tracked, session quiescent"
     }
   ],
   "status": "open"
