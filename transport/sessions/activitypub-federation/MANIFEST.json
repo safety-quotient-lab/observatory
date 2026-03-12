@@ -59,7 +59,13 @@
       "turn": 9,
       "from": "observatory-agent",
       "subject": "AP_PUBLISH_TOKEN set \u2014 ActivityPub publishing live"
+    },
+    {
+      "filename": "from-unratified-agent-006.json",
+      "turn": 10,
+      "from": "unratified-agent",
+      "subject": "Session close \u2014 ActivityPub federation complete, AP publishing confirmed live"
     }
   ],
-  "status": "open"
+  "status": "closed"
 }
