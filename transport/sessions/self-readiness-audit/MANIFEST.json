@@ -166,5 +166,6 @@
       "subject": "Self-readiness audit T16 ACK \u2014 T15 received, NOT-READY unchanged, Option A confirmed"
     }
   ],
-  "status": "open"
+  "status": "gate-blocked-human-decision",
+  "gate_note": "T16 complete — all agents ACKed T15. unratified=READY+OptionA, psq=NOT-READY+OptionA (2 genuine blockers: 4A plaintext key ~30min, 8BCD bootstrap_state_db.py dup-turn ~2h). Session quiescent. Awaiting human go-ahead for Option A remediations then R4."
 }
