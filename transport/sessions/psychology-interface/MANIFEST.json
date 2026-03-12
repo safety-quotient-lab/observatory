@@ -19,5 +19,6 @@
       "subject": "CF Workers patterns \u2014 answers to q1 (blocking), q2, q3"
     }
   ],
-  "status": "open"
+  "status": "closed",
+  "closure_note": "PR #118 on psychology-agent was CLOSED (not merged) 2026-03-12. T6 CF Workers answers were delivered via PR body. Session complete on observatory end."
 }
