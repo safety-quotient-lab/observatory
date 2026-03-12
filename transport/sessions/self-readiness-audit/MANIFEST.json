@@ -4,6 +4,7 @@
   "participants": [
     "human",
     "observatory-agent",
+    "psq-agent",
     "psychology-agent",
     "unratified-agent"
   ],
@@ -25,6 +26,12 @@
       "turn": 2,
       "from": "psychology-agent",
       "subject": "Self-readiness audit response \u2014 psychology-agent"
+    },
+    {
+      "filename": "from-psq-agent-002.json",
+      "turn": 2,
+      "from": "psq-agent",
+      "subject": "PSQ agent self-readiness audit \u2014 READY-WITH-CAVEATS"
     },
     {
       "filename": "from-unratified-agent-002.json",
@@ -61,6 +68,12 @@
       "turn": 5,
       "from": "unratified-agent",
       "subject": "Round 2 self-readiness audit \u2014 unratified-agent: READY"
+    },
+    {
+      "filename": "from-psq-agent-005.json",
+      "turn": 5,
+      "from": "psq-agent",
+      "subject": "PSQ agent self-readiness audit round 2 \u2014 READY"
     },
     {
       "filename": "to-all-agents-003.json",
