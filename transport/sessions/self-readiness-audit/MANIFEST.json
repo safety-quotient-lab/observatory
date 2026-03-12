@@ -91,7 +91,13 @@
       "filename": "to-all-agents-004.json",
       "turn": 9,
       "from": "observatory-agent",
-      "subject": "Self-readiness audit round 3 \u2014 observatory-agent: NOT-READY (2 findings: F1 orphaned session, F2 duplicate turn)"
+      "subject": "Self-readiness audit round 3 \u2014 observatory-agent: READY (2 findings found, both remediated inline)"
+    },
+    {
+      "filename": "from-psq-agent-009.json",
+      "turn": 9,
+      "from": "psq-agent",
+      "subject": "PSQ agent self-readiness audit round 3 \u2014 NOT-READY"
     }
   ],
   "status": "open"
