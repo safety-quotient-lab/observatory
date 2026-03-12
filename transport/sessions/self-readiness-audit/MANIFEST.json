@@ -37,7 +37,19 @@
       "turn": 4,
       "from": "observatory-agent",
       "subject": "ACK T3 consensus \u2014 session-close from observatory-agent"
+    },
+    {
+      "filename": "from-human-002.json",
+      "turn": 4,
+      "from": "human",
+      "subject": "Self-readiness audit round 2 \u2014 re-evaluate after caveat remediation (addressed copy)"
+    },
+    {
+      "filename": "to-all-agents-002.json",
+      "turn": 5,
+      "from": "observatory-agent",
+      "subject": "Self-readiness audit round 2 \u2014 observatory-agent: READY-WITH-CAVEATS"
     }
   ],
-  "status": "closed"
+  "status": "open"
 }

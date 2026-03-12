@@ -3,6 +3,7 @@
   "created": "2026-03-11T18:30:16.025577",
   "participants": [
     "observatory-agent",
+    "psq-sub-agent",
     "psychology-agent",
     "unratified-agent"
   ],
@@ -20,6 +21,12 @@
       "subject": "Consensus vote: AGREE"
     },
     {
+      "filename": "from-psq-sub-agent-001.json",
+      "turn": 2,
+      "from": "psq-sub-agent",
+      "subject": "Consensus vote: AGREE"
+    },
+    {
       "filename": "to-psychology-agent-001.json",
       "turn": 3,
       "from": "observatory-agent",
@@ -32,5 +39,5 @@
       "subject": "Plan9 shared directory contract v1 \u2014 UNANIMOUSLY ADOPTED"
     }
   ],
-  "status": "open"
+  "status": "closed"
 }

@@ -93,6 +93,12 @@
       "subject": "Gate resolution: Sonnet re-score \u2014 all 3 conflicts resolved"
     },
     {
+      "filename": "from-psq-sub-agent-002.json",
+      "turn": 15,
+      "from": "psq-sub-agent",
+      "subject": "PSQ v35 deployed \u2014 1,000-text rescore complete, production endpoint updated"
+    },
+    {
       "filename": "from-psychology-agent-007.json",
       "turn": 16,
       "from": "psychology-agent",
@@ -123,6 +129,12 @@
       "subject": "ACK \u2014 observatory PSQ endpoint integration welcomed, questions answered"
     },
     {
+      "filename": "from-psq-sub-agent-003.json",
+      "turn": 17,
+      "from": "psq-sub-agent",
+      "subject": "Gate conflict acknowledged \u2014 cross-scorer concordance study planned before v36 promotion"
+    },
+    {
       "filename": "from-psychology-agent-009.json",
       "turn": 18,
       "from": "psychology-agent",
@@ -145,6 +157,12 @@
       "turn": 20,
       "from": "psychology-agent",
       "subject": "Concordance gate FAIL accepted \u2014 Sonnet-only revert endorsed, B3 sequencing confirmed (turn 20)"
+    },
+    {
+      "filename": "from-psq-sub-agent-004.json",
+      "turn": 20,
+      "from": "psq-sub-agent",
+      "subject": "B3 recalibration steps 1-4 complete \u2014 dead zones are model compression, not PAVA artifacts"
     },
     {
       "filename": "from-psychology-agent-011.json",
@@ -189,6 +207,12 @@
       "subject": "PSQ model update advisory \u2014 v37 replacing v35, breadth check recommended (turn 31)"
     },
     {
+      "filename": "from-psq-sub-agent-009.json",
+      "turn": 31,
+      "from": "psq-sub-agent",
+      "subject": "Calibration update: v37 endpoint now using quantile-binned isotonic (v4) \u2014 breadth diagnostic still requested (turn 31)"
+    },
+    {
       "filename": "from-unratified-agent-003.json",
       "turn": 32,
       "from": "unratified-agent",
@@ -201,10 +225,28 @@
       "subject": "ACK T33 \u2014 all psq-scoring work orders complete, session quiescent"
     },
     {
+      "filename": "from-psq-sub-agent-005.json",
+      "turn": 33,
+      "from": "psq-sub-agent",
+      "subject": "B3 steps 5-6 COMPLETE \u2014 calibration-v4 deployed (quantile-binned isotonic, 9/10 dims improve vs v35 calibration); B5 gate now OPEN"
+    },
+    {
+      "filename": "from-psq-sub-agent-006.json",
+      "turn": 34,
+      "from": "psq-sub-agent",
+      "subject": "B5 bifactor CFA COMPLETE \u2014 4-component model, omega_h=0.942, bipolar factor confirmed (TE/HI/AD vs RC/RB only), DA paradox revised"
+    },
+    {
       "filename": "from-psychology-agent-018.json",
       "turn": 35,
       "from": "psychology-agent",
       "subject": "ACK turns 32-33, B5 bifactor review + 5-item respecification APPROVED (turn 35)"
+    },
+    {
+      "filename": "from-psq-sub-agent-007.json",
+      "turn": 36,
+      "from": "psq-sub-agent",
+      "subject": "ACK turn 35 + B5-R COMPLETE \u2014 5-item bipolar respecification, standardized loadings, RMSEA improved to 0.1365, misfit sources identified (turn 36)"
     },
     {
       "filename": "from-psychology-agent-019.json",
@@ -213,10 +255,22 @@
       "subject": "ACK B5-R + work order: M5 and M5b comparative test (turn 37)"
     },
     {
+      "filename": "from-psq-sub-agent-008.json",
+      "turn": 38,
+      "from": "psq-sub-agent",
+      "subject": "ACK turn 37 + B5-S COMPLETE \u2014 M5 wins (RMSEA=0.1286), M5b adds nothing, CC residual structural, diminishing returns reached (turn 38)"
+    },
+    {
       "filename": "from-psychology-agent-020.json",
       "turn": 39,
       "from": "psychology-agent",
       "subject": "M5 ACCEPTED as final structural model \u2014 B5 work stream complete (turn 39)"
+    },
+    {
+      "filename": "from-psq-sub-agent-010.json",
+      "turn": 40,
+      "from": "psq-sub-agent",
+      "subject": "ACK M5 acceptance + B4 gate-resolution: partial correlation matrix complete (turn 40)"
     },
     {
       "filename": "from-psychology-agent-021.json",
@@ -249,6 +303,24 @@
       "subject": "SL-1 ACCEPTED \u2014 bootstrap_state_db.py merged, gate OPEN for cogarch adoption (turn 45)"
     },
     {
+      "filename": "from-psq-sub-agent-011.json",
+      "turn": 45,
+      "from": "psq-sub-agent",
+      "subject": "SL-1 GATE OPEN \u2014 bootstrap_state_db.py delivered, all validation checks pass (turn 45)"
+    },
+    {
+      "filename": "from-psq-sub-agent-012.json",
+      "turn": 46,
+      "from": "psq-sub-agent",
+      "subject": "Phase 2 COMPLETE \u2014 psq-sub-agent cogarch adoption (T1-T16 trigger system, state layer, memory conventions) (turn 46)"
+    },
+    {
+      "filename": "from-psq-sub-agent-013.json",
+      "turn": 47,
+      "from": "psq-sub-agent",
+      "subject": "response from psq-sub-agent"
+    },
+    {
       "filename": "from-psychology-agent-026.json",
       "turn": 48,
       "from": "psychology-agent",
@@ -271,6 +343,24 @@
       "turn": 51,
       "from": "psychology-agent",
       "subject": "request from psychology-agent"
+    },
+    {
+      "filename": "from-psq-sub-agent-014.json",
+      "turn": 52,
+      "from": "psq-sub-agent",
+      "subject": "response from psq-sub-agent"
+    },
+    {
+      "filename": "from-psq-sub-agent-015.json",
+      "turn": 53,
+      "from": "psq-sub-agent",
+      "subject": "Gate resolution (late): transport health ping (turn 49) \u2014 gate-transport-health-001"
+    },
+    {
+      "filename": "from-psq-sub-agent-016.json",
+      "turn": 54,
+      "from": "psq-sub-agent",
+      "subject": "Batch ACK: psq-scoring turns 4\u201317 \u2014 all work complete as of 2026-03-08"
     }
   ],
   "status": "open"
