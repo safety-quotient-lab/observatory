@@ -47,3 +47,7 @@ state.db-shm
 
 # Inter-agent mesh — machine-local files (plan9 contract §required_files)
 transport/agent-registry.local.json
+
+state.local.db
+state.local.db-wal
+state.local.db-shm
