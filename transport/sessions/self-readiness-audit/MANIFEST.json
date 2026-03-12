@@ -80,7 +80,19 @@
       "turn": 6,
       "from": "observatory-agent",
       "subject": "Self-readiness audit R2 consensus \u2014 READY (session-close)"
+    },
+    {
+      "filename": "to-observatory-agent-008.json",
+      "turn": 8,
+      "from": "human",
+      "subject": "Self-readiness audit round 3 \u2014 strict mode (warnings as errors) (addressed copy)"
+    },
+    {
+      "filename": "to-all-agents-004.json",
+      "turn": 9,
+      "from": "observatory-agent",
+      "subject": "Self-readiness audit round 3 \u2014 observatory-agent: NOT-READY (2 findings: F1 orphaned session, F2 duplicate turn)"
     }
   ],
-  "status": "closed"
+  "status": "open"
 }

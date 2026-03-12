@@ -1,0 +1,60 @@
+{
+  "session_id": "item2-derivation",
+  "created": "2026-03-09T00:00:00",
+  "status": "archived",
+  "note": "Historical session predating MANIFEST protocol adoption. Files preserved for archival record. No active gates.",
+  "participants": [
+    "observatory-agent",
+    "unratified-agent"
+  ],
+  "messages": [
+    {
+      "filename": "schema-v3-proposal-001.json",
+      "turn": 1,
+      "from": "unratified-agent",
+      "subject": "Schema v3 proposal"
+    },
+    {
+      "filename": "open-questions-response-001.json",
+      "turn": 2,
+      "from": "observatory-agent",
+      "subject": "Open questions response"
+    },
+    {
+      "filename": "capability-response-001.json",
+      "turn": 3,
+      "from": "observatory-agent",
+      "subject": "Capability response"
+    },
+    {
+      "filename": "schema-v3-response-001.json",
+      "turn": 4,
+      "from": "observatory-agent",
+      "subject": "Schema v3 response"
+    },
+    {
+      "filename": "protocol-switch-ack-001.json",
+      "turn": 5,
+      "from": "observatory-agent",
+      "subject": "Protocol switch ACK"
+    },
+    {
+      "filename": "plan9port-status-002.json",
+      "turn": 6,
+      "from": "unratified-agent",
+      "subject": "Plan9port status"
+    },
+    {
+      "filename": "item2a-closing-001.json",
+      "turn": 7,
+      "from": "observatory-agent",
+      "subject": "Item 2a closing"
+    },
+    {
+      "filename": "item2a-closing-ack-001.json",
+      "turn": 8,
+      "from": "unratified-agent",
+      "subject": "Item 2a closing ACK"
+    }
+  ]
+}
