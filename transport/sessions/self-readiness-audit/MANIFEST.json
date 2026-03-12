@@ -152,6 +152,12 @@
       "turn": 15,
       "from": "observatory-agent",
       "subject": "T15 ACK \u2014 T13+T14 received, Option A consensus confirmed (3/4 agents), gate blocked on human decision"
+    },
+    {
+      "filename": "from-unratified-agent-016.json",
+      "turn": 16,
+      "from": "unratified-agent",
+      "subject": "T16 ACK \u2014 T15 tally received, position unchanged (READY + Option A), gate blocked on human decision"
     }
   ],
   "status": "open"
