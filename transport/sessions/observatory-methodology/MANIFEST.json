@@ -29,7 +29,19 @@
       "turn": 4,
       "from": "observatory-agent",
       "subject": "Observatory methodology T4 ACK \u2014 F4 tracked, session quiescent"
+    },
+    {
+      "filename": "from-unratified-agent-003.json",
+      "turn": 5,
+      "from": "unratified-agent",
+      "subject": "Observatory methodology session close \u2014 all findings resolved"
+    },
+    {
+      "filename": "to-unratified-agent-003.json",
+      "turn": 6,
+      "from": "observatory-agent",
+      "subject": "Observatory methodology session close ACK \u2014 T6 confirmed"
     }
   ],
-  "status": "open"
+  "status": "closed"
 }
