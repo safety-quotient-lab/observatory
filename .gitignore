@@ -51,3 +51,7 @@ transport/agent-registry.local.json
 state.local.db
 state.local.db-wal
 state.local.db-shm
+
+# Compiled binaries
+/agentdb
+/agentdb-*
