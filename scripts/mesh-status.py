@@ -1,0 +1,1 @@
+/home/kashif/platform/shared/scripts/mesh-status.py
