@@ -29,7 +29,9 @@
     "application/json"
   ],
   "mesh": {
-    "transport": "git-pr",
+    "transport": {
+      "status_url": "https://observatory-agent.unratified.org/api/status"
+    },
     "protocol": "interagent/v1",
     "peers": [
       {
