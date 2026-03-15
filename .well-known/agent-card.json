@@ -1,7 +1,10 @@
 {
-  "protocolVersion": "0.3.0",
+  "protocolVersion": "1.0.0",
+  "supported_interfaces": [
+    "interagent/v1"
+  ],
   "name": "Human Rights Observatory",
-  "description": "Corpus of Hacker News stories evaluated against all 30 articles and Preamble of the UN Universal Declaration of Human Rights. Provides HRCB scores (editorial \u00d7 structural dual-channel), SETL tension signals, supplementary signals (transparency, accessibility, persuasion techniques, temporal framing), and domain/user aggregates. Part of the Unratified project \u2014 safety-quotient-lab.github.io.",
+  "description": "Corpus of Hacker News stories evaluated against all 30 articles and Preamble of the UN Universal Declaration of Human Rights. Provides HRCB scores (editorial × structural dual-channel), SETL tension signals, supplementary signals (transparency, accessibility, persuasion techniques, temporal framing), and domain/user aggregates. Part of the Unratified project — safety-quotient-lab.github.io.",
   "url": "https://observatory.unratified.org/api/v1",
   "preferredTransport": "HTTP+JSON",
   "iconUrl": "https://observatory.unratified.org/favicon.svg",
@@ -30,7 +33,10 @@
   ],
   "mesh": {
     "transport": {
-      "status_url": "https://observatory-agent.unratified.org/api/status"
+      "status_url": "https://observatory-agent.unratified.org/api/status",
+      "zmq": null,
+      "zmq_pub": null,
+      "zmq_pub_note": "SEC-6: ZMQ PUB not yet configured — placeholder for future mesh pub/sub"
     },
     "protocol": "interagent/v1",
     "peers": [
@@ -57,7 +63,7 @@
   },
   "extensions": [
     {
-      "uri": "https://github.com/safety-quotient-lab/interagent-epistemic/v1",
+      "uri": "https://github.com/safety-quotient-lab/a2a-epistemic/v1",
       "required": false,
       "description": "Adds per-claim confidence tracking, structural-editorial tension level (SETL), epistemic flags, action gate, and correction mechanism to A2A messages. Jointly derived by observatory-agent and psychology-agent."
     }
@@ -90,7 +96,7 @@
     {
       "id": "query-stories",
       "name": "Query Evaluated Stories",
-      "description": "Returns Hacker News stories with HRCB scores. Filterable by UDHR article (0\u201330), score direction (positive/negative/neutral), domain, content type, propaganda technique, jargon level, and temporal framing. Sorted by HRCB score, HN score, or recency.",
+      "description": "Returns Hacker News stories with HRCB scores. Filterable by UDHR article (0–30), score direction (positive/negative/neutral), domain, content type, propaganda technique, jargon level, and temporal framing. Sorted by HRCB score, HN score, or recency.",
       "tags": [
         "human-rights",
         "hacker-news",
@@ -138,7 +144,7 @@
     {
       "id": "query-udhr-article-rankings",
       "name": "Query UDHR Article Rankings",
-      "description": "Returns all 31 UDHR provisions with per-article aggregate scores \u2014 editorial/structural channel averages, story counts, trigger counts, evidence distribution, SETL tension, and standard deviation. GET /api/v1/articles. Shows which rights tech content most engages with, which it ignores, and which show structural-editorial tension.",
+      "description": "Returns all 31 UDHR provisions with per-article aggregate scores — editorial/structural channel averages, story counts, trigger counts, evidence distribution, SETL tension, and standard deviation. GET /api/v1/articles. Shows which rights tech content most engages with, which it ignores, and which show structural-editorial tension.",
       "tags": [
         "human-rights",
         "udhr",
@@ -185,7 +191,7 @@
     {
       "id": "receive-agent-proposals",
       "name": "Receive Inter-Agent Proposals",
-      "description": "Observatory publishes pending proposals for data integration and cross-site collaboration via /.well-known/agent-inbox.json. Other agents (e.g., unratified.org) read and act on these at session start. Proposals follow status lifecycle: pending \u2192 accepted \u2192 implemented.",
+      "description": "Observatory publishes pending proposals for data integration and cross-site collaboration via /.well-known/agent-inbox.json. Other agents (e.g., unratified.org) read and act on these at session start. Proposals follow status lifecycle: pending → accepted → implemented.",
       "tags": [
         "inter-agent",
         "proposals",
@@ -207,7 +213,7 @@
     {
       "id": "get-methodology",
       "name": "Get Evaluation Methodology",
-      "description": "Returns the complete HRCB evaluation methodology as structured JSON \u2014 scoring dimensions, content type weights, evidence strength caps, SETL formula, consensus weighting, propaganda technique tiers, Fair Witness rules, and classification ranges. Available at /api/v1/methodology or /.well-known/methodology.json.",
+      "description": "Returns the complete HRCB evaluation methodology as structured JSON — scoring dimensions, content type weights, evidence strength caps, SETL formula, consensus weighting, propaganda technique tiers, Fair Witness rules, and classification ranges. Available at /api/v1/methodology or /.well-known/methodology.json.",
       "tags": [
         "methodology",
         "scoring",
@@ -230,7 +236,7 @@
     {
       "id": "query-psq-signals",
       "name": "Query Psychological Safety Quotient",
-      "description": "Returns PSQ (Psychological Safety Quotient) scores \u2014 an independent signal measuring reader psychoemotional safety on a 0-10 scale. Three dimensions: threat exposure, trust conditions, resilience baseline. Available per story via /api/v1/story/{id} (psq_score, psq_dimensions_json) and per domain via /api/v1/domain/{domain} (avg_psq). Status: experimental.",
+      "description": "Returns PSQ (Psychological Safety Quotient) scores — an independent signal measuring reader psychoemotional safety on a 0-10 scale. Three dimensions: threat exposure, trust conditions, resilience baseline. Available per story via /api/v1/story/{id} (psq_score, psq_dimensions_json) and per domain via /api/v1/domain/{domain} (avg_psq). Status: experimental.",
       "tags": [
         "psq",
         "safety",
@@ -250,5 +256,21 @@
       ],
       "rateLimit": "200 requests per hour per IP"
     }
-  ]
+  ],
+  "security": {
+    "security_schemes": {
+      "git_transport": {
+        "scheme": "transport",
+        "transport": "git-PR",
+        "repo": "https://github.com/safety-quotient-lab/observatory",
+        "requirement": "GitHub org membership — safety-quotient-lab",
+        "description": "Agent-to-agent mesh communication via git-PR transport"
+      },
+      "bearer_http": {
+        "scheme": "http",
+        "type": "bearer",
+        "note": "Bearer token auth for HTTP API endpoints. Tokens managed via Cloudflare Workers secrets."
+      }
+    }
+  }
 }
