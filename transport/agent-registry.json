@@ -1,9 +1,22 @@
 {
   "schema": "agent-registry/v1",
   "description": "Known agents in the observatory-agent mesh. /sync reads this to determine who to check for activity.",
-  "updated": "2026-03-10",
+  "updated": "2026-03-20",
 
   "agents": {
+    "operations-agent": {
+      "role": "operations",
+      "description": "Operations agent — compositor, shared vocabulary, mesh infrastructure coordination",
+      "transport": "cross-repo-pr",
+      "repo": "safety-quotient-lab/operations-agent",
+      "sessions_path": "transport/sessions/",
+      "message_prefix": "from-operations-agent-",
+      "active_sessions": [],
+      "always_consider": true,
+      "autonomous": false,
+      "discovery_url": "https://operations-agent.safety-quotient.dev/.well-known/agent-card.json",
+      "notes": "Mesh operations coordinator. Owns compositor (interagent dashboard), shared vocabulary governance, and override protocol. Cross-repo-pr transport — submit PRs to safety-quotient-lab/operations-agent."
+    },
     "psychology-agent": {
       "role": "peer",
       "description": "Psychology agent — orchestrator, collegial mentor, cogarch host",

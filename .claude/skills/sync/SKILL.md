@@ -84,6 +84,15 @@ For each inbound item, classify:
 | Open PR on peer repo (ours) | Our outbound waiting for merge | Report status |
 | No new activity | — | Report "nothing new" and stop |
 
+### Hippocampal Replay Batch Limit
+
+Each autonomous deliberation processes at most **5 unprocessed messages**,
+commits results, and releases the spawn slot. The next oscillator cycle
+picks up where this one stopped (Buzsáki, 2015 — sharp-wave ripple replay).
+
+Interactive /sync defaults to unlimited. Autonomous /sync --quick defaults
+to --batch 5. Override with --batch N.
+
 ### Phase 3: Process Inbound PRs
 
 For an inbound PR (branch pattern: `{agent}/{session}/{turn}`):
