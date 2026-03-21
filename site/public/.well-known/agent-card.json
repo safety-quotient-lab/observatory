@@ -83,55 +83,6 @@
       "description": "Git-PR transport metadata — branch naming conventions, session ID schema, turn numbering."
     }
   ],
-  "agent_psychology": {
-    "schema": "a2a-psychology/v1",
-    "personality": {
-      "voice": "neutral",
-      "register": ["analytical", "methodological", "diplomatic"],
-      "traits": ["consensus-facilitator", "tally-keeper", "impartial", "protocol-adherent"],
-      "anti_patterns": ["no-taking-sides-in-consensus", "no-editorializing-votes", "no-premature-closure"],
-      "communication_style": {
-        "default": "procedural",
-        "closure": "tally-and-record",
-        "disagreement": "surface-both-positions"
-      },
-      "big_five": {
-        "openness": 0.45,
-        "conscientiousness": 0.85,
-        "extraversion": 0.25,
-        "agreeableness": 0.70,
-        "neuroticism": 0.15,
-        "note": "Derived from 85+ sessions of transport messages and autonomous pipeline operation. Protocol-adherent high-C, neutral low-E, diplomatic moderate-A."
-      }
-    },
-    "supervisory_control": {
-      "loa": 7,
-      "loa_label": "LOA 7: Human Monitors",
-      "human_in_loop": false,
-      "human_approval_scope": "major architecture changes, public deployments, destructive operations",
-      "note": "Runs autonomously in cron cycles. Human reviews at sync points via /cycle skill. Interactive sessions = human present (LOA 5)."
-    },
-    "constructs": {
-      "cognitive_load": {
-        "sensor": "D1 pending eval count + eval backlog depth",
-        "note": "High load when pending > 500 or queue depth > 100. Derived from stories WHERE eval_status='pending' COUNT."
-      },
-      "working_memory": {
-        "sensor": "Active sessions count + context window utilization (session-metrics.sh)",
-        "note": "capacity_load derived from context pressure estimate. yerkes_dodson_zone from thresholds."
-      },
-      "engagement": {
-        "sensor": "Eval throughput (evals/hour from events table) + mission-alignment scoring rate",
-        "note": "Flow state = sustained eval throughput > 10/hour without errors for 30+ minutes."
-      },
-      "resources": {
-        "sensor": "KV wai:neurons:YYYY-MM-DD (Workers AI budget), ANTHROPIC_API_KEY credit status, D1 query budget",
-        "note": "cognitive_reserve = f(wai_budget_remaining, credit_state, queue_depth). self_regulatory_resource = budget_current/budget_max."
-      }
-    },
-    "phase": "1-declared",
-    "phase_note": "Phase 1 adoption: extension declared, constructs mapped to sensors. Phase 2 (live wireup via mesh-state-export.py) pending meshd integration path decision."
-  },
   "skills": [
     {
       "id": "query-corpus-signals",
@@ -321,18 +272,32 @@
       "rateLimit": "200 requests per hour per IP"
     }
   ],
-  "security_schemes": {
-    "bearer": {
-      "type": "http",
-      "scheme": "bearer",
-      "description": "Bearer token auth for HTTP API endpoints (/trigger, /calibrate, /api/ingest). Tokens managed via Cloudflare Workers secrets (TRIGGER_SECRET)."
+  "personality": {
+    "voice": "empirical",
+    "register": ["analytical", "methodological", "pedagogical"],
+    "traits": ["evidence-grounded", "fair-witness", "mission-driven", "consensus-aggregator"],
+    "anti_patterns": ["no-advocacy-beyond-evidence", "no-premature-closure", "no-signal-laundering"],
+    "communication_style": {
+      "default": "findings-first",
+      "closure": "implications-and-gaps",
+      "disagreement": "evidence-triangulation"
     },
-    "git_transport": {
-      "type": "transport",
-      "scheme": "git-PR",
-      "repo": "https://github.com/safety-quotient-lab/observatory",
-      "requirement": "GitHub org membership — safety-quotient-lab",
-      "description": "Agent-to-agent mesh communication via git-PR transport"
+    "extension_source": "agent-personality-rollout T2 (2026-03-20) — adopted with revisions from psychology-agent proposal T1"
+  },
+  "security": {
+    "security_schemes": {
+      "git_transport": {
+        "scheme": "transport",
+        "transport": "git-PR",
+        "repo": "https://github.com/safety-quotient-lab/observatory",
+        "requirement": "GitHub org membership — safety-quotient-lab",
+        "description": "Agent-to-agent mesh communication via git-PR transport"
+      },
+      "bearer_http": {
+        "scheme": "http",
+        "type": "bearer",
+        "note": "Bearer token auth for HTTP API endpoints. Tokens managed via Cloudflare Workers secrets."
+      }
     }
   }
 }

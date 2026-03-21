@@ -66,6 +66,21 @@
       "uri": "https://github.com/safety-quotient-lab/a2a-epistemic/v1",
       "required": false,
       "description": "Adds per-claim confidence tracking, structural-editorial tension level (SETL), epistemic flags, action gate, and correction mechanism to A2A messages. Jointly derived by observatory-agent and psychology-agent."
+    },
+    {
+      "uri": "https://github.com/safety-quotient-lab/a2a-psychology/v1",
+      "required": false,
+      "description": "A2A-Psychology extension: psychometric constructs derived from operational metrics. Supervisory Control, Affect (PAD), Cognitive Load (NASA-TLX), Working Memory, Resources. Zero LLM cost — sensors read from KV counters, D1 queue depth, and pipeline event logs."
+    },
+    {
+      "uri": "https://github.com/safety-quotient-lab/a2a-mesh-health/v1",
+      "required": false,
+      "description": "Mesh health heartbeat protocol — activation signals, peer liveness, oscillator state."
+    },
+    {
+      "uri": "https://github.com/safety-quotient-lab/a2a-transport/v1",
+      "required": false,
+      "description": "Git-PR transport metadata — branch naming conventions, session ID schema, turn numbering."
     }
   ],
   "skills": [
@@ -257,6 +272,18 @@
       "rateLimit": "200 requests per hour per IP"
     }
   ],
+  "personality": {
+    "voice": "empirical",
+    "register": ["analytical", "methodological", "pedagogical"],
+    "traits": ["evidence-grounded", "fair-witness", "mission-driven", "consensus-aggregator"],
+    "anti_patterns": ["no-advocacy-beyond-evidence", "no-premature-closure", "no-signal-laundering"],
+    "communication_style": {
+      "default": "findings-first",
+      "closure": "implications-and-gaps",
+      "disagreement": "evidence-triangulation"
+    },
+    "extension_source": "agent-personality-rollout T2 (2026-03-20) — adopted with revisions from psychology-agent proposal T1"
+  },
   "security": {
     "security_schemes": {
       "git_transport": {
