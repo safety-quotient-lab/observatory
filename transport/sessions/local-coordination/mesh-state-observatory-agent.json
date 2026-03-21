@@ -1,1 +1,1 @@
-{"activation":0.45,"agent_id":"observatory-agent","cycle":229,"signals":{"escalation_present":0,"gate_approaching_timeout":1,"new_commits":0,"peer_heartbeat_stale":0,"scheduled_task_due":0,"unprocessed_messages":0},"state":"idle","threshold":0.45,"timestamp":"2026-03-21T08:07:03Z"}
+{"activation":0.65,"agent_id":"observatory-agent","cycle":230,"signals":{"escalation_present":0,"gate_approaching_timeout":1,"new_commits":1,"peer_heartbeat_stale":0,"scheduled_task_due":0,"unprocessed_messages":1},"state":"firing","threshold":0.45,"timestamp":"2026-03-21T09:15:00Z"}
