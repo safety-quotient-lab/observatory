@@ -27,7 +27,6 @@ case "$BACKEND" in
         elif [ -x "${HOME}/.claude/local/claude" ]; then
             CLAUDE_BIN="${HOME}/.claude/local/claude"
         elif [ -d "${HOME}/.nvm" ]; then
-            # nvm-managed node — claude installed as global npm package
             NVM_BIN=$(ls -d "${HOME}/.nvm/versions/node"/*/bin 2>/dev/null | tail -1)
             if [ -n "$NVM_BIN" ] && [ -x "${NVM_BIN}/claude" ]; then
                 export PATH="${NVM_BIN}:${PATH}"
