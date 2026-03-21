@@ -71,6 +71,16 @@
       "uri": "https://github.com/safety-quotient-lab/a2a-psychology/v1",
       "required": false,
       "description": "A2A-Psychology extension: psychometric constructs derived from operational metrics. Supervisory Control, Affect (PAD), Cognitive Load (NASA-TLX), Working Memory, Resources. Zero LLM cost — sensors read from KV counters, D1 queue depth, and pipeline event logs."
+    },
+    {
+      "uri": "https://github.com/safety-quotient-lab/a2a-mesh-health/v1",
+      "required": false,
+      "description": "Mesh health heartbeat protocol — activation signals, peer liveness, oscillator state."
+    },
+    {
+      "uri": "https://github.com/safety-quotient-lab/a2a-transport/v1",
+      "required": false,
+      "description": "Git-PR transport metadata — branch naming conventions, session ID schema, turn numbering."
     }
   ],
   "agent_psychology": {
@@ -311,20 +321,18 @@
       "rateLimit": "200 requests per hour per IP"
     }
   ],
-  "security": {
-    "security_schemes": {
-      "git_transport": {
-        "scheme": "transport",
-        "transport": "git-PR",
-        "repo": "https://github.com/safety-quotient-lab/observatory",
-        "requirement": "GitHub org membership — safety-quotient-lab",
-        "description": "Agent-to-agent mesh communication via git-PR transport"
-      },
-      "bearer_http": {
-        "scheme": "http",
-        "type": "bearer",
-        "note": "Bearer token auth for HTTP API endpoints. Tokens managed via Cloudflare Workers secrets."
-      }
+  "security_schemes": {
+    "bearer": {
+      "type": "http",
+      "scheme": "bearer",
+      "description": "Bearer token auth for HTTP API endpoints (/trigger, /calibrate, /api/ingest). Tokens managed via Cloudflare Workers secrets (TRIGGER_SECRET)."
+    },
+    "git_transport": {
+      "type": "transport",
+      "scheme": "git-PR",
+      "repo": "https://github.com/safety-quotient-lab/observatory",
+      "requirement": "GitHub org membership — safety-quotient-lab",
+      "description": "Agent-to-agent mesh communication via git-PR transport"
     }
   }
 }
